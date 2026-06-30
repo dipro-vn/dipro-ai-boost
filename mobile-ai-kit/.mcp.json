@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json.schemastore.org/mcp.json",
+  "mcpServers": {
+    "figma-open-mcp": {
+      "command": "/opt/homebrew/bin/npx",
+      "args": [
+        "-y",
+        "figma-developer-mcp",
+        "--stdio"
+      ],
+      "env": {
+        "FIGMA_API_KEY": "FIGMA-KEY",
+        "FRAMELINK_TELEMETRY": "off",
+        "DO_NOT_TRACK": "1",
+        "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+      }
+    },
+    "backlog": {
+      "command": "/opt/homebrew/bin/npx",
+      "args": [
+        "-y",
+        "backlog-mcp-server",
+        "--stdio"
+      ],
+      "env": {
+        "PATH": "/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+        "BACKLOG_DOMAIN": "dipro-vn.backlog.com",
+        "BACKLOG_API_KEY": "BACKLOG-KEY"
+      }
+    }
+  }
+}
