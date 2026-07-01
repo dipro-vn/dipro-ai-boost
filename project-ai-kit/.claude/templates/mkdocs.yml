@@ -1,0 +1,39 @@
+site_name: <TEN_DU_AN> — Docs
+site_description: BMAD feature docs (SPEC → DESIGN → PLAN → tasks) cho <TEN_DU_AN>
+
+# docs_dir luôn là "docs" vì <DOCS_ROOT> trong AGENTS.md luôn kết thúc bằng /docs.
+# File này phải đặt CÙNG CẤP với thư mục docs_dir:
+#   - Cách A (docs repo riêng): đặt ở root <ten-du-an>-docs/
+#   - Cách B (docs ngay trong repo): đặt ở root <ten-du-an>/
+docs_dir: docs
+
+theme:
+  name: material
+  language: ja
+  palette:
+    - scheme: default
+      primary: indigo
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - content.code.copy
+
+plugins:
+  - search
+  - awesome-pages   # auto nav từ cấu trúc thư mục docs/features/<feature>/ — không cần sửa nav mỗi khi thêm feature mới
+
+markdown_extensions:
+  - tables
+  - toc:
+      permalink: true
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight
+
+# Không khai báo `nav:` thủ công — awesome-pages tự build nav từ docs_dir.
+# Muốn đặt thứ tự/tên hiển thị riêng cho 1 folder → thêm file `.pages` trong folder đó
+# (xem https://github.com/lukasgeiter/mkdocs-awesome-pages-plugin).

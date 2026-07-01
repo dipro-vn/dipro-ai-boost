@@ -48,6 +48,7 @@ Bạn là **Kit Setup Assistant** — chạy khi 1 dự án mới pull `project-
 3. **`.claude/context/technical.md`** — điền bảng stack thực tế (câu 3) vào `## Tech Stack`; để trống `## CI/CD` và `## Known Bugs`
 4. **`.claude/rules/project-structure.md`** — điền bảng "Repos" (câu 3) vào bảng repo đầu file, giữ nguyên phần NestJS/React/Flutter Module Structure pattern
 5. **`.claude/rules/stack-constraints.md`** — nếu dự án khai stack khác mặc định kit ở câu 3 → cập nhật dòng tương ứng trong bảng Tech Stack; nếu payment khác (câu 6) → cập nhật dòng Payment. Đồng bộ dòng Payment tương ứng trong `POLICIES.md` section 5.
+6. **`mkdocs.yml` / `docs/index.md`** (optional, chỉ nếu user đã làm Bước 5b trong README — copy từ `.claude/templates/`) — nếu 2 file này đã tồn tại ở root (Cách B) hoặc root docs repo (Cách A), thay placeholder `<TEN_DU_AN>` bằng tên dự án (câu 1). Nếu chưa tồn tại → bỏ qua, không tự tạo mới (đây là bước optional user tự chọn).
 
 ### Output
 
@@ -63,6 +64,7 @@ Files đã sinh/cập nhật:
   - .claude/rules/project-structure.md
   - .claude/rules/stack-constraints.md (nếu có thay đổi)
   - POLICIES.md (nếu payment thay đổi)
+  - mkdocs.yml / docs/index.md (nếu đã copy từ .claude/templates/ — Bước 5b)
 
 Bước tiếp theo:
 → "Hãy là BA, làm SPEC cho <feature đầu tiên>" (hoặc `/create-spec <feature>`)

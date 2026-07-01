@@ -95,6 +95,28 @@ Yêu cầu môi trường (tuỳ chọn nhưng khuyến nghị — đã khai tro
 
 Mở `AGENTS.md` → xác nhận bảng Ecosystem/Actors đã điền đúng đường dẫn repo thật (Bước 3). Sai chỗ nào thì sửa tay hoặc chạy lại `/init-kit` để bổ sung.
 
+### Bước 5b — (optional) Setup MkDocs site để duyệt docs
+
+Kit có sẵn template MkDocs để render `<DOCS_ROOT>/features/<feature>/` (SPEC/DESIGN/PLAN/tasks) thành 1 site duyệt được bằng browser — không cần sửa `mkdocs.yml` mỗi khi thêm feature mới (nav tự sinh từ cấu trúc thư mục qua plugin `awesome-pages`).
+
+```bash
+# Copy 2 file template vào ĐÚNG cấp với docs_dir (thư mục chứa "docs/"):
+# - Cách A (docs repo riêng): root <ten-du-an>-docs/
+# - Cách B (docs ngay trong repo): root <ten-du-an>/
+cp .claude/templates/mkdocs.yml <đích>/mkdocs.yml
+mkdir -p <đích>/docs
+cp .claude/templates/docs-index.md <đích>/docs/index.md
+```
+
+`/init-kit` (Bước 4) tự điền `<TEN_DU_AN>` trong `mkdocs.yml`/`docs/index.md` nếu 2 file này đã tồn tại tại thời điểm chạy — nếu chưa, tự sửa placeholder `<TEN_DU_AN>` bằng tay.
+
+Cài dependency và chạy site:
+
+```bash
+pip install -r .claude/templates/mkdocs-requirements.txt
+mkdocs serve   # mở http://localhost:8000
+```
+
 ### Bước 6 — Bắt đầu vòng đời feature đầu tiên
 
 ```
@@ -130,7 +152,8 @@ project-ai-kit/
     ├── skills/       ← technical + process skills, load on-demand
     ├── context/      ← business/technical memory — phần lớn RỖNG, điền dần qua BA/PM/init-agent
     ├── rules/        ← coding-style, security, git-workflow, stack-constraints...
-    └── workflows/    ← BMAD pipeline reference, db-connect templates
+    ├── workflows/    ← BMAD pipeline reference, db-connect templates
+    └── templates/    ← mkdocs.yml + docs-index.md + mkdocs-requirements.txt (Bước 5b, optional)
 ```
 
 **Nguyên tắc cốt lõi** (chi tiết trong `POLICIES.md`): không đoán mò · đọc trước hành động sau · stateless (mọi context đọc từ `.md`) · tool-first (tilth thay grep/cat/find) · blast radius check trước khi đổi public interface · phân quyền persona nghiêm ngặt (chỉ Dev sửa source code).
