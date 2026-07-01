@@ -102,7 +102,7 @@ def write_xlsx(sections, output_path):
     wb.remove(wb.active)
 
     HEADER_FONT = Font(bold=True, color="FFFFFF", size=10)
-    HEADER_FILL = PatternFill(start_color="2E5F8A", end_color="2E5F8A", fill_type="solid")
+    HEADER_FILL = PatternFill(start_color="46BDC6", end_color="46BDC6", fill_type="solid")
     HEADER_ALIGN = Alignment(horizontal="center", vertical="center", wrap_text=True)
     CELL_ALIGN = Alignment(vertical="top", wrap_text=True)
     TEXT_ALIGN = Alignment(vertical="top", wrap_text=True)
