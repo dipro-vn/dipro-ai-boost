@@ -1,8 +1,156 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  // ============================================================
+  // PERMISSIONS
+  // Ưu tiên đánh giá: deny > allow > ask > defaultMode
+  // ============================================================
   "permissions": {
-    "allow": [],
-    "deny": []
+    "allow": [
+      // --- Đọc / tìm kiếm code (an toàn tuyệt đối) ---
+      "Read(**)",
+      "Glob(**)",
+      "Grep(**)",
+      // --- Flutter / Dart ---
+      "Bash(flutter pub get)",
+      "Bash(flutter pub upgrade*)",
+      "Bash(flutter pub add*)",
+      "Bash(flutter pub deps*)",
+      "Bash(flutter pub run build_runner*)",
+      "Bash(flutter clean)",
+      "Bash(flutter analyze*)",
+      "Bash(flutter test*)",
+      "Bash(flutter format*)",
+      "Bash(dart format*)",
+      "Bash(dart analyze*)",
+      "Bash(dart fix*)",
+      "Bash(dart run build_runner*)",
+      "Bash(dart pub get)",
+      "Bash(dart run slang)",
+      "Bash(dart run slang watch)",
+      "Bash(dart run slang analyze*)",
+      "Bash(dart run slang stats*)",
+      "Bash(dart run slang migrate*)",
+      "Bash(flutter --version)",
+      "Bash(flutter doctor*)",
+      "Bash(flutter devices)",
+      "Bash(flutter build*)",
+      // --- React Native / Node ---
+      "Bash(npm install)",
+      "Bash(npm ci)",
+      "Bash(npm run *)",
+      "Bash(npm test*)",
+      "Bash(npm audit)",
+      "Bash(yarn install)",
+      "Bash(yarn add*)",
+      "Bash(yarn *)",
+      "Bash(pnpm install)",
+      "Bash(pnpm add*)",
+      "Bash(pnpm *)",
+      "Bash(npx tsc*)",
+      "Bash(npx eslint*)",
+      "Bash(npx prettier*)",
+      "Bash(npx jest*)",
+      "Bash(npx react-native*)",
+      "Bash(node -v)",
+      "Bash(npx expo*)",
+      // --- iOS (CocoaPods / Xcode CLI) ---
+      "Bash(pod install*)",
+      "Bash(pod update*)",
+      "Bash(pod repo update)",
+      "Bash(xcodebuild -version)",
+      "Bash(xcrun simctl list*)",
+      // --- Android (Gradle) ---
+      "Bash(./gradlew *)",
+      "Bash(gradlew *)",
+      "Bash(adb devices)",
+      "Bash(adb logcat*)",
+      // --- Git (thao tác đọc / an toàn) ---
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git branch*)",
+      "Bash(git show*)",
+      "Bash(git add*)",
+      "Bash(git stash*)",
+      // --- Editing trong phạm vi source code ---
+      "Edit(lib/**)",
+      "Edit(src/**)",
+      "Edit(test/**)",
+      "Edit(__tests__/**)",
+      "Write(lib/**)",
+      "Write(src/**)",
+      "Write(test/**)"
+    ],
+    "ask": [
+      // Các thao tác có ảnh hưởng nhưng cần xác nhận thủ công
+      "Bash(git commit*)",
+      "Bash(git push*)",
+      "Bash(git merge*)",
+      "Bash(git rebase*)",
+      "Bash(git reset*)",
+      "Bash(git checkout*)",
+      "Bash(npm publish*)",
+      "Bash(flutter pub publish*)",
+      "Bash(pod deintegrate*)",
+      "Edit(android/**)",
+      "Edit(ios/**)",
+      "Edit(pubspec.yaml)",
+      "Edit(package.json)",
+      "Edit(*.podspec)",
+      "Edit(build.gradle*)"
+    ],
+    "deny": [
+      // --- Không bao giờ đọc/ghi secrets & credentials ---
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Read(**/secrets/**)",
+      "Read(**/*.keystore)",
+      "Read(**/*.jks)",
+      "Read(**/*.p12)",
+      "Read(**/*.pem)",
+      "Read(**/*.mobileprovision)",
+      "Read(**/google-services.json)",
+      "Read(**/GoogleService-Info.plist)",
+      "Read(**/firebase_options.dart)",
+      "Read(**/key.properties)",
+      "Read(**/local.properties)",
+      // --- Không cho đụng tới build output / cache nặng ---
+      "Edit(**/build/**)",
+      "Edit(**/*.g.dart)",
+      "Edit(**/*.freezed.dart)",
+      "Edit(**/strings.g.dart)",
+      "Edit(**/.dart_tool/**)",
+      "Edit(**/Pods/**)",
+      "Edit(**/node_modules/**)",
+      "Edit(**/DerivedData/**)",
+      "Edit(**/.gradle/**)",
+      // --- Lệnh nguy hiểm ---
+      "Bash(rm -rf *)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(curl *)",
+      "Bash(sudo *)",
+      "Bash(flutter pub publish)",
+      "Bash(npm publish)"
+    ]
   },
-  "hooks": {}
+  // ============================================================
+  // HOOKS
+  // Tự động format code sau khi Claude sửa file (giảm review thủ công)
+  // ============================================================
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"const d=JSON.parse(require('fs').readFileSync(0,'utf8'));const f=d.tool_input&&d.tool_input.file_path||'';const {execSync}=require('child_process');try{if(/\\.i18n\\.json$/.test(f)){execSync('dart run slang')}else if(/\\.dart$/.test(f)){execSync('dart format '+JSON.stringify(f))}else if(/\\.(ts|tsx|js|jsx)$/.test(f)){execSync('npx --no-install prettier --write '+JSON.stringify(f))}}catch(e){}\""
+          }
+        ]
+      }
+    ]
+  }
 }
