@@ -104,11 +104,7 @@ module.exports = {
 - **Component test**: cho component có logic hiển thị quan trọng.
 - File test mirror cấu trúc `src/`, đặt tên `<file>.test.ts(x)`.
 
-## 15. Git / PR convention (nhẹ)
-- Commit theo Conventional Commits: `feat:` `fix:` `refactor:` `test:` `chore:` `docs:`.
-- 1 PR = 1 mục tiêu; PR phải pass lint + typecheck (`tsc --noEmit`) + test.
-
-## 16. Checklist review (dán vào PR template)
+## 15. Checklist review (dán vào PR template)
 ```
 [ ] Component không gọi thẳng API/storage — đi qua service/RTK Query/thunk
 [ ] State chỉ "mutate" trong reducer của createSlice; ngoài ra immutable
@@ -123,7 +119,7 @@ module.exports = {
 [ ] Đặt tên file/symbol đúng quy ước (mục 7, 8)
 ```
 
-## 17. Hướng dẫn cho AI assistant (khi sinh/sửa code)
+## 16. Hướng dẫn cho AI assistant (khi sinh/sửa code)
 1. Mặc định stack **RN + TypeScript + Redux Toolkit**; server state dùng **RTK Query**, không tự đổi state management.
 2. Luôn sinh **functional component + hooks**, **không** `any`, tuân thủ rule mục 2–12.
 3. Đặt code đúng feature, đúng tầng (logic vào slice/thunk/service, không vào component).

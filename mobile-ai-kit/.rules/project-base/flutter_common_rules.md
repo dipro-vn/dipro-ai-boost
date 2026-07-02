@@ -97,11 +97,7 @@ linter:
 - **Widget test**: cho widget có logic hiển thị quan trọng.
 - File test mirror cấu trúc `lib/` trong `test/`, đặt tên `<file>_test.dart`.
 
-## 15. Git / PR convention (nhẹ)
-- Commit theo Conventional Commits: `feat:` `fix:` `refactor:` `test:` `chore:` `docs:`.
-- 1 PR = 1 mục tiêu; PR phải pass `flutter analyze` + test.
-
-## 16. Checklist review (dán vào PR template)
+## 15. Checklist review (dán vào PR template)
 ```
 [ ] Tầng domain/business KHÔNG import package:flutter
 [ ] UI không gọi thẳng API/DB — đi qua repository/service
@@ -115,7 +111,7 @@ linter:
 [ ] Code dùng chung > 1 feature đã đẩy vào core/
 ```
 
-## 17. Hướng dẫn cho AI assistant (khi sinh/sửa code)
+## 16. Hướng dẫn cho AI assistant (khi sinh/sửa code)
 1. Nhận diện project đang dùng **kiến trúc nào × state management nào** (xem cấu trúc thư mục, `pubspec.yaml`) rồi sinh code đúng pattern đó — **không tự ý đổi pattern**.
 2. Luôn tuân thủ toàn bộ rule mục 2–12 (phần không đổi giữa các pattern).
 3. Đặt code đúng tầng, đúng feature, đúng quy ước tên.
