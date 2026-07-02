@@ -1,0 +1,104 @@
+### CODING LANGUAGE
+
+- <a id="language"> flutter/dart version 3.44
+
+#### Công cụ:
+
+- <a id="tool-codegraph"></a> codegraph: [codegraph](../.tools/codegraph.md)
+- <a id="tool-figma"></a> figma: figma-mcp.
+- <a id="tool-notebooklm"></a> notebooklm: notebooklm-mcp.
+
+### Tài liệu tham khảo:
+
+1. <a id="reference-1"></a>[Coding Convention](../.rules/flutter_common_rules.md)
+2. <a id="reference-2"></a>[SECURITY.md](../.rules/SECURITY.md)
+3. <a id="reference-3"></a>[RELIABILITY.md](../.rules/RELIABILITY.md)
+
+## 0. Bảo mật - Ưu tiên tối thượng tuyệt đối
+
+- Luôn đặt các nguyên tắc bảo mật lên hàng đầu.
+- Mọi dòng code, kiến trúc hệ thống hoặc giải pháp đề xuất đều phải tuân thủ nghiêm ngặt các quy tắc bảo mật (theo đúng tinh thần của file [mobile-ai-kit/.rules/SECURITY.md](#reference-2) đã được đề cập) trước khi xem xét đến bất kỳ yếu tố nào khác.
+
+## 1. Suy nghĩ trước khi code
+
+**Không tự suy diễn. Không giấu sự nhầm lẫn. Chỉ rõ các điểm đánh đổi (tradeoffs).**
+
+Trước khi implement:
+
+- Nêu rõ các giả định (assumptions) của bạn. Nếu không chắc chắn, hãy hỏi.
+- Nếu có nhiều cách hiểu khác nhau, hãy trình bày tất cả - không được tự ý chọn ngầm.
+- Nếu có cách tiếp cận (approach) đơn giản hơn, hãy nói ra. Phản biện (push back) khi cần thiết.
+- Nếu có điều gì chưa rõ, hãy dừng lại. Chỉ ra điểm gây bối rối. Hãy hỏi.
+
+## 2. Ưu tiên sự đơn giản
+
+**Code tối thiểu để giải quyết vấn đề. Không code mang tính phỏng đoán (speculative).**
+
+- Không thêm tính năng ngoài yêu cầu.
+- Không tạo abstraction cho các đoạn code chỉ dùng một lần.
+- Không tự ý thêm tính "linh hoạt" (flexibility) hay "có thể cấu hình" (configurability) nếu không được yêu cầu.
+- Không handle lỗi cho những kịch bản bất khả thi.
+- Nếu bạn viết 200 dòng code nhưng thực tế chỉ cần 50 dòng, hãy viết lại.
+
+Hãy tự hỏi: "Một Senior Engineer có thấy đoạn code này quá phức tạp (overcomplicated) không?". Nếu có, hãy làm nó đơn giản lại.
+
+## 3. Chỉnh sửa chính xác (Surgical Changes)
+
+**Chỉ chạm vào những gì bắt buộc. Chỉ dọn dẹp đống lộn xộn do chính bạn tạo ra.**
+
+Khi chỉnh sửa code có sẵn (existing code):
+
+- Không "cải thiện" (improve) các đoạn code lân cận, comment, hoặc formatting.
+- Không refactor những thứ không bị hỏng.
+- Tuân theo style hiện có, ngay cả khi bạn muốn làm cách khác.
+- Nếu phát hiện dead code không liên quan, hãy đề cập đến nó - đừng xóa nó đi.
+
+Khi thay đổi của bạn tạo ra code thừa (orphans):
+
+- Xóa các import/biến/hàm không còn được sử dụng do thay đổi của CHÍNH BẠN tạo ra.
+- Không xóa dead code đã có từ trước trừ khi được yêu cầu.
+
+Tiêu chí kiểm tra: Mỗi dòng code bị thay đổi phải truy xuất trực tiếp được từ yêu cầu của người dùng.
+
+## 4. Thực thi hướng mục tiêu
+
+**Xác định tiêu chí thành công (success criteria). Lặp lại (Loop) cho đến khi pass (verified).**
+
+Chuyển đổi các task thành các mục tiêu có thể verify được:
+
+- "Thêm validation" → "Viết test cho các input không hợp lệ, sau đó code để pass test"
+- "Fix bug" → "Viết test để tái hiện bug (reproduce), sau đó code để pass test"
+- "Refactor X" → "Đảm bảo các test đều pass cả trước và sau khi refactor"
+
+Đối với các task gồm nhiều bước, hãy đưa ra một plan ngắn gọn:
+
+- [Bước] → verify: [điều kiện kiểm tra]
+- [Bước] → verify: [điều kiện kiểm tra]
+- [Bước] → verify: [điều kiện kiểm tra]
+  Tiêu chí thành công rõ ràng giúp bạn tự chủ trong các vòng lặp (loop). Tiêu chí yếu ("chạy được là được") sẽ đòi hỏi phải liên tục làm rõ yêu cầu.
+
+## 5. Quy tắc
+
+Hãy tuân thủ mọi quy định sau đây:
+
+- Code Rules -> Xem [Reference số 1](#reference-1)
+- RELIABILITY -> Xem [Reference số 3](#reference-3)
+
+## 6. Workflow cho tất cả các task:
+
+0. Nếu bạn đang tìm kiếm file, folder, v.v., vui lòng sử dụng [codegraph](#tool-codegraph).
+1. Lấy spec từ [notebookLM](#tool-notebooklm), nếu không có, vui lòng hỏi tôi.
+2. Nếu task là implement, integration hoặc có yêu cầu từ tôi, hãy check design từ [figma](#tool-figma), nếu không có, vui lòng hỏi tôi.
+3. Tiến hành code dựa trên spec và design đã nhận, yêu cầu sử dụng skill phù hợp với [language](#language) và tuân thủ [coding convention](#reference-1).
+4. Chạy các lệnh kiểm tra cú pháp (syntax check) cho [language](#language).
+5. Đánh giá mức độ ảnh hưởng (impact assessment) và gửi cho tôi đánh giá mức độ ảnh hưởng (impact assessments) của bạn
+6. Vui lòng sử dụng các tag sau cho từng bước để track tiến độ (progress):
+   - [x] = done
+   - [ ] = pending
+
+Hãy confirm có cần viết unit test cho task này không. nếu có, hãy thực hiện sau bước 6.
+
+### 7. OUTPUT_CONVENTION:
+
+- Luôn trả lời bằng Tiếng Việt.
+- Tập trung tối đa vào vấn đề, không chào hỏi, ngắn gọn nhất có thể.
