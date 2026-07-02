@@ -10,7 +10,7 @@
 
 ### Tài liệu tham khảo:
 
-1. <a id="reference-1"></a>[Coding Convention](../.rules/flutter_common_rules.md)
+1. <a id="reference-1"></a>[Coding Convention](../.rules/project-base/flutter_common_rules.md)
 2. <a id="reference-2"></a>[SECURITY.md](../.rules/SECURITY.md)
 3. <a id="reference-3"></a>[RELIABILITY.md](../.rules/RELIABILITY.md)
 
