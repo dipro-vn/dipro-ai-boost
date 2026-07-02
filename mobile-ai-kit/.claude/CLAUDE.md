@@ -4,15 +4,15 @@
 
 #### Công cụ:
 
-- <a id="tool-codegraph"></a> codegraph: [codegraph](../.tools/codegraph.md)
-- <a id="tool-figma"></a> figma: figma-mcp.
-- <a id="tool-notebooklm"></a> notebooklm: notebooklm-mcp.
+- <a id="tool-codegraph">codegraph: [codegraph](../.tools/codegraph.md)</a>
+- <a id="tool-figma">figma: figma-mcp.</a>
+- <a id="tool-notebooklm">notebooklm: notebooklm-mcp.</a>
 
 ### Tài liệu tham khảo:
 
-1. <a id="reference-1"></a>[Coding Convention](../.rules/project-base/flutter_common_rules.md)
-2. <a id="reference-2"></a>[SECURITY.md](../.rules/SECURITY.md)
-3. <a id="reference-3"></a>[RELIABILITY.md](../.rules/RELIABILITY.md)
+1. <a id="reference-1">[Coding Convention](../.rules/project-base/flutter_common_rules.md)</a>
+2. <a id="reference-2">[SECURITY.md](../.rules/SECURITY.md)</a>
+3. <a id="reference-3">[RELIABILITY.md](../.rules/RELIABILITY.md)</a>
 
 ## 0. Bảo mật - Ưu tiên tối thượng tuyệt đối
 
