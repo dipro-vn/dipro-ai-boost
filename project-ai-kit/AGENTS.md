@@ -134,8 +134,6 @@ Danh sách đầy đủ (skill → repo/vai trò → khi nào dùng) → `.claud
 
 | File | Nội dung | Ai dùng |
 |---|---|---|
-| `db-connect-dev.md` | Template kết nối PostgreSQL DEV (AWS SSM) — điền giá trị thật của dự án | `backend-agent` |
-| `db-connect-staging.md` | Template kết nối PostgreSQL Staging qua SSM | `backend-agent` |
 | `new-feature.md` | BMAD pipeline end-to-end | Human reference — đọc khi cần tra cứu thứ tự pipeline; `pm-agent` đọc khi lập PLAN |
 | `bug-fix.md` | Quy trình điều tra và fix bug | `backend-agent` / `frontend-agent` / `mobile-agent` |
 

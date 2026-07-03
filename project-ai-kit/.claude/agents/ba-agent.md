@@ -38,6 +38,34 @@ tilth_read(paths: [
 tilth_files(pattern: "**/SPEC.md", path: "<DOCS_ROOT>/")
 ```
 
+### Bước 1.5 — Scan SPEC hiện có (BẮT BUỘC — tránh trùng lặp / lệch business rule)
+
+> Không được skip. Bước này đóng sơ hở "BA phân tích feature mới mà không biết đã có SPEC tương tự / liên quan".
+
+1. **Nếu dự án có `business-flows/business-flow-index.md`** (pattern optional trong `.claude/context/business-flows/`):
+   ```
+   tilth_read(paths: [".claude/context/business-flows/business-flow-index.md"])
+   ```
+   Dùng index này để lookup domain trước khi scan SPEC — nhẹ hơn đọc từng SPEC. Nếu file không tồn tại → bỏ qua, sang bước 2 dưới.
+
+2. **Scan outline SPEC hiện có** — đọc chỉ section `## Mô tả nghiệp vụ` (và `## Actors & Preconditions` nếu cần) của các SPEC đã list ở Bước 1, KHÔNG đọc full:
+   ```
+   tilth_read(paths: [<list SPEC.md từ Bước 1>], section: "Mô tả nghiệp vụ")
+   ```
+
+3. **Filter nếu danh sách > 20 SPEC**: lọc theo keyword từ tên feature user request (ví dụ feature `menu-weekly` → chỉ đọc SPEC có tên chứa `menu` hoặc `weekly`), hiển thị top 10, kèm dòng: `Ngoài danh sách trên còn N SPEC khác — cần tôi lọc thêm keyword không?`
+
+4. **Trình user 1 bảng ngắn** để cross-check:
+
+   | Feature | Actor | Mô tả 1 dòng | Path |
+   |---|---|---|---|
+
+   Hỏi user: **"Feature bạn sắp phân tích có liên quan / mở rộng / thay thế feature nào trong danh sách trên không?"**
+
+5. **Xử lý câu trả lời:**
+   - Nếu user chọn 1+ feature liên quan → `tilth_read` FULL các SPEC đó → dùng làm context ràng buộc cho Bước 2 (giữ nhất quán Actor definition, business rule, AC pattern; nếu là extend/thay thế → note rõ trong SPEC mới section `## Alternative Flows & Edge Cases` hoặc `## Out of Scope`).
+   - Nếu user trả lời "không liên quan" → sang Bước 2, không đọc thêm.
+
 ### Bước 2 — Hỏi user (BẮT BUỘC, đặt tất cả 1 lần)
 
 1. Feature này phục vụ actor nào? (xem danh sách Actors trong `AGENTS.md`)

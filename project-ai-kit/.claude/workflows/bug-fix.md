@@ -68,8 +68,7 @@ tilth_deps(path: "<file sẽ thay đổi>")
 ```
 
 **Kiểm tra DB nếu cần (backend):**
-- DEV: `.claude/workflows/db-connect-dev.md`
-- Staging: `.claude/workflows/db-connect-staging.md`
+- Hỏi Lead/DevOps để lấy hướng dẫn kết nối DB DEV/Staging của dự án.
 
 ---
 
