@@ -1,16 +1,10 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
-  // ============================================================
-  // PERMISSIONS
-  // Ưu tiên đánh giá: deny > allow > ask > defaultMode
-  // ============================================================
   "permissions": {
     "allow": [
-      // --- Đọc / tìm kiếm code (an toàn tuyệt đối) ---
       "Read(**)",
       "Glob(**)",
       "Grep(**)",
-      // --- Flutter / Dart ---
       "Bash(flutter pub get)",
       "Bash(flutter pub upgrade*)",
       "Bash(flutter pub add*)",
@@ -34,7 +28,6 @@
       "Bash(flutter doctor*)",
       "Bash(flutter devices)",
       "Bash(flutter build*)",
-      // --- React Native / Node ---
       "Bash(npm install)",
       "Bash(npm ci)",
       "Bash(npm run *)",
@@ -53,18 +46,15 @@
       "Bash(npx react-native*)",
       "Bash(node -v)",
       "Bash(npx expo*)",
-      // --- iOS (CocoaPods / Xcode CLI) ---
       "Bash(pod install*)",
       "Bash(pod update*)",
       "Bash(pod repo update)",
       "Bash(xcodebuild -version)",
       "Bash(xcrun simctl list*)",
-      // --- Android (Gradle) ---
       "Bash(./gradlew *)",
       "Bash(gradlew *)",
       "Bash(adb devices)",
       "Bash(adb logcat*)",
-      // --- Git (thao tác đọc / an toàn) ---
       "Bash(git status)",
       "Bash(git diff*)",
       "Bash(git log*)",
@@ -72,7 +62,6 @@
       "Bash(git show*)",
       "Bash(git add*)",
       "Bash(git stash*)",
-      // --- Editing trong phạm vi source code ---
       "Edit(lib/**)",
       "Edit(src/**)",
       "Edit(test/**)",
@@ -83,7 +72,6 @@
       "mcp__codegraph__*"
     ],
     "ask": [
-      // Các thao tác có ảnh hưởng nhưng cần xác nhận thủ công
       "Bash(git commit*)",
       "Bash(git push*)",
       "Bash(git merge*)",
@@ -101,7 +89,6 @@
       "Edit(build.gradle*)"
     ],
     "deny": [
-      // --- Không bao giờ đọc/ghi secrets & credentials ---
       "Read(./.env)",
       "Read(./.env.*)",
       "Read(**/.env)",
@@ -117,7 +104,6 @@
       "Read(**/firebase_options.dart)",
       "Read(**/key.properties)",
       "Read(**/local.properties)",
-      // --- Không cho đụng tới build output / cache nặng ---
       "Edit(**/build/**)",
       "Edit(**/*.g.dart)",
       "Edit(**/*.freezed.dart)",
@@ -127,7 +113,6 @@
       "Edit(**/node_modules/**)",
       "Edit(**/DerivedData/**)",
       "Edit(**/.gradle/**)",
-      // --- Lệnh nguy hiểm ---
       "Bash(rm -rf *)",
       "Bash(git push --force*)",
       "Bash(git push -f*)",
@@ -137,10 +122,6 @@
       "Bash(npm publish)"
     ]
   },
-  // ============================================================
-  // HOOKS
-  // Tự động format code sau khi Claude sửa file (giảm review thủ công)
-  // ============================================================
   "hooks": {
     "PostToolUse": [
       {

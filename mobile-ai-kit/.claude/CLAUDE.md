@@ -4,20 +4,23 @@
 
 #### Công cụ:
 
-- <a id="tool-codegraph">codegraph: [codegraph](../.tools/codegraph.md)</a>
+- <a id="tool-codegraph">codegraph: [codegraph](tools/codegraph.md)</a>
+- <a id="tool-understand-anything">Understand-Anything: [Understand-Anything](tools/understand-anything.md)</a>
 - <a id="tool-figma">figma: figma-mcp.</a>
 - <a id="tool-notebooklm">notebooklm: notebooklm-mcp.</a>
 
 ### Tài liệu tham khảo:
 
-1. <a id="reference-1">[Coding Convention](../.rules/project-base/flutter_common_rules.md)</a>
-2. <a id="reference-2">[SECURITY.md](../.rules/SECURITY.md)</a>
-3. <a id="reference-3">[RELIABILITY.md](../.rules/RELIABILITY.md)</a>
+1. <a id="reference-1">[Coding Convention](rules/project-base/flutter_common_rules.md)</a>
+2. <a id="reference-2">[SECURITY.md](rules/SECURITY.md)</a>
+3. <a id="reference-3">[RELIABILITY.md](rules/RELIABILITY.md)</a>
+4. <a id="reference-4">[Planning Spec](rules/planning-spec.md)</a>
+5. <a id="reference-5">[Skill Selection Spec](rules/skill-selection-spec.md)</a>
 
 ## 0. Bảo mật - Ưu tiên tối thượng tuyệt đối
 
 - Luôn đặt các nguyên tắc bảo mật lên hàng đầu.
-- Mọi dòng code, kiến trúc hệ thống hoặc giải pháp đề xuất đều phải tuân thủ nghiêm ngặt các quy tắc bảo mật (theo đúng tinh thần của file [mobile-ai-kit/.rules/SECURITY.md](#reference-2) đã được đề cập) trước khi xem xét đến bất kỳ yếu tố nào khác.
+- Mọi dòng code, kiến trúc hệ thống hoặc giải pháp đề xuất đều phải tuân thủ nghiêm ngặt các quy tắc bảo mật (theo đúng tinh thần của file [SECURITY.md](#reference-2) đã được đề cập) trước khi xem xét đến bất kỳ yếu tố nào khác.
 
 ## 1. Suy nghĩ trước khi code
 
@@ -83,20 +86,26 @@ Hãy tuân thủ mọi quy định sau đây:
 
 - Code Rules -> Xem [Reference số 1](#reference-1)
 - RELIABILITY -> Xem [Reference số 3](#reference-3)
+- Skill Selection -> Xem [Reference số 5](#reference-5) (áp dụng ở bất kỳ bước nào cần thực thi theo đúng framework/skill, không riêng bước code)
 
-## 6. Workflow cho tất cả các task:
+## 6. Workflow theo loại task
 
-0. Nếu bạn đang tìm kiếm file, folder, v.v., vui lòng sử dụng [codegraph](#tool-codegraph).
-1. Lấy spec từ [notebookLM](#tool-notebooklm), nếu không có, vui lòng hỏi tôi.
-2. Nếu task là implement, integration hoặc có yêu cầu từ tôi, hãy check design từ [figma](#tool-figma), nếu không có, vui lòng hỏi tôi.
-3. Tiến hành code dựa trên spec và design đã nhận, yêu cầu sử dụng skill [find-skills](../.skills/find-skills/README.md) với [language](#language) và tuân thủ [coding convention](#reference-1).
-4. Chạy các lệnh kiểm tra cú pháp (syntax check) cho [language](#language).
-5. Đánh giá mức độ ảnh hưởng (impact assessment) và gửi cho tôi đánh giá mức độ ảnh hưởng (impact assessments) của bạn
-6. Vui lòng sử dụng các tag sau cho từng bước để track tiến độ (progress):
-   - [x] = done
-   - [ ] = pending
+1. Nếu bạn đang tìm kiếm file, folder, symbol, v.v., BẮT BUỘC dùng source-map tool thay vì grep/find thủ công, chọn theo dự án đang setup:
+   - Có `.codegraph/` ở root repo → dùng [codegraph](#tool-codegraph).
+   - Không có `.codegraph/` nhưng có `.understand-anything/` ở root repo → dùng [Understand-Anything](#tool-understand-anything).
+   - Không có cả hai → dự án chưa setup source-map tool, dùng grep/find/glob thông thường và báo lại để tôi cân nhắc setup (xem `guideline/step1-install-source-map.md`).
+2. Xác định LOẠI TASK, sau đó CHỈ đọc đúng 1 file spec tương ứng trong `.claude/workflows/` (không đọc các file loại khác) để tiết kiệm token và tránh áp rule thừa:
 
-Hãy confirm có cần viết unit test cho task này không. nếu có, hãy thực hiện sau bước 6.
+   | Loại task | Spec |
+   |---|---|
+   | Fix bug | [fix-bug.md](workflows/fix-bug.md) |
+   | Điều tra / phân tích (chưa chắc code) | [investigate.md](workflows/investigate.md) |
+   | Feature mới / implement / integration | [new-feature.md](workflows/new-feature.md) |
+   | Refactor / migrate (không đổi behavior) | [refactor.md](workflows/refactor.md) |
+   | Performance / Optimization | [performance.md](workflows/performance.md) |
+   | Loại khác không thuộc trên | [default.md](workflows/default.md) |
+
+3. Nếu chưa rõ task thuộc loại nào, hỏi tôi trước khi chọn spec.
 
 ### 7. OUTPUT_CONVENTION:
 
