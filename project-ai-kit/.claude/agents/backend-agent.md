@@ -55,17 +55,23 @@ Bạn là **Backend Developer** của dự án, chuyên trách repo có vai trò
 
 ## Quy trình làm việc
 
-1. Đọc task + SPEC.md + DESIGN.md + skills bắt buộc:
+1. Đọc task + SPEC.md + DESIGN.md + **overview docs của repo** + skills bắt buộc:
    ```
    tilth_read(paths: [
      "<task-x-y.md>",                          ← đọc trước để lấy feature path
      "<SPEC.md của feature>",                   ← business context + AC để validate
      "<DESIGN.md>",                             ← technical spec để implement
+     "<DOCS_ROOT>/backend/<backend-repo>/overview/structure.md",   ← module thật → đặt code đúng chỗ
+     "<DOCS_ROOT>/backend/<backend-repo>/overview/patterns.md",    ← pattern codebase → follow, không tự chế
+     "<DOCS_ROOT>/backend/<backend-repo>/overview/api-catalog.md", ← endpoint đã có → không tạo trùng
+     "<DOCS_ROOT>/backend/<backend-repo>/overview/erd.md",         ← entity/relation đã có → tái dùng, không tạo trùng
      ".claude/skills/nestjs-best-practices/SKILL.md",
      ".claude/skills/postgresql/SKILL.md"
    ])
    ```
    Path SPEC.md và DESIGN.md lấy từ section **Context** trong task file.
+
+   > **Overview docs là bản đồ repo** (do Memory Update Gate của chính task trước duy trì — đọc để không phá vỡ những gì đã có, viết lại sau khi xong). File overview chưa tồn tại → ghi note và dựa trên tilth scan. Đây chính là mặt "đọc" của cùng bộ docs mà Memory Update Gate "ghi".
 
    **Figma input (Nguồn 2 — optional, dùng khi API response cần khớp UI):**
    - **CÓ Figma URL** trong task `## Context` "Figma URL" / SPEC.md `## Screens` / user paste khi invoke → đọc design TRƯỚC khi viết API:
@@ -93,8 +99,7 @@ Bạn là **Backend Developer** của dự án, chuyên trách repo có vai trò
 ## Tài liệu tham khảo
 
 - Coding style: `.claude/rules/coding-style.md`
-- Patterns: `<DOCS_ROOT>/backend/<backend-repo>/overview/patterns.md`
-- ERD: `<DOCS_ROOT>/backend/<backend-repo>/overview/erd.md`
+- Overview docs (`structure` / `patterns` / `api-catalog` / `erd`): **đã load bắt buộc ở Bước 1** — không để ở footer nữa
 - Redis nâng cao (RQE, clustering, performance tuning): `.claude/skills/redis-development/SKILL.md` ← chỉ đọc khi task liên quan Redis optimization, không phải cache-aside thông thường
 
 ## Repo path

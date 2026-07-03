@@ -59,9 +59,28 @@ Kiểm tra `SPEC.md ## Screens` cột "Figma Link" hoặc user paste Figma URL t
 
 > Tra cứu tên repo + Epic code chính xác trong bảng Ecosystem của `AGENTS.md`.
 
-## Bước 3 — Phân tích code hiện tại (BẮT BUỘC)
+## Bước 3 — Load overview docs của repo (BẮT BUỘC — đọc bản đồ trước)
 
-Với mỗi repo bị ảnh hưởng:
+> **Đây là "đọc docs" trong nguyên tắc "đọc docs → xác nhận tilth → generate".** Overview docs là bản đồ toàn cảnh repo (do Memory Update Gate của Dev duy trì). Không đọc = thiết kế mù: dễ trùng endpoint đã có, bỏ sót entity, đặt sai module. `tilth` chỉ tìm hẹp từng symbol — không thay được cái nhìn toàn cảnh này.
+
+Với **mỗi repo bị ảnh hưởng** (map ở Bước 2), đọc đủ 4 overview docs của repo đó TRƯỚC khi deep-dive:
+
+```
+tilth_read(paths: [
+  "<DOCS_ROOT>/<layer>/<repo>/overview/structure.md",     ← module/thư mục thật → đặt design đúng chỗ
+  "<DOCS_ROOT>/<layer>/<repo>/overview/patterns.md",      ← pattern codebase đang dùng → không phá vỡ convention
+  "<DOCS_ROOT>/<layer>/<repo>/overview/api-catalog.md",   ← (backend) endpoint đã có → không thiết kế trùng
+  "<DOCS_ROOT>/<layer>/<repo>/overview/erd.md"            ← (backend) entity đã có → tái dùng, không tạo trùng
+])
+```
+
+> `<layer>` = `backend` / `frontend` / `mobile` theo vai trò repo. Repo `frontend`/`mobile` bỏ `api-catalog.md` + `erd.md` (chỉ có `structure.md` + `patterns.md`). Nếu file overview chưa tồn tại (repo mới, chưa có Dev task nào chạy) → ghi note "overview chưa có, design dựa trên tilth scan trực tiếp" và tiếp tục — không bị block.
+
+Đối chiếu bản đồ với SPEC: endpoint SPEC cần đã có trong `api-catalog.md` chưa? Entity cần đã có trong `erd.md` chưa? → quyết định thêm mới vs tái dùng vs sửa.
+
+## Bước 3b — Phân tích code hiện tại (BẮT BUỘC)
+
+Với mỗi repo bị ảnh hưởng, dùng tilth xác nhận chi tiết những gì overview docs chỉ ra:
 
 ```
 tilth_search(query: "<entity/service/component liên quan>")

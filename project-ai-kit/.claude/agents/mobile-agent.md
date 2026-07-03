@@ -102,15 +102,18 @@ socket.disconnect();
    tilth_read(paths: ["<task-x-y.md>"])
    ```
 
-2. Đọc SPEC.md + DESIGN.md + skill (song song):
+2. Đọc SPEC.md + DESIGN.md + **overview docs của repo** + skill (song song):
    ```
    tilth_read(paths: [
      "<SPEC.md của feature>",                   ← business context + AC
      "<DESIGN.md>",                             ← API contract + data model
+     "<DOCS_ROOT>/mobile/<mobile-repo>/overview/structure.md",   ← thư mục thật (feature/provider/model) → đặt file đúng chỗ
+     "<DOCS_ROOT>/mobile/<mobile-repo>/overview/patterns.md",    ← pattern Riverpod/Retrofit/freezed đang dùng → follow, không tự chế
      ".claude/skills/flutter-review/SKILL.md"
    ])
    ```
    Path lấy từ section **Context** trong task file.
+   > Overview docs là bản đồ repo do Memory Update Gate duy trì — đọc để không phá convention, viết lại sau khi xong. File chưa tồn tại → ghi note và dựa trên tilth scan.
 
 3. **Figma input (Nguồn 2 — ưu tiên cao cho UI screen mobile):**
    - Lấy `<path_figma>` theo thứ tự:
@@ -138,7 +141,7 @@ socket.disconnect();
 ## Tài liệu tham khảo
 
 - Coding style: `.claude/rules/coding-style.md`
-- Mobile structure: `<DOCS_ROOT>/mobile/<mobile-repo>/overview/structure.md`
+- Overview docs (`structure` / `patterns`): **đã load bắt buộc ở Bước 2** — không để ở footer nữa
 
 ## Output
 

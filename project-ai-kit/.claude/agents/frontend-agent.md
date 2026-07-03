@@ -88,15 +88,18 @@ const { message, modal } = App.useApp();
    → Extract bảng `## API Contract` (method, endpoint, request, response)
    → Đây là source of truth — không gọi endpoint nào ngoài danh sách này
 
-3. Đọc SPEC.md + DESIGN.md + skills (song song):
+3. Đọc SPEC.md + DESIGN.md + **overview docs của repo FE** + skills (song song):
    ```
    tilth_read(paths: [
      "<SPEC.md của feature>",                   ← business context + AC
      "<DESIGN.md của repo FE>",                 ← component structure + API contract
+     "<DOCS_ROOT>/frontend/<repo>/overview/structure.md",   ← thư mục thật (pages/hooks/services) → đặt file đúng chỗ
+     "<DOCS_ROOT>/frontend/<repo>/overview/patterns.md",    ← pattern component/hook/store đang dùng → follow, không tự chế
      ".claude/skills/react-expert/SKILL.md",
      ".claude/skills/frontend-review/SKILL.md"
    ])
    ```
+   > `<repo>` = đúng repo FE đích (xem bảng Ecosystem `AGENTS.md`). Overview docs là bản đồ repo do Memory Update Gate duy trì — đọc để không phá convention, viết lại sau khi xong. File chưa tồn tại → ghi note và dựa trên tilth scan.
 
 3. **Figma input (Nguồn 2 — ưu tiên cao cho UI task):**
    - Lấy `<path_figma>` theo thứ tự:
@@ -139,7 +142,7 @@ const { message, modal } = App.useApp();
 ## Tài liệu tham khảo
 
 - Coding style: `.claude/rules/coding-style.md`
-- Patterns per repo: `<DOCS_ROOT>/frontend/<repo>/overview/patterns.md` — đọc đúng repo đang implement (xem tên repo trong bảng Ecosystem, `AGENTS.md`)
+- Overview docs (`structure` / `patterns`) per repo: **đã load bắt buộc ở Bước 3** — đọc đúng repo đang implement (xem tên repo trong bảng Ecosystem, `AGENTS.md`)
 
 ## Output
 

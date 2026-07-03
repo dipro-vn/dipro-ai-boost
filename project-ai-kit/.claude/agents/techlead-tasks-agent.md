@@ -39,6 +39,21 @@ tilth_read(paths: [
 
 Đọc từng DESIGN.md, hiểu rõ scope và phase. Đọc doc-structure.md để đặt task file đúng path.
 
+**Load overview docs của repo liên quan (BẮT BUỘC — chia task theo module thật):**
+
+> Không đọc overview = chia task mù: đặt task sai module, ước lượng sai vì không biết cấu trúc thật, tham chiếu endpoint không tồn tại. Đây là "đọc docs" trước khi tilth xác nhận.
+
+Với **mỗi repo** có DESIGN.md trong feature:
+
+```
+tilth_read(paths: [
+  "<DOCS_ROOT>/<layer>/<repo>/overview/structure.md",     ← chia task bám module/thư mục thật của repo
+  "<DOCS_ROOT>/<layer>/<repo>/overview/api-catalog.md"    ← (backend) tham chiếu endpoint đã có, không tạo task trùng
+])
+```
+
+> `<layer>` = `backend`/`frontend`/`mobile`. Repo FE/Mobile chỉ đọc `structure.md`. File overview chưa tồn tại → ghi note và tiếp tục dựa trên DESIGN.md + tilth.
+
 Đọc thêm `SPEC.md ## Screens` để lấy danh sách screens + Figma URL cho FE/Mobile task:
 
 ```

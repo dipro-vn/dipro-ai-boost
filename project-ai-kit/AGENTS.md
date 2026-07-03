@@ -183,6 +183,8 @@ Chi tiết trigger Designer / QC + thứ tự tham gia → `.claude/workflows/ne
 
 ## Memory Update Gate — sau mỗi Dev task
 
+> **Đây là mặt "GHI" của overview docs. Mặt "ĐỌC" là bắt buộc ở Bước 1 của mỗi Dev agent + Bước 3 Tech Lead Design + Bước 1 Tech Lead Tasks** — cùng một bộ file. Overview docs không phải write-only: Tech Lead đọc chúng để thiết kế/chia task không trùng, Dev đọc chúng để code đúng pattern, rồi ghi lại thay đổi tại đây. Nếu sửa gate này (thêm/bớt file) → cập nhật luôn danh sách load ở các agent tương ứng để hai mặt luôn khớp.
+
 | Thay đổi | File cần cập nhật (full path) |
 |---|---|
 | Endpoint mới / đổi method/path/response | `<DOCS_ROOT>/backend/<backend-repo>/overview/api-catalog.md` |
