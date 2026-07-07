@@ -1,8 +1,10 @@
 # AI Agents Workflow — Đọc gì · Thực thi gì · Output gì
 
-> **Mục đích:** tài liệu tra cứu nhanh cho user/PM audit từng agent làm gì trong pipeline BMAD. Nội dung tổng hợp từ 12 file trong `.claude/agents/`. Khi sửa workflow của agent nào → **sửa file agent tương ứng, không sửa file này** (sync lại sau).
+> **Mục đích:** tài liệu tra cứu nhanh **cho user/PM (human)** audit từng agent làm gì trong pipeline BMAD. Nội dung tổng hợp từ 12 file trong `.claude/agents/`. Khi sửa workflow của agent nào → **sửa file agent tương ứng, không sửa file này** (sync lại sau).
 >
 > **Không phải canonical** — canonical là `.claude/agents/<agent>.md`. File này chỉ là bản tổng hợp.
+>
+> **Vị trí:** đặt ở root `project-ai-kit/` (không phải trong `.claude/`) — cố ý để agents không auto-load. Chỉ human đọc khi cần audit / onboarding developer mới.
 
 ---
 
@@ -13,7 +15,7 @@
 | 0 | Setup | `init-agent` | `/init-kit` (1 lần) | — |
 | 1 | Discovery | `ba-agent` | `/create-spec <feature>` | — |
 | 2a | Design | `techlead-design-agent` | `/create-design <SPEC.md>` | 2b, 2c |
-| 2b | Design | `qc-agent` (manual TC lần 1) | `/test/generate_manual_testcases_rbt` | 2a, 2c |
+| 2b | Design | `qc-agent` (manual TC lần 1) | Pipeline: `/test/analyze-req` → `/test/plan-tcs` → `/test/gen-tcs` | 2a, 2c |
 | 2c | Design | `designer-agent` | `/create-ui-design <SPEC.md>` | 2a, 2b |
 | 3 | Planning | `techlead-tasks-agent` | `/create-tasks <feature/>` | — |
 | 4 | Planning | `pm-agent` | `/create-plan <feature/>` (+ optional `/create-backlog`) | — |
@@ -26,6 +28,8 @@
 | 7a | Test | `qc-agent` (execution lần 2) | `/test/generate_test_execution_checklist` | 7c |
 | 7b | Test | `qc-agent` (regression optional) | `/test/generate_regression_suite` | — |
 | 7c | Test | `qc-automation-agent` | `"Hãy là QC Automation, test feature: ..."` | 7a |
+
+> **On-demand (không thuộc phase-gate):** `/test/review-tcs` (deep review khi ≥2 QC) · `/test/export-xlsx <path> web\|app` (Excel bàn giao) · `/test/gen-bug-report` (bug template).
 
 **Handover chain:** natural language (copy-paste vào turn kế tiếp) hoặc slash command — cả hai cùng load file agent.
 
@@ -81,15 +85,15 @@
 
 ### 3.3 `qc-agent` — QC Manual Tester
 
-> **Chạy 3 lần trong pipeline:** lần 1 = sinh TC sau SPEC (2b) · lần 2 = execution checklist trước release (7a) · lần 3 song song với 7c (QC Automation)
+> **Chạy 3 lần trong pipeline:** lần 1 = sinh TC sau SPEC (2b — pipeline 4 bước) · lần 2 = execution checklist trước release (7a) · lần 3 song song với 7c (QC Automation)
 
 | | |
 |---|---|
-| **Đọc Bước 1** | SPEC.md · `.claude/skills/rbt_manual_testing/SKILL.md` |
+| **Đọc Bước 1** | SPEC.md · `.claude/skills/rbt_manual_testing/SKILL.md` (4 sections: context/analyze/plan/gen) |
 | **Đọc Figma (optional)** | `get_screenshot` + `get_design_context` (từ ## Screens Figma Link) |
-| **Thực thi** | Chọn mode: **QUICK** (1 module đơn giản) · **FULL RBT 6 bước** (module phức tạp) · **Cross-module Pairwise** (nhiều dimension) · **Update delta** · **Regression** · **Execution** · **Exploratory** · **Bug report** · **Test data** · **Onboarding** |
-| **Output** | `<feature>/test-cases/tc_<module>.md` · `regression_<release>.md` · `checklist_<release>.md` · `bug-reports/BUG_*.md` · `cross_module_plan.md` — mỗi TC có visual states (Normal/Focus/Filled/Error/Disabled/Loading) + Traceability Matrix AC ↔ TC (100% cover) |
-| **Không** | Sinh TC khi chưa đọc SPEC · Test data placeholder · Gộp validation nhiều field · Auto-submit bug lên Backlog · Lẫn vai trò với qa-agent (không chạy test suite) |
+| **Thực thi** | **Pipeline chính (3 bước)**: `/test/analyze-req` (Q&A + AC + Screen Inventory) → `/test/plan-tcs` (Screen → Component + Risk + Technique) → `/test/gen-tcs` (TC chi tiết + Visual + Validation). **On-demand (ngoài pipeline)**: `/test/review-tcs` (deep review 8 tiêu chí khi ≥2 QC) · `/test/export-xlsx <path> web\|app` (Excel bàn giao) · `/test/generate_regression_suite` (sau code change) · `/test/generate_test_execution_checklist` (pre-release) · `/test/gen-bug-report` (chuẩn hóa bug). **Delta update** khi SPEC đổi: re-run pipeline (analyze-req merge vào analysis.md có sẵn). |
+| **Output** | `<DOCS_ROOT>/features/<feature>/test-cases/<module>/{analysis.md, plan-tcs.md, test-cases.md}` (pipeline) · `review_report.md` · `test-cases.xlsx` (on-demand) · `regression_<release>.md` · `checklist_<release>.md` · `bug-reports/BUG_*.md` — mỗi TC có Traceability ID (link về AC-XX) + Visual states (Normal/Focus/Filled/Error/Disabled/Loading) |
+| **Không** | Sinh TC khi chưa đọc SPEC · Test data placeholder · Gộp validation nhiều field · Auto-submit bug lên Backlog · Lẫn vai trò với qa-agent (không chạy test suite) · Chạy `/gen-tcs` khi chưa có `plan-tcs.md` · Skip user confirm sau `/analyze-req` và `/plan-tcs` |
 
 ### 3.4 `designer-agent` — UI/UX Designer
 
@@ -201,6 +205,8 @@
 | 8 | Memory Update Gate có bị skip không? | Sau mỗi dev task, output phải liệt kê `api-catalog.md` / `erd.md` / `patterns.md` — updated hay skipped |
 | 9 | Handover message có natural language không? | Output cuối mỗi agent phải có `"Hãy là <role>, ..."` để user copy-paste |
 | 10 | Agent có commit tự động không? | KHÔNG được — chỉ commit khi user yêu cầu rõ ràng |
+| 11 | QC có chạy `/plan-tcs` trước `/gen-tcs` không? | `/gen-tcs` sẽ tự dừng nếu module chưa có `plan-tcs.md` — verify không skip bằng cách gọi thẳng `/gen-tcs` |
+| 12 | QC có handle TBD ACs đúng không? | `/gen-tcs` phải hỏi user chọn A/B/C khi phát hiện TBD AC, không tự đoán |
 
 ---
 
@@ -215,6 +221,8 @@
 | QA PASS nhưng vẫn miss AC | So với assumption thay vì SPEC | qa-agent Bước 3 đối chiếu AC ID từ SPEC.md |
 | Task quá lớn, dev không xong trong session | techlead-tasks-agent ước lượng sai | Enforce 4-8h/task, chia nhỏ nếu > 8h |
 | Backlog issues sync thiếu / sai | pm-agent Bước 4.2 verify metadata không kỹ | Tạo issue thử trước, user confirm mới batch |
+| QC gọi thẳng `/gen-tcs` khi chưa có `plan-tcs.md` | Skip pipeline steps | Command tự dừng + hướng dẫn quay lại `/plan-tcs` |
+| Test data placeholder ("email hợp lệ") lọt vào TC | `/gen-tcs` self-check yếu | Self-check tự grep placeholder, tự fix trước khi lưu |
 
 ---
 
@@ -224,6 +232,9 @@
 - **BMAD pipeline chi tiết:** `.claude/workflows/new-feature.md`
 - **Bug fix workflow:** `.claude/workflows/bug-fix.md`
 - **AI behavior policy:** `POLICIES.md` (always-loaded qua `CLAUDE.md`)
+- **Companion rules:** `.claude/rules/SECURITY.md` (restricted files) · `POLICY.md` (IP protection) · `RELIABILITY.md` (no hallucination)
 - **Ecosystem (repos + actors + docs root):** `AGENTS.md` section `<ecosystem>`
 - **Context files:** `.claude/context/` (đọc on-demand theo cột "Ai đọc" trong `AGENTS.md`)
 - **Skills:** `.claude/skills/README.md`
+- **Commands:** `.claude/commands/README.md`
+- **QC pipeline 4 bước chi tiết:** `.claude/agents/qc-agent.md` — section "Quy trình chuẩn"

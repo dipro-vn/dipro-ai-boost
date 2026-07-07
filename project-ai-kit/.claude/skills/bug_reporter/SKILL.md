@@ -1,6 +1,6 @@
 ---
 name: bug_reporter
-description: Skill chuẩn hóa bug reports — phân loại severity/priority, sinh steps to reproduce rõ ràng, format sẵn sàng paste vào Backlog.
+description: Skill chuẩn hóa bug reports — phân loại bug type/severity/priority, sinh steps to reproduce rõ ràng, format sẵn sàng paste vào Backlog.
 ---
 
 # Bug Reporter
@@ -26,6 +26,7 @@ Skill này giúp QC viết bug reports **chuẩn, đủ thông tin, không mơ h
 |-------|-------|
 | **Bug ID** | Format: `BUG-[MODULE]-[SỐ]` (VD: `BUG-LOGIN-001`) |
 | **Tiêu đề** | Ngắn gọn, rõ impact: `[Màn hình] [Hành động] → [Kết quả sai]` |
+| **Bug Type** | Xem bảng phân loại Bug Type bên dưới |
 | **Environment** | OS, Browser/App version, URL/Build, Test account |
 | **Severity** | Xem bảng phân loại bên dưới |
 | **Priority** | Xem bảng phân loại bên dưới |
@@ -35,6 +36,25 @@ Skill này giúp QC viết bug reports **chuẩn, đủ thông tin, không mơ h
 | **Reproducibility** | Always / Intermittent (x/y lần) / Only once |
 | **Evidence** | Screenshot, video, console log (nếu có) |
 | **Root Cause Hint** | Gợi ý nơi có thể xảy ra lỗi (optional) |
+
+---
+
+## Phân Loại Bug Type
+
+| # | Bug Type | Tiêu chí phân loại |
+|---|----------|-------------------|
+| 1 | **UI Bug** | Sai font, màu sắc, layout, căn lề, padding/margin, responsive không đúng, không khớp Figma/Spec. Không ảnh hưởng logic |
+| 2 | **Functional Bug** | Chức năng không hoạt động đúng yêu cầu, sai logic nghiệp vụ, sai flow, lỗi lưu/cập nhật/hiển thị data |
+| 3 | **Validation Bug** | Sai format input, sai required/optional, thiếu hoặc sai error message, sai min/max length, chấp nhận data không hợp lệ |
+| 4 | **Performance Bug** | Phản hồi chậm, tốn thời gian tải, bị treo khi thao tác — thường kèm ngưỡng cụ thể (VD: >3s, >10s) |
+| 5 | **Compatibility Bug** | Giao diện hoặc chức năng không đúng trên một số browser, OS, hoặc thiết bị cụ thể |
+| 6 | **Security Bug** | Lỗ hổng cho phép truy cập trái phép, thay đổi data không qua xác thực, lộ thông tin nhạy cảm |
+| 7 | **REQ Bug** | Thiếu mô tả validation, thiếu màn hình, thiếu logic/công thức/trạng thái trong requirement — lỗi thuộc về spec, không phải code |
+| 8 | **Design Bug** | Design chưa đồng bộ (cùng template nhưng nhiều nơi khác nhau), thiếu states (hover, loading, empty, error, disabled), thiếu flow/animation |
+
+> **Phân biệt UI Bug vs Design Bug:** UI Bug = implement sai so với design đã có. Design Bug = design thiếu/sai từ đầu, chưa có gì để implement theo.
+
+> **Phân biệt Functional Bug vs Validation Bug:** Validation Bug = lỗi tại lớp kiểm tra đầu vào (input field). Functional Bug = lỗi ở logic xử lý sau khi data đã pass validation.
 
 ---
 
@@ -94,6 +114,7 @@ Precondition: Đăng nhập tài khoản admin@test.com, đang ở trang /users/
 
 | Field | Nội dung |
 |-------|---------|
+| **Bug Type** | Functional Bug |
 | **Severity** | Major |
 | **Priority** | P2 |
 | **Environment** | Chrome 124, macOS 14, https://staging.app.com, account: test@admin.com |
