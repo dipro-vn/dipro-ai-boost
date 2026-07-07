@@ -1,21 +1,21 @@
 ---
 name: RBT Manual Testing
-description: Skill sinh manual test cases theo quy trình AI-RBT — pipeline 3 bước per module (analyze-req → gen-tcs TS → gen-tcs TCs), context-roleplay chạy 1 lần cho project. Dùng kết hợp với requirements_analyzer và testing_dimensions.
+description: Skill sinh manual test cases theo quy trình AI-RBT — pipeline 3 bước per module (analyze-req → plan-tcs → gen-tcs), context.md điền tay 1 lần cho project. Dùng kết hợp với requirements_analyzer và testing_dimensions.
 ---
 
 # RBT Manual Testing
 
 ## Description
 
-Skill hỗ trợ sinh manual test cases chất lượng cao theo quy trình Risk-Based Testing (RBT). Được tổ chức thành **5 sections**, tương ứng với pipeline 3 bước per module + 1 bước setup project.
+Skill hỗ trợ sinh manual test cases chất lượng cao theo quy trình Risk-Based Testing (RBT). Được tổ chức thành **4 sections**, tương ứng pipeline 3 bước per module + 1 bước setup project (không cần command).
 
 **Pipeline:**
 ```
-/context-roleplay  → /analyze-req  → /decompose-modules  → /gen-tcs
+context.md (điền tay 1 lần) → /analyze-req → /plan-tcs → /gen-tcs
 ```
 
 **Nguyên tắc cốt lõi:**
-- **Human Strategy:** Con người xác định chiến lược, mức độ rủi ro và tiêu chuẩn
+- **Human Strategy:** Con người xác định chiến lược, mức độ rủi ro và tiêu chuẩn — thể hiện rõ nhất ở bước `/plan-tcs`, nơi user duyệt cấu trúc Screen/Component trước khi AI sinh hàng loạt TC
 - **AI Execution:** AI thực hiện phân tích, viết TCs và rà soát lỗ hổng
 - **Human Verification:** Con người kiểm tra lại kết quả trước khi chốt
 
@@ -26,31 +26,22 @@ Skill hỗ trợ sinh manual test cases chất lượng cao theo quy trình Risk
 Sử dụng skill này khi:
 - Sinh manual test cases từ requirements / user stories
 - Phân tích requirements để phát hiện ambiguity và verify AC
-- Phân rã hệ thống thành modules / features
-- Xây dựng test scenarios có traceability với AC
+- Lên plan triển khai test (phân rã Screen/Component, risk level) có traceability với AC
 - Áp dụng Risk-Based Testing (đánh giá rủi ro cho test cases)
 - Chuẩn hóa test cases sang bảng Markdown (Backlog/Excel format)
 
 **KHÔNG** sử dụng skill này khi:
-- Chỉ cần sinh test data riêng lẻ → dùng `/gen-test-data`
 - Cần chuẩn hóa bug report → dùng `/gen-bug-report`
 
 ---
 
-# Section 1: Context & Role-play
+# Section 1: Context Setup
 
-**Command tương ứng:** `/context-roleplay`
+**Không có command riêng** — `context.md` là file điền tay.
 
-**Mục đích:** Thiết lập vai trò Senior QA Engineer và nạp bối cảnh dự án trước khi phân tích.
-
-**Agent phải:**
-1. Thu thập thông tin project (chạy 1 lần duy nhất):
-   - Tên project + mô tả hệ thống
-   - Actors và vai trò
-   - **Platform: Web / Mobile / Desktop / Nhiều platform?**
-   - Business rules toàn cục (áp dụng ở mọi module)
-2. Filter trước khi ghi — áp rule *"Đây là rule của cả project hay của riêng module này?"* Chỉ ghi thông tin là rule của cả project
-3. Lưu ra `context.md` ở **root folder** — được CLAUDE.md auto-load vào mọi session
+**Khi nào cần:**
+- **Project-base** (context.md do PM's agent flow tạo và maintain): QC không cần làm gì — context.md đã tồn tại, được CLAUDE.md auto-load.
+- **Labo / Maintain** (dùng kit rời, chưa có context.md): QC tự tạo file `context.md` ở **root project**, copy template bên dưới và điền tay.
 
 **Output file:** `context.md` (root project)
 
@@ -72,7 +63,7 @@ Mô tả: [Hệ thống làm gì, đối tượng dùng là ai]
 - Output language: Tiếng Việt
 ```
 
-> Giữ ngắn — dưới 20 dòng. Thông tin đặc thù module để trong `## Summary` của `analysis.md`.
+> Giữ ngắn — dưới 20 dòng. Thông tin đặc thù module để trong `## Summary` của `analysis.md`. Filter trước khi ghi: *"Đây là rule của cả project hay của riêng module này?"* — chỉ ghi thông tin là rule của cả project.
 
 ---
 
@@ -80,7 +71,7 @@ Mô tả: [Hệ thống làm gì, đối tượng dùng là ai]
 
 **Command tương ứng:** `/analyze-req`
 
-**Mục đích:** Phân tích requirements để phát hiện điểm mờ (Q&A) và mapping REQ → AC. Hai việc chạy song song vì Q&A làm AC chất lượng hơn. Output là bộ AC đủ tốt để triển khai Test Scenarios.
+**Mục đích:** Phân tích requirements để phát hiện điểm mờ (Q&A) và mapping REQ → AC. Hai việc chạy song song vì Q&A làm AC chất lượng hơn. Output là bộ AC + Screen Inventory đủ tốt để lên `/plan-tcs`.
 
 **Agent phải:**
 1. Đọc requirements doc — project context đã được auto-load qua CLAUDE.md
@@ -97,7 +88,8 @@ Mô tả: [Hệ thống làm gì, đối tượng dùng là ai]
    - Map từng requirement thành Acceptance Criteria có thể kiểm chứng
    - Đánh dấu AC nào cần clarify từ Q&A (Status: TBD)
 
-3. Tổng hợp vào `analysis.md` — 3 sections: Summary, Q&A, AC
+3. Nếu có design input đã cross-check: lưu lại danh sách frame/screen đã confirm vào section **Screen Inventory** — để `/plan-tcs` dùng trực tiếp, không đọc lại Figma hay đoán cấu trúc từ text.
+4. Tổng hợp vào `analysis.md` — 4 sections: Summary, Q&A, AC, Screen Inventory (nếu có)
 
 **Output file:** `testing/[module]/analysis.md`
 
@@ -113,7 +105,7 @@ Mô tả: [Hệ thống làm gì, đối tượng dùng là ai]
 |----|-----------|--------|--------------------------------------|--------|----------|--------|
 | AMB-01 | REQ-XX | [tên màn hình] | ... Đề xuất: ... | ... | High / Medium / Low | TBD |
 
-> **TBD** = chưa được PM/BA confirm | **Answered** = đã có câu trả lời (dùng `/sync-qa` để update từ file Q&A công ty)
+> **TBD** = chưa được PM/BA confirm | **Answered** = đã có câu trả lời
 
 ---
 
@@ -123,6 +115,13 @@ Mô tả: [Hệ thống làm gì, đối tượng dùng là ai]
 |--------|-------|------------|--------|
 | REQ-01 | AC-01 | ... | Confirmed / Assumed / TBD |
 
+## Screen Inventory
+*(chỉ có nếu đã cross-check với design — Figma/screenshot/PDF)*
+
+| Screen/Frame | Nguồn (Figma frame name) | Ghi chú |
+|---|---|---|
+| [Tên screen] | [Frame name trong Figma] | ... |
+
 ## History
 - v1 ([ngày]): /analyze-req — khởi tạo
 ```
@@ -131,105 +130,83 @@ Mô tả: [Hệ thống làm gì, đối tượng dùng là ai]
 
 ---
 
-# Section 3: Module Decomposition
+# Section 3: TC Implementation Plan
 
-**Command tương ứng:** `/decompose-modules`
+**Command tương ứng:** `/plan-tcs`
 
-**Mục đích:** Phân rã tính năng thành các Module / Sub-module nhỏ, xác định risk level để định hướng độ sâu test.
+**Mục đích:** Xác định chiến lược test ở cấp module — cấu trúc phân rã Screen/Component + risk level + technique hint — trước khi sinh TC. Đây là bước **bắt buộc**, thể hiện nguyên tắc Human Strategy.
 
 **Agent phải:**
-1. Đọc `analysis.md` (Summary section có đủ module context)
-2. Phân rã theo 1 trong 2 cách:
-   - **Theo UI:** Header, Data Table, Form popup, Sidebar...
-   - **Theo luồng:** Flow tạo mới, Flow chỉnh sửa, Flow xóa...
-3. Mô tả ngắn gọn chức năng từng Module
-4. Đánh giá Risk Level per sub-module:
-   - **High:** Nghiệp vụ quan trọng, liên quan tiền/bảo mật/phân quyền
-   - **Medium:** Luồng chính nhưng không critical
-   - **Low:** UI validation, happy path đơn giản
-5. Chỉ ra Dependencies giữa các Module
+1. Đọc `analysis.md` (Summary + AC + Screen Inventory nếu có) + `context.md` (platform, auto-load)
+2. **Xác định Screen (đơn vị màn hình)** — tổng quát, không giới hạn CRUD List/Create/Edit/Detail. 1 Screen = 1 đơn vị điều hướng riêng biệt user thực sự thấy (1 URL riêng, 1 dialog full-screen, 1 step trong wizard, 1 tab riêng).
+   - Có Screen Inventory → dùng trực tiếp.
+   - Không có → suy luận từ Summary/luồng trong AC, tự flag rõ "Phân rã dựa trên suy luận từ text, chưa có design xác nhận."
+3. Với mỗi Screen:
+   a. Ghi nhận **UI chung (layout tổng thể)** — 1 dòng mô tả ngắn ở cấp Screen.
+   b. Liệt kê **từng Component theo đúng thứ tự xuất hiện trên UI**.
+4. Với mỗi Component, xác định:
+   - **Component Type** (Textbox/Dropdown/Checkbox/Radio/Table/Dialog/Button/File Upload/...) — dùng để tra thẳng `component_checklist/SKILL.md` ở bước `/gen-tcs`, không đoán qua keyword.
+   - **Risk Level** (High/Medium/Low) — High: nghiệp vụ quan trọng/tiền/bảo mật/phân quyền; Medium: luồng chính không critical; Low: UI validation/happy path đơn giản.
+   - **Technique Flag** (nhẹ, optional) — note ngắn nếu AC có dấu hiệu cần Decision Table/State Transition/Boundary Tier. **Không dựng bảng/diagram đầy đủ ở bước này.**
+5. **Rule tương tác chéo component:** khi xác định Logic của 1 component, luôn tự hỏi "component này có phụ thuộc/ảnh hưởng component nào khác trên cùng màn hình không?" — ghi vào cột "Ghi chú phụ thuộc" của component chịu trách nhiệm chính, không tạo category riêng.
+6. **Xác định Assumption môi trường test** — liệt kê ngắn các điều kiện hạ tầng/bên ngoài mà TC ở bước `/gen-tcs` sẽ ngầm dựa vào để chạy được (VD: API bên thứ 3 available lúc test, cronjob/background job chạy đúng chu kỳ thật, không bị mock/stub). Đây KHÔNG phải câu hỏi cho PM/BA (khác AMB-XX) — chỉ là lưu ý cho người chạy test. Để trống nếu module không phụ thuộc hạ tầng ngoài.
+7. Lưu ra `testing/[module]/plan-tcs.md`, show cho user confirm.
 
-**Output file:** `testing/[module]/modules.md`
+**Output file:** `testing/[module]/plan-tcs.md`
 
 ```markdown
-# Module Decomposition: [Module Name]
+# TC Implementation Plan: [Module Name]
 
-## Module Hierarchy
+## [Screen 1 Name]
+- **UI chung:** [mô tả ngắn layout tổng thể]
 
-### [Module A]
-- **Mô tả:** ...
-- **Risk:** High / Medium / Low
-- **Sub-modules:**
-  - [Sub-module A1] — Risk: High — [mô tả ngắn]
-  - [Sub-module A2] — Risk: Medium — [mô tả ngắn]
+| Component | Component Type | Risk Level | Technique Flag | Ghi chú phụ thuộc |
+|---|---|---|---|---|
+| [Tên component] | [Loại] | High/Medium/Low | [tên pattern nếu có, — nếu không] | [phụ thuộc component nào, — nếu không] |
 
-### [Module B]
+## [Screen 2 Name]
 ...
 
-## Dependencies
-- [Module A] phụ thuộc vào [Module B] vì ...
+## Ghi chú tổng quát
+- **Assumption môi trường test:** [điều kiện hạ tầng/bên ngoài TC sẽ dựa vào — để trống nếu không có]
 ```
+
+> **Lưu ý:** `/gen-tcs` sẽ từ chối chạy nếu module chưa có `plan-tcs.md`.
 
 ---
 
-# Section 4: Test Scenario Generation
-
-**Command tương ứng:** `/gen-tcs` (Mode A — sinh TS trước để review)
-
-**Mục đích:** Sinh Test Scenarios có traceability với AC, phân loại theo risk level từ modules.md.
-
-**Agent phải:**
-1. Đọc `analysis.md` + `modules.md`. Nếu không có (flexible entry), suy luận từ requirements doc trực tiếp.
-2. Xác định platform từ `analysis.md` Summary → nếu trống, dùng Platform trong project `context.md` đã auto-load → đọc `.claude/skills/testing_dimensions/SKILL.md` section tương ứng
-3. Sinh Test Scenarios bao phủ:
-   - Happy Path (luồng chính)
-   - Alternate Paths (luồng rẽ nhánh)
-   - Exception Paths (lỗi, timeout, mất kết nối...)
-   - Security / phân quyền
-   - UI Validation
-   - Business Logic
-   - Data Integrity
-   - Platform-specific dimensions (từ testing_dimensions)
-4. Đảm bảo mỗi AC có ít nhất 1 Scenario cover — bổ sung nếu thiếu (Gap Analysis)
-
-**Output file:** `testing/[module]/test-scenarios.md`
-
-```markdown
-# Test Scenarios: [Module Name]
-
-| TS ID | AC ID | Scenario Description | Risk Level | Category |
-|-------|-------|----------------------|------------|----------|
-| TS-001 | AC-01 | Check [happy path...] | High | Business Logic |
-| TS-002 | AC-01 | Check [negative...] | Medium | Validation |
-```
-
----
-
-# Section 5: Test Case Generation
+# Section 4: Test Case Generation
 
 **Command tương ứng:** `/gen-tcs`
 
-**Mục đích:** Sinh test cases chi tiết từ test-scenarios.md, áp dụng Field-Level Validation, Visual States, và kỹ thuật thiết kế test case.
+**Mục đích:** Sinh Test Case chi tiết (bao gồm Test Scenario — không còn artifact riêng) từ `plan-tcs.md` + `analysis.md`, áp dụng Field-Level Validation, Visual States, và kỹ thuật thiết kế test case.
 
 **Agent phải:**
-1. Đọc `test-scenarios.md`. Platform đọc từ `analysis.md` Summary hoặc project `context.md` đã auto-load.
-2. Với mỗi scenario, sinh TC đầy đủ fields (xem Output Format)
-3. **Validation chuyên biệt từng trường (Field-Level Validation):**
-   - Liệt kê **tất cả input fields** trên form/UI đang test
-   - Sinh validation TCs **riêng cho TỪNG trường** theo đặc tính riêng
-   - Tham chiếu **Bảng Field-Level Validation** ở Reference Library
-   - **KHÔNG** gộp validation nhiều trường vào 1 TC
-4. **Sinh UI Visual TCs** theo Bảng Field-Level Visual States Validation:
-   - 1 TC screen level "Verify UI tổng thể" — đặt **ĐẦU** bảng TC
-   - Visual state TCs (6 states: Normal, Focus, Filled, Error, Disabled, Loading) per field — đặt **TRƯỚC** logic TCs của cùng field
-5. **Nhận diện và áp dụng Complex Logic Patterns** (xem sub-section bên dưới) — làm TRƯỚC khi sinh TC
-6. Áp dụng kỹ thuật thiết kế test case phù hợp:
-   - **Equivalence Partitioning (EP)**
-   - **Boundary Value Analysis (BVA)**
-   - **Decision Table** (khi có ≥2 điều kiện kết hợp)
-   - **State Transition** (khi có workflow trạng thái)
-7. **Áp dụng Platform Dimensions** từ `testing_dimensions/SKILL.md`
-8. Nếu scenarios quá nhiều → sinh từng Module một, hỏi user để tiếp tục
+1. Đọc `plan-tcs.md` (bắt buộc — nếu chưa có, dừng lại yêu cầu chạy `/plan-tcs` trước). File này quyết định *sinh cái gì* và *sâu tới đâu*.
+2. Đọc `analysis.md` (nội dung AC đầy đủ + Q&A status) — quyết định *nội dung* Steps/Expected Result. Kiểm tra TBD ACs trước khi tiếp tục.
+3. Xác định platform: đọc `analysis.md` Summary → nếu trống, dùng Platform trong `context.md` đã auto-load → đọc `testing_dimensions/SKILL.md` section tương ứng.
+4. Với mỗi Screen trong `plan-tcs.md` (đúng thứ tự):
+   a. Sinh **1 TC "Verify UI tổng thể"** trước tiên (đặt đầu bảng của sheet đó), dựa trên mô tả "UI chung" trong plan.
+   b. Với mỗi Component (đúng thứ tự trong `plan-tcs.md`):
+      - Nếu có Technique Flag → **dựng đầy đủ** Decision Table/State Transition/Boundary Tier tương ứng (xem sub-section "Complex Logic Patterns"), show inline trước khi expand ra TC.
+      - Sinh **Visual TCs** theo 6 states (Bảng Visual States) — đặt **TRƯỚC** logic TCs của cùng component.
+      - Nếu là input field: sinh **Field-Level Validation TCs riêng cho từng trường** (Bảng Field-Level Validation) — không gộp nhiều field vào 1 TC.
+      - Áp `component_checklist/SKILL.md` theo **Component Type** đã gắn trong `plan-tcs.md` (Section A/B/C — tra trực tiếp, không đoán qua keyword AC text).
+      - Khi xét Logic: áp dụng cột "Ghi chú phụ thuộc" từ `plan-tcs.md` — nếu component phụ thuộc component khác, sinh thêm TC cho tương tác đó.
+5. Áp dụng kỹ thuật thiết kế phù hợp: Equivalence Partitioning (EP), Boundary Value Analysis (BVA).
+6. Áp dụng Platform Dimensions từ `testing_dimensions/SKILL.md`.
+7. Lưu output ra `testing/[module]/test-cases.md`.
+
+> Nếu scope lớn (nhiều Screen), sinh từng Screen một theo thứ tự trong `plan-tcs.md`, hỏi user để tiếp tục.
+
+## Rule ngôn ngữ Test Scenario
+
+- Luôn bắt đầu bằng **"Check"**, theo sau là **câu tự nhiên hoàn chỉnh, đọc như người nói** — không phải cụm từ khóa rút gọn.
+- **Cấm:** ký hiệu mũi tên (`→`, `->`), gạch chéo nén ý thay cho "hoặc" (VD `A/B`), dấu hai chấm nén nhiều ý (VD `Login: email sai`), viết tắt không giải thích.
+- Ví dụ:
+  - ❌ Sai: `Login → Dashboard (email/pass hợp lệ)`
+  - ✅ Đúng: `Check đăng nhập thành công với email và password hợp lệ`
+- Visual TCs vẫn giữ prefix `[UI Visual]` trước câu "Check...".
 
 **Output file:** `testing/[module]/test-cases.md`
 
@@ -237,7 +214,7 @@ Mô tả: [Hệ thống làm gì, đối tượng dùng là ai]
 
 ## Complex Logic Patterns
 
-Agent **tự động nhận diện** từ nội dung AC/TS và áp dụng pattern phù hợp **trước khi sinh TC**. Có thể áp nhiều pattern trong 1 lần nếu AC phức tạp.
+Agent **tự động nhận diện** từ nội dung AC và áp dụng pattern phù hợp **trước khi sinh TC**. Có thể áp nhiều pattern trong 1 lần nếu AC phức tạp. Nếu `plan-tcs.md` đã có Technique Flag cho component đang xử lý, dùng đó làm gợi ý — nhưng vẫn phải tự dựng bảng/diagram đầy đủ ở đây (Technique Flag chỉ là note ngắn, không phải bảng hoàn chỉnh).
 
 ### Pattern 1: Decision Table
 
@@ -284,7 +261,8 @@ Dấu hiệu: "trạng thái", "chuyển sang", "flow", tên states rõ ràng (D
 **Agent làm:**
 1. Vẽ state diagram dạng text
 2. Xác định transitions hợp lệ và không hợp lệ
-3. Show inline trước khi sinh TC
+3. **Xác định back transition** — tự hỏi: có transition nào đi NGƯỢC lại state trước đó không (khác invalid transition — đây là đường lùi CÓ CHỦ ĐÍCH trong thiết kế, VD "mở lại", "hủy duyệt", "yêu cầu sửa lại")? Nếu có, đánh dấu riêng — side-effect của đi lùi thường khác đi tiến (thu hồi quyền đã cấp, xóa timestamp đã đóng dấu, báo lại người liên quan...), không thể coi là "test lại y hệt transition tiến theo chiều ngược".
+4. Show inline trước khi sinh TC
 
 ```
 Ví dụ — Workflow phê duyệt:
@@ -294,12 +272,15 @@ Ví dụ — Workflow phê duyệt:
 [Pending] --reject--> [Rejected]
 [Approved] --cancel--> [Cancelled]
 
+Back transitions (đi lùi có chủ đích, khác invalid):
+[Approved] --reopen--> [Pending]
+
 Invalid transitions:
 [Draft] --approve--> ❌
 [Approved] --submit--> ❌
 ```
 
-**Sau đó:** test mỗi transition hợp lệ (1 TC) + mỗi invalid transition quan trọng (1 TC).
+**Sau đó:** test mỗi transition hợp lệ (1 TC) + mỗi invalid transition quan trọng (1 TC) + mỗi back transition (1 TC riêng — verify cả state cuối đúng chưa lẫn side-effect đi kèm, không gộp chung với transition tiến).
 
 ---
 
@@ -378,7 +359,7 @@ Sau khi sinh logic/validate TCs cho mỗi field, agent PHẢI sinh thêm visual 
 
 > **Tất cả 6 states đều bắt buộc** — sinh TC cho từng state, không bỏ qua state nào dù field đơn giản.
 
-**Screen level (1 TC per module):**
+**Screen level (1 TC per Screen):**
 - TC "Verify UI tổng thể": layout đúng, spacing đúng, không bị vỡ giao diện — đặt **ĐẦU** bảng TC
 
 > **Nguyên tắc:** Nếu có design input (Figma link / screenshot / PDF): Expected Result của Visual TC = "UI hiển thị đúng theo [tên frame/screen] trong design" — đối với Figma, đính kèm screenshot frame làm reference. Nếu không có design: expected result là "thống nhất với design [tên component]".
@@ -403,21 +384,24 @@ Sau khi sinh logic/validate TCs cho mỗi field, agent PHẢI sinh thêm visual 
 ## Output Format
 
 ```
-| ID | Function Name | Category | Risk Level | AC ID | TS ID | Test Scenario | Precondition | Steps | Expected Results | Test Data | Priority |
+| ID | Function Name | Category | Risk Level | Traceability ID | Test Scenario | Precondition | Steps | Expected Results | Test Data | Priority |
 ```
 
 - **ID:** format `[MODULE]-[SỐ]` (VD: `ORD-001`)
-- **AC ID:** AC tương ứng từ `analysis.md` (VD: `AC-05`). Với TCs từ implicit requirement hoặc ambiguity: dùng Q&A ID (VD: `AMB-01`) hoặc để `N/A` nếu không có nguồn rõ ràng.
-- **TS ID:** TS tương ứng từ `test-scenarios.md` (VD: `TS-001`). Điền `N/A` nếu dùng Mode B (không có TS artifact).
-- **Test Scenario:** bắt đầu bằng "Check..." cho functional TCs; dùng prefix `[UI Visual]` cho visual TCs
-- **Steps / Expected Results:** đánh số, dùng `<br>` xuống dòng trong cell — **KHÔNG** dùng `|`, `/`, hay newline thô
+- **Function Name:** Sub-module/Component từ `plan-tcs.md` (VD: "Email field", "Submit button"). Nếu TC ở mức flow (không gắn 1 component cụ thể), dùng tên flow (VD "Login Flow").
+- **Category:** cấp con dưới Function Name — "UI"/"Validate"/"Behavior"/"Logic" (component-level) hoặc "Happy Path"/"Negative"/"Security" (flow-level).
+- **Traceability ID:** ID nguồn gốc TC trace ngược tới — AC tương ứng từ `analysis.md` (VD: `AC-05`), hoặc Q&A ID nếu từ ambiguity (VD: `AMB-01`), hoặc `N/A` nếu không có nguồn rõ ràng. Tên cột dùng chung cho mọi loại ID team quy ước (REQ ID, AC ID, Q&A ID, hoặc ID khác theo bảng quy ước riêng của team) — không giới hạn chỉ AC.
+- **Test Scenario:** bắt đầu bằng "Check..." — xem "Rule ngôn ngữ Test Scenario" ở Section 4. Prefix `[UI Visual]` cho visual TCs.
+- **Steps / Expected Results:** đánh số, dùng `<br>` xuống dòng trong cell — **KHÔNG** dùng `|`, `/`, hay newline thô.
 - **Priority:** Critical / High / Medium / Low
+
+Khi export ra `.xlsx` qua `/export-xlsx`: **Sheet name = tên Screen** (heading `##` trong `test-cases.md`, lấy theo tên Screen trong `plan-tcs.md`).
 
 ---
 
 ## Integration Testing Patterns
 
-Dùng khi cần test data di chuyển giữa các modules. Tham chiếu bởi `/gen-inter-tcs`.
+Dùng khi cần test data di chuyển giữa các modules — áp thủ công vào `/gen-tcs` cho các Component/Screen liên quan đến integration point (không có command riêng).
 
 ### 4 loại TC cần cover per integration point
 
@@ -462,4 +446,7 @@ Dùng khi cần test data di chuyển giữa các modules. Tham chiếu bởi `/
 - ❌ Không hỏi platform trước khi sinh TCs
 - ❌ Bỏ qua `testing_dimensions` khi đã biết platform
 - ❌ Rút gọn hoặc bỏ sót test case khi mapping sang bảng
-- ❌ Sinh tất cả test cases 1 lần cho hệ thống lớn (phải chia module)
+- ❌ Sinh tất cả test cases 1 lần cho hệ thống lớn (phải chia theo Screen)
+- ❌ **Viết Test Scenario dạng ký hiệu rút gọn** (mũi tên, gạch chéo nén ý, dấu hai chấm nén nhiều ý) thay vì câu tự nhiên hoàn chỉnh
+- ❌ **Chạy `/gen-tcs` khi chưa có `plan-tcs.md`** cho module đó
+- ❌ **Đoán Component Type qua keyword AC text** khi `plan-tcs.md` đã có sẵn Component Type — phải tra trực tiếp

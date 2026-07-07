@@ -1,5 +1,5 @@
 ---
-description: Bước 2/3 — Phân tích requirements: summary → phát hiện điểm mờ (Q&A) → mapping REQ→AC. Output là analysis.md gồm 3 sections đủ để triển khai Test Scenarios.
+description: Bước 1/3 — Phân tích requirements: summary → phát hiện điểm mờ (Q&A) → mapping REQ→AC → Screen Inventory (nếu có design). Output là analysis.md dùng cho /plan-tcs.
 skills:
   - rbt_manual_testing
   - requirements_analyzer
@@ -21,14 +21,15 @@ Thực hiện **Section 2: Requirement Analysis** từ skill `rbt_manual_testing
 
    > *"Summary trên có chính xác không? Có điểm nào cần điều chỉnh trước khi tôi phân tích?"*
 
-3. Nếu có design input: đọc design → cross-check với spec theo `## Design Integration` trong skill `requirements_analyzer` → bổ sung AMB items cho inconsistencies phát hiện được
+3. Nếu có design input: đọc design → cross-check với spec theo `## Design Integration` trong skill `requirements_analyzer` → bổ sung AMB items cho inconsistencies phát hiện được. Đồng thời **lưu lại danh sách frame/screen đã confirm** vào section Screen Inventory (xem Output bên dưới) — để `/plan-tcs` dùng trực tiếp, không phải đọc lại Figma hay đoán cấu trúc screen từ text.
 
 4. Thực hiện **song song** 2 việc:
    - **A — Phát hiện Ambiguities:** Sinh danh sách câu hỏi AMB-XX với Reference, Screen, Question + Assumption/Đề xuất, Impact, Severity
    - **B — Mapping REQ → AC:** Map từng requirement thành AC có thể kiểm chứng
 
 5. Đánh dấu AC nào cần clarify từ Q&A (Status: TBD - To Be Decided)
-6. Lưu output ra `testing/[module]/analysis.md`
+6. Nếu có design input đã cross-check ở bước 3: tổng hợp Screen Inventory (frame/screen đã confirm) vào section riêng
+7. Lưu output ra `testing/[module]/analysis.md`
 
 ## Input cần thiết
 
@@ -56,12 +57,19 @@ Thực hiện **Section 2: Requirement Analysis** từ skill `rbt_manual_testing
 |----|-----------|--------|--------------------------------------|--------|----------|--------|
 | AMB-01 | REQ-XX | [tên màn hình] | ... Đề xuất: ... | ... | High / Medium / Low | TBD |
 
-> **TBD** = chưa được PM/BA confirm | **Answered** = đã có câu trả lời (dùng `/sync-qa` để update từ file Q&A công ty)
+> **TBD** = chưa được PM/BA confirm | **Answered** = đã có câu trả lời (sửa tay `analysis.md` để update sau khi PM/BA trả lời)
 
 ## Acceptance Criteria
 | REQ ID | AC ID | AC Content | Status |
 |--------|-------|-----------|--------|
 | REQ-01 | AC-01 | ... | Confirmed / Assumed / TBD |
+
+## Screen Inventory
+*(chỉ có nếu đã cross-check với design — Figma/screenshot/PDF)*
+
+| Screen/Frame | Nguồn (Figma frame name) | Ghi chú |
+|---|---|---|
+| [Tên screen] | [Frame name trong Figma] | ... |
 
 ## History
 - v1 ([ngày]): /analyze-req — khởi tạo
@@ -71,4 +79,4 @@ Thực hiện **Section 2: Requirement Analysis** từ skill `rbt_manual_testing
 
 ## Bước tiếp theo
 
-Sau khi có `analysis.md`, chạy `/decompose-modules` để phân rã module — hoặc chạy thẳng `/gen-tcs` nếu scope đủ rõ.
+Sau khi có `analysis.md`, chạy `/plan-tcs` để lên TC Implementation Plan (bắt buộc trước `/gen-tcs`).
