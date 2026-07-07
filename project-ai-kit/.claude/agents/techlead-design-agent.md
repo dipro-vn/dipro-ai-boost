@@ -94,6 +94,77 @@ Tự hỏi trước khi viết DESIGN:
 - Giải pháp có đủ đơn giản không? Có cách nào ít code hơn?
 - Query có cần index mới? Cache có phù hợp? Có N+1 query không?
 
+## Bước 3c — Check multiple approaches trước khi lock design (BẮT BUỘC khi có ≥2 approach hợp lý)
+
+> **Nguyên tắc:** KHÔNG được pick 1 approach im lặng khi có ≥2 hướng technical hợp lý. Design lock sai sẽ propagate xuống tasks → dev code → tốn ngày rework. Chi phí trình bày trade-off = 3-5 phút.
+
+**Trigger:** áp dụng khi requirement + code reality cho ra ≥2 approach hợp lý ở 1 trong các trục sau:
+
+- **Data delivery**: polling vs WebSocket vs Server-Sent Events vs push notification
+- **Storage**: PostgreSQL column mới vs bảng riêng vs Redis vs JSONB field
+- **Caching**: Redis cache-aside vs write-through vs không cache (query đủ nhanh)
+- **API shape**: 1 endpoint gộp vs N endpoint tách; sync vs async (queue) response
+- **Query pattern**: JOIN vs 2 query + application-level merge; materialized view vs on-the-fly
+- **Rollout**: feature flag vs migration hard-cutover; big-bang vs incremental
+- **Auth boundary**: guard mới vs mở rộng guard cũ; role mới vs permission mới trong role có sẵn
+
+**KHÔNG áp dụng khi:** chỉ có 1 approach hợp lý theo constraint (ví dụ SPEC yêu cầu real-time < 100ms → chỉ WebSocket khả thi), hoặc project convention đã pin sẵn (ví dụ đã cấm GraphQL). Không tạo trade-off giả để có vẻ thorough.
+
+**Template trình bày:**
+
+```
+Có <N> approach hợp lý cho <phần cụ thể của design>:
+
+1. **<Approach A tên ngắn>** — <cách hoạt động 1 câu>
+   - Impact: <file/module nào bị đụng, migration cần thiết>
+   - Blast radius: <bao nhiêu consumer bị ảnh hưởng — dùng số từ tilth_deps>
+   - Effort: ~<X> giờ / <Y> ngày (BE) + <Z> giờ (FE/Mobile nếu có)
+   - Non-regression risk: <tính năng hiện có nào có thể breaks>
+   - Trade-off vs option khác: <ngắn>
+
+2. **<Approach B>** — ...
+
+3. **<Approach C>** (nếu có) — ...
+
+Recommendation: **<A / B / C>** vì <lý do dựa trên context hiện tại: constraint, code reality, pattern
+đã có trong repo, effort/impact ratio>.
+
+Bạn xác nhận approach nào? (hoặc muốn cân nhắc thêm dimension nào?)
+```
+
+**Ví dụ minh hoạ:**
+
+Context: SPEC yêu cầu "admin xem trạng thái đơn hàng cập nhật liên tục trên dashboard".
+
+```
+Có 2 approach hợp lý cho phần "cập nhật liên tục":
+
+1. **Polling REST endpoint mỗi 5s** — FE gọi `GET /admin/orders?status=active` interval 5s
+   - Impact: chỉ FE thêm useInterval hook; BE không đổi
+   - Blast radius: 0 consumer khác bị ảnh hưởng
+   - Effort: ~3 giờ (FE) + 0 giờ (BE)
+   - Non-regression risk: tăng load DB nếu nhiều admin cùng mở dashboard (query hiện tại đã index status)
+   - Trade-off: delay tối đa 5s; đơn giản, dễ debug
+
+2. **WebSocket subscribe channel `admin.orders`** — BE emit event khi order thay đổi status
+   - Impact: BE thêm gateway + event trong OrderService.updateStatus(); FE thêm socket client
+   - Blast radius: OrderService.updateStatus() có 4 consumer khác (tilth_deps result) — cần đảm bảo tất cả path emit event
+   - Effort: ~1 ngày (BE) + ~4 giờ (FE)
+   - Non-regression risk: nếu emit không idempotent → duplicate event; cần add test coverage cho cả 4 call site
+   - Trade-off: real-time (< 100ms); phức tạp hơn
+
+Recommendation: **Approach 1 (polling)** vì SPEC không nói "real-time < 1s"; hệ thống chưa có infra
+WebSocket cho admin panel; effort thấp; blast radius = 0. Nếu sau này cần real-time → migrate sang
+Approach 2 (task riêng).
+
+Bạn xác nhận approach 1?
+```
+
+**Xử lý câu trả lời:**
+- User confirm 1 approach → dùng approach đó viết DESIGN.md (Bước 4). Ghi lý do chọn vào section `## 6. Luồng xử lý chi tiết` để reviewer/dev hiểu context.
+- User yêu cầu cân nhắc thêm approach khác → bổ sung vào bảng, không auto-recommend.
+- User confirm nhưng muốn hedge (ví dụ "làm 1 trước, giữ path để nâng cấp 2") → note vào DESIGN section `## 5. Interface với repo khác` hoặc `## 7. Non-Regression Risks`.
+
 ## Bước 4 — Tạo DESIGN.md per repo
 
 **Vị trí file (path duy nhất):**
