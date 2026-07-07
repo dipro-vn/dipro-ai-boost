@@ -2,8 +2,6 @@
 
 > Bộ khung multi-agent AI (BA → Tech Lead → PM → Dev → QC → QA → Designer) theo mô hình BMAD. Pull kit này vào 1 dự án mới, bỏ repo source code vào đúng chỗ, chạy 1 lệnh setup, là có ngay bộ agent/command/skill hoạt động cho toàn bộ vòng đời feature (SPEC → DESIGN → task → implement → QA → deploy).
 
-**Stack mặc định kit:** NestJS + PostgreSQL (backend) · React 19 + Redux Toolkit v2 + TanStack Query v5 (web frontend) · Flutter + Riverpod (mobile) · REST API. Dự án dùng đúng stack này sẽ tận dụng được gần như toàn bộ skill kỹ thuật có sẵn mà không cần sửa gì. Dự án dùng stack khác vẫn dùng được phần workflow/persona (BA/Tech Lead/PM/QC/QA), nhưng nên thay các skill trong `.claude/skills/{nestjs-best-practices,react-expert,flutter-review,postgresql,redis-development}/` bằng skill tương ứng với stack thật.
-
 ---
 
 ## Quy trình từ A → Z
@@ -20,6 +18,7 @@ git init   # nếu chưa có git repo
 ```bash
 # Từ thư mục chứa project-ai-kit (đổi <path-to-kit> cho đúng)
 cp -r <path-to-kit>/project-ai-kit/.claude ./.claude
+cp -r <path-to-kit>/project-ai-kit/template ./template    # Excel templates cho QC
 cp <path-to-kit>/project-ai-kit/CLAUDE.md <path-to-kit>/project-ai-kit/POLICIES.md <path-to-kit>/project-ai-kit/AGENTS.md ./
 ```
 
@@ -30,8 +29,9 @@ Sau bước này, dự án mới có:
 ├── CLAUDE.md          ← always-loaded, chỉ import 2 file dưới
 ├── POLICIES.md         ← AI behavior policy chung (không sửa trừ khi cần đổi rule tổ chức)
 ├── AGENTS.md           ← project rules — CHƯA điền, sẽ điền ở Bước 4
+├── template/           ← Excel templates cho QC test cases (Web/App V3.0)
 └── .claude/
-    ├── agents/ commands/ skills/ context/ rules/ workflows/ settings.json
+    ├── agents/ commands/ skills/ context/ rules/ scripts/ workflows/ settings.json
 ```
 
 ### Bước 3 — Bỏ repo source code vào
@@ -84,12 +84,6 @@ Mở Claude Code tại thư mục `<ten-du-an>`, chạy:
 7. Cặp repo/khái niệm dễ nhầm lẫn cần lưu ý
 8. Feature cross-repo nào chắc chắn sẽ có (optional)
 
-Agent tự điền `AGENTS.md`, `.claude/context/specification.md`, `.claude/context/technical.md`, `.claude/rules/project-structure.md`, `.claude/rules/stack-constraints.md`.
-
-Yêu cầu môi trường (tuỳ chọn nhưng khuyến nghị — đã khai trong `.claude/settings.json`):
-- **tilth MCP** — code intelligence (search/read/deps) thay cho grep/cat/find thủ công. Không có tilth thì sửa `agents/*.md` sang `Read`/`Glob`/`Grep` chuẩn.
-- **Figma MCP** — cần cho `designer-agent`, `qc-automation-agent`.
-- **Backlog MCP** (`@nulab/backlog-mcp-server`) — cần cho `pm-agent` nếu track issue trên Backlog; điền `BACKLOG_DOMAIN`/`BACKLOG_API_KEY` vào `.claude/settings.json`. Không dùng thì bỏ qua.
 
 ### Bước 5 — Kiểm tra lại kết quả init
 
@@ -118,35 +112,238 @@ mkdocs serve   # mở http://localhost:8000
 ```
 
 ### Bước 6 — Bắt đầu vòng đời feature đầu tiên
-
-```
-/create-spec <tên feature>
-```
-
-hoặc: "hãy là BA, làm SPEC cho \<feature\>". Từ đây pipeline BMAD tự dẫn dắt qua "Bước tiếp theo" ở cuối mỗi output — không cần nhớ thứ tự lệnh:
+"hãy là BA, làm SPEC cho \<requirement\>". Từ đây pipeline BMAD tự dẫn dắt qua "Bước tiếp theo" ở cuối mỗi output — không cần nhớ thứ tự lệnh:
 
 ```
 /create-spec        (BA)         → SPEC.md
 /create-design       (Tech Lead)  → DESIGN.md per repo         ┐ chạy song song
-/create-ui-design     (Designer)   → Figma frames + URL         ┤ (2b, 2c)
-/test/generate_manual_testcases_rbt (QC) → test cases           ┘
+/create-ui-design     (Designer)   → Figma frames + URL         ┤ (2b, 2c, 2d)
+/test/analyze-req → /test/plan-tcs → /test/gen-tcs (QC)         ┘  → analysis/plan/test-cases.md per module
 /create-tasks        (Tech Lead)  → tasks/task-*.md
 /create-plan         (PM)         → PLAN.md
 "Hãy là Backend/Frontend/Mobile Developer, implement task: <task-x-y.md>"
 "Hãy là QA, verify task: <task-x-y.md>"
-/test/generate_test_execution_checklist (QC) → trước khi deploy
+/test/review-tcs (QC, khi có ≥2 QC review chéo)                 → review_report.md
+/test/export-xlsx <test-cases.md> web|app (bàn giao Excel)      → test-cases.xlsx
+/test/generate_test_execution_checklist (QC)                    → trước khi deploy
 ```
 
-Chi tiết đầy đủ pipeline (thứ tự, Contract Lock, Memory Update Gate) → `AGENTS.md` section `<bmad_workflow>` và `.claude/workflows/new-feature.md`.
 
 **Shortcut chạy cả pipeline 1 lệnh (không PM):**
-
 ```
 /create-feature <feature> [mô tả]     # Planning: BA → Design → Tasks, dừng ở gate để review
 /create-feature <feature> build       # Build: Dev → QA → QC, chạy sau khi đã duyệt Planning
 ```
 
 Dùng khi muốn chạy nhanh cả pipeline mà không gõ từng lệnh; PM (`/create-plan`, `/create-backlog`) vẫn chạy riêng khi cần timeline/assignee thật.
+
+**Sơ đồ pipeline BMAD — từ yêu cầu đến deploy:**
+
+```mermaid
+flowchart TB
+
+    %% ===== STAGE 1 =====
+
+    subgraph S1["① INPUT & ANALYSIS"]
+
+        INPUT["📥 Input
+        PDF · Figma · Backlog · Meeting"]
+
+        TRIGGER{"Trigger"}
+
+        NL["💬 Natural Language"]
+        CMD["⌨️ /create-spec"]
+
+        BA["🟦 BA Agent"]
+
+        SPEC["📄 SPEC.md"]
+
+        INPUT --> TRIGGER
+        TRIGGER --> NL
+        TRIGGER --> CMD
+
+        NL --> BA
+        CMD --> BA
+
+        BA --> SPEC
+
+    end
+
+    %% ===== STAGE 2 =====
+
+    subgraph S2["② DESIGN (song song)"]
+
+        TLD["🟦 Tech Lead Design"]
+        DES["🟨 Designer Agent"]
+        QCPIPE["🟪 QC Agent — pipeline 3 bước
+        analyze-req → plan-tcs → gen-tcs"]
+
+        DESIGN["📄 DESIGN.md per repo"]
+        FIGMA["🎨 Figma URL
+        + ## Screens → SPEC"]
+        TC["📄 test-cases/<module>/
+        analysis · plan-tcs · test-cases"]
+
+        SPEC --> TLD
+        SPEC --> DES
+        SPEC --> QCPIPE
+
+        TLD --> DESIGN
+        DES --> FIGMA
+        QCPIPE --> TC
+
+    end
+
+    %% ===== STAGE 3 =====
+
+    subgraph S3["③ PLANNING"]
+
+        TASK["🟦 Tech Lead Tasks"]
+
+        TASKDOC["📄 tasks/task-*.md"]
+
+        PM["🟦 PM Agent"]
+
+        PLAN["📄 PLAN.md"]
+
+        BACKLOG["📋 Backlog"]
+
+        DESIGN --> TASK
+        FIGMA --> TASK
+
+        TASK --> TASKDOC
+
+        TASKDOC --> PM
+
+        PM --> PLAN
+        PM -. /create-backlog .-> BACKLOG
+
+    end
+
+    %% ===== STAGE 4 =====
+
+    subgraph S4["④ CONTRACT LOCK"]
+
+        LOCK{"🔒 Contract Lock
+
+        BE + FE + Mobile + PM + QC
+
+        REST + WebSocket + Push"}
+
+    end
+
+    PLAN --> LOCK
+    BACKLOG -.-> LOCK
+
+    %% ===== STAGE 5 =====
+
+    subgraph S5["⑤ BUILD"]
+
+        BE["🟩 Backend Agent
+        Phase 1 (DB) → 2 (API + Contract)"]
+        FE["🟩 Frontend Agent
+        Phase 3"]
+        MOB["🟩 Mobile Agent
+        Phase 3"]
+
+        CODE["💻 Working Code
+        + API Contract table
+        + Memory Update Gate"]
+
+        LOCK --> BE
+        BE -. copy API Contract .-> FE
+        BE -. copy API Contract .-> MOB
+
+        FIGMA -.-> FE
+        FIGMA -.-> MOB
+
+        BE --> CODE
+        FE --> CODE
+        MOB --> CODE
+
+    end
+
+    %% ===== STAGE 6 =====
+
+    subgraph S6["⑥ VERIFY (QA per task)"]
+
+        QA["🟪 QA Agent"]
+
+        REPORT["📊 QA Report
+        PASS / FAIL"]
+
+        CODE --> QA
+
+        TC -.-> QA
+
+        QA --> REPORT
+
+    end
+
+    %% ===== STAGE 7 =====
+
+    subgraph S7["⑦ TESTING (song song)"]
+
+        MANUAL["🟪 QC Manual — lần 2
+        execution checklist + gen-bug-report"]
+
+        AUTO["🟪 QC Automation
+        Playwright E2E"]
+
+        BUG["📊 Bug Reports"]
+
+        E2E["📊 E2E Report"]
+
+        REPORT --> MANUAL
+        REPORT --> AUTO
+
+        TC -.-> MANUAL
+
+        MANUAL --> BUG
+        AUTO --> E2E
+
+    end
+
+    %% ===== STAGE 8 =====
+
+    subgraph S8["⑧ DEPLOY"]
+
+        DEPLOY["🚀 STG → PROD"]
+
+    end
+
+    BUG --> DEPLOY
+    E2E --> DEPLOY
+
+
+    %% ===== STYLE =====
+
+    classDef ba fill:#DBEAFE,stroke:#2563EB,color:#1E3A8A
+    classDef dev fill:#DCFCE7,stroke:#16A34A,color:#14532D
+    classDef qa fill:#F3E8FF,stroke:#9333EA,color:#581C87
+    classDef design fill:#FEF3C7,stroke:#D97706,color:#78350F
+    classDef artifact fill:#F9FAFB,stroke:#6B7280,color:#111827
+    classDef gate fill:#FEE2E2,stroke:#DC2626,color:#7F1D1D
+
+    class BA,TLD,TASK,PM ba
+    class BE,FE,MOB dev
+    class QCPIPE,QA,MANUAL,AUTO qa
+    class DES design
+
+    class SPEC,DESIGN,FIGMA,TC,TASKDOC,PLAN,BACKLOG,CODE,REPORT,BUG,E2E artifact
+
+    class TRIGGER,LOCK gate
+```
+
+
+**On-demand (ngoài pipeline chính, chạy khi cần):**
+
+| Command | Khi nào |
+|---|---|
+| `/test/review-tcs` | Có ≥2 QC review chéo bộ TC (8 tiêu chí Critical/Major/Minor) |
+| `/test/export-xlsx <path> web\|app` | Bàn giao Excel cho client / release theo template công ty |
+| `/test/generate_regression_suite` | Sau code change lớn, cần xác định subset TC re-run |
+| Delta update | SPEC đổi → re-run `/test/analyze-req` → `plan-tcs` → `gen-tcs` |
 
 ### Chạy Automation Test (Playwright E2E)
 
@@ -161,22 +358,16 @@ project-ai-kit/
 ├── CLAUDE.md, POLICIES.md, AGENTS.md   ← root docs, always-loaded qua CLAUDE.md
 ├── README.md            ← guide này — setup A→Z + quy trình feature
 ├── Automation_Test.md   ← guide riêng — setup + chạy Playwright E2E automation test
+├── template/            ← Excel templates cho QC test cases (Web/App V3.0) — dùng bởi /test/export-xlsx
 └── .claude/
     ├── agents/       ← persona (BMAD core + init-agent)
-    ├── commands/     ← slash command, thin entry point → agent tương ứng
-    ├── skills/       ← technical + process skills, load on-demand
+    ├── commands/     ← slash command, thin entry point → agent tương ứng (bao gồm QC pipeline /test/analyze-req → plan-tcs → gen-tcs → review-tcs → export-xlsx)
+    ├── skills/       ← technical + process skills, load on-demand (bao gồm rbt_manual_testing, component_checklist, testing_dimensions cho QC pipeline)
     ├── context/      ← business/technical memory — phần lớn RỖNG, điền dần qua BA/PM/init-agent
-    ├── rules/        ← coding-style, security, git-workflow, stack-constraints...
+    ├── rules/        ← coding-style, security, git-workflow, stack-constraints, SECURITY.md (files cấm đọc), POLICY.md (IP protection), RELIABILITY.md (no guessing)...
+    ├── scripts/      ← md_to_xlsx.py — Python script convert TC .md → .xlsx theo template Web/App
     ├── workflows/    ← bmad-plan-phase.js/bmad-build-phase.js (dùng bởi /create-feature) + pipeline reference + db-connect templates
     └── templates/    ← mkdocs.yml + docs-index.md + mkdocs-requirements.txt (Bước 5b, optional)
 ```
 
 **Nguyên tắc cốt lõi** (chi tiết trong `POLICIES.md`): không đoán mò · đọc trước hành động sau · stateless (mọi context đọc từ `.md`) · tool-first (tilth thay grep/cat/find) · blast radius check trước khi đổi public interface · phân quyền persona nghiêm ngặt (chỉ Dev sửa source code).
-
-## Khi dự án phát triển
-
-- Phát hiện gotcha mới (2 repo dễ nhầm, convention riêng...) → thêm vào `AGENTS.md` section `<core_rules>` / `<red_line_rules>`.
-- Pattern code mới → cập nhật `<DOCS_ROOT>/<layer>/<repo>/overview/patterns.md` theo Memory Update Gate (xem `AGENTS.md`).
-- Thêm repo mới vào dự án → chạy lại `/init-kit`, chọn "thêm repo mới" khi được hỏi.
-- Feature/domain nghiệp vụ phức tạp cần business-flow index riêng → tham khảo pattern ở `.claude/context/business-flows/README.md` (optional, chỉ cần khi dự án có nhiều domain nghiệp vụ tách biệt).
-</content>

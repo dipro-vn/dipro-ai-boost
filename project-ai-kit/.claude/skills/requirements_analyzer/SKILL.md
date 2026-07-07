@@ -59,6 +59,61 @@ Với mỗi REQ trong document:
 
 ---
 
+## Design Integration
+
+*(Áp dụng khi user cung cấp design input: Figma link, screenshot, PDF export design...)*
+
+### Theo dạng input
+
+| Input | Cách đọc |
+|-------|---------|
+| Screenshot / image | Đọc trực tiếp — cross-check ngay với spec |
+| PDF export | Đọc từng trang — cross-check theo từng screen |
+| Figma link | Dùng Figma MCP tools — theo quy trình 2 phase bên dưới |
+
+---
+
+### Figma — Quy trình 2 Phase
+
+> Áp dụng khi Figma file có nhiều pages hoặc nhiều frames. Mục tiêu: xác định đúng scope trước khi đọc sâu — tránh bỏ sót screen và tránh đọc nhầm vào archive/draft.
+
+#### Phase 1 — Scope Mapping (có checkpoint)
+
+1. Gọi `get_pages` → list tất cả pages trong file
+2. Hỏi user:
+   > Figma file có [N] pages: [danh sách tên]. Pages nào liên quan đến feature đang phân tích? *(Bỏ qua Archive, Draft, hoặc pages không liên quan)*
+3. Chờ user confirm pages
+4. Với các pages được confirm: gọi `scan_nodes_by_types` với type `FRAME` → list top-level frames
+5. Hỏi user:
+   > Tôi thấy [N] frames: [danh sách tên]. Frames nào là screens của feature này?
+6. Chờ user confirm frames → đây là **scope chính thức** cho Phase 2
+
+#### Phase 2 — Deep Read (chỉ trong scope đã confirm)
+
+Với mỗi frame được confirm:
+
+1. Gọi `get_node` để đọc nội dung frame
+2. Tìm `COMPONENT_SET` nodes — đây là nơi Figma lưu state variants:
+   - Tìm nodes có tên chứa keyword: `State=`, `Status=`, `Type=`, `Variant=`, `Mode=`
+   - Ví dụ phổ biến: `State=Error`, `State=Loading`, `State=Disabled`, `Status=Active`
+3. Gọi `get_annotations` để đọc annotations và developer notes
+4. Cross-check với spec theo bảng bên dưới
+
+---
+
+### Cross-check Checklist
+
+| Thứ cần kiểm tra | Cách làm | Nếu không khớp |
+|---|---|---|
+| **Screen inventory** | Frames đã confirm vs sections trong spec | Frame có trong design nhưng không có trong spec → thêm AMB item |
+| **UI states** | COMPONENT_SET variants vs states được mô tả trong spec | State có trong design (`State=Error`) nhưng spec không mô tả behavior → thêm AMB item |
+| **Field names** | Label text trong frame vs tên field trong spec | Naming khác nhau → thêm AMB item, KHÔNG tự chọn cái nào đúng |
+| **Business rules ẩn** | Annotations / developer notes trong frame | Annotation chứa rule chưa có trong spec → ghi chú vào AC context |
+
+> Figma Findings chỉ bổ sung thêm AMB items — không thay thế hay override phân tích từ spec text.
+
+---
+
 ## Những gì KHÔNG làm
 
 - ❌ Tự sinh AC khi PM chưa viết → đưa vào Ambiguities

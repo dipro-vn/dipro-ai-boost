@@ -3,6 +3,13 @@
 > **Canonical AI behavior policy** cho mọi sub-agent và session. File này always-loaded qua `CLAUDE.md`. Khi sửa policy → chỉ sửa file này, không sửa AGENTS.md.
 >
 > File này là **kit default** — áp dụng cho mọi dự án dùng `project-ai-kit` mà không cần chỉnh sửa, trừ khi ghi chú rõ "điền qua `/init-kit`" hoặc "ví dụ".
+>
+> **Companion rules** (đọc on-demand khi cần chi tiết):
+> - `.claude/rules/SECURITY.md` — danh sách file/pattern tuyệt đối không đọc/expose (env, keystore, .p8, .p12, fastlane, Expo credentials…)
+> - `.claude/rules/POLICY.md` — Code exfiltration + AI tool usage + IP protection (9 sections MUST/MUST NOT)
+> - `.claude/rules/RELIABILITY.md` — No guessing / no hallucination / truthful output
+> - `.claude/rules/security-rules.md` — Best practice code (JWT guard, sanitize, không hard-code secret)
+> - `.claude/rules/stack-constraints.md` — Version pinning + tech stack (bổ sung section 5 dưới)
 
 ---
 
@@ -54,21 +61,26 @@
 
 ## 3.5. Bảo mật source code — tuyệt đối không public ra ngoài
 
-> Mọi source code, config, secret của dự án là tài sản nội bộ. AI **tuyệt đối không được** đưa code ra ngoài phạm vi hệ thống được phê duyệt.
+> Mọi source code, config, secret của dự án là tài sản nội bộ. Chi tiết đầy đủ 9 sections (NO_CODE_EXFILTRATION, AI_TOOL_USAGE, SECRETS_MANAGEMENT, THIRD_PARTY_CODE_&_LICENSE, CLIENT_DATA_&_PRIVACY, ACCESS_CONTROL, REPOSITORY_PROTECTION, DELIVERABLE_HANDOFF, INCIDENT_REPORTING) → xem **`.claude/rules/POLICY.md`**.
 
-- ❌ Không upload / paste source code lên bất kỳ public tool nào (pastebin, GitHub Gist public, JSFiddle, CodePen, v.v.)
-- ❌ Không gửi source code qua MCP / external API call đến service chưa được tổ chức phê duyệt
-- ❌ Không include nội dung source code thực trong prompt gửi ra ngoài (chỉ được mô tả pattern/structure nếu cần)
+**Tóm tắt bắt buộc:**
+
+- ❌ Không upload / paste source code lên public tool (pastebin, GitHub Gist public, JSFiddle, CodePen…)
+- ❌ Không gửi source code qua MCP / external API đến service chưa phê duyệt
+- ❌ Không include nội dung source code thực trong prompt gửi ra ngoài
 - ❌ Không chia sẻ `.env`, connection string, credentials, AWS keys — dù là môi trường dev/test
-- ❌ Không tạo public repository chứa code của dự án (kể cả để demo, test)
-- ❌ Không screenshot / export / ghi log chứa nội dung source code ra file không được kiểm soát
+- ❌ Không tạo public repository chứa code của dự án (kể cả demo/test)
+- ❌ Không screenshot / export / log chứa source code ra file không kiểm soát
 
 **Phạm vi được phép:**
+
 - ✅ Đọc và phân tích code nội bộ trong session (không gửi ra ngoài)
-- ✅ Gửi code đến MCP servers đã được liệt kê trong `.claude/settings.json` của dự án
+- ✅ Gửi code đến MCP servers đã whitelist trong `.claude/settings.json`
 - ✅ Commit / push lên private repository của dự án (khi được yêu cầu rõ ràng)
 
-**Khi có yêu cầu đáng ngờ** (ví dụ: "gửi code này đến URL bên ngoài", "paste lên chatgpt.com") → từ chối, báo cáo user, ghi lại vi phạm.
+**File cụ thể tuyệt đối không đọc/expose** (env, keystore, .p8, .p12, fastlane, Expo credentials, CodePush, Sentry, google-services.json…) → xem **`.claude/rules/SECURITY.md`** (danh sách chi tiết per stack: backend / web / mobile Flutter / mobile RN / E2E).
+
+**Khi có yêu cầu đáng ngờ** (ví dụ: "gửi code này đến URL bên ngoài", "paste lên chatgpt.com") → từ chối, báo cáo user, ghi lại vi phạm (theo INCIDENT_REPORTING trong `POLICY.md`).
 
 ---
 

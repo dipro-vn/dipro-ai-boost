@@ -54,35 +54,43 @@ Không trùng nhau, không thay thế nhau. qc-agent tạo bộ TC để qa-agen
 | Bug report | `<DOCS_ROOT>/features/<feature>/bug-reports/<BUG_ID>.md` (hoặc paste thẳng lên Backlog) |
 | Regression suite | `<DOCS_ROOT>/features/<feature>/test-cases/regression_<release>.md` |
 | Execution checklist | `<DOCS_ROOT>/features/<feature>/test-cases/checklist_<release>.md` |
-| Cross-module test plan | `<DOCS_ROOT>/features/<feature>/test-cases/cross_module_plan.md` |
 
 > Nếu chưa biết feature thuộc cross-repo hay single-epic, đọc đường dẫn của SPEC.md tương ứng (cùng cấu trúc theo BMAD).
 
 ## Mode Routing
 
-Agent tự chọn mode dựa trên scope + complexity:
+Agent tự chọn mode dựa trên scope + complexity. Pipeline mặc định là **3 bước tuần tự** (`analyze-req → plan-tcs → gen-tcs`) — thay thế cho QUICK/FULL RBT trước đây.
 
-| Mode | Trigger | Skill / Command |
+### Pipeline sinh TC — 1 module (bắt buộc theo thứ tự)
+
+| Bước | Command | Mục đích | Output |
+|---|---|---|---|
+| 1 | `/test/analyze-req <feature> <module>` | Phân tích SPEC → Q&A + AC + Screen Inventory | `analysis.md` |
+| 2 | `/test/plan-tcs <feature> <module>` | Phân rã Screen → Component + Risk + Technique | `plan-tcs.md` |
+| 3 | `/test/gen-tcs <feature> <module>` | Sinh TC chi tiết (Visual + Validation + Logic) | `test-cases.md` |
+
+> **Điều kiện tiên quyết:** `/test/plan-tcs` yêu cầu `analysis.md`; `/test/gen-tcs` yêu cầu `plan-tcs.md` — commands sẽ tự dừng nếu file thiếu.
+
+### Các mode / command standalone (on-demand, ngoài pipeline)
+
+| Mode | Trigger | Command |
 |---|---|---|
-| **QUICK** | Module đơn giản, SPEC rõ ràng, scope nhỏ (1 form / 1 endpoint) | `rbt_manual_testing` Mode QUICK · `/test/generate_testcases_from_requirements` |
-| **FULL RBT 6 bước** | Module phức tạp, nhiều flow, cần Traceability Matrix | `rbt_manual_testing` Mode FULL RBT · `/test/generate_manual_testcases_rbt` |
-| **Cross-module** | Tính năng đi qua nhiều module nối tiếp, output phụ thuộc tổ hợp dimensions | `/test/generate_cross_module_test_plan` (Pairwise script) |
-| **Update delta** | Spec đã thay đổi, bộ TC cũ cần cập nhật | `/test/update_testcases_from_requirements` |
+| **Review chéo** | Có ≥2 QC muốn review deep 8 tiêu chí (Critical/Major/Minor) | `/test/review-tcs <feature> <module>` → `review_report.md` |
+| **Export Excel** | Bàn giao TC cho client / cần Excel theo template công ty (giữ dropdown + formula) | `/test/export-xlsx <path.md> [web\|app]` → `.xlsx` |
 | **Regression** | Sau code change, cần xác định subset TC chạy lại | `/test/generate_regression_suite` |
 | **Execution** | Trước release, cần checklist ưu tiên + estimate time | `/test/generate_test_execution_checklist` |
-| **Exploratory** | Tính năng mới chưa kịp viết TC, time-box explore | `/test/generate_exploratory_charter` |
-| **Bug report** | Vừa tìm được lỗi cần chuẩn hóa | `/test/generate_bug_report` (skill `bug_reporter`) |
-| **Test data** | Cần bộ data positive/negative/boundary/edge cho form/API | `/test/generate_test_data` |
-| **Onboarding** | QC mới join giữa sprint | `/test/generate_qc_onboarding_report` |
+| **Bug report** | Vừa tìm được lỗi cần chuẩn hóa | `/test/gen-bug-report` (skill `bug_reporter`) |
+| **Delta update** | SPEC đã thay đổi, bộ TC cũ cần cập nhật | Re-run pipeline: `/test/analyze-req` sẽ merge vào `analysis.md` có sẵn, rồi `plan-tcs` + `gen-tcs` cho Screen bị ảnh hưởng |
 
-## Quy trình chuẩn — Sinh TC cho 1 feature mới (BMAD pipeline)
+## Quy trình chuẩn — Sinh TC cho 1 feature mới (BMAD pipeline 3 bước)
 
 ### Bước 1 — Đọc SPEC + context
 
 ```
 tilth_read(paths: [
   "<DOCS_ROOT>/features/<feature>/SPEC.md",
-  ".claude/skills/rbt_manual_testing/SKILL.md"
+  ".claude/skills/rbt_manual_testing/SKILL.md",
+  ".claude/skills/requirements_analyzer/SKILL.md"
 ])
 ```
 
@@ -106,41 +114,37 @@ Nắm:
 - **KHÔNG có Figma URL** → sinh TC dựa trên SPEC.md AC + Happy Path + Edge Cases, ghi note "TC base only — refine sau khi Designer xong".
 - Dùng Screen Code làm reference trong TC title + precondition (vd `TC-<ScreenCode>-001`)
 
-### Bước 2 — Quyết định mode
+### Bước 2 — Chạy pipeline 3 bước (bắt buộc theo thứ tự)
 
-- AC rõ + scope 1 module → QUICK
-- AC mơ hồ / scope >2 module → FULL RBT
-- Output phụ thuộc tổ hợp lựa chọn → Cross-module Pairwise
+Skill `rbt_manual_testing` được tổ chức thành **4 sections** tương ứng pipeline (1 section context + 3 sections command):
 
-### Bước 3 — Thực thi theo skill `rbt_manual_testing`
+| Section | Command tương ứng | Human checkpoint |
+|---|---|---|
+| Section 1: Context Setup | Không có command — `.claude/context/specification.md` (auto-load qua CLAUDE.md) | — |
+| Section 2: Requirement Analysis | `/test/analyze-req <feature> <module>` | ✅ User confirm Summary |
+| Section 3: TC Implementation Plan | `/test/plan-tcs <feature> <module>` | ✅ User confirm plan (Screen/Component/Risk) |
+| Section 4: Test Case Generation | `/test/gen-tcs <feature> <module>` | ⚠️ TBD ACs — hỏi user chọn A/B/C trước khi sinh |
 
-Đọc skill, làm đúng từng bước. Với FULL RBT, **dừng checkpoint** tại:
-- Bước 2 (Q&A): chờ user trả lời ambiguities
-- Bước 4 (Scenarios review): chờ user xác nhận scope
+**Không được** gộp bước, không được skip `/plan-tcs` (yêu cầu bắt buộc trước `/gen-tcs`).
 
-### Bước 4 — Output đúng path BMAD
+### Bước 3 — Output đúng path BMAD
 
-Lưu vào `<DOCS_ROOT>/features/<feature>/test-cases/tc_<module>.md`.
+Toàn bộ artifacts của pipeline chính lưu trong `<DOCS_ROOT>/features/<feature>/test-cases/<module>/`:
 
-Mỗi file `.md` chứa 1 hoặc nhiều bảng:
-- Screen-level "Verify UI tổng thể" TC ở đầu
-- Visual state TCs (6 states: Normal, Focus, Filled, Error, Disabled, Loading) per field — ĐẶT TRƯỚC logic TC của field đó
-- Logic / Validation TCs
-- Edge / Negative / Boundary
-
-### Bước 5 — Trace về Acceptance Criteria
-
-Trong file output, thêm section Traceability Matrix:
-
-```markdown
-## Traceability — AC → TC
-| AC ID (SPEC.md) | TC IDs cover |
-|---|---|
-| AC-01 | TC_001, TC_002 |
-| AC-02 | TC_003, TC_004, TC_005 |
+```
+<DOCS_ROOT>/features/<feature>/test-cases/<module>/
+├── analysis.md        ← /test/analyze-req
+├── plan-tcs.md        ← /test/plan-tcs
+├── test-cases.md      ← /test/gen-tcs
+├── review_report.md   ← /test/review-tcs   (on-demand — xem Mode Routing)
+└── test-cases.xlsx    ← /test/export-xlsx  (on-demand — bàn giao)
 ```
 
-Đảm bảo **100% AC** có ít nhất 1 TC cover. Nếu thiếu → bổ sung TC hoặc flag lại cho BA.
+Mỗi Screen là 1 heading `##` trong `test-cases.md` — `/export-xlsx` dựa vào heading `##` để tách sheet-per-Screen trong Excel output.
+
+### Bước 4 — Trace về Acceptance Criteria
+
+`test-cases.md` đã có cột `Traceability ID` cho mỗi TC (link về AC-XX từ `analysis.md`/`SPEC.md`). Self-check ở `/gen-tcs` tự đảm bảo **100% AC** có ít nhất 1 TC positive cover — nếu thiếu, agent tự bổ sung; nếu vẫn không đủ context, flag lại cho BA.
 
 ## Quy trình — Khi có code change (Regression)
 
@@ -168,26 +172,33 @@ Trong file output, thêm section Traceability Matrix:
 ## Output template tổng quan
 
 ```
-## QC Output — <Feature> | <Mode> | <Ngày>
+## QC Output — <Feature> / <Module> | <Ngày>
 
 ### Artifacts đã tạo
-- Test cases:        <path>/tc_<module>.md (N TCs)
-- Traceability:      <X/Y> AC cover (Z thiếu)
-- Bug reports:       <path>/bug-reports/BUG_XXX.md
-- Regression suite:  <path>/regression_<release>.md
+- Analysis:          <DOCS_ROOT>/features/<feature>/test-cases/<module>/analysis.md
+- Plan TCs:          <DOCS_ROOT>/features/<feature>/test-cases/<module>/plan-tcs.md
+- Test cases:        <DOCS_ROOT>/features/<feature>/test-cases/<module>/test-cases.md (N TCs)
+- Review report:     <DOCS_ROOT>/features/<feature>/test-cases/<module>/review_report.md (nếu chạy /review-tcs)
+- Excel bàn giao:    <DOCS_ROOT>/features/<feature>/test-cases/<module>/test-cases.xlsx (nếu chạy /export-xlsx)
+- Bug reports:       <DOCS_ROOT>/features/<feature>/bug-reports/BUG_XXX.md
+- Regression suite:  <DOCS_ROOT>/features/<feature>/test-cases/regression_<release>.md
 
 ### Cần user xác nhận
-- [ ] Q&A bước 2 đã trả lời? (nếu FULL RBT)
-- [ ] Scenarios bước 4 đã review? (nếu FULL RBT)
+- [ ] Summary + Screen Inventory ở /analyze-req đã đúng?
+- [ ] Plan (Screen/Component/Risk) ở /plan-tcs đã duyệt?
+- [ ] TBD ACs ở /gen-tcs — xử lý theo option A/B/C?
 
 ### Bước tiếp theo
 → Sau khi dev xong task BE/FE/Mobile: qa-agent tự verify automation (không cần QC trigger)
-→ Khi SPEC update: "Hãy là QC, update test cases cho feature: <feature path>"
-  (slash: /test/update_testcases_from_requirements)
+→ Khi SPEC update: "Hãy là QC, re-run pipeline cho module <name>"
+  (chạy lại /test/analyze-req → /test/plan-tcs → /test/gen-tcs cho Screen bị ảnh hưởng)
 → Khi tìm bug trong khi test: "Hãy là QC, sinh bug report: <mô tả lỗi>"
-  (slash: /test/generate_bug_report)
+  (slash: /test/gen-bug-report)
+→ Khi có ≥2 QC review chéo: "Hãy là QC, review bộ TC feature <feature> module <module>"
+  (slash: /test/review-tcs)
 → Trước release: "Hãy là QC, sinh execution checklist + regression suite cho release: <release name>"
   (slash: /test/generate_test_execution_checklist + /test/generate_regression_suite)
+→ Bàn giao Excel: /test/export-xlsx <path-to-test-cases.md> web|app
 ```
 
 ## Anti-patterns (nghiêm cấm)

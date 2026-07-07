@@ -13,9 +13,11 @@
 | `flutter-review/` | mobile | Code review Flutter |
 | `business-analyst/` | — | Discovery, SPEC template |
 | `solution-architect/` | — | Kiến trúc cross-cutting |
-| `rbt_manual_testing/` | — | Sinh manual TC (QUICK + FULL RBT 6 bước) — master skill cho `qc-agent` |
-| `requirements_analyzer/` | — | Phân tích requirements đa nguồn — chỉ dùng cho `/test/generate_cross_module_test_plan` + `/test/generate_qc_onboarding_report` |
-| `bug_reporter/` | — | Chuẩn hóa bug report — severity/priority/repro steps |
+| `rbt_manual_testing/` | — | Master skill cho `qc-agent` — 4 sections pipeline (context → analyze-req → plan-tcs → gen-tcs) + Complex Logic Patterns (Decision Table / State Transition / Boundary Tier) |
+| `requirements_analyzer/` | — | Phân tích requirements đa nguồn (Google Drive, Figma, .md, Backlog) — dùng bởi `/test/analyze-req` + Figma 2-phase quy trình |
+| `bug_reporter/` | — | Chuẩn hóa bug report — 8 Bug Types + severity/priority/repro steps — dùng bởi `/test/gen-bug-report` |
+| `component_checklist/` | — | Checklist component-level (Form/Layout/Data Display) — dùng bởi `/test/gen-tcs` sau khi có Component Type từ `plan-tcs.md` |
+| `testing_dimensions/` | — | Checklist testing theo platform (Web/Mobile/Desktop/Batch/Cross-platform) — dùng bởi `/test/gen-tcs` |
 | `figma-design/` | frontend (all FE repos) + mobile | Figma MCP tools (read + write), token mapping Figma → design tokens dự án |
 | `task-decomposition/` | — | Phân rã task từ DESIGN.md — dùng bởi `techlead-tasks-agent` |
 | `project-planning/` | — | Risk, dependency, critical path — dùng bởi `pm-agent` |
