@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Claude Code Proxy — Dashboard</title>
+  <link rel="stylesheet" href="/dashboard/style.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-icon">hub</span>
+        <span class="brand-text">Claude Proxy</span>
+      </div>
+      <nav class="nav">
+        <button class="nav-item active" data-tab="overview">Overview</button>
+        <button class="nav-item" data-tab="endpoint">Endpoint</button>
+        <button class="nav-item" data-tab="usage">Usage</button>
+        <button class="nav-item" data-tab="quota">Quota</button>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="status-dot" id="status-dot"></div>
+        <span id="status-label">Checking...</span>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <h1 id="page-title">Overview</h1>
+        <button class="btn btn-ghost" id="refresh-btn"><span class="ico">refresh</span> Refresh</button>
+      </header>
+
+      <!-- Overview -->
+      <section class="tab-panel active" id="tab-overview">
+        <div class="cards">
+          <div class="card">
+            <div class="card-label">Requests (today)</div>
+            <div class="card-value" id="ov-requests">—</div>
+          </div>
+          <div class="card">
+            <div class="card-label">Est. tokens</div>
+            <div class="card-value" id="ov-tokens">—</div>
+          </div>
+          <div class="card">
+            <div class="card-label">Avg latency</div>
+            <div class="card-value" id="ov-latency">—</div>
+          </div>
+          <div class="card">
+            <div class="card-label">Errors</div>
+            <div class="card-value" id="ov-errors">—</div>
+          </div>
+        </div>
+        <div class="panel">
+          <h2>Quick start</h2>
+          <ol class="steps">
+            <li><code>npm run proxy</code> — bật server</li>
+            <li><code>npm run claude:login</code> — đăng nhập Claude Code</li>
+            <li>Mở Figma plugin → endpoint <code id="ov-endpoint">http://localhost:20128/v1</code></li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- Endpoint & Keys -->
+      <section class="tab-panel" id="tab-endpoint">
+        <div class="panel">
+          <h2>API Endpoint</h2>
+          <div class="copy-row">
+            <input type="text" id="endpoint-url" readonly>
+            <button class="btn" data-copy="endpoint-url"><span class="ico">content_copy</span> Copy</button>
+          </div>
+          <p class="hint">Dùng URL này trong Figma plugin hoặc CLI tools (OpenAI-compatible).</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <h2>API Keys</h2>
+            <button class="btn btn-primary" id="create-key-btn"><span class="ico">add</span> Tạo key</button>
+          </div>
+          <p class="hint">Nếu không có key nào, proxy chấp nhận <code>Bearer local</code>.</p>
+          <table class="tbl">
+            <thead><tr><th>Name</th><th>Key</th><th>Created</th><th></th></tr></thead>
+            <tbody id="keys-list"></tbody>
+          </table>
+        </div>
+        <div class="panel">
+          <h2>Models</h2>
+          <div id="models-list" class="tag-list"></div>
+        </div>
+      </section>
+
+      <!-- Usage -->
+      <section class="tab-panel" id="tab-usage">
+        <div class="toolbar">
+          <select id="usage-period">
+            <option value="today">Today</option>
+            <option value="24h">24 hours</option>
+            <option value="7d" selected>7 days</option>
+            <option value="30d">30 days</option>
+          </select>
+        </div>
+        <div class="cards">
+          <div class="card"><div class="card-label">Requests</div><div class="card-value" id="us-requests">—</div></div>
+          <div class="card"><div class="card-label">Input tokens (est.)</div><div class="card-value" id="us-prompt">—</div></div>
+          <div class="card"><div class="card-label">Output tokens (est.)</div><div class="card-value" id="us-completion">—</div></div>
+          <div class="card"><div class="card-label">Errors</div><div class="card-value" id="us-errors">—</div></div>
+        </div>
+        <div class="panel">
+          <h2>By model</h2>
+          <table class="tbl">
+            <thead><tr><th>Model</th><th>Requests</th><th>Input</th><th>Output</th></tr></thead>
+            <tbody id="usage-by-model"></tbody>
+          </table>
+        </div>
+        <div class="panel">
+          <h2>Recent requests</h2>
+          <table class="tbl">
+            <thead><tr><th>Time</th><th>Model</th><th>Tokens</th><th>Duration</th><th>Status</th></tr></thead>
+            <tbody id="usage-recent"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Quota -->
+      <section class="tab-panel" id="tab-quota">
+        <div class="panel" id="quota-connection">
+          <div class="conn-head">
+            <div class="conn-icon">CC</div>
+            <div>
+              <h2 id="quota-name">Claude Code</h2>
+              <p class="hint" id="quota-email">—</p>
+            </div>
+            <span class="badge" id="quota-badge">—</span>
+          </div>
+        </div>
+        <div class="quota-grid" id="quota-bars"></div>
+        <div class="panel">
+          <p class="hint" id="quota-message"></p>
+        </div>
+      </section>
+    </main>
+  </div>
+  <div class="toast" id="toast"></div>
+  <script src="/dashboard/app.js"></script>
+</body>
+</html>

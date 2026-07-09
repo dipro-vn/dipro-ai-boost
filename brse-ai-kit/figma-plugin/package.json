@@ -1,0 +1,24 @@
+{
+  "name": "figma-plugin",
+  "version": "1.0.0",
+  "description": "Đánh số UI element trên Frame Figma để phục vụ Basic Design (badge đỏ + đường nối).",
+  "main": "index.js",
+  "scripts": {
+    "build": "node scripts/build-code.js && node scripts/build-ui.js",
+    "postinstall": "node scripts/build-code.js && node scripts/build-ui.js",
+    "proxy": "node scripts/ai-proxy-server.js",
+    "bridge": "node scripts/ai-proxy-server.js",
+    "claude:login": "npx claude auth login"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "exceljs": "^4.4.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@anthropic-ai/claude-code": "^2.1.183"
+  }
+}

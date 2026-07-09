@@ -1,0 +1,16 @@
+{
+  "name": "Basic Design Numbering",
+  "id": "basic-design-numbering-v5",
+  "api": "1.0.0",
+  "documentAccess": "dynamic-page",
+  "main": "dist/code.js",
+  "ui": "src/ui.html",
+  "editorType": ["figma"],
+  "networkAccess": {
+    "allowedDomains": ["http://localhost:20128"],
+    "devAllowedDomains": [
+      "http://localhost:20128"
+    ],
+    "reasoning": "Call local Claude Code proxy and CORS bridge on localhost:20128"
+  }
+}

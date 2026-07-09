@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Claude Code Bridge</title>
+</head>
+<body>
+<div id="bridge-status" style="font:13px/1.5 system-ui,sans-serif;padding:16px;color:#444;max-width:480px;">
+  <strong>Claude Code Bridge</strong>
+  <p id="bridge-msg">Đang khởi động…</p>
+</div>
+<script>
+(function () {
+  var BRIDGE_ORIGIN = window.location.origin;
+
+  function postToParent(payload) {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage(payload, '*');
+    }
+  }
+
+  var statusEl = document.getElementById('bridge-msg');
+  var inIframe = window.parent && window.parent !== window;
+  if (statusEl) {
+    statusEl.textContent = inIframe
+      ? 'Bridge sẵn sàng (iframe Figma plugin).'
+      : 'Bridge đang chạy. Trang này dùng làm iframe ẩn trong Figma plugin — mở trực tiếp chỉ để kiểm tra server.';
+  }
+  if (inIframe && statusEl && statusEl.parentElement) {
+    statusEl.parentElement.style.display = 'none';
+  }
+
+  postToParent({ type: 'bridge-ready', origin: BRIDGE_ORIGIN });
+
+  window.addEventListener('message', function (event) {
+    var msg = event.data;
+    if (!msg || msg.type !== 'bridge-ai-request') return;
+
+    var endpoint = String(msg.endpoint || 'http://localhost:20128/v1').replace(/\/+$/, '');
+    var url = endpoint + '/chat/completions';
+    var messages = [];
+    if (msg.system) messages.push({ role: 'system', content: msg.system });
+    messages.push({ role: 'user', content: msg.user || '' });
+
+    var BRIDGE_TIMEOUT_MS = 120000;
+    var BRIDGE_PROBE_MS = 8000;
+    var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var timer = controller ? setTimeout(function() { controller.abort(); }, BRIDGE_TIMEOUT_MS) : null;
+
+    function parseCompletionRaw(raw) {
+      var trimmed = String(raw || '').trim();
+      if (!trimmed) throw new Error('AI tra ve rong.');
+      if (trimmed.charAt(0) === '{') return JSON.parse(trimmed);
+      var content = '';
+      var lines = trimmed.split('\n');
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i].trim();
+        if (line.indexOf('data:') !== 0) continue;
+        var payload = line.slice(5).trim();
+        if (!payload || payload === '[DONE]') continue;
+        try {
+          var chunk = JSON.parse(payload);
+          var delta = chunk.choices && chunk.choices[0] && chunk.choices[0].delta;
+          var msg = chunk.choices && chunk.choices[0] && chunk.choices[0].message;
+          if (delta && delta.content) content += delta.content;
+          if (msg && msg.content) content = msg.content;
+        } catch (e) {}
+      }
+      if (content) return { choices: [{ message: { content: content } }] };
+      throw new Error('AI tra ve rong (khong parse duoc SSE/JSON).');
+    }
+
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + (msg.apiKey || 'local'),
+      },
+      body: JSON.stringify({
+        model: msg.model || 'cc/claude-sonnet-4-6',
+        max_tokens: msg.maxTokens || 1500,
+        stream: false,
+        messages: messages,
+      }),
+      signal: controller ? controller.signal : undefined,
+    })
+      .then(function (res) {
+        return res.text().then(function (raw) {
+          if (!res.ok) {
+            if (timer) clearTimeout(timer);
+            var errText = raw;
+            try {
+              var errJson = JSON.parse(raw);
+              errText = (errJson.error && (errJson.error.message || errJson.error)) || raw;
+            } catch (e) {}
+            throw new Error(typeof errText === 'string' ? errText : JSON.stringify(errText));
+          }
+          return raw;
+        });
+      })
+      .then(function (raw) {
+        if (timer) clearTimeout(timer);
+        var data = parseCompletionRaw(raw);
+        var text = '';
+        if (data.choices && data.choices.length && data.choices[0].message) {
+          text = data.choices[0].message.content || '';
+        }
+        if (!String(text).trim()) throw new Error('AI tra ve rong (khong co content).');
+        postToParent({ type: 'bridge-ai-result', id: msg.id, text: text });
+      })
+      .catch(function (err) {
+        if (timer) clearTimeout(timer);
+        var errMsg = (err && err.message) || String(err);
+        if (err && err.name === 'AbortError') {
+          errMsg = 'Timeout goi Claude Code (' + (BRIDGE_TIMEOUT_MS / 1000) + 's). Kiem tra npm run proxy (port 20128).';
+        } else if (/failed to fetch|networkerror|econnrefused/i.test(errMsg)) {
+          errMsg = 'Khong ket noi duoc proxy tai ' + endpoint + '. Chay: npm run proxy (port 20128).';
+        }
+        postToParent({
+          type: 'bridge-ai-result',
+          id: msg.id,
+          error: errMsg,
+        });
+      });
+  });
+})();
+</script>
+</body>
+</html>
