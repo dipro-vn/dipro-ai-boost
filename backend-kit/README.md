@@ -26,6 +26,7 @@ If the target project already has `.claude/`, merge the folders manually:
 cp -r backend-kit/.claude/agents   your-backend-project/.claude/
 cp -r backend-kit/.claude/commands your-backend-project/.claude/
 cp -r backend-kit/.claude/skills   your-backend-project/.claude/
+cp -r backend-kit/.claude/tools    your-backend-project/.claude/
 ```
 
 Expected structure after installation:
@@ -35,7 +36,8 @@ your-backend-project/
 |-- .claude/
 |   |-- agents/
 |   |-- commands/
-|   `-- skills/
+|   |-- skills/
+|   `-- tools/
 |-- src/
 |-- package.json
 `-- CLAUDE.md
@@ -57,9 +59,24 @@ Include:
 6. Documentation links for API contracts and feature specs
 ```
 
-Optional source-map tools can be used when present. The kit must still work with normal file search and project inspection.
+## 4. Optional Source-Map Setup
 
-## 4. Commands
+Source-map tools help agents understand the backend codebase before editing. They are optional: the kit still works with normal file and text search when no source-map tool is installed.
+
+Setup guide:
+
+```text
+backend-kit/guideline/step1-install-source-map.md
+```
+
+Choose one:
+
+- CodeGraph for fast source mapping in most NestJS projects.
+- Understand-Anything for larger, legacy, or poorly documented projects.
+
+When a target project contains `.codegraph/` or `.understand-anything/`, backend agents should use the matching source-map tool before broad manual search, then verify important findings by reading the source files.
+
+## 5. Commands
 
 | Task | Command | Use When |
 | --- | --- | --- |
@@ -87,7 +104,7 @@ Examples:
 /generate-api inventory-items
 ```
 
-## 5. Kit Layout
+## 6. Kit Layout
 
 ```text
 .claude/
@@ -107,6 +124,9 @@ Examples:
 |   |-- new-feature.md
 |   |-- refactoring.md
 |   `-- test-generation.md
+|-- tools/
+|   |-- codegraph.md
+|   `-- understand-anything.md
 `-- skills/
     |-- backend-query-cache-performance/
     |-- backend-security-review/
@@ -118,9 +138,11 @@ Examples:
     `-- sourcebase-reuse-first/
 ```
 
-## 6. Core Rules
+## 7. Core Rules
 
 - Inspect existing project patterns before adding modules, entities, migrations, or cache keys.
+- Use a configured source-map tool before broad manual search when `.codegraph/` or `.understand-anything/` exists.
+- Sync the source-map tool after code changes when the tool supports syncing.
 - Organize NestJS by feature modules, not technical layers.
 - Validate request DTOs with `class-validator`; serialize responses through DTOs.
 - Do not return raw entities from controllers.
