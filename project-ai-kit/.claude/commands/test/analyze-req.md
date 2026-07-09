@@ -1,13 +1,10 @@
 ---
-description: Bước 1/4 — Phân tích requirements/SPEC.md → phát hiện điểm mờ (Q&A) → mapping REQ→AC → Screen Inventory. Output là analysis.md dùng cho /plan-tcs. Nếu đã có SPEC.md từ BA, bỏ qua bước AC generation.
+description: Bước 1/4 — Phân tích requirements/SPEC.md → phát hiện điểm mờ (Q&A) → mapping REQ→AC → Screen Inventory. Output là analysis.md dùng cho /plan-tcs. 
 skills:
   - rbt_manual_testing
   - requirements_analyzer
 argument-hint: <feature-name> [module-name]
 ---
-
-Bạn là `qc-agent`. Thực hiện **Section 2: Requirement Analysis** từ skill `rbt_manual_testing`.
-
 ## Input
 
 - **BMAD flow (thường):** `<DOCS_ROOT>/features/<feature>/SPEC.md` (do BA tạo)
