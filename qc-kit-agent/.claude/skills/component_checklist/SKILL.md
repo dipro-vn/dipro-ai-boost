@@ -9,15 +9,15 @@ description: Checklist component-level behaviors — áp dụng sau testing_dime
 
 Skill này **không dùng độc lập** — dùng kết hợp với `rbt_manual_testing`, áp dụng **sau** `testing_dimensions`.
 
-**Khi nào áp dụng:** Tự động detect từ AC text (hoặc từ Figma nếu có MCP):
+**Khi nào áp dụng:** Component Type đã được `/plan-tcs` gắn sẵn cho từng component trong `plan-tcs.md` (Textbox/Dropdown/Checkbox/Radio/Table/Dialog/Button/File Upload/...). `/gen-tcs` **tra thẳng** theo Component Type đó vào Section tương ứng bên dưới — **không** đoán qua keyword AC text, không hỏi user xác nhận A/B/C (khác với việc gắn Component Type, vốn đã chốt ở `/plan-tcs` và user đã confirm plan ở bước đó rồi).
 
-| Keyword trong AC | Section áp dụng |
+| Component Type (từ `plan-tcs.md`) | Section áp dụng |
 |-----------------|----------------|
-| "nhập", "input", "textbox", "form", "upload", "download", "import", "export", "đăng ký", "tạo mới", "cập nhật", "xóa", nút hành động | **Section A — Form Components** |
-| "dialog", "popup", "breadcrumb", "pager", "tooltip", "hyperlink", "link", "progress" | **Section B — Layout Components** |
-| "tìm kiếm", "search", "danh sách", "bảng", "list", "paging", "phân trang", "sort", "sắp xếp", "filter", "lọc" | **Section C — Data Display** |
+| Textbox/Input, Dropdown/Select, Checkbox, Radio, Button (Add/Update/Delete/Export/Import/Download/Upload) | **Section A — Form Components** |
+| Dialog/Popup, Breadcrumb, Pager, Tooltip, Hyperlink/Link, Progress bar | **Section B — Layout Components** |
+| Table/List (Search, Paging, Sort, Filter) | **Section C — Data Display** |
 
-> Trước khi sinh TCs, agent confirm với user: "Tôi sẽ áp component checklist: [A/B/C]. Có cần thêm/bỏ gì không?"
+> Nếu Component Type không khớp entry cụ thể nào trong 3 Section trên (component đặc thù, ít gặp): dùng section gần nhất làm nền, tự bổ sung scenario theo đặc tính riêng của component đó — không bỏ qua bước checklist.
 
 ---
 
@@ -51,6 +51,27 @@ Skill này **không dùng độc lập** — dùng kết hợp với `rbt_manual
 | Select all / Deselect all | Nếu có: check/uncheck đúng tất cả visible options |
 | Search trong dropdown | Filter options đúng theo keyword; không kết quả → empty state rõ ràng |
 | Dependent dropdown | Dropdown B reset khi Dropdown A thay đổi; không giữ giá trị cũ không hợp lệ |
+
+### Checkbox
+
+| Scenario | Cần verify |
+|----------|-----------|
+| Default state | Đúng trạng thái mặc định (checked/unchecked) theo spec |
+| Check/Uncheck | Toggle đúng, không cần double-click |
+| Required validation | Submit khi checkbox bắt buộc chưa check → error đúng message |
+| Indeterminate state | Nếu có (VD "select all" cha với con được chọn 1 phần) → hiển thị đúng dấu gạch ngang, không nhầm với checked/unchecked |
+| Disabled | Không toggle được, style phân biệt rõ |
+| Nhóm checkbox độc lập | Check checkbox này không ảnh hưởng checkbox khác trong cùng nhóm (trừ khi có rule phụ thuộc) |
+
+### Radio Button
+
+| Scenario | Cần verify |
+|----------|-----------|
+| Default selection | Đúng option được chọn mặc định (hoặc không option nào nếu spec yêu cầu) |
+| Chỉ chọn được 1 | Chọn option khác tự động bỏ chọn option cũ trong cùng group |
+| Required validation | Submit khi chưa chọn option nào (nếu bắt buộc) → error đúng message |
+| Disabled option | Option bị disable không chọn được, style phân biệt rõ |
+| Đổi selection kích hoạt logic phụ | Nếu chọn radio này làm hiện/ẩn field khác → verify đúng theo từng option |
 
 ### Button — theo loại hành động
 
@@ -190,6 +211,20 @@ Skill này **không dùng độc lập** — dùng kết hợp với `rbt_manual
 ---
 
 ## Section C — Data Display
+
+### Table (khung hiển thị dữ liệu — độc lập với Search/Paging/Sort/Filter bên dưới)
+
+| Scenario | Cần verify |
+|----------|-----------|
+| Column mapping | Mỗi cột hiển thị đúng data field, đúng định dạng (ngày/số/tiền tệ/trạng thái) |
+| Column header | Tên cột đúng, không thiếu/thừa cột so với spec |
+| Row rendering | Số dòng đúng số record; không dòng nào bị lặp/thiếu |
+| Empty table | Không có data → empty state rõ ràng, không hiện bảng trống/lỗi |
+| Row action | Action theo dòng (Edit/Delete/View...) đúng gắn với đúng record của dòng đó |
+| Row selection | Nếu có checkbox chọn dòng: chọn/bỏ chọn đúng, "select all" hoạt động đúng |
+| Column resize/reorder | Nếu cho phép: thao tác đúng, state được giữ khi reload (tùy spec) |
+| Sticky header/column | Nếu có: header/cột cố định đúng khi scroll ngang/dọc |
+| Long text trong cell | Truncate + tooltip đầy đủ, hoặc wrap đúng theo spec — không vỡ layout |
 
 ### Search
 
