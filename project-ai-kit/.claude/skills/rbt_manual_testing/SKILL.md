@@ -134,7 +134,7 @@ Mô tả: [Hệ thống làm gì, đối tượng dùng là ai]
 
 **Command tương ứng:** `/plan-tcs`
 
-**Mục đích:** Xác định chiến lược test ở cấp module — cấu trúc phân rã Screen/Component + risk level + technique hint — trước khi sinh TC. Đây là bước **bắt buộc**, thể hiện nguyên tắc Human Strategy.
+**Mục đích:** Xác định chiến lược test ở cấp module — cấu trúc phân rã Screen/Component + risk level + technique hint — trước khi sinh TC. Đây là bước **bắt buộc**, thể hiện nguyên tắc Human Strategy. Dùng kết hợp `.claude/skills/screen_strategy/SKILL.md` để chuẩn hóa Strategy Summary theo Screen archetype.
 
 **Agent phải:**
 1. Đọc `analysis.md` (Summary + AC + Screen Inventory nếu có) + `context.md` (platform, auto-load)
@@ -144,13 +144,14 @@ Mô tả: [Hệ thống làm gì, đối tượng dùng là ai]
 3. Với mỗi Screen:
    a. Ghi nhận **UI chung (layout tổng thể)** — 1 dòng mô tả ngắn ở cấp Screen.
    b. Liệt kê **từng Component theo đúng thứ tự xuất hiện trên UI**.
-4. Với mỗi Component, xác định:
+4. **Xác định Archetype & viết Strategy Summary** cho Screen — đọc `.claude/skills/screen_strategy/SKILL.md` (section khớp archetype List/Form/Detail, hoặc Fallback nếu không khớp), viết 3-5 bullet chiến lược tham chiếu tên component thật đã liệt kê ở bước 3b. Self-check: bullet không tham chiếu component/AC cụ thể nào của Screen đang xử lý → viết lại trước khi lưu.
+5. Với mỗi Component, xác định:
    - **Component Type** (Textbox/Dropdown/Checkbox/Radio/Table/Dialog/Button/File Upload/...) — dùng để tra thẳng `component_checklist/SKILL.md` ở bước `/gen-tcs`, không đoán qua keyword.
    - **Risk Level** (High/Medium/Low) — High: nghiệp vụ quan trọng/tiền/bảo mật/phân quyền; Medium: luồng chính không critical; Low: UI validation/happy path đơn giản.
    - **Technique Flag** (nhẹ, optional) — note ngắn nếu AC có dấu hiệu cần Decision Table/State Transition/Boundary Tier. **Không dựng bảng/diagram đầy đủ ở bước này.**
-5. **Rule tương tác chéo component:** khi xác định Logic của 1 component, luôn tự hỏi "component này có phụ thuộc/ảnh hưởng component nào khác trên cùng màn hình không?" — ghi vào cột "Ghi chú phụ thuộc" của component chịu trách nhiệm chính, không tạo category riêng.
-6. **Xác định Assumption môi trường test** — liệt kê ngắn các điều kiện hạ tầng/bên ngoài mà TC ở bước `/gen-tcs` sẽ ngầm dựa vào để chạy được (VD: API bên thứ 3 available lúc test, cronjob/background job chạy đúng chu kỳ thật, không bị mock/stub). Đây KHÔNG phải câu hỏi cho PM/BA (khác AMB-XX) — chỉ là lưu ý cho người chạy test. Để trống nếu module không phụ thuộc hạ tầng ngoài.
-7. Lưu ra `<DOCS_ROOT>/features/<feature>/test-cases/<module>/plan-tcs.md`, show cho user confirm.
+6. **Rule tương tác chéo component:** khi xác định Logic của 1 component, luôn tự hỏi "component này có phụ thuộc/ảnh hưởng component nào khác trên cùng màn hình không?" — ghi vào cột "Ghi chú phụ thuộc" của component chịu trách nhiệm chính, không tạo category riêng.
+7. **Xác định Assumption môi trường test** — liệt kê ngắn các điều kiện hạ tầng/bên ngoài mà TC ở bước `/gen-tcs` sẽ ngầm dựa vào để chạy được (VD: API bên thứ 3 available lúc test, cronjob/background job chạy đúng chu kỳ thật, không bị mock/stub). Đây KHÔNG phải câu hỏi cho PM/BA (khác AMB-XX) — chỉ là lưu ý cho người chạy test. Để trống nếu module không phụ thuộc hạ tầng ngoài.
+8. Lưu ra `<DOCS_ROOT>/features/<feature>/test-cases/<module>/plan-tcs.md`, show cho user confirm.
 
 **Output file:** `<DOCS_ROOT>/features/<feature>/test-cases/<module>/plan-tcs.md`
 
@@ -158,6 +159,11 @@ Mô tả: [Hệ thống làm gì, đối tượng dùng là ai]
 # TC Implementation Plan: [Module Name]
 
 ## [Screen 1 Name]
+- **Archetype:** [List/Search / Form Create / Form Edit / Detail/View / Khác]
+- **Chiến lược Test Case:**
+  - [Bullet 1 — tham chiếu component/AC thật của Screen này]
+  - [Bullet 2]
+  - [Bullet 3]
 - **UI chung:** [mô tả ngắn layout tổng thể]
 
 | Component | Component Type | Risk Level | Technique Flag | Ghi chú phụ thuộc |
