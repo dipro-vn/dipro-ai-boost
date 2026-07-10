@@ -89,7 +89,7 @@ flowchart LR
 
     Q -->|"POC /\nprototype"| LB["🧪 Labo\n─────────────────\nChọn 1–3 kit\ntheo stack cần dùng"]
 
-    Q -->|"Bug fix /\ncải tiến nhỏ"| MT["🔧 Maintain\n─────────────────\nKit theo repo bị lỗi\n(backend / fe / mobile)\n+ qc-kit-agent nếu\ncần bug report"]
+    Q -->|"Bug fix /\ncải tiến nhỏ"| MT["🔧 Maintain\n─────────────────\nKit theo repo\n(backend / fe / mobile)\n+ qc-kit-agent nếu\ncần bug report"]
 
     style PB fill:#DBEAFE,stroke:#2563EB,color:#1E3A8A
     style LB fill:#FEF3C7,stroke:#D97706,color:#78350F
