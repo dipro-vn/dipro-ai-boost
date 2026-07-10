@@ -37,9 +37,6 @@ Lần chạy đầu tiên CLI sẽ mở browser để login bằng Anthropic acc
 | `/exit` | Thoát session (hoặc `Ctrl+D`) |
 
 Trong session có thể trigger agent bằng **natural language** ("hãy là BA, làm SPEC cho login") hoặc **slash command** (`/create-spec login`) — cùng kết quả.
-
-Muốn xem full help / config: gõ `/help` bên trong session, hoặc `claude --help` ngoài shell.
-
 > **Alternative:** Nếu công ty đã cấp Claude Code qua IDE extension (VS Code / JetBrains) hoặc desktop app thì cũng dùng được — chỉ cần mở đúng thư mục `<ten-du-an>` là kit hoạt động. Các bước bên dưới giả định dùng CLI.
 
 ---
@@ -139,8 +136,6 @@ cp .claude/templates/mkdocs.yml <đích>/mkdocs.yml
 mkdir -p <đích>/docs
 cp .claude/templates/docs-index.md <đích>/docs/index.md
 ```
-
-`/init-kit` (Bước 4) tự điền `<TEN_DU_AN>` trong `mkdocs.yml`/`docs/index.md` nếu 2 file này đã tồn tại tại thời điểm chạy — nếu chưa, tự sửa placeholder `<TEN_DU_AN>` bằng tay.
 
 Cài dependency và chạy site:
 
@@ -374,15 +369,6 @@ flowchart TB
 ```
 
 
-**On-demand (ngoài pipeline chính, chạy khi cần):**
-
-| Command | Khi nào |
-|---|---|
-| `/test/review-tcs` | Có ≥2 QC review chéo bộ TC (8 tiêu chí Critical/Major/Minor) |
-| `/test/export-xlsx <path> web\|app` | Bàn giao Excel cho client / release theo template công ty |
-| `/test/generate_regression_suite` | Sau code change lớn, cần xác định subset TC re-run |
-| Delta update | SPEC đổi → re-run `/test/analyze-req` → `plan-tcs` → `gen-tcs` |
-
 ### Chạy Automation Test (Playwright E2E)
 
 Hướng dẫn setup repo E2E riêng, cài Playwright, chạy `/qc-automation` và đọc report → `Automation_Test.md`.
@@ -409,3 +395,6 @@ project-ai-kit/
 ```
 
 **Nguyên tắc cốt lõi** (chi tiết trong `POLICIES.md`): không đoán mò · đọc trước hành động sau · stateless (mọi context đọc từ `.md`) · tool-first (tilth thay grep/cat/find) · blast radius check trước khi đổi public interface · phân quyền persona nghiêm ngặt (chỉ Dev sửa source code).
+
+## Tham Khảo
+[VIDEO DEMO](https://drive.google.com/file/d/10475WFEabgLh0-yTJkNLjPYNldgKghkC/view?usp=sharing)
