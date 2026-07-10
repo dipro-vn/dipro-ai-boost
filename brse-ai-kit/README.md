@@ -45,6 +45,8 @@ Figma Frame
       (.xls + ảnh)      (UTF-8 BOM)
 ```
 
+[VIDEO HƯỚNG DẪN TẠI ĐÂY](https://drive.google.com/file/d/1WkbpoVpPAmMJdSOqzaN2Lhb4k35MF6vE/view?usp=sharing)
+
 ### Cài đặt Plugin
 
 1. Mở **Figma Desktop** (bắt buộc dùng Figma Desktop, không phải web)

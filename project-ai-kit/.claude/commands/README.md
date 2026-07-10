@@ -35,7 +35,7 @@
 | # | Command | Chức năng | Input → Output | Skill |
 |---|---|---|---|---|
 | 1 | `/test/analyze-req <feature> <module>` | Phân tích requirements → Q&A + AC + Screen Inventory | SPEC.md → `analysis.md` | `rbt_manual_testing` + `requirements_analyzer` |
-| 2 | `/test/plan-tcs <feature> <module>` | TC Implementation Plan (Screen → Component, Risk, Technique) | `analysis.md` → `plan-tcs.md` | `rbt_manual_testing` |
+| 2 | `/test/plan-tcs <feature> <module>` | TC Implementation Plan (Screen → Archetype + Strategy → Component, Risk, Technique) | `analysis.md` → `plan-tcs.md` | `rbt_manual_testing` + `screen_strategy` |
 | 3 | `/test/gen-tcs <feature> <module>` | Sinh TC chi tiết (bao gồm Test Scenario + Visual + Validation) | `plan-tcs.md` + `analysis.md` → `test-cases.md` | `rbt_manual_testing` + `testing_dimensions` + `component_checklist` |
 | 4 | `/test/review-tcs <feature> <module>` (optional) | Deep review 8 tiêu chí (Critical/Major/Minor) | `test-cases.md` → `review_report.md` | `rbt_manual_testing` |
 | 5 | `/test/export-xlsx <path.md> [web\|app]` | Export ra `.xlsx` theo template Web/App (giữ dropdown) | `.md` → `.xlsx` | — (Python script) |
@@ -46,6 +46,7 @@
 
 | Command | Chức năng | Skill |
 |---|---|---|
+| `/test/gen-automation <feature> [module]` | Sinh Playwright script từ `test-cases.md` — Playwright MCP recon DOM thật, auto-heal khi FAIL | `automation_engineer` |
 | `/test/gen-bug-report` | Chuẩn hóa bug report cho Backlog (severity/priority/repro) | `bug_reporter` |
 | `/test/generate_regression_suite` | Chọn TC chạy lại sau code change | `rbt_manual_testing` |
 | `/test/generate_test_execution_checklist` | Checklist ưu tiên trước release | `rbt_manual_testing` |

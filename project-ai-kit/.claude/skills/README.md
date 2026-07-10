@@ -18,6 +18,8 @@
 | `bug_reporter/` | — | Chuẩn hóa bug report — 8 Bug Types + severity/priority/repro steps — dùng bởi `/test/gen-bug-report` |
 | `component_checklist/` | — | Checklist component-level (Form/Layout/Data Display) — dùng bởi `/test/gen-tcs` sau khi có Component Type từ `plan-tcs.md` |
 | `testing_dimensions/` | — | Checklist testing theo platform (Web/Mobile/Desktop/Batch/Cross-platform) — dùng bởi `/test/gen-tcs` |
+| `screen_strategy/` | — | Chiến lược test theo Screen archetype (List/Search, Form, Detail/View, Fallback) — dùng on-demand trong `/test/plan-tcs` khi cần viết Strategy Summary cho Screen |
+| `automation_engineer/` | — | Playwright automation từ manual test cases (6 sections: Scaffold → Chọn TC → MCP Recon → Sinh code → Auto-heal → Report) — dùng bởi `/test/gen-automation` |
 | `figma-design/` | frontend (all FE repos) + mobile | Figma MCP tools (read + write), token mapping Figma → design tokens dự án |
 | `task-decomposition/` | — | Phân rã task từ DESIGN.md — dùng bởi `techlead-tasks-agent` |
 | `project-planning/` | — | Risk, dependency, critical path — dùng bởi `pm-agent` |
