@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Basic Design Workflow Guide</title>
+<style>
+  :root {
+    --blue:    #2563EB;
+    --blue-lt: #DBEAFE;
+    --green:   #059669;
+    --green-lt:#D1FAE5;
+    --orange:  #D97706;
+    --orange-lt:#FEF3C7;
+    --red:     #DC2626;
+    --red-lt:  #FEE2E2;
+    --gray:    #374151;
+    --gray-lt: #F9FAFB;
+    --border:  #E5E7EB;
+    --code-bg: #1E293B;
+    --code-txt:#E2E8F0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', 'Hiragino Sans', Arial, sans-serif;
+    font-size: 14px; color: var(--gray);
+    background: #F1F5F9; line-height: 1.7;
+  }
+
+  /* ── Layout ── */
+  .page-wrap { max-width: 960px; margin: 0 auto; padding: 32px 24px 80px; }
+
+  /* ── Header ── */
+  .doc-header {
+    background: linear-gradient(135deg, #1E3A5F 0%, #2563EB 100%);
+    color: #fff; border-radius: 12px;
+    padding: 36px 40px 32px; margin-bottom: 36px;
+  }
+  .doc-header .badge {
+    display: inline-block; background: rgba(255,255,255,0.2);
+    color: #fff; font-size: 11px; font-weight: 700;
+    letter-spacing: 1.5px; padding: 3px 10px; border-radius: 20px;
+    text-transform: uppercase; margin-bottom: 12px;
+  }
+  .doc-header h1 { font-size: 28px; font-weight: 800; line-height: 1.25; }
+  .doc-header p  { margin-top: 10px; opacity: 0.85; font-size: 14px; }
+  .doc-header .meta { margin-top: 20px; display: flex; gap: 24px; font-size: 12px; opacity: 0.7; }
+
+  /* ── Section ── */
+  .section { background: #fff; border-radius: 10px; border: 1px solid var(--border);
+             margin-bottom: 24px; overflow: hidden; }
+  .section-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 24px; border-bottom: 1px solid var(--border);
+    background: var(--gray-lt);
+  }
+  .section-header .step-badge {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 800; color: #fff; flex-shrink: 0;
+  }
+  .section-header h2 { font-size: 16px; font-weight: 700; }
+  .section-header .sub { font-size: 12px; color: #6B7280; margin-top: 1px; }
+  .section-body { padding: 24px; }
+
+  /* ── Step pill ── */
+  .step-blue   { background: var(--blue); }
+  .step-green  { background: var(--green); }
+  .step-orange { background: var(--orange); }
+  .step-red    { background: var(--red); }
+  .step-gray   { background: #6B7280; }
+
+  /* ── Flow arrows ── */
+  .flow { display: flex; flex-direction: column; gap: 0; }
+  .flow-item {
+    display: flex; align-items: flex-start; gap: 16px;
+    padding: 14px 0; border-bottom: 1px dashed var(--border);
+  }
+  .flow-item:last-child { border-bottom: none; }
+  .flow-num {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--blue); color: #fff;
+    font-size: 12px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 2px;
+  }
+  .flow-content h4 { font-size: 13px; font-weight: 700; margin-bottom: 3px; }
+  .flow-content p  { font-size: 13px; color: #4B5563; }
+
+  /* ── File table ── */
+  .file-table { width: 100%; border-collapse: collapse; }
+  .file-table th {
+    background: var(--blue); color: #fff;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.5px;
+    padding: 10px 14px; text-align: left;
+  }
+  .file-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: top; }
+  .file-table tr:last-child td { border-bottom: none; }
+  .file-table tr:nth-child(even) td { background: var(--gray-lt); }
+  .tag {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 11px; font-weight: 700; white-space: nowrap;
+  }
+  .tag-must   { background: #FEE2E2; color: #991B1B; }
+  .tag-opt    { background: #E0E7FF; color: #3730A3; }
+  .tag-output { background: var(--green-lt); color: #065F46; }
+
+  /* ── Code / prompt block ── */
+  .prompt-block {
+    background: var(--code-bg); color: var(--code-txt);
+    border-radius: 8px; padding: 20px 24px;
+    font-family: 'Courier New', monospace; font-size: 13px;
+    line-height: 1.8; white-space: pre-wrap; word-break: break-word;
+    position: relative;
+  }
+  .prompt-block .prompt-label {
+    position: absolute; top: -11px; left: 16px;
+    background: var(--blue); color: #fff;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 11px; font-weight: 700; padding: 2px 10px; border-radius: 20px;
+    letter-spacing: 0.5px;
+  }
+  .var { color: #FCD34D; }      /* yellow = variable to fill in */
+  .cmt { color: #94A3B8; }      /* gray = comment */
+  .kw  { color: #6EE7B7; }      /* green = keyword/section */
+
+  /* ── Alert box ── */
+  .alert {
+    border-radius: 8px; padding: 14px 18px;
+    font-size: 13px; margin: 16px 0; display: flex; gap: 12px; align-items: flex-start;
+  }
+  .alert-icon { font-size: 18px; flex-shrink: 0; line-height: 1.4; }
+  .alert-blue   { background: var(--blue-lt);   border-left: 4px solid var(--blue); }
+  .alert-orange { background: var(--orange-lt); border-left: 4px solid var(--orange); }
+  .alert-red    { background: var(--red-lt);    border-left: 4px solid var(--red); }
+  .alert-green  { background: var(--green-lt);  border-left: 4px solid var(--green); }
+
+  /* ── Rule list ── */
+  .rule-list { list-style: none; }
+  .rule-list li {
+    padding: 10px 14px; border-bottom: 1px solid var(--border);
+    font-size: 13px; display: flex; align-items: flex-start; gap: 10px;
+  }
+  .rule-list li:last-child { border-bottom: none; }
+  .rule-list li::before { content: '▸'; color: var(--blue); font-size: 12px; margin-top: 2px; flex-shrink: 0; }
+
+  /* ── Two-col ── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
+
+  .card {
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 16px 18px; background: var(--gray-lt);
+  }
+  .card h4 { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+
+  /* ── Divider ── */
+  .divider { height: 1px; background: var(--border); margin: 16px 0; }
+
+  /* ── TOC ── */
+  .toc { background: var(--blue-lt); border-radius: 8px; padding: 18px 22px; margin-bottom: 28px; }
+  .toc h3 { font-size: 13px; font-weight: 700; color: var(--blue); margin-bottom: 10px; }
+  .toc ol  { padding-left: 20px; }
+  .toc li  { font-size: 13px; padding: 3px 0; }
+  .toc a   { color: var(--blue); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+
+  /* ── Small label ── */
+  .label { font-size: 11px; font-weight: 700; color: #6B7280; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* ── Attach list ── */
+  .attach-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+  .attach-item {
+    display: flex; align-items: center; gap: 10px;
+    background: #F8FAFC; border: 1px solid var(--border);
+    border-radius: 6px; padding: 10px 14px; font-size: 13px;
+  }
+  .attach-icon { font-size: 18px; flex-shrink: 0; }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+<!-- ══════════════════════════════════════════
+     HEADER
+══════════════════════════════════════════ -->
+<div class="doc-header">
+  <div class="badge">Workflow Guide</div>
+  <h1>Basic Design — 作業手順書</h1>
+  <p>Master_Basic_Design.xlsx を使った画面基本設計書の作成・更新フロー<br>
+  Claude Cowork × Figma 連携ワークフロー</p>
+  <div class="meta">
+    <span>📅 Last updated: 2026-06-18</span>
+    <span>👤 Taiyang</span>
+    <span>📁 Project: Master Basic Design</span>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     TABLE OF CONTENTS
+══════════════════════════════════════════ -->
+<div class="toc">
+  <h3>📋 目次 / Table of Contents</h3>
+  <ol>
+    <li><a href="#overview">ワークフロー概要</a></li>
+    <li><a href="#project-setup">Projectセットアップ</a></li>
+    <li><a href="#required-files">必要ファイル一覧</a></li>
+    <li><a href="#prompt-first">初回プロンプト（新規画面作成）</a></li>
+    <li><a href="#prompt-spec">仕様変更プロンプト（既存画面のスペック更新）</a></li>
+    <li><a href="#prompt-repeat">新規画面追加プロンプト（2画面目以降）</a></li>
+    <li><a href="#rules">重要ルール・注意事項</a></li>
+  </ol>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SECTION 1: OVERVIEW
+══════════════════════════════════════════ -->
+<div class="section" id="overview">
+  <div class="section-header">
+    <div class="step-badge step-gray">①</div>
+    <div>
+      <h2>ワークフロー概要</h2>
+      <div class="sub">End-to-end process at a glance</div>
+    </div>
+  </div>
+  <div class="section-body">
+    <div class="flow">
+      <div class="flow-item">
+        <div class="flow-num">1</div>
+        <div class="flow-content">
+          <h4>Project作成 &amp; ファイル配置</h4>
+          <p>Claude Coworkで「Master Basic Design」プロジェクトを作成。必須ファイルをフォルダに配置し、Project Instructionsを設定する。</p>
+        </div>
+      </div>
+      <div class="flow-item">
+        <div class="flow-num">2</div>
+        <div class="flow-content">
+          <h4>入力素材の準備（画面ごと）</h4>
+          <p>Figma URL・番号付きスクリーンショット（画像）・スケルトン基本設計書（xlsx）を準備する。</p>
+        </div>
+      </div>
+      <div class="flow-item">
+        <div class="flow-num">3</div>
+        <div class="flow-content">
+          <h4>Claude へプロンプト送信（3パターン）</h4>
+          <p>
+            <strong>① 新規作成</strong> — その画面IDがMasterに存在しない場合。スケルトン+スクリーンショットを添付。<br>
+            <strong>② 仕様変更</strong> — 既存シートの特定項目を変更したい場合。変更内容を明示してChange Summaryに記述。<br>
+            <strong>③ 新規画面追加</strong> — 2画面目以降を追加する場合。ワークブックに新シートが追記される。
+          </p>
+        </div>
+      </div>
+      <div class="flow-item">
+        <div class="flow-num">4</div>
+        <div class="flow-content">
+          <h4>Claude が自動実行（常にRead-First）</h4>
+          <p>まず Master_Basic_Design.xlsx を読み込み現在の状態を確認 → シートの有無を判定 → 既存シート更新 or 新規作成 → 画像を保持・再挿入 → 保存。ローカルで手動編集したファイルも、フォルダがマウントされていれば次回セッションで最新版を読み込む。</p>
+        </div>
+      </div>
+      <div class="flow-item">
+        <div class="flow-num">5</div>
+        <div class="flow-content">
+          <h4>出力・確認</h4>
+          <p>更新済み Master_Basic_Design.xlsx が出力される。内容を確認し、[要確認]箇所をレビューして埋める。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SECTION 2: PROJECT SETUP
+══════════════════════════════════════════ -->
+<div class="section" id="project-setup">
+  <div class="section-header">
+    <div class="step-badge step-blue">②</div>
+    <div>
+      <h2>Projectセットアップ</h2>
+      <div class="sub">初回のみ実施する設定作業</div>
+    </div>
+  </div>
+  <div class="section-body">
+
+    <div class="two-col">
+      <div class="card">
+        <h4>🖥️ Claude Cowork</h4>
+        <ol style="padding-left:18px; font-size:13px; line-height:2;">
+          <li>Claude Desktop を起動</li>
+          <li>「New Project」を作成</li>
+          <li>Project名:「Master Basic Design」</li>
+          <li>作業フォルダをマウント（Connect Folder）</li>
+          <li>Project Instructions を貼り付け（下記参照）</li>
+        </ol>
+      </div>
+      <div class="card">
+        <h4>📂 フォルダ構成</h4>
+        <pre style="font-size:12px; line-height:1.8; color:#374151;">Master Basic Design/
+├── Master_Basic_Design.xlsx   ← 単一ソース
+├── FORMAT RULE.rtf
+├── CONTENT RULE.rtf
+├── VALIDATION CATALOG.rtf
+├── ERROR MESSAGE CATALOG.rtf
+└── 要件定義書.xlsx             ← 参考資料</pre>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="label" style="margin-bottom:10px;">Project Instructions（設定画面に貼り付け）</div>
+    <div class="prompt-block" style="font-size:12px; line-height:1.7;">
+<span class="cmt"># ── ROLE ──────────────────────────────────────────────</span>
+You are a Senior Japanese Business Analyst and BrSE
+specializing in enterprise Basic Design documents.
+You are the maintainer of the Master Basic Design Workbook.
+
+<span class="cmt"># ── MASTER WORKBOOK ───────────────────────────────────</span>
+Master_Basic_Design.xlsx is the single source of truth.
+All screens must exist inside this workbook.
+Never create separate workbooks unless explicitly requested.
+
+<span class="cmt"># ── TEMPLATE (SAMPLE SHEET) ───────────────────────────</span>
+The sheet named <span class="kw">{Screen Name}</span> is the master template (Sample).
+Never modify / delete / rename / write content into it.
+
+<span class="cmt"># ── SCREEN MANAGEMENT ─────────────────────────────────</span>
+Before creating output, inspect sheet names.
+Determine whether the target screen already exists
+by matching: Screen Name / URL / screenshot.
+
+If EXISTS → update only that sheet.
+  Preserve: formatting / screenshot / manually edited notes.
+  Do not overwrite unrelated sheets.
+
+If NOT EXISTS → duplicate {Screen Name} → rename → populate.
+  Never create blank sheets.
+
+<span class="cmt"># ── IMAGE PRESERVATION ────────────────────────────────</span>
+openpyxl strips embedded images on load+save.
+After every wb.save(), re-insert all images via ws.add_image().
+Workflow:
+  1. Extract image from skeleton xlsx (xl/media/) using zipfile.
+  2. Convert RGBA→RGB, save to temp PNG.
+  3. Create openpyxl Image, set anchor="A9", fit to cols A-G.
+  4. ws.add_image(img) before wb.save().
+
+<span class="cmt"># ── READ-BEFORE-WRITE ─────────────────────────────────</span>
+At the start of EVERY task:
+  1. Read Master_Basic_Design.xlsx from the project folder.
+  2. List all existing sheet names.
+  3. Identify the target screen.
+  4. Plan changes before executing.
+This ensures locally-edited content is never overwritten.
+
+<span class="cmt"># ── SPEC UPDATE RULE ──────────────────────────────────</span>
+When updating an existing screen's spec:
+  - Update ONLY the items listed in Change Summary.
+  - Preserve all unchanged items, screenshots, manually edited notes.
+  - Update 更新日 and 更新者 metadata rows.
+  - Never blank out existing content unless explicitly instructed.
+  - Never touch other sheets.
+
+<span class="cmt"># ── WORKBOOK GROWTH ───────────────────────────────────</span>
+New screens are always appended. Never rebuild from scratch.
+Never delete sheets. Output always contains ALL existing sheets + new.
+
+<span class="cmt"># ── HISTORY SHEET AUTO-LOG ────────────────────────────</span>
+After EVERY create or update operation, if sheet "1.1. 変更履歴" exists:
+  1. Find the last row with data in sheet "1.1. 変更履歴".
+  2. Append a new row with:
+     B: No (auto-increment from previous row)
+     C: 変更日 (today's date, format YYYY-MM-DD)
+     D: 画面ID (e.g. 1921)
+     E: 画面名 (screen name)
+     F: 変更種別 (新規作成 or 仕様変更)
+     G: 変更内容 (1-line summary of what was created/changed)
+     H: 変更者 (from prompt, default: Taiyang)
+  Note: header row is row 4. Data starts from row 5.
+  3. Preserve all existing rows. Never overwrite.
+
+<span class="cmt"># ── COVER SHEET AUTO-UPDATE ───────────────────────────</span>
+After EVERY operation, if sheet "1.0 表紙Cover" exists:
+  Find the cell labeled 最終更新日 and update its value to today.
+  Find the cell labeled 総画面数 and update to count of screen sheets
+  (exclude: {Screen Name}, 1.0 表紙Cover, 1.1. 変更履歴, Error Message List).
+
+<span class="cmt"># ── UNKNOWN INFORMATION ───────────────────────────────</span>
+Mark unknown requirements as [要確認].
+Never assume requirements silently.
+
+<span class="cmt"># ── OUTPUT QUALITY ────────────────────────────────────</span>
+Japanese: business Japanese, dictionary form, BA wording.
+Avoid AI wording. Follow FORMAT RULE.md and CONTENT RULE.md.</div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SECTION 3: REQUIRED FILES
+══════════════════════════════════════════ -->
+<div class="section" id="required-files">
+  <div class="section-header">
+    <div class="step-badge step-blue">③</div>
+    <div>
+      <h2>必要ファイル一覧</h2>
+      <div class="sub">プロジェクトフォルダに常時配置するファイル + 毎回添付するファイル</div>
+    </div>
+  </div>
+  <div class="section-body">
+
+    <div class="label" style="margin-bottom:10px;">📁 プロジェクトフォルダに配置（常設）</div>
+    <table class="file-table">
+      <tr>
+        <th>ファイル名</th>
+        <th>用途</th>
+        <th>必須</th>
+        <th>備考</th>
+      </tr>
+      <tr>
+        <td><strong>Master_Basic_Design.xlsx</strong></td>
+        <td>単一ソース。全画面のシートを格納するマスターワークブック。<br><code style="font-size:11px;">{Screen Name}</code> シートがSampleテンプレート。</td>
+        <td><span class="tag tag-must">必須</span></td>
+        <td>削除・再作成不可</td>
+      </tr>
+      <tr>
+        <td><strong>FORMAT RULE.rtf</strong></td>
+        <td>レイアウト・ボーダー・スタイル・画像配置ルール</td>
+        <td><span class="tag tag-must">必須</span></td>
+        <td>Claudeが自動参照</td>
+      </tr>
+      <tr>
+        <td><strong>CONTENT RULE.rtf</strong></td>
+        <td>各セクションの記述ルール（ボタン・入力・リンク・エッジケース等）</td>
+        <td><span class="tag tag-must">必須</span></td>
+        <td>Claudeが自動参照</td>
+      </tr>
+      <tr>
+        <td><strong>VALIDATION CATALOG.rtf</strong></td>
+        <td>バリデーションルールの共通カタログ</td>
+        <td><span class="tag tag-must">必須</span></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td><strong>ERROR MESSAGE CATALOG.rtf</strong></td>
+        <td>エラーメッセージの共通カタログ（MSG001〜）</td>
+        <td><span class="tag tag-must">必須</span></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td><strong>要件定義書.xlsx</strong></td>
+        <td>システム全体の要件定義書。各画面の概要・API・ビジネスフローを参照。</td>
+        <td><span class="tag tag-opt">任意</span></td>
+        <td>あると記述精度が上がる</td>
+      </tr>
+    </table>
+
+    <div class="divider"></div>
+
+    <div class="label" style="margin-bottom:10px;">📎 毎回のプロンプトに添付するファイル</div>
+    <table class="file-table">
+      <tr>
+        <th>ファイル</th>
+        <th>内容</th>
+        <th>必須</th>
+      </tr>
+      <tr>
+        <td><strong>番号付きスクリーンショット</strong><br><code style="font-size:11px;">.png / .jpg</code></td>
+        <td>UIの各項目に番号（①②③…）が付いた画面キャプチャ。<br>Claudeが画面構成・項目順序・レイアウトを把握するために使用。</td>
+        <td><span class="tag tag-must">必須</span></td>
+      </tr>
+      <tr>
+        <td><strong>スケルトン基本設計書</strong><br><code style="font-size:11px;">basic_design_XXXX_YYYYMMDD.xlsx</code></td>
+        <td>自動生成されたスケルトン（項目名・型・番号の一覧）。<br>番号付き画像と対応している。画像も埋め込み済みの場合はClaudeが抽出して再挿入する。</td>
+        <td><span class="tag tag-must">必須</span></td>
+      </tr>
+    </table>
+
+    <div class="alert alert-orange">
+      <div class="alert-icon">⚠️</div>
+      <div>スケルトンxlsxに埋め込まれた番号付き画像はClaudeが自動抽出してMaster_Basic_Design.xlsxのシートに挿入します。画像の事前加工は不要です。</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SECTION 4: FIRST-TIME PROMPT
+══════════════════════════════════════════ -->
+<div class="section" id="prompt-first">
+  <div class="section-header">
+    <div class="step-badge step-green">④</div>
+    <div>
+      <h2>初回プロンプト — 新規画面作成</h2>
+      <div class="sub">その画面IDのシートがMaster_Basic_Design.xlsxに存在しない場合</div>
+    </div>
+  </div>
+  <div class="section-body">
+
+    <div class="alert alert-green">
+      <div class="alert-icon">✅</div>
+      <div><strong>いつ使う？</strong> 新しい画面（画面ID）を初めてMasterワークブックに追加するとき。Claudeは{Screen Name}シートを複製して新しいシートを作成します。</div>
+    </div>
+
+    <div class="label" style="margin-bottom:10px;">添付ファイル</div>
+    <div class="attach-list" style="margin-bottom:20px;">
+      <div class="attach-item"><span class="attach-icon">🖼️</span> 番号付きスクリーンショット（画像）</div>
+      <div class="attach-item"><span class="attach-icon">📊</span> スケルトン基本設計書 xlsx（画像埋め込み済み）</div>
+    </div>
+
+    <div style="position:relative; margin-top:20px;">
+    <div class="prompt-block">
+<span class="prompt-label">PROMPT — 初回（新規作成）</span>
+<span class="kw">Target Screen</span>
+[SCREEN NAME]
+<span class="var">※ 画面名を記入。例: 1921 - VAS FLOW 通常登録</span>
+
+Figma URL
+[<span class="var">https://www.figma.com/design/XXXXX?node-id=XXXXX</span>]
+
+<span class="kw">Task</span>
+Update Master_Basic_Design.xlsx.
+Determine whether the target screen already exists.
+If the sheet exists:
+- update only affected parts
+If the sheet does not exist:
+- duplicate Sample
+- create a new sheet
+
+Analyze:
+- Figma hierarchy
+- Numbered Screenshot
+- Skeleton Basic Design
+- Feature Definitions
+- API Definitions
+- Validation Catalog
+- Error Message Catalog
+
+Populate:
+- Overview
+- Access Method
+- Business Flow
+- Item Definitions
+- Validation
+- Error Handling
+- API Behavior
+- Edge Cases
+
+Follow:
+- Format_Rule.md
+- Content_Rule.md
+
+Unknown requirements:
+[要確認]
+
+Preserve workbook structure and formatting.
+
+Output:
+Updated Master_Basic_Design.xlsx
+</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="label" style="margin-bottom:10px;">Claudeが自動実行すること（初回）</div>
+    <ul class="rule-list">
+      <li>Master_Basic_Design.xlsxのシート一覧を確認し、対象画面の有無を判定する</li>
+      <li>シートが存在しない場合、{Screen Name}（Sampleテンプレート）を複製して新シートを作成する</li>
+      <li>Figma URLから設計コンテキスト（階層・コンポーネント・プロパティ）を取得する</li>
+      <li>スケルトンxlsxから項目一覧（#・JP名・VN名・型・ステータス等）を抽出する</li>
+      <li>要件定義書.xlsxから該当画面のシートを参照し、概要・ビジネスフロー・API情報を補完する</li>
+      <li>62項目すべてに記述（日本語・ベトナム語）を充実させ、[要確認]でフラグを立てる</li>
+      <li>スケルトンxlsxに埋め込まれた番号付き画像を抽出し、新シートのA9に挿入する</li>
+      <li>ボーダー・フォーマットをSampleテンプレートと完全一致させる</li>
+    </ul>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SECTION 5: SPEC UPDATE PROMPT
+══════════════════════════════════════════ -->
+<div class="section" id="prompt-spec">
+  <div class="section-header">
+    <div class="step-badge step-orange">⑤</div>
+    <div>
+      <h2>仕様変更プロンプト — 既存画面のスペック更新</h2>
+      <div class="sub">画面IDのシートはすでに存在し、特定の項目・ボタン・バリデーション等を変更したい場合</div>
+    </div>
+  </div>
+  <div class="section-body">
+
+    <div class="alert alert-orange">
+      <div class="alert-icon">⚠️</div>
+      <div><strong>いつ使う？</strong> 既存シート（例: 1921）の一部の仕様が変わった場合。新規スケルトンの添付は不要。<strong>「何を変えるか」をChange Summaryに明記</strong>することで、未変更部分・スクリーンショット・手動ノートが保護される。</div>
+    </div>
+
+    <div class="alert alert-blue">
+      <div class="alert-icon">💡</div>
+      <div>
+        <strong>Claudeの動作（新threadでも同じ）：</strong><br>
+        ① プロジェクトフォルダのMaster_Basic_Design.xlsxを読み込む（Read-First）<br>
+        ② 対象シートの現在の内容を確認する<br>
+        ③ Change Summaryに記載した項目のみ更新する<br>
+        ④ 変更していない項目・画像・手動ノートはそのまま保持する<br>
+        ⑤ メタデータ（更新日・更新者）を更新してから保存する
+      </div>
+    </div>
+
+    <div class="label" style="margin-bottom:10px;">添付ファイル</div>
+    <div class="attach-list" style="margin-bottom:20px;">
+      <div class="attach-item"><span class="attach-icon">📄</span> 変更仕様書・変更内容のメモ（あれば）</div>
+      <div class="attach-item"><span class="attach-icon">🖼️</span> 変更後のスクリーンショット（UIレイアウトが変わった場合のみ）</div>
+    </div>
+
+    <div style="position:relative; margin-top:20px;">
+    <div class="prompt-block">
+<span class="prompt-label">PROMPT — 仕様変更（既存画面スペック更新）</span>
+<span class="kw">Target Screen</span>
+[<span class="var">SCREEN NAME</span>]
+<span class="var">※ 既存シート名と一致させる。例: 1921 - VAS FLOW 通常登録</span>
+
+<span class="kw">Task</span>
+Update Master_Basic_Design.xlsx.
+The target sheet already exists.
+Read the current sheet content first (Read-First).
+Update ONLY the items listed in Change Summary below.
+Preserve ALL other items, screenshots, and manually edited notes.
+Update 更新日 and 更新者 metadata after changes.
+
+<span class="kw">Change Summary</span>
+<span class="var">※ 変更内容を具体的に記述する（必須）</span>
+<span class="var">例1: item #3（保存して計算）のバリデーションエラー説明を以下に変更する：</span>
+<span class="var">　　 [変更後の内容をここに記述]</span>
+<span class="var">例2: item #15（メールアドレス）の最大文字数を100文字から200文字に変更する</span>
+<span class="var">例3: Error Message ListシートのE-1921-003のメッセージ文言を変更する</span>
+
+Follow:
+- Format_Rule.md
+- Content_Rule.md
+
+Unknown requirements:
+[要確認]
+
+Preserve:
+- All unchanged items
+- Embedded screenshot at A9
+- Manually edited notes in Comment column
+- Workbook structure and all other sheets
+
+Output:
+Updated Master_Basic_Design.xlsx
+</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="label" style="margin-bottom:10px;">仕様変更時のClaudeの保護対象</div>
+    <table class="file-table">
+      <tr><th>保護対象</th><th>説明</th></tr>
+      <tr>
+        <td>未変更の項目行</td>
+        <td>Change Summaryに記載のない項目はすべて現状維持。上書きしない。</td>
+      </tr>
+      <tr>
+        <td>A9の埋め込み画像</td>
+        <td>スクリーンショットが変わっていない場合、既存画像を再挿入して保持する。</td>
+      </tr>
+      <tr>
+        <td>Comment列の手動ノート</td>
+        <td>BA・開発者が手動で記入したコメントは上書きしない。</td>
+      </tr>
+      <tr>
+        <td>他シート</td>
+        <td>対象シート以外の{Screen Name}・他画面シート・Error Message Listには触れない。</td>
+      </tr>
+      <tr>
+        <td>メタデータ更新</td>
+        <td>更新日（行4）と更新者（行5）はClaudeが自動更新する。</td>
+      </tr>
+    </table>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SECTION 6: REPEAT PROMPT (NEW SCREEN ADDITION)
+══════════════════════════════════════════ -->
+<div class="section" id="prompt-repeat">
+  <div class="section-header">
+    <div class="step-badge step-blue">⑥</div>
+    <div>
+      <h2>新規画面追加プロンプト — 2画面目以降</h2>
+      <div class="sub">既存ワークブックに新しい画面IDのシートを追記する場合</div>
+    </div>
+  </div>
+  <div class="section-body">
+
+    <div class="alert alert-blue">
+      <div class="alert-icon">ℹ️</div>
+      <div><strong>いつ使う？</strong> ワークブックにすでに1つ以上のシートが存在し、<strong>新しい画面IDのシートを追加</strong>するとき。Claudeはシート一覧を確認してから新シートをAppendする。既存シートは一切変更されない。</div>
+    </div>
+
+    <div class="alert alert-green">
+      <div class="alert-icon">✅</div>
+      <div><strong>ワークブックの成長：</strong> 出力は常に「全既存シート + 新シート」。既存シートを削除・上書きしない。ワークブックを一から作り直さない。</div>
+    </div>
+
+    <div class="label" style="margin-bottom:10px;">添付ファイル</div>
+    <div class="attach-list" style="margin-bottom:20px;">
+      <div class="attach-item"><span class="attach-icon">🖼️</span> 番号付きスクリーンショット（新規画面 or 変更があった画面）</div>
+      <div class="attach-item"><span class="attach-icon">📊</span> スケルトン基本設計書 xlsx（新規 or 更新版）</div>
+    </div>
+
+    <div style="position:relative; margin-top:20px;">
+    <div class="prompt-block">
+<span class="prompt-label">PROMPT — 2回目以降（追加・更新）</span>
+<span class="kw">Target Screen</span>
+[SCREEN NAME]
+<span class="var">※ 既存の場合はシート名と一致させる。例: 1921 - VAS FLOW 通常登録</span>
+
+Figma URL
+[<span class="var">https://www.figma.com/design/XXXXX?node-id=XXXXX</span>]
+
+<span class="kw">Task</span>
+Update Master_Basic_Design.xlsx.
+Determine whether the target screen already exists.
+If the sheet exists:
+- update only affected parts
+If the sheet does not exist:
+- duplicate Sample
+- create a new sheet
+
+<span class="kw">Change Summary</span>
+<span class="var">※ 変更内容を具体的に記述する（省略可だが記述推奨）</span>
+<span class="var">例1: item #3（保存して計算）にバリデーションエラー詳細を追加する</span>
+<span class="var">例2: Error Message Listシートを新規作成し、全validate errorを定義する</span>
+<span class="var">例3: 新規画面 1922 を追加する（スケルトン添付）</span>
+
+Analyze:
+- Figma hierarchy
+- Numbered Screenshot
+- Skeleton Basic Design
+- Feature Definitions
+- API Definitions
+- Validation Catalog
+- Error Message Catalog
+
+Populate:
+- Overview
+- Access Method
+- Business Flow
+- Item Definitions
+- Validation
+- Error Handling
+- API Behavior
+- Edge Cases
+
+Follow:
+- Format_Rule.md
+- Content_Rule.md
+
+Unknown requirements:
+[要確認]
+
+Preserve workbook structure and formatting.
+<span class="cmt">※ 既存シートの未変更部分・スクリーンショット・手動編集ノートは保持する</span>
+
+Output:
+Updated Master_Basic_Design.xlsx
+</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="label" style="margin-bottom:10px;">初回との主な違い</div>
+    <table class="file-table">
+      <tr><th>項目</th><th>初回</th><th>2回目以降</th></tr>
+      <tr>
+        <td>シート存在確認</td>
+        <td>常に「存在しない」→ 新規作成</td>
+        <td>存在チェック → 既存更新 or 新規作成</td>
+      </tr>
+      <tr>
+        <td>Change Summary</td>
+        <td>不要</td>
+        <td><strong>記述推奨</strong>（変更範囲を明示すると精度向上）</td>
+      </tr>
+      <tr>
+        <td>既存データの扱い</td>
+        <td>—</td>
+        <td>未変更部分・画像・手動ノートを保持</td>
+      </tr>
+      <tr>
+        <td>画像の扱い</td>
+        <td>スケルトンから抽出して挿入</td>
+        <td>既存画像を保持 + 新規画像があれば更新</td>
+      </tr>
+    </table>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SECTION 7: RULES
+══════════════════════════════════════════ -->
+<div class="section" id="rules">
+  <div class="section-header">
+    <div class="step-badge step-red">⑦</div>
+    <div>
+      <h2>重要ルール・注意事項</h2>
+      <div class="sub">ミスを防ぐためのチェックリスト</div>
+    </div>
+  </div>
+  <div class="section-body">
+
+    <div class="two-col">
+
+      <div>
+        <div class="label" style="margin-bottom:8px;">🔒 絶対に守るルール</div>
+        <ul class="rule-list">
+          <li><strong>{Screen Name}シートは絶対に編集・削除・改名しない</strong>（Sampleテンプレート）</li>
+          <li>Master_Basic_Design.xlsx は1つだけ。別ファイルを作成しない</li>
+          <li>既存シートを削除しない。ワークブックを一から作り直さない</li>
+          <li>Sampleテンプレートのスタイル・色・ボーダーを変更しない</li>
+          <li>画像は必ずws.add_image()で再挿入する（openpyxl制約）</li>
+        </ul>
+      </div>
+
+      <div>
+        <div class="label" style="margin-bottom:8px;">📝 記述品質ルール</div>
+        <ul class="rule-list">
+          <li>不明な要件は<strong>[要確認]</strong>でマーク。推測で埋めない</li>
+          <li>記述は日本語（辞書形・ビジネス敬語・BA表現）で統一</li>
+          <li>ベトナム語（VN列）は実装指向の簡潔な記述</li>
+          <li>ボタンには「成功ケース・失敗ケース・API障害ケース・UI挙動」を必ず定義</li>
+          <li>エラーはError Message Listシートに集約し、itemのCommentから参照する</li>
+        </ul>
+      </div>
+
+      <div>
+        <div class="label" style="margin-bottom:8px;">🖼️ 画像ルール</div>
+        <ul class="rule-list">
+          <li>スクリーンショット配置エリア: <strong>列A〜G、行9以降</strong></li>
+          <li>画像エリアにテキスト・マージセルを書き込まない</li>
+          <li>画像はRGBA→RGB変換してから挿入する（透過PNGのエラー防止）</li>
+          <li>縦横比を維持して列A〜Gの幅に合わせてリサイズする</li>
+        </ul>
+      </div>
+
+      <div>
+        <div class="label" style="margin-bottom:8px;">✅ 完了前チェック</div>
+        <ul class="rule-list">
+          <li>{Screen Name}シートが変更されていないことを確認</li>
+          <li>全項目（#1〜最終）に記述（JP・VN）が入っていることを確認</li>
+          <li>ボーダーが全行に適用されていることを確認（特に後半の行）</li>
+          <li>シートにgridlinesが非表示になっていることを確認</li>
+          <li>画像がA9に埋め込まれていることをzipfileで検証</li>
+        </ul>
+      </div>
+
+      <div>
+        <div class="label" style="margin-bottom:8px;">🔄 仕様変更時の追加チェック</div>
+        <ul class="rule-list">
+          <li>Change Summaryに記載した項目のみが変更されていることを確認</li>
+          <li>Change Summaryに記載のない項目が元の内容のまま保持されていることを確認</li>
+          <li>Comment列の手動ノートが消えていないことを確認</li>
+          <li>更新日・更新者（メタデータ行）が更新されていることを確認</li>
+          <li>他シート（{Screen Name}・他画面・Error Message List）が変更されていないことを確認</li>
+        </ul>
+      </div>
+
+      <div style="grid-column: 1 / -1;">
+        <div class="label" style="margin-bottom:8px;">🗂️ スレッド・ファイル同期ルール（FAQ）</div>
+        <table class="file-table">
+          <tr><th>状況</th><th>Claudeの動作</th></tr>
+          <tr>
+            <td>新しいスレッドで既存画面の仕様変更を依頼</td>
+            <td>プロジェクトフォルダのMaster_Basic_Design.xlsxを読み込み、対象シートを検出して更新する。<strong>新ファイルは作成しない。</strong></td>
+          </tr>
+          <tr>
+            <td>同じシステムの別画面を追加依頼</td>
+            <td>既存ワークブックに新シートをAppend。<strong>既存シートは一切変更しない。</strong>出力は全シートを含む1ファイル。</td>
+          </tr>
+          <tr>
+            <td>ユーザーがローカルでファイルを手動編集した後</td>
+            <td>フォルダがマウントされていれば、次回セッションで更新済みファイルを自動的に読み込む。Claude側に「前のバージョン」は存在しない。</td>
+          </tr>
+          <tr>
+            <td>Claudeがクラッシュ・中断した場合</td>
+            <td>プロジェクトフォルダ内のファイルが最新の状態として扱われる。再度プロンプトを送信すれば継続可能。</td>
+          </tr>
+        </table>
+      </div>
+
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="label" style="margin-bottom:10px;">📂 出力ファイルの確認方法</div>
+    <div class="alert alert-blue">
+      <div class="alert-icon">💡</div>
+      <div>
+        Excelで開いて確認するポイント：<br>
+        <strong>① シート数</strong> — {Screen Name} + 作成済み画面シート + Error Message List が存在するか<br>
+        <strong>② 画像</strong> — 各シートのA列に番号付きスクリーンショットが表示されているか<br>
+        <strong>③ ボーダー</strong> — 項目テーブル（H列〜R列）の全行にボーダーが引かれているか<br>
+        <strong>④ [要確認]</strong> — Ctrl+F で検索し、確認が必要な箇所を特定してレビューする
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     FOOTER
+══════════════════════════════════════════ -->
+<div style="text-align:center; padding:24px 0; color:#9CA3AF; font-size:12px;">
+  Master Basic Design Workflow Guide — Maintained by Taiyang<br>
+  Claude Cowork × Figma Integration
+</div>
+
+</div><!-- /page-wrap -->
+</body>
+</html>

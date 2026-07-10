@@ -28,11 +28,14 @@ Ví dụ:
 4. Chạy script:
 
 ```bash
+# Tự động tìm python3 có openpyxl (ưu tiên venv local, sau đó system)
+PYTHON=$(python3 -c "import openpyxl, sys; print(sys.executable)" 2>/dev/null || python3 -c "import sys; print(sys.executable)")
+
 # test-cases.md
-/Users/dipro/.venvs/qa-tools/bin/python3 .claude/scripts/md_to_xlsx.py <file_path> <web|app>
+$PYTHON .claude/scripts/md_to_xlsx.py <file_path> <web|app>
 
 # artifact khác
-/Users/dipro/.venvs/qa-tools/bin/python3 .claude/scripts/md_to_xlsx.py <file_path>
+$PYTHON .claude/scripts/md_to_xlsx.py <file_path>
 ```
 
 5. Báo kết quả: đường dẫn file `.xlsx` vừa tạo (cùng thư mục với file `.md` input)
@@ -63,4 +66,4 @@ Ví dụ:
 ## Lưu ý
 
 - File `.xlsx` ghi đè nếu đã tồn tại cùng tên
-- Nếu script báo lỗi `ModuleNotFoundError: openpyxl`, chạy: `python3 -m venv /Users/dipro/.venvs/qa-tools && /Users/dipro/.venvs/qa-tools/bin/pip install openpyxl`
+- Nếu script báo lỗi `ModuleNotFoundError: openpyxl`, chạy: `pip install openpyxl` (hoặc dùng venv: `python3 -m venv .venv && .venv/bin/pip install openpyxl`)
