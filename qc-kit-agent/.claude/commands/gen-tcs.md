@@ -1,5 +1,5 @@
 ---
-description: Sinh Test Case chi tiết (bao gồm Test Scenario) từ plan-tcs.md + analysis.md. Bắt buộc phải có plan-tcs.md trước khi chạy.
+description: Sinh Test Case chi tiết (bao gồm Test Scenario) từ plan-tcs.md + analysis.md. Nếu module chưa có 2 file này, tự động chain /analyze-req → /plan-tcs trước (vẫn giữ checkpoint).
 skills:
   - rbt_manual_testing
   - testing_dimensions
@@ -8,34 +8,40 @@ skills:
 
 Thực hiện **Section 4: Test Case Generation** từ skill `rbt_manual_testing`.
 
-## Bước 0 — Kiểm tra `plan-tcs.md` (bắt buộc)
+## Bước 0 — Kiểm tra `analysis.md` và `plan-tcs.md`
 
-Kiểm tra `testing/[module]/plan-tcs.md` có tồn tại không:
+Kiểm tra `testing/[module]/analysis.md` và `testing/[module]/plan-tcs.md` có tồn tại không:
 
-**Không có** → dừng lại, thông báo:
+**Thiếu 1 trong 2 (hoặc cả 2)** → thông báo ngắn rồi **tự động chạy tuần tự** các bước còn thiếu — không cần hỏi user có muốn chạy không, vì đây là bước bắt buộc để thực hiện đúng yêu cầu user vừa đưa ra:
 
-> ⚠️ Module này chưa có `plan-tcs.md`. Chạy `/plan-tcs` trước để xác định cấu trúc Screen/Component và risk level, sau đó quay lại `/gen-tcs`.
+> ℹ️ Module này chưa có `analysis.md`/`plan-tcs.md`. Tôi sẽ tự chạy `/analyze-req` → `/plan-tcs` trước, sau đó tiếp tục `/gen-tcs`.
 
-**Có** → tiếp tục Bước 1.
+- Thiếu `analysis.md` → thực hiện **Section 2: Requirement Analysis** (skill `rbt_manual_testing`) — vẫn dừng đúng tại checkpoint Requirements Summary confirm và Q&A ambiguities như khi chạy `/analyze-req` độc lập.
+- Sau khi có `analysis.md` (vừa tạo hoặc đã có sẵn) mà thiếu `plan-tcs.md` → thực hiện **Section 3: TC Implementation Plan** — vẫn dừng đúng tại checkpoint "Bạn muốn điều chỉnh gì không?" như khi chạy `/plan-tcs` độc lập.
+- Sau khi user confirm `plan-tcs.md` → tiếp tục Bước 1 bên dưới.
+
+**Có sẵn cả 2** → tiếp tục Bước 1 luôn, không chạy lại.
 
 ---
 
-## Bước 1 — Kiểm tra TBD ACs
+## Bước 1 — Kiểm tra TBD ACs (severity-gated)
 
-Đọc `testing/[module]/analysis.md`, kiểm tra cột Status trong bảng Acceptance Criteria:
+Đọc `testing/[module]/analysis.md`, kiểm tra cột Status trong bảng Acceptance Criteria. Với mỗi AC status TBD, tra Severity của AMB-XX liên quan trong bảng Q&A (nếu không xác định được AMB liên quan hoặc severity không rõ, coi như **High** để an toàn).
 
 **Không có AC nào status TBD** → tiếp tục bình thường.
 
-**Có ≥1 AC status TBD** → thông báo và hỏi user:
+**Có AC TBD nhưng AMB liên quan chỉ ở mức Medium/Low** → tự động sinh TC bình thường, tag `[UNCONFIRMED]` ở đầu Test Scenario của các TC thuộc AC đó. Không hỏi user.
 
-> ⚠️ Có **X AC** chưa được confirm (status: TBD). TCs sinh từ các AC này có thể sai nếu PM/BA thay đổi requirement sau.
+**Có AC TBD với AMB liên quan ở mức High** (nghiệp vụ liên quan tiền/bảo mật/phân quyền) → dừng lại, thông báo và hỏi user:
+
+> ⚠️ Có **X AC** chưa được confirm (status: TBD), trong đó **Y AC** liên quan ambiguity mức **High** (AMB-XX). TCs sinh từ các AC này có thể sai lệch nghiêm trọng nếu PM/BA thay đổi requirement sau.
 >
 > Bạn muốn xử lý thế nào?
-> **A.** Chỉ sinh TCs cho AC Confirmed/Assumed — bỏ qua TBD
-> **B.** Sinh TCs cho tất cả — tag `[UNCONFIRMED]` vào Test Scenario của TCs từ TBD ACs
-> **C.** Dừng lại để resolve TBD trước (chạy lại sau khi PM confirm)
+> **A.** Chỉ sinh TCs cho AC Confirmed/Assumed — bỏ qua các AC TBD mức High
+> **B.** Vẫn sinh TCs cho AC TBD mức High — tag `[UNCONFIRMED]` như các AC mức Medium/Low
+> **C.** Dừng lại để resolve TBD mức High trước (chạy lại sau khi PM confirm)
 
-> *Nếu chọn B: TCs từ TBD ACs sẽ có prefix `[UNCONFIRMED]` ở cột Test Scenario để dễ nhận biết và review sau.*
+> *AC TBD mức Medium/Low luôn được tag `[UNCONFIRMED]` tự động dù chọn phương án nào ở trên — câu hỏi trên chỉ áp dụng riêng cho AC TBD mức High.*
 
 ---
 
@@ -43,17 +49,17 @@ Kiểm tra `testing/[module]/plan-tcs.md` có tồn tại không:
 
 1. Đọc `plan-tcs.md` — dùng làm khung cấu trúc (Screen → Component → Risk Level/Technique Flag/Ghi chú phụ thuộc).
 2. Đọc `analysis.md` — lấy nội dung AC/Q&A để viết Steps/Expected Result.
-3. Xác định platform: `analysis.md` Summary → nếu trống, `context.md` đã auto-load → đọc `testing_dimensions/SKILL.md` section tương ứng.
+3. Xác định platform: `analysis.md` Summary → nếu trống, `context.md` đã auto-load → đọc `.claude/skills/testing_dimensions/SKILL.md` section tương ứng.
 4. Với mỗi Screen trong `plan-tcs.md` (theo đúng thứ tự xuất hiện trong file):
    - Sinh **1 TC "Verify UI tổng thể"** đầu tiên cho Screen đó (đặt đầu bảng), dựa trên mô tả "UI chung" trong plan.
    - Với mỗi Component (theo đúng thứ tự trong plan):
      - Nếu có **Technique Flag** → dựng đầy đủ Decision Table/State Transition/Boundary Tier tương ứng (tham chiếu sub-section "Complex Logic Patterns" trong skill `rbt_manual_testing`), show inline trước khi expand ra TC.
      - Sinh **Visual TCs** cho 6 states (Bảng Visual States trong skill) — đặt **TRƯỚC** logic TCs của cùng component.
      - Nếu là input field: sinh **Field-Level Validation TCs riêng cho từng trường** (Bảng Field-Level Validation trong skill) — không gộp nhiều field vào 1 TC.
-     - Áp **Component Checklist** từ `component_checklist/SKILL.md` theo **Component Type** đã gắn trong `plan-tcs.md` — tra trực tiếp Section A/B/C, không đoán qua keyword AC text.
+     - Áp **Component Checklist** từ `.claude/skills/component_checklist/SKILL.md` theo **Component Type** đã gắn trong `plan-tcs.md` — tra trực tiếp Section A/B/C, không đoán qua keyword AC text.
      - Nếu cột "Ghi chú phụ thuộc" của component không phải "—": sinh thêm TC cho tương tác cross-component đó (gắn vào Logic của component này).
 5. Áp dụng kỹ thuật thiết kế phù hợp: Equivalence Partitioning (EP), Boundary Value Analysis (BVA).
-6. Áp dụng Platform Dimensions từ `testing_dimensions/SKILL.md`.
+6. Áp dụng Platform Dimensions từ `.claude/skills/testing_dimensions/SKILL.md`.
 7. Tuân thủ **Rule ngôn ngữ Test Scenario** (xem sub-section bên dưới).
 8. Mỗi Screen là 1 heading `## [tên Screen]` riêng, với bảng TC của Screen đó ngay bên dưới — `/export-xlsx` dựa vào heading `##` để tách sheet-per-Screen.
 9. Lưu output ra `testing/[module]/test-cases.md`.
@@ -86,8 +92,10 @@ Sau khi draft xong toàn bộ TCs, thực hiện quick pass **trước khi lưu 
 | C3 | **Expected Result đo được** — không mơ hồ | Grep "hiển thị đúng", "load nhanh", "thành công", "phản hồi nhanh" trong cột Expected Results |
 | M1 | **TC Independence** — không TC nào refer đến TC khác | Grep "TC-" hoặc "xem TC" trong cột Steps/Precondition |
 | M2 | **Negative Coverage** — mỗi happy path AC có ≥1 TC negative | Đếm TC per Traceability ID theo Category |
-| M3 | **Risk Alignment** — Happy Path không set Priority thấp hơn edge case cùng AC | Đối chiếu cột Risk Level + Priority theo nhóm Traceability ID |
-| M4 | **Ngôn ngữ TS** — không còn ký hiệu rút gọn | Grep `→`, `->`, dấu `:` nén ý trong cột Test Scenario |
+| M4 | **Risk Alignment** — Happy Path không set Priority thấp hơn edge case cùng AC | Đối chiếu cột Risk Level + Priority theo nhóm Traceability ID |
+| L1 | **Ngôn ngữ TS** — không còn ký hiệu rút gọn | Grep `→`, `->`, dấu `:` nén ý trong cột Test Scenario |
+
+> Mã C1-C3/M1-M2/M4 dùng chung với `/review-tcs` (M3 — Boundary Completeness — chỉ có ở `/review-tcs`, không check ở đây vì cần đối chiếu sâu constraint trong AC). L1 là tiêu chí riêng của self-check lúc sinh TC, không có ở `/review-tcs`.
 
 ### Khi phát hiện issue: tự fix luôn, ghi nhận để báo cáo.
 
@@ -98,7 +106,7 @@ Sau khi draft xong toàn bộ TCs, thực hiện quick pass **trước khi lưu 
 - C1: Thêm TC cho AC-03 (thiếu positive case)
 - C2: Cập nhật test data TC-007, TC-012 (thay placeholder bằng giá trị cụ thể)
 - M2: Thêm TC negative cho AC-05
-- M4: Viết lại Test Scenario TC-014 sang câu tự nhiên
+- L1: Viết lại Test Scenario TC-014 sang câu tự nhiên
 
 File đã lưu tại testing/[module]/test-cases.md
 ```

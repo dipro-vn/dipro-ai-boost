@@ -80,3 +80,5 @@ Thực hiện **Section 2: Requirement Analysis** từ skill `rbt_manual_testing
 ## Bước tiếp theo
 
 Sau khi có `analysis.md`, chạy `/plan-tcs` để lên TC Implementation Plan (bắt buộc trước `/gen-tcs`).
+
+> Nếu user gọi thẳng `/gen-tcs` mà module chưa có `analysis.md`, bước này sẽ được `/gen-tcs` tự động trigger trước — checkpoint Summary confirm/Q&A vẫn giữ nguyên như khi chạy `/analyze-req` độc lập.
