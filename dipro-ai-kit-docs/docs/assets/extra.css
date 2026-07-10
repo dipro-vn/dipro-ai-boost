@@ -1,0 +1,123 @@
+/* ── Dipro Tech Brand Colors ─────────────────────────────── */
+:root {
+  --dipro-navy:   #18345A;
+  --dipro-blue:   #0c80c7;
+  --dipro-teal:   #2A99B1;
+  --dipro-teal2:  #33A7BF;
+  --dipro-bg:     #F3F6FA;
+  --dipro-text:   #2D2E2C;
+}
+
+/* ── Primary (header / nav bar) ─────────────────────────── */
+[data-md-color-primary="custom"] {
+  --md-primary-fg-color:        var(--dipro-navy);
+  --md-primary-fg-color--light: #2563eb;
+  --md-primary-fg-color--dark:  #0f2240;
+  --md-primary-bg-color:        #ffffff;
+  --md-primary-bg-color--light: rgba(255,255,255,.7);
+}
+
+/* ── Accent (links, active tab, highlighted items) ───────── */
+[data-md-color-accent="custom"] {
+  --md-accent-fg-color:         var(--dipro-blue);
+  --md-accent-fg-color--transparent: rgba(12,128,199,.1);
+  --md-accent-bg-color:         #ffffff;
+}
+
+/* ── Overrides for both light & dark ────────────────────── */
+:root, [data-md-color-scheme="default"] {
+  --md-typeset-a-color:         var(--dipro-blue);
+  --md-typeset-color:           var(--dipro-text);
+}
+
+[data-md-color-scheme="slate"] {
+  --md-typeset-a-color:         var(--dipro-teal2);
+  --md-default-bg-color:        #0f1e2e;
+  --md-default-fg-color:        rgba(255,255,255,.87);
+}
+
+/* ── Header / Nav ────────────────────────────────────────── */
+.md-header {
+  background-color: var(--dipro-navy) !important;
+}
+
+.md-header__title {
+  color: #fff;
+}
+
+/* Logo size in header — wide logo (1536x334) */
+.md-header__button.md-logo img {
+  height: 28px;
+  width: auto;
+  object-fit: contain;
+}
+
+/* Favicon tab title */
+.md-header__button.md-logo {
+  padding: 4px 8px;
+}
+
+/* ── Tabs ────────────────────────────────────────────────── */
+.md-tabs {
+  background-color: var(--dipro-navy);
+}
+
+.md-tabs__link {
+  color: rgba(255,255,255,.75);
+}
+
+.md-tabs__link--active,
+.md-tabs__link:hover {
+  color: #fff;
+}
+
+.md-tabs__indicator {
+  background-color: var(--dipro-teal2);
+}
+
+/* ── Sidebar active item ─────────────────────────────────── */
+.md-nav__item--active > .md-nav__link {
+  color: var(--dipro-blue);
+  font-weight: 600;
+}
+
+.md-nav__link:hover {
+  color: var(--dipro-blue);
+}
+
+/* ── Admonition accents ──────────────────────────────────── */
+.md-typeset .admonition.tip,
+.md-typeset details.tip {
+  border-left-color: var(--dipro-teal);
+}
+
+.md-typeset .admonition.info,
+.md-typeset details.info {
+  border-left-color: var(--dipro-blue);
+}
+
+/* ── Code blocks ─────────────────────────────────────────── */
+.md-typeset pre > code {
+  border-left: 3px solid var(--dipro-teal);
+}
+
+/* ── Tables head ─────────────────────────────────────────── */
+.md-typeset table:not([class]) th {
+  background-color: var(--dipro-navy);
+  color: #fff;
+}
+
+/* ── "Back to top" button ────────────────────────────────── */
+.md-top {
+  background-color: var(--dipro-blue);
+  color: #fff;
+}
+
+/* ── Footer ──────────────────────────────────────────────── */
+.md-footer {
+  background-color: var(--dipro-navy);
+}
+
+.md-footer-meta {
+  background-color: #0f2240;
+}
