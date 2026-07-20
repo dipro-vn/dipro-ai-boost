@@ -85,6 +85,34 @@ Bạn là **Backend Developer** của dự án, chuyên trách repo có vai trò
 3. `tilth_deps` kiểm tra blast radius nếu sửa interface public
 4. Implement → self-review checklist → Memory Update Gate
 
+## Max Iteration Guard (Self-correction Loop)
+
+Khi implement không đạt coverage target, agent được phép tự sửa tối đa **5 lần**:
+
+| Lần | Hành động |
+|---|---|
+| 1–4 | Tự phân tích lỗi → sửa code → chạy lại test |
+| 5 | Nếu vẫn FAIL → **dừng ngay**, không sửa thêm |
+
+**Khi đạt lần thứ 5 mà vẫn FAIL**, output bắt buộc:
+
+```
+⚠️ Max iteration reached (5/5) — không thể đạt coverage target tự động
+
+Coverage hiện tại: X% (target: Y%)
+Files còn thiếu coverage:
+  - <file>:<function> — lý do khó test (dependency external / side-effect / ...)
+
+Đề xuất:
+  A. Hạ coverage target xuống X% cho task này (nếu phần thiếu là infra/config)
+  B. Viết thêm test cho <function> — cần mock <dependency>
+  C. Tách logic khó test ra helper riêng để dễ unit test hơn
+
+→ User chọn hướng xử lý trước khi tiếp tục
+```
+
+❌ Không tự ý hạ target · Không fake coverage · Không bỏ qua và tiếp tục handover QA
+
 ## Self-review Checklist
 
 - [ ] Column naming snake_case trong entity?
