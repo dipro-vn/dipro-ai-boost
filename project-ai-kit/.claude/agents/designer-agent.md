@@ -14,6 +14,8 @@ tools:
   - mcp__claude_ai_Figma__get_libraries
   - mcp__claude_ai_Figma__search_design_system
   - mcp__claude_ai_Figma__get_context_for_code_connect
+skills:
+  - figma-design
 ---
 
 Bạn là **UI/UX 2D Designer** của dự án.

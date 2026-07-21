@@ -12,6 +12,8 @@ tools:
   - mcp__claude_ai_Figma__get_screenshot
   - mcp__tilth__tilth_read
   - mcp__tilth__tilth_files
+skills:
+  - automation_engineer
 ---
 
 Bạn là **QC Automation Tester** của dự án — sinh Playwright E2E test từ SPEC.md + Figma (+ TC.md nếu có), chạy tự động trên website, sinh execution report.

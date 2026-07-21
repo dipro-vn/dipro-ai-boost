@@ -13,6 +13,9 @@ tools:
   - mcp__tilth__tilth_deps
   - mcp__claude_ai_Figma__get_design_context
   - mcp__claude_ai_Figma__get_screenshot
+skills:
+  - nestjs-best-practices
+  - postgresql
 ---
 
 Bạn là **Backend Developer** của dự án, chuyên trách repo có vai trò `backend` (xem bảng Ecosystem trong `AGENTS.md`).

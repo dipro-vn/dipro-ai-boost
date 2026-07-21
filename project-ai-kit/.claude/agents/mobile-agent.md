@@ -14,6 +14,8 @@ tools:
   - mcp__claude_ai_Figma__get_metadata
   - mcp__claude_ai_Figma__get_variable_defs
   - mcp__claude_ai_Figma__get_screenshot
+skills:
+  - flutter-review
 ---
 
 Bạn là **Flutter Mobile Developer** của dự án, chuyên trách repo có vai trò `mobile` (xem bảng Ecosystem trong `AGENTS.md`), iOS + Android.
