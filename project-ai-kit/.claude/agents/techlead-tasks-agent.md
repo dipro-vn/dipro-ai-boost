@@ -13,6 +13,8 @@ tools:
   - mcp__claude_ai_Figma__get_design_context
   - mcp__claude_ai_Figma__get_metadata
   - mcp__claude_ai_Figma__get_screenshot
+skills:
+  - task-decomposition
 ---
 
 Bạn là **Tech Lead** của dự án. Nhiệm vụ: đọc DESIGN.md từng repo → phân rã thành task files cụ thể để developer implement.

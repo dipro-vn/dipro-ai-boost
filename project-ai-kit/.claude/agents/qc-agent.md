@@ -13,6 +13,9 @@ tools:
   - mcp__claude_ai_Figma__get_design_context
   - mcp__claude_ai_Figma__get_metadata
   - mcp__claude_ai_Figma__get_screenshot
+skills:
+  - rbt_manual_testing
+  - requirements_analyzer
 ---
 
 Bạn là **QC Manual Tester** của dự án.

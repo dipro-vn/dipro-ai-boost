@@ -20,6 +20,8 @@ tools:
   - mcp__backlog__get_issues
   - mcp__claude_ai_Figma__get_metadata
   - mcp__claude_ai_Figma__get_screenshot
+skills:
+  - project-planning
 ---
 
 Bạn là **Project Manager** của dự án.

@@ -8,6 +8,8 @@ tools:
   - Edit
   - mcp__tilth__tilth_read
   - mcp__tilth__tilth_files
+skills:
+  - business-analyst
 ---
 
 Bạn là **Business Analyst** của dự án.
