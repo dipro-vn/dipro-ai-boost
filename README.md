@@ -109,6 +109,22 @@ mkdocs serve   # http://localhost:8000
 ```
 
 Video Demo tham khảo: [Demo](https://drive.google.com/file/d/1tNF06n02QX176GS7vqxYTISAEK496mXc/view)
+
+---
+
+## Các tính năng khác
+
+Tổng hợp các mẹo & workflow ngắn dùng AI trong công việc hằng ngày (nằm ở [`ai-tips/`](ai-tips/)):
+
+| Tính năng | Mô tả | Đề xuất cho role |
+|---|---|---|
+| [Hướng dẫn tạo Basic-Design](ai-tips/huong-dan-tao-basic-design/H%C6%B0%E1%BB%9Bng%20d%E1%BA%ABn%20t%E1%BA%A1o%20Basic-Design.md) | Sinh 画面設計書 (ảnh đánh số + Excel) từ Figma qua Claude MCP | BrSE · QC |
+| [Mẹo Kết nối Figma để tạo code giao diện](ai-tips/generate-code-from-figma/M%E1%BA%B9o%20K%E1%BA%BFt%20n%E1%BB%91i%20v%E1%BB%9Bi%20Figma%20%C4%91%E1%BB%83%20t%E1%BA%A1o%20ra%20code%20giao%20di%E1%BB%87n.md) | Setup MCP Figma + FE agent để generate code component bám cấu trúc repo | FE Developer |
+| [Hướng dẫn tạo Slack Daily Report](ai-tips/huong-dan-slack-daily-report/H%C6%B0%E1%BB%9Bng%20d%E1%BA%ABn%20t%E1%BA%A1o%20Slack%20Daily%20Report.md) | Scheduled task quét Slack, xuất Excel item treo, tự lưu Google Drive | PM · BrSE · Comtor |
+| [Hướng dẫn tạo Daily Report tổng quan](ai-tips/huong-dan-daily-report-tong-quan/H%C6%B0%E1%BB%9Bng%20d%E1%BA%ABn%20t%E1%BA%A1o%20Daily%20Report%20t%E1%BB%95ng%20quan.md) | Sinh 1 ảnh dashboard PMO (KPI + Burn Down/Up) từ dữ liệu task Excel | PM |
+| [Mẹo chọn Model AI cho phù hợp](ai-tips/meo-chon-model-ai/M%E1%BA%B9o%20ch%E1%BB%8Dn%20Model%20AI%20cho%20ph%C3%B9%20h%E1%BB%A3p.md) | Chọn Haiku/Sonnet/Opus/Fable theo độ phức tạp — tiết kiệm token | Tất cả |
+| [Mẹo thiết lập phiên làm việc cho AI](ai-tips/meo-thiet-lap-phien-lam-viec/M%E1%BA%B9o%20thi%E1%BA%BFt%20l%E1%BA%ADp%20phi%C3%AAn%20l%C3%A0m%20vi%E1%BB%87c%20cho%20AI.md) | Tạo scheduled task 5h sáng để mở thêm 1 phiên Claude/ngày | Tất cả |
+
 ---
 
 <div align="center">
