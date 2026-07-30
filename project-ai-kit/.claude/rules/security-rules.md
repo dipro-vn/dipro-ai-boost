@@ -1,5 +1,7 @@
 # Security Rules
 
+> **Enforcement:** Rule "không hard-code secret" được enforce cứng bằng hook **H05** (`.claude/hooks/detect-hardcoded-secret.js`) — chặn Write/Edit khi content chứa AWS key, API key (sk-/pk-/ghp_/gho_/xox), JWT literal, connection string với password, hoặc private key block. Vi phạm → tool call bị chặn ngay.
+
 ## Secret Management
 
 - **AWS Parameter Store** là nguồn duy nhất cho secrets production — không `.env` file, không hard-code

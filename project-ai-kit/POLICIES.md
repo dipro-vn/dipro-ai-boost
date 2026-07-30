@@ -134,4 +134,30 @@ Không đảo ngược, không bỏ qua STG để lên thẳng PROD. Nếu dự 
 4. **Không tự ý** che giấu hoặc cố hoàn thành task bằng bypass
 
 Khi user phát hiện AI vi phạm → user có quyền yêu cầu **undo + write feedback memory** để session tương lai không lặp lại.
+
+---
+
+## 8. Enforcement layers — Rules vs Hooks
+
+Kit vận hành trên **2 lớp** enforce, bổ sung nhau (không thay thế):
+
+| Lớp | Nội dung | Ai đọc | Khi tác động |
+|---|---|---|---|
+| **Rules** (`.claude/rules/*.md` + file này) | WHY + judgement + ngoại lệ + hành vi con người | LLM (soft) + dev/PM/QC | Trước hành động, qua reasoning |
+| **Hooks** (`.claude/hooks/*.js` + `.claude/settings.json`) | Chặn cứng syntactic tại tool layer | Node script (hard) | Ngay tại tool call, ngoài LLM |
+
+**Hooks đang active** (chi tiết trong từng rule file tương ứng):
+
+| Hook | Enforce rule | Rule file |
+|---|---|---|
+| **H01** | Không đọc secret files (`.env`, keystore, `.p12`, `.pem`...) | `rules/SECURITY.md` |
+| **H02** | Không `git push --force` lên protected branch | `rules/git-workflow.md` |
+| **H03** | Không `--no-verify` / `--no-gpg-sign` | `rules/git-workflow.md` |
+| **H04** | Không `rm -rf` trên root/home/wildcard | `rules/POLICY.md` |
+| **H05** | Không hardcode API key/JWT/private key trong Write/Edit | `rules/security-rules.md` |
+
+**Quy tắc khi rule và hook conflict:**
+- Rule = intent gốc (source of truth về nghiệp vụ)
+- Hook = enforcement mechanism — nếu chặn nhầm hoặc miss case → sửa hook, không sửa rule
+- Danh sách data chung (VD restricted paths) đặt ở `.claude/config/*.json` — sửa 1 chỗ, sync cả 2 lớp
 </content>
