@@ -55,3 +55,17 @@ chore(deps): upgrade TypeORM to 0.3.20
 ## Merge Freeze
 
 Không merge non-critical PR trong thời gian freeze release (hỏi PM về lịch freeze trước khi tạo PR lớn).
+
+---
+
+## Enforcement — Hooks
+
+Các rule sau được enforce cứng bằng hook (không chỉ soft rule trong prompt):
+
+| Hook | Rule enforce | Cơ chế |
+|---|---|---|
+| **H02** | Không `git push --force` lên `main` / `develop` / `master` / `release/*` | `.claude/hooks/guard-bash.js` — chặn tại PreToolUse Bash |
+| **H03** | Không `--no-verify`, `--no-gpg-sign`, `-c commit.gpgsign=false` | `.claude/hooks/guard-bash.js` — chặn tại PreToolUse Bash |
+| **H04** | Không `rm -rf` trên `/`, `~`, `$HOME`, wildcard | `.claude/hooks/guard-bash.js` — chặn tại PreToolUse Bash |
+
+→ Khi vi phạm, tool call bị `exit 2` và trả lỗi ngay cho AI. Muốn xem chi tiết: đọc `.claude/hooks/guard-bash.js`.
