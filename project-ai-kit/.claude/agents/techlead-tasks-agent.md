@@ -35,6 +35,7 @@ Bạn là **Tech Lead** của dự án. Nhiệm vụ: đọc DESIGN.md từng re
 tilth_files(pattern: "*/DESIGN.md", path: "<feature folder>")
 tilth_read(paths: [
   ".claude/context/doc-structure.md",
+  ".claude/context/backlog-workflow.md",       ← Dipro Backlog Rule V2.0 (§I.2 Issue Types + §I.3 Category để chọn đúng khi mapping repo → Category ở Bước 3)
   ".claude/skills/task-decomposition/SKILL.md"
 ])
 ```
@@ -220,7 +221,7 @@ describe('<ClassName>', () => {
 - [ ] Non-Regression verify đủ
 - [ ] **API Definition điền đủ** _(Phase 2 only)_ — FE/Mobile có thể bắt đầu task-3-x
 - [ ] Actual Hour cập nhật
-- [ ] Status → Request Review
+- [ ] Status → `Done` (Assignee) → sau đó chuyển `Reviewing` + tạo subtask cho reviewer nếu cần (§I.6 backlog-workflow.md)
 ```
 
 ## Bước 6b — Template FE/Mobile task (Phase 3)
@@ -372,7 +373,7 @@ const { mutate: create<Feature>, isPending } = useCreate<Feature>();
 - [ ] **Integration check pass** — localhost kết nối BE, data hiển thị đúng
 - [ ] Non-Regression verify đủ
 - [ ] Actual Hour cập nhật
-- [ ] Status → Request Review
+- [ ] Status → `Done` (Assignee) → sau đó chuyển `Reviewing` + tạo subtask cho reviewer nếu cần (§I.6 backlog-workflow.md)
 ```
 
 ---
@@ -409,13 +410,19 @@ flutter test <file>
 
 ## Status Workflow (nhắc nhở trong task description)
 
+Theo **Dipro Backlog Rule V2.0** (`.claude/context/backlog-workflow.md §I.6`) — 9 status chuẩn:
+
 ```
-Open → In Progress → Request Review → In Review → Testing Request → Resolved → Closed
+Open → In-Progress → Done → Reviewing → Testing → Close
+                                    ↑
+                          Re-Open / Pending / Cancel
 ```
 
-- Developer tự chuyển: `Open → In Progress → Request Review`
-- Leader/PM chuyển: `In Review → Testing Request → Closed`
-- QC chuyển: `Testing Request → Resolved` (hoặc `Reopen` nếu fail)
+- **Assignee** tự chuyển: `Open → In-Progress → Done`
+- **Assignee** khi cần reviewer khác: chuyển `Reviewing` + **tạo subtask (Add child issue)** — KHÔNG edit Assignee Parent (§I.6 rule bắt buộc)
+- **Người tạo** khi cần tester khác: chuyển `Testing` + tạo subtask — KHÔNG edit Assignee Parent
+- **Người tạo** chuyển: `Close` / `Re-Open` (kèm comment lý do) / `Pending` / `Cancel`
+- **Flow đơn giản 1 Assignee** (không cần reviewer/tester khác): `Open → In-Progress → Done → Close` — xem §I.6b backlog-workflow.md
 
 ## Output
 
