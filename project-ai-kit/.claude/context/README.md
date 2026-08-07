@@ -8,7 +8,7 @@
 |---|---|---|
 | `specification.md` | Business context, epics, phase-gate | `ba-agent`, `pm-agent` |
 | `technical.md` | Tech stack, CI/CD, known bugs | `techlead-design-agent`, `backend-agent` |
-| `backlog-workflow.md` | Quy tắc tạo issue/task, status workflow | `techlead-tasks-agent`, `pm-agent`, `backend-agent`, `frontend-agent`, `mobile-agent` |
+| `backlog-workflow.md` | Dipro Backlog Rule V2.0 — 6 Issue Types, 9-status flow, Template_Task/Bug (Producer/Bug type/Root Cause), phân quyền, quy tắc subtask | `pm-agent` (toàn bộ, sync Backlog) · `techlead-tasks-agent` (§I.2 Issue Types + §I.3 Category) · `qc-agent` (§I.6 Status + §III Template_Bug) · `ba-agent` (§I.2 Issue Types) |
 | `doc-structure.md` | Cấu trúc SPEC/DESIGN/PLAN theo feature type (single-repo vs cross-repo) | `ba-agent`, `techlead-design-agent`, `techlead-tasks-agent`, `designer-agent` |
 | `designer-context.md` | UI components catalog, theme thực tế per repo — auto-extract từ source code khi cần | `designer-agent` (BẮT BUỘC mỗi lần chạy) |
 | `business-flows/` (optional) | Business-flow index theo domain — chỉ cần nếu dự án có nhiều domain nghiệp vụ phức tạp, xem pattern trong `business-flows/README.md` | `ba-agent`, `techlead-design-agent`, `pm-agent` |

@@ -102,6 +102,16 @@ Mobile kit dùng **workflows** thay vì slash commands — trigger bằng mô t�
 
 ---
 
+## pm-ai-kit Commands
+
+| Command | Input | Output |
+|---------|-------|--------|
+| `/performance-report` | Wizard hỏi API key, project, members, allocation, khoảng thời gian | `{projectKey}_{YYYYMMDD}_{YYYYMMDD}.xlsx` (5–6 sheets) |
+
+Cần chạy trong thư mục `pm-ai-kit/`. Backlog auto-detect qua MCP (`mcp__backlog__get_space`). Config cache tại `performance-report/local.json` (git-ignored).
+
+---
+
 ## Trigger bằng Natural Language
 
 Ngoài slash commands, có thể trigger agents bằng ngôn ngữ tự nhiên:

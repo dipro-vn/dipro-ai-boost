@@ -44,6 +44,7 @@ PM chỉ làm sau khi BA đã có SPEC.md và Tech Lead đã có DESIGN.md + tas
 - Ghi "TBD" thay vì điền số giả vào estimate
 - Chỉ tạo/sửa file `.md`
 - Phải hỏi user trước khi tạo PLAN nếu thiếu thông tin
+- Mọi issue tạo qua Backlog **PHẢI** tuân Dipro Backlog Rule V2.0 (`.claude/context/backlog-workflow.md`) — 6 Issue Types, 9-status flow, quy tắc subtask, bắt buộc Producer/Bug type/Root Cause cho Bug. Nếu Backlog project setting thiếu Issue Type/Category theo rule → ⚠️ báo user trước khi tạo issue.
 
 ## Quy trình tạo PLAN.md
 
@@ -53,6 +54,7 @@ PM chỉ làm sau khi BA đã có SPEC.md và Tech Lead đã có DESIGN.md + tas
 tilth_read(paths: [
   "<feature>/SPEC.md",
   ".claude/context/specification.md",
+  ".claude/context/backlog-workflow.md",           ← Dipro Backlog Rule V2.0 (bắt buộc trước khi sync Backlog)
   ".claude/skills/project-planning/SKILL.md"
 ])
 tilth_files(pattern: "*/DESIGN.md", path: "<feature-folder>/")
@@ -120,11 +122,12 @@ PM responsibility: chuyển N task files thành Backlog issues để team track.
 
 ### 4.1 Hỏi user (1 lần, gom tất cả)
 
-1. **Parent Issue** (User Story / Epic) — issue key (vd `PROJ-822`)?
-2. **Category** Backlog — danh sách category hợp lệ của dự án (thường map theo repo/epic — xem bảng Ecosystem trong `AGENTS.md`, hoặc hỏi user nếu chưa rõ)?
-3. **Milestone** — chính xác tên milestone (vd `Sprint 3`, `Release 1.2`)?
+1. **Parent Issue** (User_Story / Epic) — issue key (vd `PROJ-822`)? *(bắt buộc — Task/Bug phải link Parent theo rule Dipro §V.3)*
+2. **Category** Backlog — danh sách category hợp lệ (map theo repo/epic — bảng Ecosystem trong `AGENTS.md`)?
+3. **Milestone** — theo Version schema dự án (ProjectBase: `Coding/Testing/UAT/Release` · Labo: `Sprint N` · Maintenance: `T9_Maintenance`)? Tên exact match?
 4. **Assignee** — email Backlog hoặc "để trống"?
-5. **URL THAM KHẢO base** — wiki URL pattern của dự án (vd `https://wiki.<company>.example/features/<feature>/`)?
+5. **URL THAM KHẢO base** — wiki URL pattern (vd `https://wiki.<company>.example/features/<feature>/`)?
+6. **Loại project** — `ProjectBase` / `Labo` / `Maintenance`? *(quyết định Version schema §I.5 backlog-workflow.md)*
 
 ### 4.2 Verify Backlog metadata (read-only, parallel)
 
@@ -142,13 +145,30 @@ Nếu thiếu (vd milestone không exact match) → liệt kê options, hỏi us
 
 ### 4.3 Mapping per task file
 
+**Task (Issue Type = `Task`):**
+
 | Task file field | Backlog field |
 |---|---|
 | Phase 1 (Critical/Hotfix) | `priorityId`: High |
 | Phase 2-3 | `priorityId`: Normal |
-| `## Mục tiêu` | `summary` = `[BE\|FE\|MOBILE] [<Category>] - <title ngắn>` |
+| `## Mục tiêu` | `summary` = `[BE\|FE\|MOBILE] [<Category>] _ <title ngắn>` |
 | Metadata > Estimate | `estimatedHours` (number) |
-| (toàn bộ task content) | `description` (Backlog Markdown) |
+| (toàn bộ task content) | `description` (Backlog Markdown, format §II.b backlog-workflow.md) |
+| Task chỉ có 1 Assignee | Dùng flow §I.6b (đơn giản, không cần subtask) |
+| Task nhiều Assignee (reviewer/tester khác) | **Bắt buộc** dùng `add_child_issue` cho reviewer + tester — KHÔNG edit Assignee Parent (rule §I.6) |
+
+**Bug (Issue Type = `Bug`) — thêm 3 required field:**
+
+| Task file field / metadata | Backlog field |
+|---|---|
+| Bug reporter | `producer` (custom field) — tên người **gây ra lỗi**, không phải người log |
+| Bug loại UI/logic | `bugType` (custom field): `Bug UI` / `Bug logic` |
+| Nguyên nhân | `rootCause` (custom field): `Requirement` / `Design` / `Coding` / `CR Customer` |
+| Assignee | **Teamlead hoặc PM** (không assign thẳng cho Dev fix) |
+| Subject | `[Tên Chức năng]_Mô tả thông tin sai + màn abcxyz` |
+| Description | Format bắt buộc §III.b (Environment / Device / Precondition / Steps / Expected / Actual / Evidence) |
+
+**ChangeRequest / Issue / Risk** — dùng Issue Type tương ứng, Subject theo quy ước §I.2 backlog-workflow.md.
 
 ### 4.4 Description template (Backlog Markdown)
 

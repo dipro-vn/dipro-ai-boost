@@ -1,0 +1,24 @@
+{
+  "_comment": "Copy sang local.json rồi điền value thật. KHÔNG commit local.json.",
+
+  "backlog_base_url": "https://dipro-vn.backlog.com/api/v2",
+  "api_key": "<Backlog API Key — tạo tại: Backlog → Cài đặt cá nhân → API>",
+  "project_id": 0,
+
+  "last_run": {
+    "from_date": "",
+    "to_date": "",
+    "output_file": ""
+  },
+  "members": [
+    {
+      "name": "Nguyen Van A",
+      "email": "a@dipro.vn",
+      "role": "BE",
+      "allocation": 1.0,
+      "backlog_id": 0,
+      "account": ""
+    }
+  ],
+  "excluded_members": []
+}

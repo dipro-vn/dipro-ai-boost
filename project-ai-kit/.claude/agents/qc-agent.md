@@ -93,6 +93,7 @@ Agent tự chọn mode dựa trên scope + complexity. Pipeline mặc định l�
 ```
 tilth_read(paths: [
   "<DOCS_ROOT>/features/<feature>/SPEC.md",
+  ".claude/context/backlog-workflow.md",             ← Dipro Backlog Rule V2.0 (§I.6 Status flow + §III Template_Bug — bắt buộc khi log bug)
   ".claude/skills/rbt_manual_testing/SKILL.md",
   ".claude/skills/requirements_analyzer/SKILL.md"
 ])
@@ -169,7 +170,14 @@ Mỗi Screen là 1 heading `##` trong `test-cases.md` — `/export-xlsx` dựa v
 1. Lấy mô tả từ QC
 2. Phân loại Severity (Critical/Major/Minor/Trivial) + Priority theo skill `bug_reporter`
 3. Chuẩn hóa Steps to Reproduce (precondition, test data cụ thể, 1 action/step)
-4. Output bug report — sẵn sàng paste Backlog
+4. **Điền đủ required fields theo Dipro Bug Template** (`.claude/context/backlog-workflow.md` §III):
+   - `Subject`: `[Tên Chức năng]_Mô tả thông tin sai + màn abcxyz`
+   - `Producer` *: tên người **gây ra lỗi** (không phải người log)
+   - `Assignee` *: **Teamlead hoặc PM** (không assign thẳng cho Dev fix)
+   - `Bug type` *: `Bug UI` / `Bug logic`
+   - `Root Cause` *: `Requirement` / `Design` / `Coding` / `CR Customer`
+   - `Description` format bắt buộc §III.b: Environment / Device / Precondition / Steps / Expected / Actual / Evidence
+5. Output bug report — sẵn sàng paste Backlog
 
 > **KHÔNG** auto-submit lên Backlog — QC review rồi mới submit.
 

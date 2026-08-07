@@ -10,6 +10,7 @@
 | [mobile-ai-kit](mobile-ai-kit.md) | Flutter + React Native | Mobile Dev | ✅ |
 | [brse-ai-kit](brse-ai-kit.md) | Tạo Basic Design từ Figma | BrSE | ✅ |
 | [qc-kit-agent](qc-kit-agent.md) | Sinh & quản lý test cases | QC Engineer | ✅ |
+| [pm-ai-kit](pm-ai-kit.md) | Báo cáo hiệu suất thành viên từ Backlog | Project Manager | ✅ |
 
 ---
 
@@ -25,6 +26,7 @@ graph TD
     Q1 -->|"Code Flutter / RN"| MOB["mobile-ai-kit"]
     Q1 -->|"Tạo Basic Design\ntừ Figma"| BRSE["brse-ai-kit"]
     Q1 -->|"Sinh test cases\nhoặc Playwright"| QC["qc-kit-agent"]
+    Q1 -->|"Báo cáo hiệu suất\nthành viên (Backlog)"| PM["pm-ai-kit"]
 ```
 
 ---
@@ -64,6 +66,7 @@ qc-kit-agent     → QC sessions (sinh TC riêng biệt)
 | mobile-ai-kit | N/A | 6 workflows | codegraph |
 | brse-ai-kit | N/A | Plugin UI | Figma API |
 | qc-kit-agent | N/A | 7 | Playwright |
+| pm-ai-kit | 1 | 1 (`/performance-report`) | Backlog MCP |
 
 ### Tech stack mỗi kit
 
@@ -86,3 +89,4 @@ qc-kit-agent     → QC sessions (sinh TC riêng biệt)
 | mobile-ai-kit | Expo managed workflow (cần bare workflow) |
 | brse-ai-kit | Không có Figma Desktop app |
 | qc-kit-agent | Không có test cases / chỉ cần unit test |
+| pm-ai-kit | Không dùng Backlog / không cần báo cáo định kỳ |

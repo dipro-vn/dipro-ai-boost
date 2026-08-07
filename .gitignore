@@ -22,3 +22,11 @@ Thumbs.db
 
 # AI source
 AI_Source/
+
+# pm-ai-kit
+pm-ai-kit/local.json
+pm-ai-kit/performance-report/local.json
+pm-ai-kit/performance-report/data/
+pm-ai-kit/performance-report/result/
+pm-ai-kit/performance-report/debug_*.csv
+pm-ai-kit/performance-report/*.xlsx
