@@ -80,6 +80,7 @@ nav:
     - "Kit 4: mobile-ai-kit": kits/mobile-ai-kit.md
     - "Kit 5: brse-ai-kit": kits/brse-ai-kit.md
     - "Kit 6: qc-kit-agent": kits/qc-kit-agent.md
+    - "Kit 7: pm-ai-kit": kits/pm-ai-kit.md
   - Hướng dẫn:
     - Bắt đầu nhanh: guides/getting-started.md
     - Setup dự án mới: guides/new-project-setup.md
