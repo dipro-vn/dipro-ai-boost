@@ -1,6 +1,6 @@
 ---
 name: nextjs-data-fetching
-description: 
+description: Fetch data phía server trong Next.js App Router — fetch với cache và revalidate, tag-based revalidation, streaming với Suspense, tránh request waterfall. Dùng khi lấy dữ liệu cho page hoặc layout trong app/.
 ---
 
 # Data Fetching

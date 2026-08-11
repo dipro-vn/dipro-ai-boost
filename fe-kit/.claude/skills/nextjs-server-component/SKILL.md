@@ -1,6 +1,6 @@
 ---
 name: nextjs-server-component
-description: 
+description: Dùng React Server Component trong Next.js — mặc định mọi component trong app/ là RSC, truy cập data trực tiếp, không dùng hook hay browser API, giảm bundle client. Dùng khi render UI không cần tương tác.
 ---
 
 # Server Component

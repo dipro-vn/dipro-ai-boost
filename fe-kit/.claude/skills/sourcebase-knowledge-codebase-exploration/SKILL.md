@@ -1,6 +1,6 @@
 ---
 name: sourcebase-knowledge-codebase-exploration
-description: 
+description: Khám phá codebase lạ một cách có hệ thống — đọc cấu trúc thư mục, tìm entry point, lần theo luồng dữ liệu, nhận diện quy ước của dự án. Dùng khi bắt đầu làm việc với source base chưa quen.
 ---
 
 # Codebase Exploration

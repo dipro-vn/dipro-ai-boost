@@ -1,6 +1,6 @@
 ---
 name: html-css-responsive-design
-description: 
+description: Giao diện thích ứng nhiều kích thước màn hình — media query, đơn vị tương đối, fluid layout, mobile-first. Dùng khi làm UI phải chạy tốt trên cả mobile, tablet và desktop bằng CSS thuần.
 ---
 
 # Responsive Design

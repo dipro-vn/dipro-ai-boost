@@ -1,3 +1,8 @@
+---
+description: Cải thiện cấu trúc code mà không đổi hành vi — đảm bảo test trước, refactor từng bước, verify
+argument-hint: [module hoặc component cần refactor]
+---
+
 # Refactoring
 
 **Type:** Workflow

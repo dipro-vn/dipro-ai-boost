@@ -1,6 +1,6 @@
 ---
 name: prisma-schema-design
-description: 
+description: Thiết kế Prisma schema — model, field type, quan hệ một-nhiều và nhiều-nhiều, enum, quy ước đặt tên, default và nullable. Dùng khi tạo mới hoặc sửa file schema.prisma.
 ---
 
 # Prisma Schema Design

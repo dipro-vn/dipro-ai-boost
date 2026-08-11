@@ -1,6 +1,6 @@
 ---
 name: html-css-css-layout
-description: 
+description: Dàn layout với Flexbox và Grid — chọn đúng cái nào cho tình huống nào, căn chỉnh, gap, kiểm soát overflow. Dùng khi dựng layout trang, sidebar, card grid, hoặc căn chỉnh phần tử phức tạp.
 ---
 
 # CSS Layout

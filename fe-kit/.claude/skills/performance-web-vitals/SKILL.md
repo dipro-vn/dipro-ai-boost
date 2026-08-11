@@ -1,6 +1,6 @@
 ---
 name: performance-web-vitals
-description: 
+description: Đạt ngưỡng Core Web Vitals LCP, CLS, INP — tối ưu ảnh và font, đặt kích thước cố định tránh layout shift, giảm blocking task. Dùng khi cần cải thiện điểm Lighthouse hoặc trải nghiệm tải trang thật.
 ---
 
 # Web Vitals

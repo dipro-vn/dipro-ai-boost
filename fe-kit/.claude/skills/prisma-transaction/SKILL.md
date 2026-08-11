@@ -1,6 +1,6 @@
 ---
 name: prisma-transaction
-description: 
+description: Đảm bảo atomic cho nhiều thao tác ghi bằng Prisma — $transaction dạng mảng, interactive transaction, xử lý rollback và deadlock. Dùng khi một hành động phải ghi nhiều bảng cùng lúc.
 ---
 
 # Prisma Transaction

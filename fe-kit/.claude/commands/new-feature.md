@@ -1,3 +1,8 @@
+---
+description: Xây feature mới từ story hoặc issue — phân tích, thiết kế, implement, test, review
+argument-hint: [mô tả feature cần xây]
+---
+
 # New Feature
 
 **Type:** Workflow
