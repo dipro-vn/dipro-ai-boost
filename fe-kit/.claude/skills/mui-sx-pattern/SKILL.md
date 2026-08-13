@@ -1,6 +1,6 @@
 ---
 name: mui-sx-pattern
-description: 
+description: CHỈ dùng khi dự án dùng Material UI. Style component bằng prop sx — dùng token theme thay vì magic value, responsive value dạng object, khi nào nên tách sang styled. Dùng khi style bất kỳ component MUI nào.
 ---
 
 # Sx Pattern

@@ -1,6 +1,6 @@
 ---
 name: form-error-display
-description: 
+description: Hiển thị lỗi form đúng cách — lỗi cấp field, lỗi cấp form, gắn aria-invalid và aria-describedby cho screen reader. Dùng khi render thông báo lỗi validation, error summary, hoặc trạng thái lỗi submit.
 ---
 
 # Error Display

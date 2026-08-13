@@ -1,6 +1,6 @@
 ---
 name: testing-jest-coverage-analysis
-description: 
+description: Đọc và dùng báo cáo coverage đúng cách — phân biệt statement, branch, function coverage; tìm nhánh quan trọng chưa phủ; không chạy theo phần trăm một cách hình thức. Dùng khi rà soát độ phủ test.
 ---
 
 # Coverage Analysis

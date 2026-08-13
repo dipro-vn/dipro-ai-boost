@@ -1,3 +1,9 @@
+---
+name: frontend-reviewer
+description: Review code đã implement — bắt bug, rủi ro bảo mật và hiệu năng, tuân thủ quy ước; phản hồi phân mức blocker / nên sửa / gợi ý kèm lý do. Thực thi /code-review và là cổng cuối của /new-feature, /bug-fix, /refactoring.
+tools: Read, Grep, Glob, Bash
+---
+
 # Frontend Reviewer
 
 **Type:** Agent

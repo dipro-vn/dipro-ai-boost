@@ -1,6 +1,6 @@
 ---
 name: react-query-mutation-pattern
-description: 
+description: Tạo, sửa, xoá server state bằng useMutation của TanStack Query — onSuccess, onError, onSettled, invalidate cache sau khi ghi, trạng thái isPending. Dùng khi submit form hoặc thao tác thay đổi dữ liệu server.
 ---
 
 # Mutation Pattern

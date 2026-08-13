@@ -1,3 +1,9 @@
+---
+name: frontend-analyst
+description: Phân tích yêu cầu nghiệp vụ và UI trước khi viết code — biến story mơ hồ thành đặc tả có acceptance criteria, edge case, trạng thái UI loading/empty/error. Dùng ở bước đầu của /new-feature, và trong /bug-fix khi cần làm rõ hành vi mong đợi.
+tools: Read, Grep, Glob
+---
+
 # Frontend Analyst
 
 **Type:** Agent
