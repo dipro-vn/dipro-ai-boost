@@ -28,17 +28,20 @@ Ví dụ:
 1. Xác định đường dẫn file `.md` từ input của user (tuyệt đối hoặc tương đối từ root project)
 2. Kiểm tra file tồn tại
 3. **Nếu file là `test-cases.md` và user chưa chỉ định `web`/`app` trong prompt** → hỏi user: "Xuất theo template Web hay App?" trước khi chạy script. Không đoán.
-4. Chạy script (dùng Python với `openpyxl` — tự setup venv nếu chưa có):
+4. Chạy script (auto-detect Python có `openpyxl` — ưu tiên venv local, sau đó system):
 
 ```bash
+# Tự động tìm python3 có openpyxl (ưu tiên venv local, sau đó system)
+PYTHON=$(python3 -c "import openpyxl, sys; print(sys.executable)" 2>/dev/null || python3 -c "import sys; print(sys.executable)")
+
 # test-cases.md (cần platform web hoặc app)
-python3 .claude/scripts/md_to_xlsx.py <file_path> <web|app>
+$PYTHON .claude/scripts/md_to_xlsx.py <file_path> <web|app>
 
 # artifact khác (analysis, plan, review)
-python3 .claude/scripts/md_to_xlsx.py <file_path>
+$PYTHON .claude/scripts/md_to_xlsx.py <file_path>
 ```
 
-> Nếu môi trường user đã config sẵn venv riêng (VD `/Users/dipro/.venvs/qa-tools/bin/python3`), dùng đúng venv đó để đảm bảo `openpyxl` đã cài.
+> Nếu môi trường user đã config sẵn venv riêng (VD `~/.venvs/qa-tools/bin/python3`), snippet trên vẫn ưu tiên `sys.executable` của Python nào có `openpyxl`, không cần user chỉ định.
 
 5. Báo kết quả: đường dẫn file `.xlsx` vừa tạo (cùng thư mục với file `.md` input)
 
@@ -68,9 +71,5 @@ python3 .claude/scripts/md_to_xlsx.py <file_path>
 ## Lưu ý
 
 - File `.xlsx` ghi đè nếu đã tồn tại cùng tên
-- Nếu script báo lỗi `ModuleNotFoundError: openpyxl`, chạy:
-  ```
-  python3 -m venv ~/.venvs/qa-tools && ~/.venvs/qa-tools/bin/pip install openpyxl
-  ```
-  Rồi chạy lại script với `~/.venvs/qa-tools/bin/python3`.
+- Nếu script báo lỗi `ModuleNotFoundError: openpyxl`, cài trực tiếp: `pip install openpyxl` — hoặc dùng venv riêng: `python3 -m venv .venv && .venv/bin/pip install openpyxl` (snippet auto-detect ở trên sẽ tự pick venv này ở lần chạy sau).
 - Template thật nằm ở `template/[Tên dự án]_[Tên module]_Testcase_ForWeb_V3.0.xlsx` và `template/[Tên dự án]_[Tên module]_Testcase_ForApp_V3.0.xlsx` — dùng chung 1 lần cho cả dự án, không tự sửa.

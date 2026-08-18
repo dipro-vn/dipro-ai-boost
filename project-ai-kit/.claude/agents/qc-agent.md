@@ -72,7 +72,9 @@ Agent tự chọn mode dựa trên scope + complexity. Pipeline mặc định l�
 | 2 | `/test/plan-tcs <feature> <module>` | Phân rã Screen → Archetype + Strategy Summary → Component + Risk + Technique | `plan-tcs.md` |
 | 3 | `/test/gen-tcs <feature> <module>` | Sinh TC chi tiết (Visual + Validation + Logic) | `test-cases.md` |
 
-> **Điều kiện tiên quyết:** `/test/plan-tcs` yêu cầu `analysis.md`; `/test/gen-tcs` yêu cầu `plan-tcs.md` — commands sẽ tự dừng nếu file thiếu.
+> **Điều kiện tiên quyết:** `/test/plan-tcs` yêu cầu `analysis.md`. `/test/gen-tcs` yêu cầu `plan-tcs.md` — nếu module chưa có `plan-tcs.md` (hoặc cả `analysis.md`), `/test/gen-tcs` sẽ **auto-chain** `/test/analyze-req` → `/test/plan-tcs` trước, vẫn dừng đúng checkpoint Summary/Plan confirm (không silent-generate).
+>
+> **TBD ACs (severity-gated):** Medium/Low → auto-tag `[UNCONFIRMED]`, không hỏi. High (tiền/bảo mật/phân quyền) → dừng hỏi user chọn A/B/C.
 
 ### Các mode / command standalone (on-demand, ngoài pipeline)
 
@@ -128,7 +130,7 @@ Skill `rbt_manual_testing` được tổ chức thành **4 sections** tương �
 | Section 1: Context Setup | Không có command — `.claude/context/specification.md` (auto-load qua CLAUDE.md) | — |
 | Section 2: Requirement Analysis | `/test/analyze-req <feature> <module>` | ✅ User confirm Summary |
 | Section 3: TC Implementation Plan | `/test/plan-tcs <feature> <module>` | ✅ User confirm plan (Screen/Archetype/Component/Risk) |
-| Section 4: Test Case Generation | `/test/gen-tcs <feature> <module>` | ⚠️ TBD ACs — hỏi user chọn A/B/C trước khi sinh |
+| Section 4: Test Case Generation | `/test/gen-tcs <feature> <module>` | ⚠️ TBD ACs mức **High** — hỏi user chọn A/B/C trước khi sinh (Medium/Low auto-tag `[UNCONFIRMED]`) |
 
 **Không được** gộp bước, không được skip `/plan-tcs` (yêu cầu bắt buộc trước `/gen-tcs`).
 

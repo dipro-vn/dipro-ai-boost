@@ -9,32 +9,40 @@ argument-hint: <feature-name> [module-name]
 
 Bạn là `qc-agent`. Thực hiện **Section 4: Test Case Generation** từ skill `rbt_manual_testing`.
 
-## Bước 0 — Kiểm tra `plan-tcs.md` (bắt buộc)
+## Bước 0 — Kiểm tra `analysis.md` và `plan-tcs.md`
 
-Kiểm tra `<DOCS_ROOT>/features/<feature>/test-cases/<module>/plan-tcs.md` có tồn tại không:
+Kiểm tra `<DOCS_ROOT>/features/<feature>/test-cases/<module>/analysis.md` và `plan-tcs.md` có tồn tại không:
 
-**Không có** → dừng lại, thông báo:
+**Có sẵn cả 2** → tiếp tục Bước 1 luôn, không chạy lại.
 
-> ⚠️ Module này chưa có `plan-tcs.md`. Chạy `/plan-tcs <feature> <module>` trước để xác định cấu trúc Screen/Component và risk level, sau đó quay lại `/gen-tcs`.
+**Thiếu 1 trong 2 (hoặc cả 2)** → thông báo ngắn rồi **tự động chạy tuần tự** các bước còn thiếu — không cần hỏi user có muốn chạy không, vì đây là bước bắt buộc để thực hiện đúng yêu cầu user vừa đưa ra:
 
-**Có** → tiếp tục Bước 1.
+> ℹ️ Module này chưa có `analysis.md`/`plan-tcs.md`. Tôi sẽ tự chạy `/test/analyze-req` → `/test/plan-tcs` trước, sau đó tiếp tục `/test/gen-tcs`.
+
+- Thiếu `analysis.md` → thực hiện **Section 2: Requirement Analysis** (skill `rbt_manual_testing`) — vẫn dừng đúng tại checkpoint Requirements Summary confirm và Q&A ambiguities như khi chạy `/test/analyze-req` độc lập.
+- Sau khi có `analysis.md` (vừa tạo hoặc đã có sẵn) mà thiếu `plan-tcs.md` → thực hiện **Section 3: TC Implementation Plan** — vẫn dừng đúng tại checkpoint "Bạn muốn điều chỉnh gì không?" như khi chạy `/test/plan-tcs` độc lập.
+- Sau khi user confirm `plan-tcs.md` → tiếp tục Bước 1 bên dưới.
+
+> Quan trọng: dù auto-chain, **không được** silent-generate hết rồi mới show — phải dừng đúng vị trí checkpoint của từng bước như khi chạy độc lập.
 
 ---
 
-## Bước 1 — Kiểm tra TBD ACs
+## Bước 1 — Kiểm tra TBD ACs (severity-gated)
 
-Đọc `<DOCS_ROOT>/features/<feature>/test-cases/<module>/analysis.md`, kiểm tra cột Status trong bảng Acceptance Criteria:
+Đọc `<DOCS_ROOT>/features/<feature>/test-cases/<module>/analysis.md`, kiểm tra cột Status trong bảng Acceptance Criteria. Với mỗi AC status TBD, tra Severity của AMB-XX liên quan trong bảng Q&A (nếu không xác định được AMB liên quan hoặc Severity không rõ, coi như **High** để an toàn).
 
 **Không có AC nào status TBD** → tiếp tục bình thường.
 
-**Có ≥1 AC status TBD** → thông báo và hỏi user:
+**Có AC TBD nhưng AMB liên quan chỉ ở mức Medium/Low** → tự động sinh TC bình thường, tag `[UNCONFIRMED]` ở đầu Test Scenario của các TC thuộc AC đó. Không hỏi user.
 
-> ⚠️ Có **X AC** chưa được confirm (status: TBD). TCs sinh từ các AC này có thể sai nếu PM/BA thay đổi requirement sau.
+**Có AC TBD với AMB liên quan ở mức High** (nghiệp vụ liên quan tiền/bảo mật/phân quyền) → dừng lại, thông báo và hỏi user:
+
+> ⚠️ Có **X AC** chưa được confirm (status: TBD), trong đó **Y AC** liên quan ambiguity mức **High** (AMB-XX). TCs sinh từ các AC này có thể sai lệch nghiêm trọng nếu PM/BA thay đổi requirement sau.
 >
 > Bạn muốn xử lý thế nào?
-> **A.** Chỉ sinh TCs cho AC Confirmed/Assumed — bỏ qua TBD
-> **B.** Sinh TCs cho tất cả — tag `[UNCONFIRMED]` vào Test Scenario của TCs từ TBD ACs
-> **C.** Dừng lại để resolve TBD trước (chạy lại sau khi PM confirm)
+> **A.** Chỉ sinh TCs cho AC Confirmed/Assumed — bỏ qua các AC TBD mức High
+> **B.** Vẫn sinh TCs cho AC TBD mức High — tag `[UNCONFIRMED]` như các AC mức Medium/Low
+> **C.** Dừng lại để resolve TBD mức High trước (chạy lại sau khi PM confirm)
 
 > *Nếu chọn B: TCs từ TBD ACs sẽ có prefix `[UNCONFIRMED]` ở cột Test Scenario để dễ nhận biết và review sau.*
 
