@@ -177,7 +177,7 @@ Mô tả: [Hệ thống làm gì, đối tượng dùng là ai]
 - **Assumption môi trường test:** [điều kiện hạ tầng/bên ngoài TC sẽ dựa vào — để trống nếu không có]
 ```
 
-> **Lưu ý:** `/gen-tcs` sẽ từ chối chạy nếu module chưa có `plan-tcs.md`.
+> **Lưu ý:** Nếu module chưa có `plan-tcs.md` (hoặc cả `analysis.md`) khi user gọi `/gen-tcs`, `/gen-tcs` sẽ tự động chain chạy `/analyze-req` → `/plan-tcs` trước — vẫn dừng đúng tại checkpoint Summary/Plan confirm của từng bước, không silent-generate.
 
 ---
 
@@ -188,8 +188,8 @@ Mô tả: [Hệ thống làm gì, đối tượng dùng là ai]
 **Mục đích:** Sinh Test Case chi tiết (bao gồm Test Scenario — không còn artifact riêng) từ `plan-tcs.md` + `analysis.md`, áp dụng Field-Level Validation, Visual States, và kỹ thuật thiết kế test case.
 
 **Agent phải:**
-1. Đọc `plan-tcs.md` (bắt buộc — nếu chưa có, dừng lại yêu cầu chạy `/plan-tcs` trước). File này quyết định *sinh cái gì* và *sâu tới đâu*.
-2. Đọc `analysis.md` (nội dung AC đầy đủ + Q&A status) — quyết định *nội dung* Steps/Expected Result. Kiểm tra TBD ACs trước khi tiếp tục.
+1. Đọc `plan-tcs.md` — nếu chưa có (hoặc chưa có `analysis.md`), tự động chain chạy Section 2/3 tương ứng trước (xem Bước 0 trong `/gen-tcs`), vẫn dừng đúng checkpoint Summary/Plan confirm, không hỏi xin phép trigger. File này quyết định *sinh cái gì* và *sâu tới đâu*.
+2. Đọc `analysis.md` (nội dung AC đầy đủ + Q&A status) — quyết định *nội dung* Steps/Expected Result. Kiểm tra TBD ACs theo severity của AMB liên quan trước khi tiếp tục: Medium/Low → tự động tag `[UNCONFIRMED]`, không hỏi; High → dừng hỏi user (xem Bước 1 trong `/gen-tcs`).
 3. Xác định platform: đọc `analysis.md` Summary → nếu trống, dùng Platform trong `context.md` đã auto-load → đọc `testing_dimensions/SKILL.md` section tương ứng.
 4. Với mỗi Screen trong `plan-tcs.md` (đúng thứ tự):
    a. Sinh **1 TC "Verify UI tổng thể"** trước tiên (đặt đầu bảng của sheet đó), dựa trên mô tả "UI chung" trong plan.
@@ -454,5 +454,6 @@ Dùng khi cần test data di chuyển giữa các modules — áp thủ công v�
 - ❌ Rút gọn hoặc bỏ sót test case khi mapping sang bảng
 - ❌ Sinh tất cả test cases 1 lần cho hệ thống lớn (phải chia theo Screen)
 - ❌ **Viết Test Scenario dạng ký hiệu rút gọn** (mũi tên, gạch chéo nén ý, dấu hai chấm nén nhiều ý) thay vì câu tự nhiên hoàn chỉnh
-- ❌ **Chạy `/gen-tcs` khi chưa có `plan-tcs.md`** cho module đó
+- ❌ **Bỏ qua checkpoint Summary/Plan confirm** khi `/gen-tcs` auto-chain `/analyze-req`/`/plan-tcs` — phải dừng đúng vị trí như khi chạy độc lập, không silent-generate hết rồi mới show
 - ❌ **Đoán Component Type qua keyword AC text** khi `plan-tcs.md` đã có sẵn Component Type — phải tra trực tiếp
+- ❌ **Dừng hỏi user với AC TBD mức Medium/Low** — chỉ dừng hỏi khi có AC TBD gắn với AMB mức High (nghiệp vụ tiền/bảo mật/phân quyền). Medium/Low tự tag `[UNCONFIRMED]`.

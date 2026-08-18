@@ -462,6 +462,114 @@ def _parse_issues(raw: List[dict]) -> pd.DataFrame:
 
 
 # ============================================================
+# 1.5. LATE DELIVERY DETECTION — fetch /comments để tìm ngày status → Done
+# ============================================================
+
+# Cache theo issue_id → resolved_at timestamp (naive Asia/Ho_Chi_Minh) hoặc None
+_RESOLVED_TS_CACHE: Dict[int, Optional[pd.Timestamp]] = {}
+
+
+def _fetch_resolved_at(issue_id: int) -> Optional[pd.Timestamp]:
+    """
+    Fetch /issues/:id/comments, tìm timestamp task được "delivered" — tức là
+    lần ĐẦU TIÊN status chuyển vào DONE_STATUSES mà SAU ĐÓ không bị bounce ra
+    khỏi Done nữa. Semantic: khi dev báo xong (Resolved) và không bị QC reopen.
+
+    Ví dụ ESKITCHEN-1684:
+      Open → In Progress → In Review → In Progress → Resolved (10/8 15:20) → Closed (11/8 11:13)
+      → delivered_at = 10/8 15:20 (lần Resolved đầu tiên không bị reopen).
+      KHÔNG tính là 11/8 (Closed) — đó chỉ là PM verify.
+
+    Ví dụ task bị reopen:
+      Resolved (5/8) → In Progress (6/8) → Resolved (10/8) → Closed (11/8)
+      → delivered_at = 10/8 (lần Resolved thứ 2, vì lần đầu bị bounce).
+
+    None nếu không thấy transition sang Done nào.
+    """
+    if issue_id in _RESOLVED_TS_CACHE:
+        return _RESOLVED_TS_CACHE[issue_id]
+
+    try:
+        resp = requests.get(
+            f"{BACKLOG_BASE_URL}/issues/{issue_id}/comments",
+            params={"apiKey": API_KEY, "count": 100, "order": "asc"},
+            timeout=30,
+        )
+        resp.raise_for_status()
+        comments = resp.json()
+    except requests.exceptions.RequestException as exc:
+        logger.warning(f"  activities fetch failed for issue {issue_id}: {exc}")
+        _RESOLVED_TS_CACHE[issue_id] = None
+        return None
+
+    # Thu thập chuỗi transition theo thứ tự thời gian (đã order=asc)
+    transitions: List[tuple] = []  # [(timestamp, new_status_name), ...]
+    for c in comments:
+        for ch in (c.get("changeLog") or []):
+            if ch.get("field") != "status":
+                continue
+            new_val = (ch.get("newValue") or "").strip()
+            ts = (
+                pd.to_datetime(c["created"], errors="coerce", utc=True)
+                .tz_convert("Asia/Ho_Chi_Minh")
+                .tz_localize(None)
+            )
+            if pd.notna(ts):
+                transitions.append((ts, new_val))
+
+    # Tìm lần đầu tiên vào Done mà không bị bounce ra Done nữa
+    delivered_ts: Optional[pd.Timestamp] = None
+    for i, (ts, s) in enumerate(transitions):
+        if s in DONE_STATUSES:
+            # Có bất kỳ transition SAU đó ra khỏi Done không?
+            bounced = any(t[1] not in DONE_STATUSES for t in transitions[i+1:])
+            if not bounced:
+                delivered_ts = ts
+                break
+
+    _RESOLVED_TS_CACHE[issue_id] = delivered_ts
+    return delivered_ts
+
+
+def _enrich_late_delivered(df: pd.DataFrame, max_workers: int = 10) -> pd.DataFrame:
+    """
+    Thêm 2 cột vào df: `resolvedAt` (Timestamp | NaT) và `isLateDelivered` (bool).
+
+    isLateDelivered = True khi:
+      - status ∈ DONE_STATUSES (task đã đóng)
+      - có dueDate
+      - resolvedAt.date() > dueDate.date()
+
+    Fetch song song với ThreadPoolExecutor để tránh tuần tự chậm.
+    Chỉ fetch cho task đã done — task open không có "late delivery".
+    """
+    if df.empty or "status" not in df.columns:
+        return df
+
+    done_mask = df["status"].isin(DONE_STATUSES) & df["dueDate"].notna()
+    done_ids = df.loc[done_mask, "id"].dropna().astype(int).unique().tolist()
+
+    to_fetch = [i for i in done_ids if i not in _RESOLVED_TS_CACHE]
+    if to_fetch:
+        logger.info(f"  Fetching resolvedAt for {len(to_fetch)} done issues (parallel × {max_workers})...")
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as pool:
+            list(pool.map(_fetch_resolved_at, to_fetch))
+
+    df = df.copy()
+    df["resolvedAt"] = df["id"].map(
+        lambda i: _RESOLVED_TS_CACHE.get(int(i)) if pd.notna(i) else None
+    )
+    df["isLateDelivered"] = (
+        df["status"].isin(DONE_STATUSES)
+        & df["dueDate"].notna()
+        & df["resolvedAt"].notna()
+        & (df["resolvedAt"].dt.normalize() > df["dueDate"].dt.normalize())
+    )
+    return df
+
+
+# ============================================================
 # 2. PROCESSING — Thống kê với pandas
 # ============================================================
 
@@ -492,6 +600,11 @@ def process_stats(df: pd.DataFrame, from_date: str, to_date: str, month_df: Opti
 
     from_ts = pd.Timestamp(from_date)
     to_ts   = pd.Timestamp(to_date)
+
+    # Enrich: thêm resolvedAt + isLateDelivered (fetch /comments cho task đã done)
+    df = _enrich_late_delivered(df)
+    if month_df is not None and not month_df.empty:
+        month_df = _enrich_late_delivered(month_df)
 
     dashboard_df    = _compute_dashboard_weekly(df, from_ts, to_ts)
     monthly_df      = _compute_monthly_stats(month_df if month_df is not None else df, from_date)
@@ -592,17 +705,21 @@ def _compute_dashboard_weekly(
     sub["_done"] = sub["status"].isin(DONE_STATUSES).astype(int)
     sub["_is_bug"] = (sub["issueType"].str.strip().str.lower() == "bug").astype(int)
     sub["_bug_done"] = (sub["_is_bug"] & sub["_done"]).astype(int)
+    sub["_overdue"] = sub["isOverdue"].astype(int) if "isOverdue" in sub.columns else 0
+    sub["_late_delivered"] = sub["isLateDelivered"].astype(int) if "isLateDelivered" in sub.columns else 0
 
     g = (
         sub.groupby("assignee")
         .agg(
-            assignee_id     =("assigneeId",     "first"),
-            total_task      =("id",             "count"),
-            task_done       =("_done",          "sum"),
-            total_bug       =("_is_bug",        "sum"),
-            bug_done        =("_bug_done",      "sum"),
-            total_estimate  =("estimatedHours", "sum"),
-            total_actual    =("actualHours",    "sum"),
+            assignee_id         =("assigneeId",     "first"),
+            total_task          =("id",             "count"),
+            task_done           =("_done",          "sum"),
+            total_overdue       =("_overdue",       "sum"),
+            total_late_delivered=("_late_delivered", "sum"),
+            total_bug           =("_is_bug",        "sum"),
+            bug_done            =("_bug_done",      "sum"),
+            total_estimate      =("estimatedHours", "sum"),
+            total_actual        =("actualHours",    "sum"),
         )
         .reset_index()
     )
@@ -623,16 +740,18 @@ def _compute_dashboard_weekly(
     )
 
     g = g.rename(columns={
-        "assignee"  : "Member",
-        "total_task": "Total Task",
-        "task_done" : "Task Done",
-        "total_bug" : "Total Bug",
-        "bug_done"  : "Bug Done",
+        "assignee"            : "Member",
+        "total_task"          : "Total Task",
+        "task_done"           : "Task Done",
+        "total_overdue"       : "Task Overdue",
+        "total_late_delivered": "Task Late Delivered",
+        "total_bug"           : "Total Bug",
+        "bug_done"            : "Bug Done",
     })
 
     col_order = [
         "Member", "Role", "Allocation (%)", "Effort Load",
-        "Total Task", "Task Done", "Task Remain",
+        "Total Task", "Task Done", "Task Remain", "Task Overdue", "Task Late Delivered",
         "Total Bug",  "Bug Done",  "Bug Remain",
         "Total Estimate (h)", "Total Actual (h)", "Productivity (%)",
     ]
@@ -652,17 +771,30 @@ def _compute_monthly_stats(df: pd.DataFrame, ref_date: str) -> pd.DataFrame:
     sub["_done"] = sub["status"].isin(DONE_STATUSES).astype(int)
     sub["_is_bug"] = (sub["issueType"].str.strip().str.lower() == "bug").astype(int)
     sub["_bug_done"] = (sub["_is_bug"] & sub["_done"]).astype(int)
+    # monthly df không đi qua prepare_dataframe → compute isOverdue inline
+    if "isOverdue" in sub.columns:
+        sub["_overdue"] = sub["isOverdue"].astype(int)
+    else:
+        today_ts = pd.Timestamp.now().normalize()
+        sub["_overdue"] = (
+            sub["dueDate"].notna()
+            & (sub["dueDate"] < today_ts)
+            & (~sub["status"].isin(DONE_STATUSES))
+        ).astype(int)
+    sub["_late_delivered"] = sub["isLateDelivered"].astype(int) if "isLateDelivered" in sub.columns else 0
 
     g = (
         sub.groupby("assignee")
         .agg(
-            assignee_id    =("assigneeId",     "first"),
-            total_task     =("id",             "count"),
-            task_done      =("_done",          "sum"),
-            total_bug      =("_is_bug",        "sum"),
-            bug_done       =("_bug_done",      "sum"),
-            total_estimate =("estimatedHours", "sum"),
-            total_actual   =("actualHours",    "sum"),
+            assignee_id         =("assigneeId",     "first"),
+            total_task          =("id",             "count"),
+            task_done           =("_done",          "sum"),
+            total_overdue       =("_overdue",       "sum"),
+            total_late_delivered=("_late_delivered", "sum"),
+            total_bug           =("_is_bug",        "sum"),
+            bug_done            =("_bug_done",      "sum"),
+            total_estimate      =("estimatedHours", "sum"),
+            total_actual        =("actualHours",    "sum"),
         )
         .reset_index()
     )
@@ -685,16 +817,18 @@ def _compute_monthly_stats(df: pd.DataFrame, ref_date: str) -> pd.DataFrame:
 
     g["Tháng"] = target_month
     g = g.rename(columns={
-        "assignee"  : "Member",
-        "total_task": "Total Task",
-        "task_done" : "Task Done",
-        "total_bug" : "Total Bug",
-        "bug_done"  : "Bug Done",
+        "assignee"            : "Member",
+        "total_task"          : "Total Task",
+        "task_done"           : "Task Done",
+        "total_overdue"       : "Task Overdue",
+        "total_late_delivered": "Task Late Delivered",
+        "total_bug"           : "Total Bug",
+        "bug_done"            : "Bug Done",
     })
 
     col_order = [
         "Tháng", "Member", "Role", "Allocation (%)",
-        "Total Task", "Task Done", "Task Remain",
+        "Total Task", "Task Done", "Task Remain", "Task Overdue", "Task Late Delivered",
         "Total Bug",  "Bug Done",  "Bug Remain",
         "Total Estimate (h)", "Total Actual (h)", "Productivity (%)",
         "Bug_Rate (%)",
@@ -1253,7 +1387,7 @@ def export_to_excel(
         else:
             pd.DataFrame(columns=[
                 "Member", "Role", "Allocation (%)", "Effort Load",
-                "Total Task", "Task Done", "Task Remain",
+                "Total Task", "Task Done", "Task Remain", "Task Overdue", "Task Late Delivered",
                 "Total Bug", "Bug Done", "Bug Remain",
                 "Total Estimate (h)", "Total Actual (h)", "Productivity (%)",
             ]).to_excel(writer, sheet_name="Dashboard", index=False, startrow=1)
@@ -1582,6 +1716,14 @@ def _format_excel(filepath: str, stats: Dict) -> None:
                  "🟢 Cân bằng, đúng chuẩn effort tuần", "ok"),
                 ("Effort Load = Quá tải", "Estimate > Alloc-hours (100% = 40h/tuần)",
                  "🔴 Quá tải — cần chia bớt task", "bad"),
+                ("Task Overdue = 0", "dueDate < today AND status ∉ Done",
+                 "🟢 Không có task quá hạn trong tuần", "ok"),
+                ("Task Overdue > 0", "dueDate < today AND status ∉ Done",
+                 "🔴 Có task quá hạn — cần review deadline / re-assign", "bad"),
+                ("Task Late Delivered = 0", "resolvedAt.date > dueDate.date AND status ∈ Done",
+                 "🟢 Task đã đóng đều đúng hoặc trước deadline", "ok"),
+                ("Task Late Delivered > 0", "resolvedAt.date > dueDate.date AND status ∈ Done",
+                 "🔴 Task đã đóng nhưng deliver trễ (resolvedAt lấy từ changeLog của /comments)", "bad"),
             ], "Chú thích — Dashboard")
 
         if sheet_name == "Member_Availability":
@@ -1608,6 +1750,14 @@ def _format_excel(filepath: str, stats: Dict) -> None:
                  "🟢 Chất lượng tốt", "ok"),
                 ("Bug_Rate ≥ 10%",  "Total Bug ÷ Total Estimate × 100",
                  "🔴 Nhiều bug so với effort — cần review chất lượng", "bad"),
+                ("Task Overdue = 0", "dueDate < today AND status ∉ Done",
+                 "🟢 Không có task quá hạn tồn đọng trong tháng", "ok"),
+                ("Task Overdue > 0", "dueDate < today AND status ∉ Done",
+                 "🔴 Có task quá hạn tồn đọng — cần review deadline", "bad"),
+                ("Task Late Delivered = 0", "resolvedAt.date > dueDate.date AND status ∈ Done",
+                 "🟢 Tháng này task đóng đúng hoặc trước deadline", "ok"),
+                ("Task Late Delivered > 0", "resolvedAt.date > dueDate.date AND status ∈ Done",
+                 "🔴 Tháng này có task đóng trễ deadline (resolvedAt từ changeLog)", "bad"),
             ], "Chú thích — Monthly Stats")
 
         if sheet_name == "Action_Required":
@@ -1690,11 +1840,29 @@ def _color_productivity(cell) -> None:
         cell.fill = _PERF_RED_FILL; cell.font = _PERF_RED_FONT
 
 
+def _color_overdue(cell) -> None:
+    """Tô cột Task Overdue: >0 → đỏ bold, =0 → xanh nhạt."""
+    try:
+        v = int(cell.value) if cell.value not in (None, "") else None
+    except (ValueError, TypeError):
+        return
+    if v is None:
+        return
+    if v > 0:
+        cell.fill = _PERF_RED_FILL
+        cell.font = _PERF_RED_FONT
+    else:
+        cell.fill = _PERF_GREEN_FILL
+        cell.font = _PERF_GREEN_FONT
+
+
 def _style_dashboard_sheet(ws, header_row: int = 1) -> None:
-    """Tô Productivity (%) + Effort Load trong Dashboard."""
+    """Tô Productivity (%) + Effort Load + Task Overdue + Task Late Delivered trong Dashboard."""
     header = {cell.value: cell.column for cell in ws[header_row] if cell.value}
-    prod_col   = header.get("Productivity (%)")
-    effort_col = header.get("Effort Load")
+    prod_col    = header.get("Productivity (%)")
+    effort_col  = header.get("Effort Load")
+    overdue_col = header.get("Task Overdue")
+    late_col    = header.get("Task Late Delivered")
     for row in ws.iter_rows(min_row=header_row + 1):
         r = row[0].row
         if prod_col:
@@ -1704,18 +1872,28 @@ def _style_dashboard_sheet(ws, header_row: int = 1) -> None:
             style = _EFFORT_FILLS.get(str(cell.value or "").strip())
             if style:
                 cell.fill, cell.font = style
+        if overdue_col:
+            _color_overdue(ws.cell(row=r, column=overdue_col))
+        if late_col:
+            _color_overdue(ws.cell(row=r, column=late_col))
 
 
 def _style_month_stats_sheet(ws, header_row: int = 1) -> None:
-    """Tô Productivity + Bug_Rate trong Monthly_Stats."""
+    """Tô Productivity + Bug_Rate + Task Overdue + Task Late Delivered trong Monthly_Stats."""
     header = {cell.value: cell.column for cell in ws[header_row] if cell.value}
-    prod_col = header.get("Productivity (%)")
-    bug_col  = header.get("Bug_Rate (%)")
+    prod_col    = header.get("Productivity (%)")
+    bug_col     = header.get("Bug_Rate (%)")
+    overdue_col = header.get("Task Overdue")
+    late_col    = header.get("Task Late Delivered")
 
     for row in ws.iter_rows(min_row=header_row + 1):
         r = row[0].row
         if prod_col:
             _color_productivity(ws.cell(row=r, column=prod_col))
+        if overdue_col:
+            _color_overdue(ws.cell(row=r, column=overdue_col))
+        if late_col:
+            _color_overdue(ws.cell(row=r, column=late_col))
         if bug_col:
             cell = ws.cell(row=r, column=bug_col)
             try:
