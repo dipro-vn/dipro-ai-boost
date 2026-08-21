@@ -1,6 +1,6 @@
 ---
 name: performance-lazy-loading
-description: 
+description: Giảm bundle ban đầu bằng lazy loading — dynamic import, React.lazy với Suspense, hoãn tải modal và component nặng, lazy ảnh dưới màn hình. Dùng khi cần cải thiện thời gian tải trang đầu tiên.
 ---
 
 # Lazy Loading

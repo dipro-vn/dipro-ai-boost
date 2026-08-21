@@ -1,6 +1,6 @@
 ---
 name: ui-analysis-figma-analysis
-description: 
+description: Đọc file hoặc frame Figma trước khi code — trích token màu, typography, spacing, tìm auto-layout và constraint, ghi chú trạng thái component. Dùng khi nhận link Figma và cần chuyển thành code. Cần Figma MCP server.
 ---
 
 # Figma Analysis

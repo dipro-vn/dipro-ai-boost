@@ -1,6 +1,6 @@
 ---
 name: react-event-handling
-description: 
+description: Viết event handler trong React — đặt tên handleX và onX, truyền tham số không tạo closure thừa, preventDefault và stopPropagation, debounce/throttle input. Dùng khi xử lý onClick, onChange, onSubmit, sự kiện bàn phím.
 ---
 
 # Event Handling

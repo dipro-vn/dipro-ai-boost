@@ -1,6 +1,6 @@
 ---
 name: requirement-analysis-acceptance-criteria
-description: 
+description: Viết acceptance criteria cho user story theo dạng Given-When-Then hoặc checklist, đủ rõ để dev và QA cùng hiểu thế nào là done. Dùng khi chốt phạm vi một story trước khi implement.
 ---
 
 # Acceptance Criteria

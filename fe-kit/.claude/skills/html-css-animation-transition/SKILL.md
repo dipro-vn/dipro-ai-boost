@@ -1,6 +1,6 @@
 ---
 name: html-css-animation-transition
-description: 
+description: Thêm animation và transition giữ hiệu năng — ưu tiên transform/opacity, tránh layout thrashing, tôn trọng prefers-reduced-motion. Dùng khi làm hiệu ứng hover, enter/exit, hoặc chuyển trang.
 ---
 
 # Animation & Transition
