@@ -27,6 +27,7 @@ cp -r backend-kit/.claude/agents   your-backend-project/.claude/
 cp -r backend-kit/.claude/commands your-backend-project/.claude/
 cp -r backend-kit/.claude/skills   your-backend-project/.claude/
 cp -r backend-kit/.claude/tools    your-backend-project/.claude/
+cp backend-kit/.claude/validate-kit.mjs your-backend-project/.claude/
 ```
 
 Expected structure after installation:
@@ -34,6 +35,7 @@ Expected structure after installation:
 ```text
 your-backend-project/
 |-- .claude/
+|   |-- validate-kit.mjs
 |   |-- agents/
 |   |-- commands/
 |   |-- skills/
@@ -42,6 +44,8 @@ your-backend-project/
 |-- package.json
 `-- CLAUDE.md
 ```
+
+Then run `node .claude/validate-kit.mjs` and restart Claude Code — see section 8.
 
 ## 3. Add Project Context
 
@@ -130,6 +134,7 @@ Examples:
 |   `-- understand-anything.md
 `-- skills/
     |-- backend-auth-authorization/
+    |-- backend-change-record/
     |-- backend-error-logging/
     |-- backend-query-cache-performance/
     |-- backend-security-review/
@@ -141,7 +146,21 @@ Examples:
     `-- sourcebase-reuse-first/
 ```
 
-## 7. Verify The Kit After Installing
+## 7. What The Kit Writes
+
+Commands that change code end with a change record at
+`docs/backend/changes/YYYY-MM-DD-<topic>.md`, written only when the diff adds a
+migration, alters a request or response shape, adds a route or cache key, leaves
+something unverified, or leaves a known problem alone. Trivial changes produce no
+file, so the directory stays worth reading.
+
+The record carries what a diff cannot — which consumers a breaking change affects,
+what a rollback destroys, which commands were never run, and which problems were
+found and deliberately left. Review commands (`/code-review`, `/db-review`,
+`/api-contract`, `/test-generation`) write no record; they produce findings, not
+changes to hand over.
+
+## 8. Verify The Kit After Installing
 
 The agents, commands, and skills only work if their frontmatter is well formed. A
 missing `name`, or a `: ` inside an unquoted description, silently stops a file from
@@ -160,7 +179,7 @@ at session start**. After installing or editing anything under `.claude/agents/`
 restart Claude Code and confirm with `/agents` that all five appear. Skills and
 commands reload without a restart; agents do not.
 
-## 8. Core Rules
+## 9. Core Rules
 
 - Inspect existing project patterns before adding modules, entities, migrations, or cache keys.
 - Use a configured source-map tool before broad manual search when `.codegraph/` or `.understand-anything/` exists.

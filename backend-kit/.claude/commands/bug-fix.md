@@ -19,6 +19,7 @@ Use when backend behavior is incorrect, unstable, insecure, slow, or inconsisten
 3. **Fix** - Dispatch **backend-developer** to make the smallest change that resolves the root cause.
 4. **Regression** - Dispatch **backend-tester** to verify the failing test now passes and run the relevant suite.
 5. **Review** - Dispatch **backend-reviewer** to check for regressions in security, data integrity, query behavior, cache behavior, and contract shape.
+6. **Record** - Invoke the `backend-change-record` skill. Write the record only if the diff matches one of its conditions.
 
 ## Definition Of Done
 
@@ -27,3 +28,4 @@ Use when backend behavior is incorrect, unstable, insecure, slow, or inconsisten
 - Relevant tests pass.
 - The fix stays within root-cause scope.
 - Review has no blockers.
+- A change record exists, or no record condition was matched.

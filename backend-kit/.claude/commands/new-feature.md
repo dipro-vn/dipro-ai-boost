@@ -23,6 +23,7 @@ Read `CLAUDE.md`, project docs, and nearby modules. Ask only for details that ca
 3. **Implementation** - Dispatch **backend-developer** to implement the smallest scoped change with NestJS, TypeORM, PostgreSQL, and Redis guidance.
 4. **Tests** - Dispatch **backend-tester** to run `/test-generation` for service, endpoint, and regression coverage.
 5. **Review** - Dispatch **backend-reviewer** to run `/code-review` and verify security, data integrity, query performance, cache behavior, and tests.
+6. **Record** - Invoke the `backend-change-record` skill. Write the record only if the diff matches one of its conditions.
 
 ## Definition Of Done
 
@@ -34,3 +35,4 @@ Read `CLAUDE.md`, project docs, and nearby modules. Ask only for details that ca
 - Query and cache behavior have been reviewed.
 - Focused tests and relevant suites pass.
 - Review has no blockers.
+- A change record exists, or no record condition was matched.

@@ -19,6 +19,7 @@ Use when adding, editing, or reviewing TypeORM migrations and related entities.
 4. **Update entity** - Keep entity names, column names, relation names, and types aligned with the migration.
 5. **Verify** - Run the project migration or test command available for schema checks.
 6. **Review** - Dispatch **backend-reviewer** to check rollback, index coverage, data safety, and query impact.
+7. **Record** - Invoke the `backend-change-record` skill. Write the record only if the diff matches one of its conditions.
 
 ## Definition Of Done
 
@@ -28,3 +29,4 @@ Use when adding, editing, or reviewing TypeORM migrations and related entities.
 - Soft delete and timestamp conventions are followed.
 - Rollback is meaningful.
 - Verification command has been run or the missing command is documented.
+- A change record exists, or no record condition was matched.

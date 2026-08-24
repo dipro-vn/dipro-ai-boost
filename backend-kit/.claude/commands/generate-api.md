@@ -19,6 +19,7 @@ Use when scaffolding a NestJS REST resource or extending an existing module with
 4. **Implement scaffold** - Dispatch **backend-developer** to create only the files needed by the accepted contract.
 5. **Add tests** - Dispatch **backend-tester** to add service and endpoint tests for the scaffolded behavior.
 6. **Review** - Dispatch **backend-reviewer** to check validation, authorization, raw entity exposure, database rules, and query safety.
+7. **Record** - Invoke the `backend-change-record` skill. Write the record only if the diff matches one of its conditions.
 
 ## Scaffold Checklist
 
@@ -29,3 +30,4 @@ Use when scaffolding a NestJS REST resource or extending an existing module with
 - [ ] Entity uses UUID and explicit database names when a table is needed.
 - [ ] Migration plan exists when schema changes.
 - [ ] Tests cover success and key failures.
+- [ ] Change record written, or skipped because no condition matched.
