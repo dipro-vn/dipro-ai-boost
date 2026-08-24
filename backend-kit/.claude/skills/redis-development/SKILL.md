@@ -1,6 +1,6 @@
 ---
 name: redis-development
-description: Redis guidance for cache-aside reads, key naming, TTL, invalidation, connection behavior, and safe production use.
+description: Use when adding a cache read, or writing to data that is already cached. Symptoms — a new cache key, a set call without TTL, a write path with no invalidation, cached data that differs per tenant or user, stale data reported after an update.
 metadata:
   stack: redis
 ---

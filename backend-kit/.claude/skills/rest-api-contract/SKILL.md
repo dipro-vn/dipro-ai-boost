@@ -1,6 +1,6 @@
 ---
 name: rest-api-contract
-description: Guidance for producing REST API contracts with method, path, auth, request, response, pagination, errors, and handoff notes.
+description: Use when adding or changing an endpoint another team or client will consume, or when asked for an API contract. Symptoms — a new route, a changed response shape, a field added or removed, a frontend asking what an endpoint returns, a breaking change to an existing consumer.
 metadata:
   stack: rest, openapi, nestjs
 ---

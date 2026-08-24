@@ -1,6 +1,6 @@
 ---
 name: postgresql
-description: PostgreSQL and TypeORM guidance for schema design, migrations, indexing, QueryBuilder usage, N+1 prevention, and transactions.
+description: Use when creating or changing an entity, writing a migration, or building a QueryBuilder query. Symptoms — a new table or column, a migration with no down step, dynamic orderBy, a list query without skip and take, a loop that queries per row, a write touching two tables.
 metadata:
   stack: postgresql, typeorm
 ---

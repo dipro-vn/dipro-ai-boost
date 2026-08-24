@@ -108,6 +108,7 @@ Examples:
 
 ```text
 .claude/
+|-- validate-kit.mjs
 |-- agents/
 |   |-- backend-analyst.md
 |   |-- backend-architect.md
@@ -128,6 +129,8 @@ Examples:
 |   |-- codegraph.md
 |   `-- understand-anything.md
 `-- skills/
+    |-- backend-auth-authorization/
+    |-- backend-error-logging/
     |-- backend-query-cache-performance/
     |-- backend-security-review/
     |-- nestjs-best-practices/
@@ -138,7 +141,26 @@ Examples:
     `-- sourcebase-reuse-first/
 ```
 
-## 7. Core Rules
+## 7. Verify The Kit After Installing
+
+The agents, commands, and skills only work if their frontmatter is well formed. A
+missing `name`, or a `: ` inside an unquoted description, silently stops a file from
+registering — the kit looks installed and does nothing.
+
+```bash
+node .claude/validate-kit.mjs
+```
+
+It checks required frontmatter fields, `name` against filename and directory, YAML
+scalars that would fail to parse, and every agent, skill, and command reference. Exit
+code 1 on any problem, so it drops straight into a pre-commit hook or CI step.
+
+Agents are registered as dispatchable subagents, and **the agent registry is read once
+at session start**. After installing or editing anything under `.claude/agents/`,
+restart Claude Code and confirm with `/agents` that all five appear. Skills and
+commands reload without a restart; agents do not.
+
+## 8. Core Rules
 
 - Inspect existing project patterns before adding modules, entities, migrations, or cache keys.
 - Use a configured source-map tool before broad manual search when `.codegraph/` or `.understand-anything/` exists.

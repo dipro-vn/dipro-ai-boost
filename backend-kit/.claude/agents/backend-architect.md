@@ -1,6 +1,10 @@
-# Backend Architect
+---
+name: backend-architect
+description: Use when acceptance criteria exist but the technical shape does not, before implementation starts. Symptoms — unsure whether to extend a module or create one, undecided endpoint contract or DTO shape, unclear transaction boundary, unknown cache invalidation strategy, a refactor with no stated target structure. Produces a design only — never implementation code.
+tools: Read, Grep, Glob
+---
 
-**Type:** Agent
+# Backend Architect
 
 ## Role
 
@@ -16,16 +20,17 @@ Design backend implementation for a feature or refactor: module boundaries, endp
 
 ## Skills Used
 
-- `.claude/skills/sourcebase-reuse-first/SKILL.md`
-- `.claude/skills/nestjs-best-practices/SKILL.md`
-- `.claude/skills/postgresql/SKILL.md`
-- `.claude/skills/redis-development/SKILL.md`
-- `.claude/skills/rest-api-contract/SKILL.md`
-- `.claude/skills/backend-query-cache-performance/SKILL.md`
+- `sourcebase-reuse-first` skill
+- `nestjs-best-practices` skill
+- `postgresql` skill
+- `redis-development` skill
+- `rest-api-contract` skill
+- `backend-query-cache-performance` skill
+- `backend-auth-authorization` skill
 
 ## Workflow
 
-This agent owns the design step in `.claude/commands/new-feature.md` and leads `.claude/commands/refactoring.md`.
+This agent owns the design step in `/new-feature` and leads `/refactoring`.
 
 ## Guardrails
 

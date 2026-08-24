@@ -1,6 +1,11 @@
+---
+description: Build a new backend capability end to end — analysis, design, implementation, tests, review.
+argument-hint: <feature description>
+---
+
 # New Feature
 
-**Type:** Workflow
+**Request:** $ARGUMENTS
 
 ## Trigger
 
@@ -12,12 +17,12 @@ Read `CLAUDE.md`, project docs, and nearby modules. Ask only for details that ca
 
 ## Steps
 
-0. **Context** - `.claude/skills/sourcebase-reuse-first/SKILL.md` inspects existing modules, scripts, patterns, DTOs, entities, migrations, and tests.
-1. **Analysis** - `.claude/agents/backend-analyst.md` defines acceptance criteria, permissions, data rules, errors, and affected contracts.
-2. **Design** - `.claude/agents/backend-architect.md` defines module boundaries, endpoint contract, DTOs, entity changes, transaction boundaries, cache behavior, and test strategy.
-3. **Implementation** - `.claude/agents/backend-developer.md` implements the smallest scoped change with NestJS, TypeORM, PostgreSQL, and Redis guidance.
-4. **Tests** - `.claude/agents/backend-tester.md` runs `.claude/commands/test-generation.md` for service, endpoint, and regression coverage.
-5. **Review** - `.claude/agents/backend-reviewer.md` runs `.claude/commands/code-review.md` and verifies security, data integrity, query performance, cache behavior, and tests.
+0. **Context** - Invoke the `sourcebase-reuse-first` skill to inspect existing modules, scripts, patterns, DTOs, entities, migrations, and tests.
+1. **Analysis** - Dispatch **backend-analyst** to define acceptance criteria, permissions, data rules, errors, and affected contracts.
+2. **Design** - Dispatch **backend-architect** to define module boundaries, endpoint contract, DTOs, entity changes, transaction boundaries, cache behavior, and test strategy.
+3. **Implementation** - Dispatch **backend-developer** to implement the smallest scoped change with NestJS, TypeORM, PostgreSQL, and Redis guidance.
+4. **Tests** - Dispatch **backend-tester** to run `/test-generation` for service, endpoint, and regression coverage.
+5. **Review** - Dispatch **backend-reviewer** to run `/code-review` and verify security, data integrity, query performance, cache behavior, and tests.
 
 ## Definition Of Done
 

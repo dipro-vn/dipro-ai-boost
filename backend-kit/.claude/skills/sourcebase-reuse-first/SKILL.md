@@ -1,6 +1,6 @@
 ---
 name: sourcebase-reuse-first
-description: Codebase exploration guidance that requires inspecting existing modules, patterns, DTOs, guards, repositories, tests, and scripts before adding new backend code.
+description: Use when about to create any new backend file — module, controller, service, DTO, entity, migration, or test — in an existing project. Symptoms — reaching for a new abstraction, naming a new DTO, about to write a helper, unsure where a file belongs, tempted to add a library.
 metadata:
   stack: sourcebase, nestjs
 ---

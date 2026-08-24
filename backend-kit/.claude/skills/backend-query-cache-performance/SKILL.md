@@ -1,6 +1,6 @@
 ---
 name: backend-query-cache-performance
-description: Backend performance guidance for PostgreSQL queries, indexing, pagination, N+1 prevention, Redis cache, and request-path efficiency.
+description: Use when a list endpoint, heavy read, or cache is added, or when something is reported slow. Symptoms — a query inside a loop, a list without pagination, filtering or sorting on an unindexed column, request timeout, an external call per row, a response loading relations it does not need.
 metadata:
   stack: postgresql, redis, performance
 ---

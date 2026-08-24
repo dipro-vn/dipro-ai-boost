@@ -1,6 +1,11 @@
+---
+description: Add backend tests for a feature, bug fix, module, service, controller, endpoint, or cache behavior.
+argument-hint: [module or behavior to cover]
+---
+
 # Test Generation
 
-**Type:** Workflow
+**Request:** $ARGUMENTS
 
 ## Trigger
 
@@ -8,9 +13,9 @@ Use when adding backend tests for a feature, bug fix, module, service, controlle
 
 ## Steps
 
-1. **Read behavior** - `.claude/agents/backend-tester.md` reads acceptance criteria, API contract, and existing tests.
+1. **Read behavior** - Dispatch **backend-tester** to read acceptance criteria, API contract, and existing tests.
 2. **List cases** - Cover success, validation failure, authorization failure, missing records, transaction failure, cache invalidation, and regression paths where relevant.
-3. **Write tests** - Apply `.claude/skills/nestjs-testing/SKILL.md` using existing project patterns.
+3. **Write tests** - Apply the `nestjs-testing` skill using existing project patterns.
 4. **Run focused tests** - Run the smallest command that exercises the new tests.
 5. **Run relevant suite** - Run the module or project test command that catches regressions.
 6. **Patch gaps** - Add missing cases for meaningful uncovered branches.

@@ -1,6 +1,10 @@
-# Backend Tester
+---
+name: backend-tester
+description: Use before implementation code is written for a feature or bug fix, and when test coverage must be verified. Symptoms — a bug with no failing test, an endpoint with no validation or authorization test, acceptance criteria with no matching assertions, a test that only proves a mock was called. Writes and runs tests — never changes production behavior to make a test pass.
+tools: Read, Write, Edit, Bash, Grep, Glob
+---
 
-**Type:** Agent
+# Backend Tester
 
 ## Role
 
@@ -16,14 +20,15 @@ Design and write backend tests for services, controllers, endpoints, migrations-
 
 ## Skills Used
 
-- `.claude/skills/nestjs-testing/SKILL.md`
-- `.claude/skills/rest-api-contract/SKILL.md`
-- `.claude/skills/postgresql/SKILL.md`
-- `.claude/skills/redis-development/SKILL.md`
+- `nestjs-testing` skill
+- `rest-api-contract` skill
+- `postgresql` skill
+- `redis-development` skill
+- `backend-auth-authorization` skill
 
 ## Workflow
 
-This agent owns `.claude/commands/test-generation.md` and the test step in `.claude/commands/new-feature.md` and `.claude/commands/bug-fix.md`.
+This agent owns `/test-generation` and the test step in `/new-feature` and `/bug-fix`.
 
 ## Guardrails
 

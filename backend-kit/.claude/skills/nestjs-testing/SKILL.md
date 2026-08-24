@@ -1,6 +1,6 @@
 ---
 name: nestjs-testing
-description: Jest and Supertest guidance for NestJS unit, service, controller, endpoint, regression, and migration-adjacent tests.
+description: Use before writing implementation code for any feature or bug fix. Symptoms — a plan to add tests after the code, a bug fix with no failing test, a test that only asserts a mock was called, an endpoint with no validation or authorization test, acceptance criteria with no matching assertions.
 metadata:
   stack: jest, supertest, nestjs
 ---

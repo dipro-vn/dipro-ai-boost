@@ -1,6 +1,6 @@
 ---
 name: nestjs-best-practices
-description: NestJS backend guidance for feature modules, controllers, services, DTOs, guards, error handling, TypeORM integration, Redis cache use, and tests.
+description: Use when writing or reviewing a NestJS controller, service, module, or DTO. Symptoms — business logic creeping into a controller, a service touching multiple tables, an endpoint returning an entity, a new provider, circular module imports, unvalidated query or body input.
 metadata:
   stack: nestjs, typescript, rest, jwt, typeorm, postgresql, redis
 ---

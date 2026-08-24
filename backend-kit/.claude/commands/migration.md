@@ -1,6 +1,11 @@
+---
+description: Add or review a TypeORM migration and keep the entity aligned with the schema change.
+argument-hint: <schema change description>
+---
+
 # Migration
 
-**Type:** Workflow
+**Request:** $ARGUMENTS
 
 ## Trigger
 
@@ -8,12 +13,12 @@ Use when adding, editing, or reviewing TypeORM migrations and related entities.
 
 ## Steps
 
-1. **Inspect current schema pattern** - Use `.claude/skills/sourcebase-reuse-first/SKILL.md` to find migration location, naming, entity conventions, and script commands.
-2. **Design schema change** - Use `.claude/skills/postgresql/SKILL.md` to define tables, columns, indexes, relations, soft delete, and rollback.
-3. **Implement migration** - `.claude/agents/backend-developer.md` writes `up()` and `down()` using project conventions.
+1. **Inspect current schema pattern** - Use the `sourcebase-reuse-first` skill to find migration location, naming, entity conventions, and script commands.
+2. **Design schema change** - Use the `postgresql` skill to define tables, columns, indexes, relations, soft delete, and rollback.
+3. **Implement migration** - Dispatch **backend-developer** to write `up()` and `down()` using project conventions.
 4. **Update entity** - Keep entity names, column names, relation names, and types aligned with the migration.
 5. **Verify** - Run the project migration or test command available for schema checks.
-6. **Review** - `.claude/agents/backend-reviewer.md` checks rollback, index coverage, data safety, and query impact.
+6. **Review** - Dispatch **backend-reviewer** to check rollback, index coverage, data safety, and query impact.
 
 ## Definition Of Done
 

@@ -1,6 +1,6 @@
 ---
 name: backend-security-review
-description: Backend security review checklist for auth, authorization, input validation, output shaping, logging, file handling, and configuration hygiene.
+description: Use when writing or reviewing an endpoint that touches protected data, accepts external input, or writes to the database. Symptoms — a new route, a changed guard, an entity returned from a controller, an ID taken from the request, dynamic orderBy, a file upload, a new log statement.
 metadata:
   stack: backend-security, nestjs
 ---

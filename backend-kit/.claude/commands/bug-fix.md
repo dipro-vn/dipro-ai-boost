@@ -1,6 +1,11 @@
+---
+description: Reproduce, diagnose, and fix incorrect backend behavior, with a regression test proving the fix.
+argument-hint: <bug description>
+---
+
 # Bug Fix
 
-**Type:** Workflow
+**Request:** $ARGUMENTS
 
 ## Trigger
 
@@ -9,11 +14,11 @@ Use when backend behavior is incorrect, unstable, insecure, slow, or inconsisten
 ## Steps
 
 0. **Context** - Read `CLAUDE.md`, related docs, nearby code, and existing tests.
-1. **Reproduce** - `.claude/agents/backend-tester.md` writes or identifies a failing test that proves the bug. Micro-fixes may skip this only with a written reason.
+1. **Reproduce** - Dispatch **backend-tester** to write or identify a failing test that proves the bug. Micro-fixes may skip this only with a written reason.
 2. **Diagnose** - Find the root cause and affected scope. Do not patch only the symptom.
-3. **Fix** - `.claude/agents/backend-developer.md` makes the smallest change that resolves the root cause.
-4. **Regression** - `.claude/agents/backend-tester.md` verifies the failing test now passes and runs the relevant suite.
-5. **Review** - `.claude/agents/backend-reviewer.md` checks for regressions in security, data integrity, query behavior, cache behavior, and contract shape.
+3. **Fix** - Dispatch **backend-developer** to make the smallest change that resolves the root cause.
+4. **Regression** - Dispatch **backend-tester** to verify the failing test now passes and run the relevant suite.
+5. **Review** - Dispatch **backend-reviewer** to check for regressions in security, data integrity, query behavior, cache behavior, and contract shape.
 
 ## Definition Of Done
 
