@@ -1,0 +1,70 @@
+name: orchestrator-app build
+
+on:
+  pull_request:
+    paths: ["orchestrator-app/**", ".github/workflows/orchestrator-app-build.yml"]
+  push:
+    branches: [main]
+    paths: ["orchestrator-app/**", ".github/workflows/orchestrator-app-build.yml"]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: orchestrator-app/pnpm-lock.yaml
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "orchestrator-app/src-tauri -> target"
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: orchestrator-app
+
+      - name: Typecheck
+        run: pnpm tsc --noEmit
+        working-directory: orchestrator-app
+
+      - name: Frontend tests
+        run: pnpm test
+        working-directory: orchestrator-app
+
+      - name: Rust fmt check
+        run: cargo fmt --check --manifest-path src-tauri/Cargo.toml
+        working-directory: orchestrator-app
+
+      - name: Rust clippy
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+        working-directory: orchestrator-app
+
+      - name: Rust tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+        working-directory: orchestrator-app
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        with:
+          projectPath: orchestrator-app
+          tauriScript: pnpm tauri
+        # No release/publish config at MVP1 — this step only verifies the
+        # app builds on both target platforms.
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: orchestrator-app-${{ matrix.platform }}
+          path: orchestrator-app/src-tauri/target/release/bundle/**
+          if-no-files-found: warn

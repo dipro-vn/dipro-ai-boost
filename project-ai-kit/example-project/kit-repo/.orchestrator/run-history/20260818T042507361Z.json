@@ -1,0 +1,10 @@
+{
+  "feature": "user-signup",
+  "slot": "qc-design",
+  "model": "claude-sonnet-5",
+  "outcome": "waiting-input",
+  "costUsd": 0.7150388999999999,
+  "startedAt": "2026-08-18T04:24:08.955659+00:00",
+  "endedAt": "2026-08-18T04:25:07.353907+00:00",
+  "attempt": 1
+}

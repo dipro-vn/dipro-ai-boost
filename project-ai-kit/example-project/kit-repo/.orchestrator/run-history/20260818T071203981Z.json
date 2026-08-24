@@ -1,0 +1,10 @@
+{
+  "feature": "user-signup",
+  "slot": "design-analyst",
+  "model": "claude-sonnet-5",
+  "outcome": "waiting-input",
+  "costUsd": 0.0955248,
+  "startedAt": "2026-08-18T07:11:39.947971+00:00",
+  "endedAt": "2026-08-18T07:12:03.972882+00:00",
+  "attempt": 8
+}

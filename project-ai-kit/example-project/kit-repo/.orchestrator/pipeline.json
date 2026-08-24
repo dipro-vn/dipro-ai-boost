@@ -1,0 +1,128 @@
+{
+  "version": 2,
+  "stages": [
+    {
+      "id": "S1_input",
+      "label": "① Input",
+      "agents": [
+        {
+          "id": "ba",
+          "agentName": "ba-agent",
+          "afterSlots": []
+        }
+      ]
+    },
+    {
+      "id": "S1b_trigger",
+      "label": "🚦 Trigger Gate",
+      "agents": [],
+      "dependsOn": "S1_input"
+    },
+    {
+      "id": "S2_design",
+      "label": "② Design",
+      "agents": [
+        {
+          "id": "techlead-design",
+          "agentName": "techlead-design-agent",
+          "afterSlots": []
+        },
+        {
+          "id": "design-analyst",
+          "agentName": "design-analyst-agent",
+          "afterSlots": []
+        },
+        {
+          "id": "qc-design",
+          "agentName": "qc-agent",
+          "afterSlots": []
+        }
+      ],
+      "dependsOn": "S1b_trigger"
+    },
+    {
+      "id": "S3_planning",
+      "label": "③ Planning",
+      "agents": [
+        {
+          "id": "techlead-tasks",
+          "agentName": "techlead-tasks-agent",
+          "afterSlots": []
+        },
+        {
+          "id": "pm",
+          "agentName": "pm-agent",
+          "afterSlots": []
+        }
+      ],
+      "dependsOn": "S2_design"
+    },
+    {
+      "id": "S4_contract_lock",
+      "label": "④ Contract Lock",
+      "agents": [],
+      "dependsOn": "S3_planning"
+    },
+    {
+      "id": "S5_build",
+      "label": "⑤ Build",
+      "agents": [
+        {
+          "id": "backend",
+          "agentName": "backend-agent",
+          "afterSlots": []
+        },
+        {
+          "id": "frontend",
+          "agentName": "frontend-agent",
+          "afterSlots": [
+            "backend"
+          ]
+        },
+        {
+          "id": "mobile",
+          "agentName": "mobile-agent",
+          "afterSlots": [
+            "backend"
+          ]
+        }
+      ],
+      "dependsOn": "S4_contract_lock"
+    },
+    {
+      "id": "S6_verify",
+      "label": "⑥ Verify",
+      "agents": [
+        {
+          "id": "qa",
+          "agentName": "qa-agent",
+          "afterSlots": []
+        }
+      ],
+      "dependsOn": "S5_build"
+    },
+    {
+      "id": "S7_testing",
+      "label": "⑦ Testing",
+      "agents": [
+        {
+          "id": "qc-testing",
+          "agentName": "qc-agent",
+          "afterSlots": []
+        },
+        {
+          "id": "qc-automation",
+          "agentName": "qc-automation-agent",
+          "afterSlots": []
+        }
+      ],
+      "dependsOn": "S6_verify"
+    },
+    {
+      "id": "S8_deploy",
+      "label": "⑧ Deploy",
+      "agents": [],
+      "dependsOn": "S7_testing"
+    }
+  ]
+}

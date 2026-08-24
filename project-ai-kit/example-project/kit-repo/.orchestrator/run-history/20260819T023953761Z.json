@@ -1,0 +1,10 @@
+{
+  "feature": "user-login",
+  "slot": "qc-design",
+  "model": "claude-haiku-4-5-20251001",
+  "outcome": "done",
+  "costUsd": 0.4758758,
+  "startedAt": "2026-08-19T02:30:07.155890+00:00",
+  "endedAt": "2026-08-19T02:39:53.752888+00:00",
+  "attempt": 7
+}

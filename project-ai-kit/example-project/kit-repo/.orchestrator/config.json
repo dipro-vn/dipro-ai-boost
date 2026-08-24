@@ -1,0 +1,116 @@
+{
+  "agents": {
+    "ba-agent": {
+      "model": "opus",
+      "max_turns": 20,
+      "permission": "write-scoped",
+      "stale": false,
+      "newly_discovered": false,
+      "timeout_minutes": 30
+    },
+    "backend-agent": {
+      "model": "sonnet",
+      "max_turns": 20,
+      "permission": "full",
+      "stale": false,
+      "newly_discovered": false,
+      "timeout_minutes": 30
+    },
+    "design-analyst-agent": {
+      "model": "sonnet",
+      "max_turns": 20,
+      "permission": "write-scoped",
+      "stale": false,
+      "newly_discovered": false,
+      "timeout_minutes": 30
+    },
+    "designer-agent": {
+      "model": "sonnet",
+      "max_turns": 20,
+      "permission": "write-scoped",
+      "stale": false,
+      "newly_discovered": false,
+      "timeout_minutes": 30
+    },
+    "frontend-agent": {
+      "model": "sonnet",
+      "max_turns": 20,
+      "permission": "full",
+      "stale": false,
+      "newly_discovered": false,
+      "timeout_minutes": 30
+    },
+    "init-agent": {
+      "model": "sonnet",
+      "max_turns": 20,
+      "permission": "write-scoped",
+      "stale": false,
+      "newly_discovered": false,
+      "timeout_minutes": 30
+    },
+    "mobile-agent": {
+      "model": "sonnet",
+      "max_turns": 20,
+      "permission": "full",
+      "stale": false,
+      "newly_discovered": false,
+      "timeout_minutes": 30
+    },
+    "pm-agent": {
+      "model": "sonnet",
+      "max_turns": 20,
+      "permission": "write-scoped",
+      "stale": false,
+      "newly_discovered": false,
+      "timeout_minutes": 30
+    },
+    "qa-agent": {
+      "model": "haiku",
+      "max_turns": 20,
+      "permission": "write-scoped",
+      "stale": false,
+      "newly_discovered": false,
+      "timeout_minutes": 30
+    },
+    "qc-agent": {
+      "model": "haiku",
+      "max_turns": 20,
+      "permission": "write-scoped",
+      "stale": false,
+      "newly_discovered": false,
+      "timeout_minutes": 30
+    },
+    "qc-automation-agent": {
+      "model": "sonnet",
+      "max_turns": 20,
+      "permission": "write-scoped",
+      "stale": false,
+      "newly_discovered": false,
+      "timeout_minutes": 30
+    },
+    "techlead-design-agent": {
+      "model": "haiku",
+      "max_turns": 20,
+      "permission": "write-scoped",
+      "stale": false,
+      "newly_discovered": false,
+      "timeout_minutes": 30
+    },
+    "techlead-tasks-agent": {
+      "model": "haiku",
+      "max_turns": 20,
+      "permission": "write-scoped",
+      "stale": false,
+      "newly_discovered": false,
+      "timeout_minutes": 30
+    }
+  },
+  "claude_auth": {
+    "mode": "cli-default"
+  },
+  "node_nicknames": {
+    "ba": "Núi BA"
+  },
+  "max_retries": 2,
+  "figma_mcp_server": "figma-bridge"
+}
