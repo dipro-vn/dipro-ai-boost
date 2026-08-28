@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { ThemeProvider } from "@/lib/theme-provider";
 import { AppShell } from "@/components/shell/AppShell";
+import { SplashScreen } from "@/components/shell/SplashScreen";
 import { useAppStore } from "@/state/app-store";
 import { ProjectLauncherScreen } from "@/screens/launcher/ProjectLauncherScreen";
 import { PipelineBoardScreen } from "@/screens/board/PipelineBoardScreen";
@@ -10,6 +12,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 
 function App() {
   const screen = useAppStore((s) => s.screen);
+  const [showSplash, setShowSplash] = useState(true);
 
   return (
     <ThemeProvider>
@@ -21,6 +24,7 @@ function App() {
           {screen === "settings" && <SettingsScreen />}
           {screen === "reports" && <ReportsScreen />}
         </AppShell>
+        {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
       </TooltipProvider>
     </ThemeProvider>
   );
