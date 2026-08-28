@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 
 use crate::domain::node_status::NodeState;
 use crate::domain::pipeline_def::slot;
+use crate::domain::project::EcosystemRepo;
 use crate::inference::spec_sections;
 
 /// `design-analysis.md` existing but shorter than this (after trimming
@@ -12,7 +13,22 @@ use crate::inference::spec_sections;
 /// if it produces false positives/negatives in practice.
 const MIN_DESIGN_ANALYSIS_CHARS: usize = 50;
 
-const NON_REPO_SUBDIRS: &[&str] = &["test-cases"];
+/// Subdirectories of a feature folder that are NOT a repo. `repo_subdirs`
+/// otherwise counts every directory as one, which would make
+/// `design-resources/` (the design-analyst's exported icons/images,
+/// AC-E2-37a) look like a repo with no `DESIGN.md` and no `tasks/` — and,
+/// worse, push a genuinely single-repo feature over the "touches ≥2 repos"
+/// line that `inference::contract_lock_rules` uses for AC-E4-11.
+///
+/// Every entry here is a folder the kit itself writes under a feature:
+/// `test-cases/` and `bug-reports/` come from `qc-agent`
+/// (`.claude/agents/qc-agent.md` § Output), `design-resources/` from
+/// `design-analyst-agent`. Missing one is not cosmetic — an unlisted folder
+/// counts as an undeclared repo, which is enough on its own to switch off
+/// both the Contract Lock scope rule and the stage ⑤ "has work" rule for
+/// the whole feature, since neither will draw a conclusion from an
+/// Ecosystem it cannot fully resolve.
+const NON_REPO_SUBDIRS: &[&str] = &["test-cases", "design-resources", "bug-reports"];
 
 /// `pub(crate)` — also reused by `inference::contract_lock_rules` (AC-E4-11:
 /// a feature touching only one repo doesn't need Contract Lock).
@@ -57,24 +73,153 @@ fn any_repo_has_file(feature_dir: &Path, relative_file: &str) -> bool {
 pub(crate) fn task_files_in_repos(feature_dir: &Path) -> Vec<PathBuf> {
     repo_subdirs(feature_dir)
         .into_iter()
-        .flat_map(|repo| {
-            let tasks_dir = repo.join("tasks");
-            std::fs::read_dir(&tasks_dir)
-                .into_iter()
-                .flatten()
-                .filter_map(|entry| entry.ok())
-                .map(|entry| entry.path())
-                .filter(|path| {
-                    let name = path.file_name().unwrap_or_default().to_string_lossy();
-                    name.starts_with("task-") && name.ends_with(".md")
-                })
-                .collect::<Vec<_>>()
-        })
+        .flat_map(|repo| task_files_in_dir(&repo))
         .collect()
 }
 
 fn any_repo_has_task_files(feature_dir: &Path) -> bool {
     !task_files_in_repos(feature_dir).is_empty()
+}
+
+/// The roles of the repos this feature ACTUALLY touches, read off its own
+/// subfolder names (`<feature>/<repo-name>/DESIGN.md` — the layout
+/// `.claude/rules/project-structure.md` mandates), matched against the
+/// Ecosystem table by repo name.
+///
+/// Returns the unmatched folder names too, and callers must treat those as
+/// "unknown", never as "not a backend": if `AGENTS.md` has no Ecosystem
+/// table, or a folder is named after a repo that was never declared, every
+/// role lookup silently comes back false. Deciding "no backend here" from
+/// that would switch off both Contract Lock and the BE->FE ordering across
+/// the whole project — everything would look like it worked while
+/// enforcing nothing.
+pub(crate) fn feature_scope_roles(
+    feature_dir: &Path,
+    ecosystem: &[EcosystemRepo],
+) -> (Vec<String>, Vec<String>) {
+    let mut roles = Vec::new();
+    let mut unmatched = Vec::new();
+    for dir in repo_subdirs(feature_dir) {
+        let Some(name) = dir.file_name().and_then(|n| n.to_str()) else {
+            continue;
+        };
+        match ecosystem
+            .iter()
+            .find(|repo| repo.name.eq_ignore_ascii_case(name))
+        {
+            // A repo whose role cell couldn't be read is "unknown", not
+            // "some other role" — same reasoning as an unmatched folder.
+            Some(repo) => match repo.role_key.as_deref() {
+                Some(role) => roles.push(role.to_string()),
+                None => unmatched.push(name.to_string()),
+            },
+            None => unmatched.push(name.to_string()),
+        }
+    }
+    (roles, unmatched)
+}
+
+/// Which stage ⑤ slots have NOTHING to do in this feature.
+///
+/// Two independent reasons a build slot can have no work, checked in this
+/// order:
+///
+/// 1. Ecosystem-level (permanent, project-wide, always resolvable): this
+///    project's Ecosystem table declares no repo at all for that role
+///    (`agentrun::readiness::RepoReadiness::RoleNotInEcosystem`) — e.g. a
+///    web-only project has no `mobile` repo, ever, in any feature. This
+///    doesn't need a single task file to exist and isn't affected by any
+///    OTHER subfolder's name — a stage ⑥ (`qa`) that waits for stage ⑤ to
+///    finish must not stay blocked on a slot that can never run here.
+///    Deliberately excludes `RoleUnreadable`: that means some OTHER repo's
+///    Vai trò cell couldn't be parsed, not that this role is absent —
+///    concluding "no work" there would hide a real config typo instead of
+///    surfacing it. Also requires `ecosystem` to be non-empty: an entirely
+///    empty Ecosystem almost always means `/init-kit` hasn't populated
+///    `AGENTS.md` yet, not "this project confidently has zero repos of any
+///    role" — treating that the same as a deliberately-configured, merely
+///    sparse Ecosystem (like backend+frontend-only, no mobile) would mark
+///    every build slot `Skipped` the moment a brand-new project opens.
+/// 2. Feature-level (task-file-based, same as before): the kit's own
+///    layout answers this — `techlead-tasks-agent` writes
+///    `<feature>/<repo>/tasks/task-*.md` for exactly the repos that have
+///    work (its Bước 4 assigns Phase 1–2 to `backend`, Phase 3 to
+///    `frontend`/`mobile`). A repo with no task file has nothing for its
+///    agent to run. Stays behind both existing guards — bails out to
+///    "assume every slot has work" unless EVERY subfolder resolved to a
+///    declared repo (`feature_scope_roles`) and at least one task file
+///    exists anywhere: concluding "no backend" from an Ecosystem table the
+///    app couldn't read, or before `techlead-tasks` has even run, would
+///    drop the BE->FE ordering for a feature nobody has scoped yet.
+pub(crate) fn slots_without_work_in_feature(
+    feature_dir: &Path,
+    ecosystem: &[EcosystemRepo],
+) -> Vec<String> {
+    let build_slots = [
+        (slot::BACKEND, "backend"),
+        (slot::FRONTEND, "frontend"),
+        (slot::MOBILE, "mobile"),
+    ];
+
+    let mut without_work: Vec<String> = if ecosystem.is_empty() {
+        Vec::new()
+    } else {
+        build_slots
+            .iter()
+            .filter(|(slot_id, _)| {
+                matches!(
+                    crate::agentrun::readiness::resolve_repo_readiness(ecosystem, slot_id),
+                    crate::agentrun::readiness::RepoReadiness::RoleNotInEcosystem
+                )
+            })
+            .map(|(slot_id, _)| slot_id.to_string())
+            .collect()
+    };
+
+    if any_repo_has_task_files(feature_dir) {
+        let (_, unmatched) = feature_scope_roles(feature_dir, ecosystem);
+        if unmatched.is_empty() {
+            for (slot_id, role) in build_slots {
+                if !without_work.iter().any(|s| s == slot_id)
+                    && !role_has_task_files(feature_dir, ecosystem, role)
+                {
+                    without_work.push(slot_id.to_string());
+                }
+            }
+        }
+    }
+
+    without_work
+}
+
+/// True when some repo of `role` has at least one `task-*.md` for this
+/// feature. Deliberately not `DESIGN.md`: Tech Lead Design writes a
+/// `DESIGN.md` for a repo it merely *considered* (the landing-page project
+/// has one that says "N/A — không có endpoint mới"), whereas a task file
+/// only exists when there is actual work.
+fn role_has_task_files(feature_dir: &Path, ecosystem: &[EcosystemRepo], role: &str) -> bool {
+    repo_subdirs(feature_dir).iter().any(|dir| {
+        let Some(name) = dir.file_name().and_then(|n| n.to_str()) else {
+            return false;
+        };
+        let is_role = ecosystem.iter().any(|repo| {
+            repo.name.eq_ignore_ascii_case(name) && repo.role_key.as_deref() == Some(role)
+        });
+        is_role && !task_files_in_dir(dir).is_empty()
+    })
+}
+
+fn task_files_in_dir(repo_dir: &Path) -> Vec<PathBuf> {
+    std::fs::read_dir(repo_dir.join("tasks"))
+        .into_iter()
+        .flatten()
+        .filter_map(|entry| entry.ok())
+        .map(|entry| entry.path())
+        .filter(|path| {
+            let name = path.file_name().unwrap_or_default().to_string_lossy();
+            name.starts_with("task-") && name.ends_with(".md")
+        })
+        .collect()
 }
 
 fn test_cases_files(feature_dir: &Path) -> Vec<PathBuf> {
@@ -94,22 +239,65 @@ fn any_test_cases_file(feature_dir: &Path) -> bool {
     !test_cases_files(feature_dir).is_empty()
 }
 
+/// AC-E3-01 / AC-E3-04a — the icons and images `design-analyst-agent`
+/// exports next to `design-analysis.md`. Display-only: listed as artifacts
+/// of the Design-Analyst node, never consulted by `infer_design_analyst`,
+/// so a feature with no assets is still `done`.
+///
+/// Flat (non-recursive) and sorted: the agent writes straight into this
+/// folder, and a stable order keeps the node detail panel from reshuffling
+/// between polls.
+fn design_resources_files(feature_dir: &Path) -> Vec<PathBuf> {
+    let mut files: Vec<PathBuf> = std::fs::read_dir(feature_dir.join("design-resources"))
+        .into_iter()
+        .flatten()
+        .filter_map(|entry| entry.ok())
+        .map(|entry| entry.path())
+        .filter(|path| path.is_file())
+        .collect();
+    files.sort();
+    files
+}
+
 /// `runs_dir` holds app-defined report conventions the kit itself does not
-/// specify a path for (AC-E3-05) — `<runs_dir>/<run-id>/<filename>`.
-fn run_files(runs_dir: &Path, filename: &str) -> Vec<PathBuf> {
+/// specify a path for (AC-E3-05) — `<runs_dir>/<run-id>/<filename>`, written
+/// by `agentrun::run_log::finalize_run`. `runs_dir` is a single flat
+/// namespace shared by every feature in the project, so only `run-id`
+/// entries prefixed for THIS feature are considered — see
+/// `store::orchestrator_dir::runs_dir_prefix`. Without this filter, a QA
+/// report from one feature would make every OTHER feature's QA node read
+/// as `Done` too.
+fn run_files(runs_dir: &Path, feature: &str, filename: &str) -> Vec<PathBuf> {
+    let prefix = crate::store::orchestrator_dir::runs_dir_prefix(feature);
     std::fs::read_dir(runs_dir)
         .into_iter()
         .flatten()
         .filter_map(|entry| entry.ok())
         .map(|entry| entry.path())
         .filter(|path| path.is_dir())
+        .filter(|path| {
+            path.file_name()
+                .and_then(|n| n.to_str())
+                .map(|name| name.starts_with(&prefix))
+                .unwrap_or(false)
+        })
         .map(|run_dir| run_dir.join(filename))
         .filter(|path| path.is_file())
         .collect()
 }
 
-fn any_run_has_file(runs_dir: &Path, filename: &str) -> bool {
-    !run_files(runs_dir, filename).is_empty()
+fn any_run_has_file(runs_dir: &Path, feature: &str, filename: &str) -> bool {
+    !run_files(runs_dir, feature, filename).is_empty()
+}
+
+/// The feature slug is always `feature_dir`'s own last path component — the
+/// same convention every caller already builds `feature_dir` with
+/// (`docs_root.join("features").join(feature)`). Deriving it here instead
+/// of threading a separate `feature: &str` through `infer_feature_state`
+/// and its ~15 test call sites keeps this an internal detail of the
+/// `runs_dir` scoping, not a public signature change.
+fn feature_slug(feature_dir: &Path) -> &str {
+    feature_dir.file_name().and_then(|n| n.to_str()).unwrap_or("")
 }
 
 fn infer_ba(feature_dir: &Path) -> NodeState {
@@ -146,11 +334,22 @@ fn infer_design_analyst(feature_dir: &Path) -> NodeState {
 /// responsible for deciding whether the result differs from what was
 /// cached before and needs writing/emitting.
 ///
-/// `backend`/`frontend`/`mobile` (stage ⑤) are always `Idle`: there is no
-/// agent runner in MVP1, and this function must not "suy từ source code"
-/// (SPEC's own words) to guess build status — that would be exactly the
-/// kind of guessing the kit's core policy forbids.
-pub fn infer_feature_state(feature_dir: &Path, runs_dir: &Path) -> BTreeMap<String, NodeState> {
+/// `backend`/`frontend`/`mobile` (stage ⑤) leave no artifact behind, so
+/// this function must not "suy từ source code" (SPEC's own words) to guess
+/// whether one has run — that is exactly the guessing the kit's core policy
+/// forbids, and `pipeline_state::apply_agent_run_metadata` layers the real
+/// run log on top afterwards.
+///
+/// It CAN say a slot has nothing to do, though, and that is not a guess:
+/// no `task-*.md` for that repo role means its agent has no input. Left as
+/// `Idle`, such a slot blocked stage ⑥ forever (`is_complete` needs every
+/// stage ⑤ slot `Done` or `Skipped`) and, through `after_slots`, blocked
+/// Frontend behind a Backend that was never going to run.
+pub fn infer_feature_state(
+    feature_dir: &Path,
+    runs_dir: &Path,
+    ecosystem: &[EcosystemRepo],
+) -> BTreeMap<String, NodeState> {
     let mut nodes = BTreeMap::new();
 
     nodes.insert(slot::BA.to_string(), infer_ba(feature_dir));
@@ -187,22 +386,32 @@ pub fn infer_feature_state(feature_dir: &Path, runs_dir: &Path) -> BTreeMap<Stri
         },
     );
 
-    nodes.insert(
-        slot::PM.to_string(),
-        if feature_dir.join("PLAN.md").is_file() {
-            NodeState::done()
+    let without_work = slots_without_work_in_feature(feature_dir, ecosystem);
+    for build_slot in [slot::BACKEND, slot::FRONTEND, slot::MOBILE] {
+        let node = if without_work.iter().any(|id| id == build_slot) {
+            let role = crate::agentrun::readiness::slot_repo_role(build_slot).unwrap_or(build_slot);
+            let detail = if !ecosystem.is_empty()
+                && matches!(
+                    crate::agentrun::readiness::resolve_repo_readiness(ecosystem, build_slot),
+                    crate::agentrun::readiness::RepoReadiness::RoleNotInEcosystem
+                )
+            {
+                format!("Dự án không có repo vai trò {role} trong Ecosystem — agent này không áp dụng.")
+            } else {
+                format!("Feature này không có task nào cho {build_slot} — agent không áp dụng.")
+            };
+            NodeState::skipped(detail)
         } else {
             NodeState::idle()
-        },
-    );
-
-    for build_slot in [slot::BACKEND, slot::FRONTEND, slot::MOBILE] {
-        nodes.insert(build_slot.to_string(), NodeState::idle());
+        };
+        nodes.insert(build_slot.to_string(), node);
     }
+
+    let feature = feature_slug(feature_dir);
 
     nodes.insert(
         slot::QA.to_string(),
-        if any_run_has_file(runs_dir, "qa-report.md") {
+        if any_run_has_file(runs_dir, feature, "qa-report.md") {
             NodeState::done()
         } else {
             NodeState::idle()
@@ -211,7 +420,7 @@ pub fn infer_feature_state(feature_dir: &Path, runs_dir: &Path) -> BTreeMap<Stri
 
     nodes.insert(
         slot::QC_TESTING.to_string(),
-        if any_run_has_file(runs_dir, "qc-checklist.md") {
+        if any_run_has_file(runs_dir, feature, "qc-checklist.md") {
             NodeState::done()
         } else {
             NodeState::idle()
@@ -220,7 +429,7 @@ pub fn infer_feature_state(feature_dir: &Path, runs_dir: &Path) -> BTreeMap<Stri
 
     nodes.insert(
         slot::QC_AUTOMATION.to_string(),
-        if any_run_has_file(runs_dir, "execution-report.md") {
+        if any_run_has_file(runs_dir, feature, "execution-report.md") {
             NodeState::done()
         } else {
             NodeState::idle()
@@ -237,6 +446,7 @@ pub fn infer_feature_state(feature_dir: &Path, runs_dir: &Path) -> BTreeMap<Stri
 /// frontend only ever passes ids from `PipelineDef`) returns an empty list
 /// rather than panicking.
 pub fn artifact_paths_for_slot(feature_dir: &Path, runs_dir: &Path, slot_id: &str) -> Vec<PathBuf> {
+    let feature = feature_slug(feature_dir);
     match slot_id {
         s if s == slot::BA => {
             let path = feature_dir.join("SPEC.md");
@@ -248,27 +458,25 @@ pub fn artifact_paths_for_slot(feature_dir: &Path, runs_dir: &Path, slot_id: &st
         }
         s if s == slot::TECHLEAD_DESIGN => files_in_repos(feature_dir, "DESIGN.md"),
         s if s == slot::DESIGN_ANALYST => {
-            let path = feature_dir.join("design-analysis.md");
-            if path.is_file() {
-                vec![path]
-            } else {
-                vec![]
+            // `design-analysis.md` FIRST, then the exported assets:
+            // `AgentStepPanel` auto-opens `artifacts[0]` in the preview
+            // modal, and `read_artifact` reads as UTF-8 — landing on a
+            // `.png` there would surface an encoding error instead of the
+            // analysis the user came to read.
+            let mut paths = Vec::new();
+            let analysis = feature_dir.join("design-analysis.md");
+            if analysis.is_file() {
+                paths.push(analysis);
             }
+            paths.extend(design_resources_files(feature_dir));
+            paths
         }
         s if s == slot::QC_DESIGN => test_cases_files(feature_dir),
         s if s == slot::TECHLEAD_TASKS => task_files_in_repos(feature_dir),
-        s if s == slot::PM => {
-            let path = feature_dir.join("PLAN.md");
-            if path.is_file() {
-                vec![path]
-            } else {
-                vec![]
-            }
-        }
         s if s == slot::BACKEND || s == slot::FRONTEND || s == slot::MOBILE => vec![],
-        s if s == slot::QA => run_files(runs_dir, "qa-report.md"),
-        s if s == slot::QC_TESTING => run_files(runs_dir, "qc-checklist.md"),
-        s if s == slot::QC_AUTOMATION => run_files(runs_dir, "execution-report.md"),
+        s if s == slot::QA => run_files(runs_dir, feature, "qa-report.md"),
+        s if s == slot::QC_TESTING => run_files(runs_dir, feature, "qc-checklist.md"),
+        s if s == slot::QC_AUTOMATION => run_files(runs_dir, feature, "execution-report.md"),
         _ => vec![],
     }
 }
@@ -283,7 +491,6 @@ pub fn canonical_single_artifact_path(feature_dir: &Path, slot_id: &str) -> Opti
     match slot_id {
         s if s == slot::BA => Some(feature_dir.join("SPEC.md")),
         s if s == slot::DESIGN_ANALYST => Some(feature_dir.join("design-analysis.md")),
-        s if s == slot::PM => Some(feature_dir.join("PLAN.md")),
         _ => None,
     }
 }
@@ -331,7 +538,7 @@ mod tests {
         let runs_dir = tmp.path().join("runs");
         std::fs::create_dir_all(&runs_dir).unwrap();
 
-        let mut computed: Vec<String> = infer_feature_state(&feature_dir, &runs_dir)
+        let mut computed: Vec<String> = infer_feature_state(&feature_dir, &runs_dir, &[])
             .into_keys()
             .collect();
         computed.sort();
@@ -347,6 +554,227 @@ mod tests {
         assert_eq!(computed, declared);
     }
 
+    fn eco(entries: &[(&str, &str)]) -> Vec<EcosystemRepo> {
+        entries
+            .iter()
+            .map(|(name, role)| EcosystemRepo {
+                name: name.to_string(),
+                declared_path: format!("repos/{name}"),
+                role: role.to_string(),
+                role_key: crate::agents_reader::canonical_role(role).map(str::to_string),
+                stack: "x".to_string(),
+                cloned: true,
+            })
+            .collect()
+    }
+
+    fn touch(path: &Path) {
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, "x").unwrap();
+    }
+
+    /// The reported case: a landing page whose Tech Lead produced tasks for
+    /// `frontend` only. Backend and Mobile have nothing to run, so Frontend
+    /// must not be told to wait for them.
+    #[test]
+    fn a_feature_planned_for_frontend_only_leaves_backend_and_mobile_without_work() {
+        let tmp = tempfile::tempdir().unwrap();
+        let feature_dir = tmp.path().join("landing-page");
+        touch(&feature_dir.join("frontend/DESIGN.md"));
+        touch(&feature_dir.join("frontend/tasks/task-3-1.md"));
+
+        let ecosystem = eco(&[("backend", "backend"), ("frontend", "frontend")]);
+        let without = slots_without_work_in_feature(&feature_dir, &ecosystem);
+        assert!(without.contains(&slot::BACKEND.to_string()));
+        assert!(without.contains(&slot::MOBILE.to_string()));
+        assert!(!without.contains(&slot::FRONTEND.to_string()));
+    }
+
+    /// A real cross-repo feature must keep every dependency it has.
+    #[test]
+    fn a_feature_planned_for_both_sides_leaves_neither_without_work() {
+        let tmp = tempfile::tempdir().unwrap();
+        let feature_dir = tmp.path().join("user-login");
+        touch(&feature_dir.join("api/tasks/task-2-1.md"));
+        touch(&feature_dir.join("web/tasks/task-3-1.md"));
+
+        let ecosystem = eco(&[("api", "backend"), ("web", "frontend")]);
+        let without = slots_without_work_in_feature(&feature_dir, &ecosystem);
+        assert!(!without.contains(&slot::BACKEND.to_string()));
+        assert!(!without.contains(&slot::FRONTEND.to_string()));
+        // No mobile repo touched -> nothing for that agent either.
+        assert!(without.contains(&slot::MOBILE.to_string()));
+    }
+
+    /// Tech Lead Design writes a `DESIGN.md` even for a repo it merely
+    /// considered — the landing-page project has one saying "N/A, không có
+    /// endpoint mới". A task file is what means real work.
+    #[test]
+    fn a_repo_with_a_design_but_no_task_counts_as_having_no_work() {
+        let tmp = tempfile::tempdir().unwrap();
+        let feature_dir = tmp.path().join("f");
+        touch(&feature_dir.join("api/DESIGN.md"));
+        touch(&feature_dir.join("web/tasks/task-3-1.md"));
+
+        let ecosystem = eco(&[("api", "backend"), ("web", "frontend")]);
+        assert!(slots_without_work_in_feature(&feature_dir, &ecosystem)
+            .contains(&slot::BACKEND.to_string()));
+    }
+
+    /// `bug-reports/` is written by `qc-agent`, and leaving it off
+    /// `NON_REPO_SUBDIRS` was enough to disable this whole rule on a real
+    /// project: the folder read as an undeclared repo, `unmatched` was
+    /// non-empty, and the safety chock below then (correctly) refused to
+    /// conclude anything. Same omission also kept Contract Lock's
+    /// single-repo rule from firing.
+    #[test]
+    fn kit_written_artifact_folders_are_not_mistaken_for_repos() {
+        let tmp = tempfile::tempdir().unwrap();
+        let feature_dir = tmp.path().join("landing-page");
+        touch(&feature_dir.join("frontend/tasks/task-3-1.md"));
+        touch(&feature_dir.join("test-cases/landing-page/test-cases.md"));
+        touch(&feature_dir.join("design-resources/hero.png"));
+        std::fs::create_dir_all(feature_dir.join("bug-reports")).unwrap();
+
+        assert_eq!(repo_subdirs(&feature_dir).len(), 1);
+
+        let ecosystem = eco(&[("backend", "backend"), ("frontend", "frontend")]);
+        assert!(slots_without_work_in_feature(&feature_dir, &ecosystem)
+            .contains(&slot::BACKEND.to_string()));
+    }
+
+    /// The safety chock, same one Contract Lock uses: an unmatched feature
+    /// subfolder must never make the task-file-based pass read a role that
+    /// genuinely HAS work (and every role IS declared in the Ecosystem) as
+    /// "no work", or the BE->FE ordering silently disappears. Uses an
+    /// Ecosystem that declares all 3 roles so the (separate, unaffected by
+    /// this guard) Ecosystem-absence pass never fires here — isolates the
+    /// guard this test is actually about.
+    #[test]
+    fn an_unmatched_folder_never_declares_a_declared_roles_slot_workless() {
+        let tmp = tempfile::tempdir().unwrap();
+        let feature_dir = tmp.path().join("f");
+        touch(&feature_dir.join("mystery/tasks/task-1-1.md"));
+
+        let ecosystem = eco(&[("backend", "backend"), ("frontend", "frontend"), ("mobile", "mobile")]);
+        assert!(slots_without_work_in_feature(&feature_dir, &ecosystem).is_empty());
+    }
+
+    /// A completely empty Ecosystem almost always means `/init-kit` hasn't
+    /// populated `AGENTS.md` yet, not "this project confidently has zero
+    /// repos of any role" — must never be read as "every build slot has no
+    /// work" the moment a brand-new project opens.
+    #[test]
+    fn a_completely_empty_ecosystem_never_declares_any_slot_workless() {
+        let tmp = tempfile::tempdir().unwrap();
+        let feature_dir = tmp.path().join("f");
+        touch(&feature_dir.join("mystery/tasks/task-1-1.md"));
+
+        assert!(slots_without_work_in_feature(&feature_dir, &[]).is_empty());
+    }
+
+    /// Nothing planned yet is not the same as nothing to do — otherwise a
+    /// brand-new feature shows all of stage ⑤ as "không áp dụng". Ecosystem
+    /// here declares all 3 roles so this stays isolated from the (separate)
+    /// Ecosystem-absence pass, which doesn't wait for task files at all.
+    #[test]
+    fn a_feature_with_no_tasks_at_all_is_not_treated_as_workless() {
+        let tmp = tempfile::tempdir().unwrap();
+        let feature_dir = tmp.path().join("f");
+        touch(&feature_dir.join("SPEC.md"));
+
+        let ecosystem = eco(&[("api", "backend"), ("web", "frontend"), ("app", "mobile")]);
+        assert!(slots_without_work_in_feature(&feature_dir, &ecosystem).is_empty());
+    }
+
+    /// The actual reported bug: a project whose Ecosystem simply never
+    /// declared a `mobile` repo must have `mobile` come back without-work
+    /// immediately — even before `techlead-tasks` has written a single task
+    /// file anywhere (guard 1 alone would otherwise say "wait, nothing
+    /// planned yet" and leave it `Idle` forever, blocking stage ⑥ on a slot
+    /// that can never run in this project).
+    #[test]
+    fn a_role_absent_from_a_configured_ecosystem_is_without_work_before_any_task_file_exists() {
+        let tmp = tempfile::tempdir().unwrap();
+        let feature_dir = tmp.path().join("f");
+        std::fs::create_dir_all(&feature_dir).unwrap();
+
+        let ecosystem = eco(&[("backend", "backend"), ("frontend", "frontend")]);
+        let without = slots_without_work_in_feature(&feature_dir, &ecosystem);
+        assert!(without.contains(&slot::MOBILE.to_string()));
+        assert!(!without.contains(&slot::BACKEND.to_string()));
+        assert!(!without.contains(&slot::FRONTEND.to_string()));
+    }
+
+    /// Same absent-role case, but now with real task files present AND an
+    /// unrelated unmatched folder that trips guard 2 for the task-file
+    /// pass — the Ecosystem-absence pass must keep flagging `mobile`
+    /// regardless, since the two passes are independent. Backend must NOT
+    /// be flagged: it genuinely has a task file, and guard 2 correctly
+    /// refuses to conclude anything about it from an unresolvable folder.
+    #[test]
+    fn a_role_absent_from_ecosystem_is_without_work_even_when_an_unrelated_folder_is_unmatched() {
+        let tmp = tempfile::tempdir().unwrap();
+        let feature_dir = tmp.path().join("f");
+        touch(&feature_dir.join("backend/tasks/task-1-1.md"));
+        touch(&feature_dir.join("mystery/tasks/task-9-9.md"));
+
+        let ecosystem = eco(&[("backend", "backend"), ("frontend", "frontend")]);
+        let without = slots_without_work_in_feature(&feature_dir, &ecosystem);
+        assert!(without.contains(&slot::MOBILE.to_string()));
+        assert!(!without.contains(&slot::BACKEND.to_string()));
+    }
+
+    /// A role missing from `role_key` resolution because some OTHER repo's
+    /// Vai trò cell is unreadable (`RepoReadiness::RoleUnreadable`) must NOT
+    /// be treated the same as a role that's confidently absent
+    /// (`RoleNotInEcosystem`) — that would hide a real `AGENTS.md` typo
+    /// behind a silent "không áp dụng" instead of surfacing it.
+    #[test]
+    fn a_role_missing_only_because_a_sibling_roles_cell_is_unreadable_is_not_assumed_workless() {
+        let tmp = tempfile::tempdir().unwrap();
+        let feature_dir = tmp.path().join("f");
+        std::fs::create_dir_all(&feature_dir).unwrap();
+
+        let ecosystem = vec![
+            EcosystemRepo {
+                name: "backend".to_string(),
+                declared_path: "repos/backend".to_string(),
+                role: "backend".to_string(),
+                role_key: Some("backend".to_string()),
+                stack: "x".to_string(),
+                cloned: true,
+            },
+            EcosystemRepo {
+                name: "mystery-repo".to_string(),
+                declared_path: "repos/mystery-repo".to_string(),
+                role: "???".to_string(),
+                role_key: None,
+                stack: "x".to_string(),
+                cloned: true,
+            },
+        ];
+        assert!(!slots_without_work_in_feature(&feature_dir, &ecosystem)
+            .contains(&slot::MOBILE.to_string()));
+    }
+
+    /// Left `Idle`, a workless build slot blocked stage ⑥ forever:
+    /// `is_complete` needs every stage ⑤ slot `Done` or `Skipped`.
+    #[test]
+    fn build_slots_without_work_are_inferred_as_skipped() {
+        let tmp = tempfile::tempdir().unwrap();
+        let feature_dir = tmp.path().join("landing-page");
+        let runs_dir = tmp.path().join("runs");
+        touch(&feature_dir.join("frontend/tasks/task-3-1.md"));
+
+        let ecosystem = eco(&[("backend", "backend"), ("frontend", "frontend")]);
+        let nodes = infer_feature_state(&feature_dir, &runs_dir, &ecosystem);
+        assert_eq!(nodes[slot::BACKEND].status, NodeStatus::Skipped);
+        assert_eq!(nodes[slot::MOBILE].status, NodeStatus::Skipped);
+        // The one that DOES have work stays runnable.
+        assert_eq!(nodes[slot::FRONTEND].status, NodeStatus::Idle);
+    }
+
     #[test]
     fn empty_feature_dir_is_all_idle() {
         let tmp = tempfile::tempdir().unwrap();
@@ -355,8 +783,8 @@ mod tests {
         let runs_dir = tmp.path().join("runs");
         std::fs::create_dir_all(&runs_dir).unwrap();
 
-        let nodes = infer_feature_state(&feature_dir, &runs_dir);
-        assert_eq!(nodes.len(), 12); // 12 agent slots total across the 8 stages
+        let nodes = infer_feature_state(&feature_dir, &runs_dir, &[]);
+        assert_eq!(nodes.len(), 11); // 11 agent slots total across the 8 stages
         assert!(nodes.values().all(|n| n.status == NodeStatus::Idle));
     }
 
@@ -368,7 +796,7 @@ mod tests {
         let runs_dir = tmp.path().join("runs");
         std::fs::create_dir_all(&runs_dir).unwrap();
 
-        let nodes = infer_feature_state(&feature_dir, &runs_dir);
+        let nodes = infer_feature_state(&feature_dir, &runs_dir, &[]);
         assert_eq!(nodes[slot::BA].status, NodeStatus::Done);
     }
 
@@ -383,7 +811,7 @@ mod tests {
         let runs_dir = tmp.path().join("runs");
         std::fs::create_dir_all(&runs_dir).unwrap();
 
-        let nodes = infer_feature_state(&feature_dir, &runs_dir);
+        let nodes = infer_feature_state(&feature_dir, &runs_dir, &[]);
         let ba = &nodes[slot::BA];
         assert_eq!(ba.status, NodeStatus::DoneIncomplete);
         assert!(ba
@@ -401,7 +829,7 @@ mod tests {
         let runs_dir = tmp.path().join("runs");
         std::fs::create_dir_all(&runs_dir).unwrap();
 
-        let nodes = infer_feature_state(&feature_dir, &runs_dir);
+        let nodes = infer_feature_state(&feature_dir, &runs_dir, &[]);
         assert_eq!(nodes[slot::TECHLEAD_DESIGN].status, NodeStatus::Done);
     }
 
@@ -414,8 +842,93 @@ mod tests {
         let runs_dir = tmp.path().join("runs");
         std::fs::create_dir_all(&runs_dir).unwrap();
 
-        let nodes = infer_feature_state(&feature_dir, &runs_dir);
+        let nodes = infer_feature_state(&feature_dir, &runs_dir, &[]);
         assert_eq!(nodes[slot::TECHLEAD_DESIGN].status, NodeStatus::Idle);
+    }
+
+    /// B2 — `design-resources/` is a sibling of the repo subdirs, not one
+    /// of them. Regression guard for the two ways it used to leak:
+    /// `DESIGN.md` detection, and the repo count `contract_lock_rules`
+    /// derives from `repo_subdirs` (AC-E4-11).
+    #[test]
+    fn design_resources_subdir_is_never_mistaken_for_a_repo() {
+        let tmp = tempfile::tempdir().unwrap();
+        let feature_dir = tmp.path().join("feature");
+        write(
+            &feature_dir.join("design-resources/icon-home.svg"),
+            "<svg/>",
+        );
+        write(&feature_dir.join("design-resources/DESIGN.md"), "x");
+        let runs_dir = tmp.path().join("runs");
+        std::fs::create_dir_all(&runs_dir).unwrap();
+
+        assert!(repo_subdirs(&feature_dir).is_empty());
+        let nodes = infer_feature_state(&feature_dir, &runs_dir, &[]);
+        assert_eq!(nodes[slot::TECHLEAD_DESIGN].status, NodeStatus::Idle);
+    }
+
+    /// AC-E3-04a — assets are display-only. Their presence or absence must
+    /// never move the Design-Analyst node's status.
+    #[test]
+    fn design_resources_do_not_affect_design_analyst_status() {
+        let tmp = tempfile::tempdir().unwrap();
+        let runs_dir = tmp.path().join("runs");
+        std::fs::create_dir_all(&runs_dir).unwrap();
+
+        // Assets but no analysis → still Idle.
+        let assets_only = tmp.path().join("f1");
+        write(
+            &assets_only.join("design-resources/icon-home.svg"),
+            "<svg/>",
+        );
+        assert_eq!(
+            infer_feature_state(&assets_only, &runs_dir, &[])[slot::DESIGN_ANALYST].status,
+            NodeStatus::Idle
+        );
+
+        // Analysis but no assets → Done anyway.
+        let analysis_only = tmp.path().join("f2");
+        write(
+            &analysis_only.join("design-analysis.md"),
+            &"x".repeat(MIN_DESIGN_ANALYSIS_CHARS + 1),
+        );
+        assert_eq!(
+            infer_feature_state(&analysis_only, &runs_dir, &[])[slot::DESIGN_ANALYST].status,
+            NodeStatus::Done
+        );
+    }
+
+    /// AC-E3-01 — assets show up in the node detail panel, with
+    /// `design-analysis.md` first so the auto-opened preview is never a
+    /// binary file (`read_artifact` decodes UTF-8).
+    #[test]
+    fn design_analyst_artifacts_list_analysis_first_then_sorted_assets() {
+        let tmp = tempfile::tempdir().unwrap();
+        let feature_dir = tmp.path().join("feature");
+        let runs_dir = tmp.path().join("runs");
+        std::fs::create_dir_all(&runs_dir).unwrap();
+
+        write(
+            &feature_dir.join("design-resources/logo-header.png"),
+            "PNG-bytes",
+        );
+        write(
+            &feature_dir.join("design-resources/icon-home.svg"),
+            "<svg/>",
+        );
+        // A nested directory is not an asset file.
+        std::fs::create_dir_all(feature_dir.join("design-resources/nested")).unwrap();
+        write(&feature_dir.join("design-analysis.md"), "x");
+
+        let paths = artifact_paths_for_slot(&feature_dir, &runs_dir, slot::DESIGN_ANALYST);
+        let names: Vec<String> = paths
+            .iter()
+            .map(|p| p.file_name().unwrap().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(
+            names,
+            vec!["design-analysis.md", "icon-home.svg", "logo-header.png"]
+        );
     }
 
     #[test]
@@ -427,14 +940,14 @@ mod tests {
         let empty_feature = tmp.path().join("f1");
         std::fs::create_dir_all(&empty_feature).unwrap();
         assert_eq!(
-            infer_feature_state(&empty_feature, &runs_dir)[slot::DESIGN_ANALYST].status,
+            infer_feature_state(&empty_feature, &runs_dir, &[])[slot::DESIGN_ANALYST].status,
             NodeStatus::Idle
         );
 
         let short_feature = tmp.path().join("f2");
         write(&short_feature.join("design-analysis.md"), "too short");
         assert_eq!(
-            infer_feature_state(&short_feature, &runs_dir)[slot::DESIGN_ANALYST].status,
+            infer_feature_state(&short_feature, &runs_dir, &[])[slot::DESIGN_ANALYST].status,
             NodeStatus::DoneIncomplete
         );
 
@@ -444,7 +957,7 @@ mod tests {
             &"x".repeat(MIN_DESIGN_ANALYSIS_CHARS + 1),
         );
         assert_eq!(
-            infer_feature_state(&full_feature, &runs_dir)[slot::DESIGN_ANALYST].status,
+            infer_feature_state(&full_feature, &runs_dir, &[])[slot::DESIGN_ANALYST].status,
             NodeStatus::Done
         );
     }
@@ -457,28 +970,26 @@ mod tests {
         let runs_dir = tmp.path().join("runs");
         std::fs::create_dir_all(&runs_dir).unwrap();
 
-        let nodes = infer_feature_state(&feature_dir, &runs_dir);
+        let nodes = infer_feature_state(&feature_dir, &runs_dir, &[]);
         assert_eq!(nodes[slot::QC_DESIGN].status, NodeStatus::Done);
     }
 
     #[test]
-    fn techlead_tasks_done_when_any_repo_has_task_files_plan_alone_is_not_enough() {
+    fn techlead_tasks_done_only_when_a_repo_has_task_files() {
         let tmp = tempfile::tempdir().unwrap();
         let runs_dir = tmp.path().join("runs");
         std::fs::create_dir_all(&runs_dir).unwrap();
 
-        // PLAN.md alone must NOT flip techlead-tasks to Done.
-        let plan_only = tmp.path().join("plan-only");
-        write(&plan_only.join("PLAN.md"), "x");
-        let nodes = infer_feature_state(&plan_only, &runs_dir);
+        // A SPEC-only feature dir must NOT flip techlead-tasks to Done.
+        let spec_only = tmp.path().join("spec-only");
+        write(&spec_only.join("SPEC.md"), "x");
+        let nodes = infer_feature_state(&spec_only, &runs_dir, &[]);
         assert_eq!(nodes[slot::TECHLEAD_TASKS].status, NodeStatus::Idle);
-        assert_eq!(nodes[slot::PM].status, NodeStatus::Done);
 
         let with_tasks = tmp.path().join("with-tasks");
         write(&with_tasks.join("backend-repo/tasks/task-1-1.md"), "x");
-        let nodes = infer_feature_state(&with_tasks, &runs_dir);
+        let nodes = infer_feature_state(&with_tasks, &runs_dir, &[]);
         assert_eq!(nodes[slot::TECHLEAD_TASKS].status, NodeStatus::Done);
-        assert_eq!(nodes[slot::PM].status, NodeStatus::Idle);
     }
 
     #[test]
@@ -491,7 +1002,7 @@ mod tests {
         let runs_dir = tmp.path().join("runs");
         std::fs::create_dir_all(&runs_dir).unwrap();
 
-        let nodes = infer_feature_state(&feature_dir, &runs_dir);
+        let nodes = infer_feature_state(&feature_dir, &runs_dir, &[]);
         for build_slot in [slot::BACKEND, slot::FRONTEND, slot::MOBILE] {
             assert_eq!(nodes[build_slot].status, NodeStatus::Idle);
         }
@@ -503,13 +1014,29 @@ mod tests {
         let feature_dir = tmp.path().join("feature");
         std::fs::create_dir_all(&feature_dir).unwrap();
         let runs_dir = tmp.path().join("runs");
-        write(&runs_dir.join("run-1/qa-report.md"), "x");
-        write(&runs_dir.join("run-2/execution-report.md"), "x");
+        write(&runs_dir.join("feature--qa/qa-report.md"), "x");
+        write(&runs_dir.join("feature--qc-automation/execution-report.md"), "x");
 
-        let nodes = infer_feature_state(&feature_dir, &runs_dir);
+        let nodes = infer_feature_state(&feature_dir, &runs_dir, &[]);
         assert_eq!(nodes[slot::QA].status, NodeStatus::Done);
         assert_eq!(nodes[slot::QC_AUTOMATION].status, NodeStatus::Done);
         assert_eq!(nodes[slot::QC_TESTING].status, NodeStatus::Idle);
+    }
+
+    /// The scoping this whole convention exists for: a QA report belonging
+    /// to a DIFFERENT feature must never make this feature's QA node read
+    /// as `Done` — see `store::orchestrator_dir::runs_dir_run_id`'s doc
+    /// comment for why `runs_dir` can't just be globbed unscoped.
+    #[test]
+    fn a_report_from_another_feature_never_counts_as_this_features_work() {
+        let tmp = tempfile::tempdir().unwrap();
+        let feature_dir = tmp.path().join("feature");
+        std::fs::create_dir_all(&feature_dir).unwrap();
+        let runs_dir = tmp.path().join("runs");
+        write(&runs_dir.join("other-feature--qa/qa-report.md"), "x");
+
+        let nodes = infer_feature_state(&feature_dir, &runs_dir, &[]);
+        assert_eq!(nodes[slot::QA].status, NodeStatus::Idle);
     }
 
     #[test]
@@ -519,7 +1046,7 @@ mod tests {
         std::fs::create_dir_all(&feature_dir).unwrap();
         let nonexistent_runs_dir = tmp.path().join("does-not-exist");
 
-        let nodes = infer_feature_state(&feature_dir, &nonexistent_runs_dir);
+        let nodes = infer_feature_state(&feature_dir, &nonexistent_runs_dir, &[]);
         assert_eq!(nodes[slot::QA].status, NodeStatus::Idle);
     }
 
@@ -531,7 +1058,7 @@ mod tests {
         write(&feature_dir.join("backend-repo/DESIGN.md"), "x");
         write(&feature_dir.join("backend-repo/tasks/task-1-1.md"), "x");
         let runs_dir = tmp.path().join("runs");
-        write(&runs_dir.join("run-1/qa-report.md"), "x");
+        write(&runs_dir.join("feature--qa/qa-report.md"), "x");
 
         let ba_paths = artifact_paths_for_slot(&feature_dir, &runs_dir, slot::BA);
         assert_eq!(ba_paths, vec![feature_dir.join("SPEC.md")]);
@@ -543,7 +1070,7 @@ mod tests {
         );
 
         let qa_paths = artifact_paths_for_slot(&feature_dir, &runs_dir, slot::QA);
-        assert_eq!(qa_paths, vec![runs_dir.join("run-1/qa-report.md")]);
+        assert_eq!(qa_paths, vec![runs_dir.join("feature--qa/qa-report.md")]);
     }
 
     #[test]
@@ -554,7 +1081,7 @@ mod tests {
         let runs_dir = tmp.path().join("runs");
         std::fs::create_dir_all(&runs_dir).unwrap();
 
-        assert!(artifact_paths_for_slot(&feature_dir, &runs_dir, slot::PM).is_empty());
+        assert!(artifact_paths_for_slot(&feature_dir, &runs_dir, slot::QC_DESIGN).is_empty());
         assert!(artifact_paths_for_slot(&feature_dir, &runs_dir, slot::BACKEND).is_empty());
         assert!(artifact_paths_for_slot(&feature_dir, &runs_dir, "unknown-slot").is_empty());
     }
@@ -564,18 +1091,16 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let feature_dir = tmp.path().join("feature");
         write(&feature_dir.join("SPEC.md"), COMPLETE_SPEC);
-        write(&feature_dir.join("PLAN.md"), "x");
         write(&feature_dir.join("backend-repo/DESIGN.md"), "x");
         write(&feature_dir.join("backend-repo/tasks/task-1-1.md"), "x");
         let runs_dir = tmp.path().join("runs");
-        write(&runs_dir.join("run-1/qa-report.md"), "x");
+        write(&runs_dir.join("feature--qa/qa-report.md"), "x");
 
         let paths = all_artifact_paths(&feature_dir, &runs_dir);
         assert!(paths.contains(&feature_dir.join("SPEC.md")));
-        assert!(paths.contains(&feature_dir.join("PLAN.md")));
         assert!(paths.contains(&feature_dir.join("backend-repo/DESIGN.md")));
         assert!(paths.contains(&feature_dir.join("backend-repo/tasks/task-1-1.md")));
-        assert!(paths.contains(&runs_dir.join("run-1/qa-report.md")));
+        assert!(paths.contains(&runs_dir.join("feature--qa/qa-report.md")));
 
         let mut sorted = paths.clone();
         sorted.sort();

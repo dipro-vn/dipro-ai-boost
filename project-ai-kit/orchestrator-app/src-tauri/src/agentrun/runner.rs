@@ -88,6 +88,18 @@ pub struct RunResult {
     pub stdout_drained: bool,
 }
 
+/// What happened when `run_and_stream` tried to register its spawned child.
+/// `AbortedProjectClosed` means the project closed (`AppState::close`
+/// bumped `spawn_admission`) between this run's caller capturing its
+/// `expected_epoch` and the child landing in `ProcessRegistry` — the child
+/// was already killed before this variant is returned, so the caller never
+/// needs to touch it again.
+#[derive(Debug)]
+pub enum SpawnOutcome {
+    Ran(RunResult),
+    AbortedProjectClosed,
+}
+
 /// Crash-durability hooks for one run (AC-E6-04/07/10) — `None` keeps
 /// `run_and_stream` pure for tests. With it, the child's PID lands in
 /// `marker_path` right after spawn (orphan detection) and every raw stdout
@@ -107,6 +119,14 @@ pub struct RunDurability {
 /// another so neither pipe can fill up and block the child — the same
 /// class of bug the T2.1 spike test guards against for stdout), and
 /// returns once the process exits or `timeout` elapses, whichever first.
+///
+/// `admission`/`expected_epoch` close the TOCTOU between `AppState::close`
+/// and this spawn: registration only happens via
+/// `ProcessRegistry::insert_if_current`, which refuses (and this function
+/// kills the child it just spawned) if the project closed after the caller
+/// captured `expected_epoch` — see that method's doc comment for the
+/// ordering argument.
+#[allow(clippy::too_many_arguments)]
 pub fn run_and_stream(
     registry: &ProcessRegistry,
     key: RunKey,
@@ -114,7 +134,9 @@ pub fn run_and_stream(
     event_tx: Sender<StreamEvent>,
     timeout: Duration,
     durability: Option<RunDurability>,
-) -> AppResult<RunResult> {
+    admission: &Mutex<u64>,
+    expected_epoch: u64,
+) -> AppResult<SpawnOutcome> {
     let mut cmd = build_command(params);
     let mut child = cmd.spawn()?;
 
@@ -146,7 +168,18 @@ pub fn run_and_stream(
     });
 
     let child = Arc::new(Mutex::new(child));
-    registry.insert(key.clone(), child.clone());
+    if !registry.insert_if_current(admission, expected_epoch, key.clone(), child.clone()) {
+        // The project closed while this run was still doing pre-spawn I/O.
+        // The child exists but was never tracked — kill it directly with
+        // the registry's own group-then-process pattern (`ProcessRegistry::
+        // kill` does the same two steps) since it was never inserted for
+        // `ProcessRegistry::kill` to find.
+        let mut guard = child.lock().unwrap();
+        process_group::signal_group(guard.id(), Signal::Kill);
+        let _ = guard.kill();
+        drop(guard);
+        return Ok(SpawnOutcome::AbortedProjectClosed);
+    }
 
     let result = stream_child_output(
         &child,
@@ -158,7 +191,7 @@ pub fn run_and_stream(
         live_log,
     );
     registry.remove(&key);
-    result
+    result.map(SpawnOutcome::Ran)
 }
 
 /// Những gì thread đọc stdout đã góp được cho tới lúc này.
@@ -465,6 +498,7 @@ mod tests {
             cwd: tmp.path(),
             config: &cfg,
             resume_session_id: None,
+            settings_file: None,
             add_dirs: &[],
             auth: crate::agentrun::spawn::SpawnAuth::CliDefault,
         };
@@ -486,15 +520,22 @@ mod tests {
             log_path: log_path.clone(),
         };
 
-        let result = run_and_stream(
+        let admission = Mutex::new(0u64);
+        let result = match run_and_stream(
             &registry,
             key.clone(),
             &params,
             tx,
             Duration::from_secs(60),
             Some(durability),
+            &admission,
+            0,
         )
-        .unwrap();
+        .unwrap()
+        {
+            SpawnOutcome::Ran(result) => result,
+            SpawnOutcome::AbortedProjectClosed => panic!("admission epoch matches — must run"),
+        };
 
         // Nothing left registered once the run is over.
         assert!(registry.get(&key).is_none());
@@ -578,22 +619,82 @@ mod tests {
             cwd: tmp.path(),
             config: &cfg,
             resume_session_id: None,
+            settings_file: None,
             add_dirs: &[],
             auth: crate::agentrun::spawn::SpawnAuth::CliDefault,
         };
         let (tx, _rx) = std::sync::mpsc::channel();
 
-        let result = run_and_stream(
+        let admission = Mutex::new(0u64);
+        let result = match run_and_stream(
             &registry,
             key.clone(),
             &params,
             tx,
             Duration::from_millis(1),
             None,
+            &admission,
+            0,
+        )
+        .unwrap()
+        {
+            SpawnOutcome::Ran(result) => result,
+            SpawnOutcome::AbortedProjectClosed => panic!("admission epoch matches — must run"),
+        };
+
+        assert!(result.timed_out);
+        assert!(registry.get(&key).is_none());
+    }
+
+    #[test]
+    fn run_and_stream_aborts_and_kills_the_child_when_the_epoch_is_stale() {
+        if !is_claude_cli_available() {
+            eprintln!("skipping live spike: `claude` CLI not usable in this environment");
+            return;
+        }
+
+        let registry = ProcessRegistry::default();
+        let key = RunKey {
+            feature: "test-feature".to_string(),
+            slot: "ba".to_string(),
+        };
+        let cfg = AgentConfig {
+            model: Model::Haiku,
+            max_turns: 20,
+            timeout_minutes: 30,
+            permission: PermissionProfile::ReadOnly,
+            stale: false,
+            newly_discovered: false,
+        };
+        let tmp = crate::agentrun::test_support::agent_project_dir("test-agent");
+        let params = SpawnParams {
+            agent_name: "test-agent",
+            prompt: "Reply with exactly the word: pong",
+            cwd: tmp.path(),
+            config: &cfg,
+            resume_session_id: None,
+            settings_file: None,
+            add_dirs: &[],
+            auth: crate::agentrun::spawn::SpawnAuth::CliDefault,
+        };
+        let (tx, _rx) = std::sync::mpsc::channel();
+
+        // Simulates `AppState::close` having bumped the epoch after this
+        // caller captured `expected_epoch = 0`.
+        let admission = Mutex::new(1u64);
+        let outcome = run_and_stream(
+            &registry,
+            key.clone(),
+            &params,
+            tx,
+            Duration::from_secs(60),
+            None,
+            &admission,
+            0,
         )
         .unwrap();
 
-        assert!(result.timed_out);
+        assert!(matches!(outcome, SpawnOutcome::AbortedProjectClosed));
         assert!(registry.get(&key).is_none());
     }
 }

@@ -6,6 +6,24 @@ tools:
   - Read
   - Edit
   - Write
+  # Glob — liệt kê file khi project KHÔNG cài tilth MCP. `POLICIES.md` §1
+  # quy định phương án thay thế là `Grep`/`Read`/`Glob`, nhưng trước đây
+  # `tools:` không có Glob nên phương án đó không dùng được: Bước 3.5 hỏng
+  # hoàn toàn trên project không có tilth.
+  - Glob
+  # Bash — dùng tự do cho dev tooling: cài dependency (npm/yarn/pnpm),
+  # chạy build/lint/test/dev-server, debug local (đọc log, `curl` tới
+  # localhost...). Bao gồm đưa asset: `mkdir -p <asset-dir>` rồi
+  # `cp <feature-folder>/design-resources/<file> <asset-dir>/` — BẮT BUỘC
+  # dùng `cp`, KHÔNG Read rồi Write (`Read` trả về ảnh đã render chứ không
+  # phải bytes, làm hỏng file nhị phân — xem Bước 3.5).
+  #
+  # Vẫn áp dụng nguyên vẹn: KHÔNG `git commit`/`push` tự ý (`POLICIES.md`
+  # §3, `AGENTS.md` §2 — Dev không bao giờ push), KHÔNG bypass hook
+  # (`--no-verify`/`--no-gpg-sign`/force-push, `git-workflow.md`), KHÔNG
+  # `rm` ngoài phạm vi task, KHÔNG sửa migration/linter/test config khi
+  # chưa được duyệt, KHÔNG đọc file bị chặn trong `.claude/rules/SECURITY.md`.
+  - Bash
   - mcp__tilth__tilth_search
   - mcp__tilth__tilth_read
   - mcp__tilth__tilth_files
@@ -122,7 +140,58 @@ const { message, modal } = App.useApp();
 
    - **KHÔNG có Figma URL** → thực thi dựa trên SPEC + DESIGN + `design_rule.md` per-site rules, ghi note "design from SPEC only — re-verify với Designer sau".
 
-   **Ưu tiên đọc:** task → SPEC.md → DESIGN.md → Figma MCP (nếu có) → design_rule.md fallback → tự đoán ❌
+   **Ưu tiên đọc:** task → SPEC.md → DESIGN.md → `design-resources/` (asset đã export, nếu có) → Figma MCP (nếu có) → design_rule.md fallback → tự đoán ❌
+
+3.5. **Design resources đã export (`design-analyst-agent` để lại, nếu có):**
+
+   Danh sách file lấy từ bảng `## 6. Assets đã export` trong `design-analysis.md`
+   (mỗi dòng 1 file + node Figma tương ứng). Không có bảng đó thì:
+   ```
+   Glob(pattern: "<feature-folder>/design-resources/**")
+   ```
+   > `tilth_files` chỉ dùng được khi project có cài tilth MCP — không có thì
+   > dùng `Glob` theo `POLICIES.md` §1.
+
+   - **Có file** → đọc `overview/structure.md` (đã load ở Bước 3) để biết đúng
+     thư mục asset của repo (ví dụ `src/assets/`), rồi copy **bằng `cp`**:
+     ```
+     Bash: mkdir -p <asset-dir>
+     Bash: cp <feature-folder>/design-resources/<file> <asset-dir>/
+     ```
+     **BẮT BUỘC `cp`, KHÔNG Read rồi Write.** `Read` trả về ảnh đã render chứ
+     không phải bytes, nên Read→Write làm hỏng mọi file nhị phân (`.png`,
+     `.jpg`): file đến đích rỗng hoặc sai nội dung mà không có lỗi nào báo ra.
+     Với `.svg` thì Read→Write tình cờ chạy được vì SVG là text — đừng dựa vào
+     sự tình cờ đó, dùng `cp` cho mọi loại file.
+
+     Chỉ copy file liên quan tới component/screen đang implement — không copy
+     bừa cả thư mục. Copy **nguyên tên, nguyên định dạng**: không resize, không
+     convert sang `.webp`/`.avif`. Nếu task cần nhiều width/format thì ghi vào
+     output để PM tạo task riêng, không tự chạy `npx sharp-cli`/ImageMagick.
+
+     Sau khi copy, xác nhận file đến nơi nguyên vẹn:
+     ```
+     Bash: file <asset-dir>/*
+     ```
+     `.png` phải báo `PNG image data`, `.svg` phải báo `SVG` hoặc `XML text`.
+     File nào báo `empty` hoặc `data` là copy hỏng — copy lại, đừng bỏ qua.
+
+   - **Không có folder hoặc rỗng** → bỏ qua, dùng luồng Figma MCP ở trên như bình thường.
+
+3.6. **Screenshot tham chiếu (`design-analyst-agent` để lại, nếu có):**
+
+   Khác `design-resources/` — đây KHÔNG phải asset để copy vào code, mà là ảnh chụp nguyên
+   màn hình để đối chiếu UI đã code với design thật:
+   ```
+   Glob(pattern: "<feature-folder>/screenshot-design/<Screen Code>.png")
+   ```
+   > `<Screen Code>` lấy từ task/SPEC — xem Bước 1. Không tìm thấy file khớp Screen Code →
+   > bỏ qua, không chặn task.
+
+   - **Có file** → `Read` file này (Read hiển thị ảnh trực tiếp) để xem layout, màu, spacing
+     thật trước khi code, và đối chiếu lại sau khi implement xong — trước khi đánh dấu
+     self-review checklist mục screenshot bên dưới là ✅.
+   - **Không có file** → bỏ qua, dựa vào `design-analysis.md` + Figma MCP như luồng đã có.
 
 4. `tilth_search` xác nhận pattern hiện có trong codebase
 5. Implement → self-review → kiểm tra không lẫn domain logic
@@ -138,6 +207,8 @@ const { message, modal } = App.useApp();
 - [ ] `useNavigate` thay vì `useHistory`?
 - [ ] AntD v6 `App.useApp()` cho message/modal?
 - [ ] Không hard-code URL — dùng `import.meta.env.VITE_API_URL`?
+- [ ] Đã copy asset từ `design-resources/` (nếu có) vào đúng thư mục asset repo **bằng `cp`** (không Read→Write), và `file <asset-dir>/*` xác nhận không có file hỏng?
+- [ ] Đã đối chiếu UI với screenshot tham chiếu trong `screenshot-design/` (nếu có)?
 - [ ] TypeScript không có `as any`?
 - [ ] `useEffect` deps đầy đủ?
 - [ ] Đã chạy FE-localhost + BE-localhost, data hiển thị từ API thật?

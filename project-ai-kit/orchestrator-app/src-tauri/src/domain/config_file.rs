@@ -105,11 +105,6 @@ pub struct ProjectConfig {
     /// CLI somewhere unusual is the reason this escape hatch exists.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub claude_cli_path: Option<String>,
-    /// AC-E1-19 — Backlog integration, NON-SECRET half only (the API key
-    /// itself lives in the OS keychain, see `store::keychain`). `None` =
-    /// not configured, which disables Push to Backlog (AC-E5-01).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub backlog: Option<crate::domain::integrations::BacklogConfig>,
 }
 
 /// "Model mặc định (chỉnh được)" table, `orchestrator-project-config/SPEC.md`.
@@ -119,7 +114,6 @@ const DEFAULT_MODELS: &[(&str, Model)] = &[
     ("ba-agent", Model::Opus),
     ("techlead-design-agent", Model::Opus),
     ("techlead-tasks-agent", Model::Opus),
-    ("pm-agent", Model::Sonnet),
     ("design-analyst-agent", Model::Sonnet),
     ("designer-agent", Model::Sonnet),
     ("qc-agent", Model::Sonnet),
@@ -191,7 +185,6 @@ impl ProjectConfig {
             max_retries: default_max_retries(),
             figma_mcp_server: None,
             claude_cli_path: None,
-            backlog: None,
         }
     }
 

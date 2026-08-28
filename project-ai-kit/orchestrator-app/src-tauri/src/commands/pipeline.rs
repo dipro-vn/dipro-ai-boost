@@ -106,7 +106,6 @@ pub struct FeatureDeletionPreview {
     /// Slots with a persisted run under `.orchestrator/agent-runs/`.
     pub run_count: usize,
     pub has_contract_lock: bool,
-    pub has_backlog_mapping: bool,
     /// Imported input copies under `.orchestrator/inputs/<ts>-<name>/`.
     pub input_copy_count: usize,
     /// Slots with a live process — deletion is refused while any exist.
@@ -192,7 +191,6 @@ fn deletion_preview(
             .map(|entries| entries.flatten().filter(|e| e.path().is_dir()).count())
             .unwrap_or(0),
         has_contract_lock: orchestrator_dir::contract_lock_dir(agents_root, feature).exists(),
-        has_backlog_mapping: orchestrator_dir::backlog_dir(agents_root, feature).exists(),
         input_copy_count: input_copy_dirs(agents_root, feature).len(),
         running_slots,
     }
@@ -213,9 +211,6 @@ pub fn preview_delete_feature(
         .iter()
         .flat_map(|stage| stage.agents.iter())
         .map(|agent| agent.id.clone())
-        .chain(std::iter::once(
-            crate::commands::backlog::BACKLOG_PUSH_SLOT.to_string(),
-        ))
         .filter(|slot| state.is_running(&name, slot))
         .collect();
 
@@ -288,7 +283,6 @@ pub fn delete_feature(
     // already gone would leave the user with no way to finish the job.
     let _ = std::fs::remove_dir_all(orchestrator_dir::agent_runs_dir(&agents_root).join(&name));
     let _ = std::fs::remove_dir_all(orchestrator_dir::contract_lock_dir(&agents_root, &name));
-    let _ = std::fs::remove_dir_all(orchestrator_dir::backlog_dir(&agents_root, &name));
     for input_dir in input_copy_dirs(&agents_root, &name) {
         let _ = std::fs::remove_dir_all(input_dir);
     }
@@ -394,6 +388,7 @@ pub fn get_pipeline_state(
     state: State<AppState>,
     feature: String,
 ) -> AppResult<PipelineStateResult> {
+    orchestrator_dir::validate_feature_id(&feature)?;
     let project = current_project(&state)?;
     let ecosystem = state.ecosystem.lock().unwrap().clone();
     let (mut result, warnings) = compute_and_persist(
@@ -435,6 +430,7 @@ pub fn get_node_detail(
     feature: String,
     slot_id: String,
 ) -> AppResult<NodeDetail> {
+    orchestrator_dir::validate_run_ids(&feature, &slot_id)?;
     let project = current_project(&state)?;
     let feature_dir = Path::new(&project.docs_root)
         .join("features")
@@ -477,6 +473,7 @@ pub fn get_node_detail(
 /// superseding, so it can never clobber the one started here.
 #[tauri::command]
 pub fn start_watching(app: AppHandle, state: State<AppState>, feature: String) -> AppResult<()> {
+    orchestrator_dir::validate_feature_id(&feature)?;
     let project = current_project(&state)?;
     let agents_root: PathBuf = project.agents_root.into();
     let docs_root: PathBuf = project.docs_root.into();
@@ -515,6 +512,7 @@ pub fn list_contract_locks(
     state: State<AppState>,
     feature: String,
 ) -> AppResult<Vec<ContractLockRecord>> {
+    orchestrator_dir::validate_feature_id(&feature)?;
     let project = current_project(&state)?;
     let dir = orchestrator_dir::contract_lock_dir(Path::new(&project.agents_root), &feature);
     Ok(contract_lock_store::list_locks(&dir))
@@ -529,6 +527,7 @@ pub fn list_contract_violations(
     state: State<AppState>,
     feature: String,
 ) -> AppResult<Vec<crate::domain::contract_lock::ViolationEvent>> {
+    orchestrator_dir::validate_feature_id(&feature)?;
     let project = current_project(&state)?;
     let dir =
         orchestrator_dir::contract_lock_violations_dir(Path::new(&project.agents_root), &feature);
@@ -631,7 +630,6 @@ mod tests {
         );
         assert_eq!(preview.run_count, 2);
         assert!(preview.has_contract_lock);
-        assert!(!preview.has_backlog_mapping);
         assert_eq!(preview.input_copy_count, 1);
     }
 
@@ -785,6 +783,52 @@ mod tests {
             .collect();
         assert_eq!(labels.len(), 2);
         assert_ne!(labels[0], labels[1]);
+    }
+
+    /// The path every project on the previous build takes now: a v3 file
+    /// is structurally current but still declares the `pm` slot, which no
+    /// longer has an agent behind it.
+    #[test]
+    fn a_v3_pipeline_json_is_migrated_so_the_pm_slot_disappears() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = orchestrator_dir::pipeline_json_path(tmp.path());
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        // A real v3 file: serialize the current template, stamp it back to
+        // version 3, and splice the removed slot into stage ③.
+        let mut v3 = serde_json::to_value(PipelineDef::default()).unwrap();
+        v3["version"] = serde_json::json!(3);
+        for stage in v3["stages"].as_array_mut().unwrap() {
+            if stage["id"] == "S3_planning" {
+                stage["agents"]
+                    .as_array_mut()
+                    .unwrap()
+                    .push(serde_json::json!({
+                        "id": "pm",
+                        "agentName": "pm-agent",
+                        "label": "PM · Plan",
+                        "afterSlots": [],
+                    }));
+            }
+        }
+        std::fs::write(&path, serde_json::to_string(&v3).unwrap()).unwrap();
+
+        let load = load_pipeline_def(tmp.path()).unwrap();
+
+        assert_eq!(load.def.version, PIPELINE_DEF_VERSION);
+        assert!(load
+            .migrated_backup
+            .expect("a migration must report its backup")
+            .to_string_lossy()
+            .ends_with("pipeline.json.v3.bak"));
+        assert!(
+            !load
+                .def
+                .stages
+                .iter()
+                .flat_map(|s| &s.agents)
+                .any(|a| a.id == "pm" || a.agent_name == "pm-agent"),
+            "the pm slot must be gone after migration"
+        );
     }
 
     #[test]

@@ -30,6 +30,11 @@ interface RunConsoleStore {
   markFinished: (feature: string, slot: string, summary: RunSummary) => void;
   hydrate: (feature: string, slot: string) => Promise<void>;
   clearFeature: (feature: string) => void;
+  /** Resets one slot's console to blank and marks it `hydrated` so the next
+   * `hydrate()` call (the dock re-mounting, a re-render) does not
+   * re-populate it from the still-on-disk `log.jsonl` of the run being
+   * abandoned — used by `BaStepPanel`'s Reset. */
+  clearConsole: (feature: string, slot: string) => void;
 }
 
 export function createAgentConsoleState(feature: string, slot: string): AgentConsoleState {
@@ -168,4 +173,15 @@ export const useRunConsoleStore = create<RunConsoleStore>((set, get) => ({
         Object.entries(state.consoles).filter(([, console]) => console.feature !== feature),
       ),
     })),
+
+  clearConsole: (feature, slot) =>
+    set((state) => {
+      const key = runConsoleKey(feature, slot);
+      return {
+        consoles: {
+          ...state.consoles,
+          [key]: { ...createAgentConsoleState(feature, slot), hydrated: true },
+        },
+      };
+    }),
 }));

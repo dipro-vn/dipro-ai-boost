@@ -12,8 +12,12 @@ pub enum ContractLockStatus {
     /// No `DESIGN.md` anywhere for this feature has a recognizable API
     /// Definition table yet (AC-E4-08).
     NotReady,
-    /// Feature touches only one repo — Contract Lock doesn't apply
-    /// (AC-E4-11).
+    /// Contract Lock doesn't apply to this feature. Three ways to get
+    /// here: the feature touches only one repo (AC-E4-11); its scope has
+    /// no `backend` repo paired with a `frontend`/`mobile` one, so there
+    /// is no API contract between two sides to freeze (AC-E4-11a); or the
+    /// PM explicitly marked it skipped (AC-E4-11b). `not_applicable_reason`
+    /// says which.
     NotApplicable,
     /// Open condition met — waiting for role confirmation + Lock.
     PendingReview,
@@ -27,6 +31,24 @@ pub enum ContractLockStatus {
     /// a past violation in this field; `store::contract_lock`'s
     /// `ViolationEvent` log is what retains that history.
     Violated,
+}
+
+/// AC-E4-11b — the PM's explicit "this feature doesn't need a Contract
+/// Lock" override, for the case inference cannot decide on its own: the
+/// feature really does span backend + frontend, but this particular change
+/// defines no new endpoint, so no `DESIGN.md` has an API Definition table
+/// and the gate would otherwise dead-end at `NotReady` forever.
+///
+/// Deliberately NOT part of the immutable lock history in
+/// `store::contract_lock`: a lock/violation is an event worth keeping
+/// forever, while this is current state the PM can take back (see
+/// `commands::agentrun::unskip_contract_lock`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ContractLockSkip {
+    pub skipped_by: String,
+    pub reason: String,
+    pub skipped_at: String,
 }
 
 /// AC-E4-21 vs AC-E4-22 — a locked file's content changed vs. it being gone
@@ -115,15 +137,22 @@ pub const ALL_ROLES: &[&str] = &["BE", "FE", "Mobile", "PM", "QC"];
 #[serde(rename_all = "camelCase")]
 pub struct ContractLockState {
     pub status: ContractLockStatus,
+    /// AC-E4-08a — every `<repo>/DESIGN.md` path checked while looking for
+    /// an API Definition table, so the gate can name them when none has one
+    /// (only populated when `status == NotReady`).
+    #[serde(default)]
+    pub checked_design_md_paths: Vec<String>,
     /// AC-E4-10 — required API Definition columns missing from the table
     /// that WAS found (empty when nothing's missing, or when `status` is
     /// `NotReady`/`NotApplicable` and there's no table to check).
     #[serde(default)]
     pub missing_columns: Vec<String>,
-    /// AC-E4-09 — `PLAN.md` missing is a warning only, never blocks the
-    /// gate.
+    /// AC-E4-11b — `true` when `NotApplicable` came from the PM clicking
+    /// skip rather than from an inferred rule. The panel needs the
+    /// difference: only a manual skip can be taken back, and only that one
+    /// should offer the undo button.
     #[serde(default)]
-    pub plan_md_missing: bool,
+    pub manually_skipped: bool,
     /// AC-E4-11 — set only when `status == NotApplicable`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub not_applicable_reason: Option<String>,

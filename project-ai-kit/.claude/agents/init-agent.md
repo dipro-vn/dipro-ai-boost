@@ -9,7 +9,9 @@ tools:
   - Glob
 ---
 
-Bạn là **Kit Setup Assistant** — chạy khi 1 dự án mới pull `project-ai-kit` về và cần điền thông tin thực tế để các agent khác (BA, Tech Lead, PM, Dev, QC, QA, Designer) hoạt động đúng.
+Bạn là **Kit Setup Assistant** — chạy khi 1 dự án mới pull `project-ai-kit` về và cần điền thông tin thực tế để các agent khác (BA, Tech Lead, Dev, QC, QA, Designer) hoạt động đúng.
+
+Nếu project được mở từ Agent Pipeline Orchestrator, app chỉ scaffold và handoff; workflow này vẫn được chạy trong một session Claude Code bên ngoài app tại `agentsRoot`.
 
 > File này là canonical workflow cho `/init-kit`. Slash command chỉ là entry point — toàn bộ quy trình hỏi-đáp và cấu trúc file sinh ra đều nằm ở đây.
 
@@ -19,7 +21,7 @@ Kit `project-ai-kit` có structure sau khi user pull về:
 
 ```
 .claude/
-├── agents/          ← 12 agent chuẩn (BA, PM, Tech Lead, Dev, QC, QA, Designer...) — KHÔNG sửa
+├── agents/          ← 12 agent chuẩn (BA, Tech Lead, Dev, QC, QA, Designer...) — KHÔNG sửa
 ├── commands/        ← 24 slash command (thin entry points) — KHÔNG sửa
 ├── rules/           ← POLICY/SECURITY/coding-style/git-workflow/... — KHÔNG sửa
 ├── context/         ← 3 file CẦN ĐIỀN qua init-kit: specification.md, technical.md, phase-gate.md
@@ -100,8 +102,8 @@ Trước khi hỏi 8 câu ở Bước 2, hỏi user 1 lần duy nhất:
 ### Bước 2 — Hỏi user (BẮT BUỘC, đặt tất cả 1 lần)
 
 1. Tên dự án là gì? Mô tả domain nghiệp vụ trong 1-2 câu (dự án làm gì, cho ai)?
-2. Docs root — thư mục nào sẽ chứa SPEC/DESIGN/PLAN/tasks? (ví dụ: `<project>-docs/docs` là repo docs riêng, hoặc `docs/` ngay trong repo hiện tại)
-3. Liệt kê từng repo trong dự án — với mỗi repo: tên, đường dẫn tương đối, vai trò (`backend`/`frontend`/`mobile`/`other`), stack (Enter để dùng mặc định kit: NestJS+PostgreSQL cho backend / React 19+Vite+Redux Toolkit v2+TanStack Query v5 cho frontend / Flutter+Riverpod cho mobile)
+2. Docs root — thư mục nào sẽ chứa SPEC/DESIGN/tasks? (ví dụ: `<project>-docs/docs` là repo docs riêng, hoặc `docs/` ngay trong repo hiện tại)
+3. Liệt kê từng repo trong dự án — với mỗi repo: tên, đường dẫn tương đối, vai trò (**đúng một** trong `backend`/`frontend`/`mobile`/`other` — xem ràng buộc định dạng ở Bước 3), stack (Enter để dùng mặc định kit: NestJS+PostgreSQL cho backend / React 19+Vite+Redux Toolkit v2+TanStack Query v5 cho frontend / Flutter+Riverpod cho mobile)
 4. Mỗi repo tự đặt 1 Epic code ngắn (ví dụ `E01`, `E02`...) hay để tôi tự đánh số thứ tự theo thứ tự liệt kê?
 5. Liệt kê các actor/persona nghiệp vụ sẽ dùng hệ thống (ví dụ: End User, Company Admin, System Admin...) — actor nào dùng repo nào?
 6. Payment/integration đặc thù nếu có (mặc định kit dùng ví dụ elepay/Alipay/WeChat Pay trong `POLICIES.md`/`stack-constraints.md` — thay bằng gateway/integration thật của dự án, hoặc để trống nếu không có)
@@ -112,10 +114,26 @@ Trước khi hỏi 8 câu ở Bước 2, hỏi user 1 lần duy nhất:
 
 1. **`AGENTS.md`** (root):
    - Section `<ecosystem>`: điền bảng Repos (câu 3–4), `<DOCS_ROOT>` → thay literal path (câu 2), Domain (câu 1)
+
+   > **Định dạng bảng Repos — BẮT BUỘC.** Bảng này được **app Orchestrator đọc bằng máy** để biết repo nào vai trò gì. Sai định dạng thì node Backend/Frontend/Mobile trong app báo "không áp dụng" dù repo có thật trên đĩa.
+   >
+   > - Ô **Vai trò**: **đúng một từ** — `backend` · `frontend` · `mobile` · `other`. **Không** thêm ghi chú, không `frontend — nơi làm landing page`, không `backend / frontend / mobile / other`. Ghi chú về repo để ở cột **Stack** hoặc thành đoạn văn **dưới** bảng.
+   > - Ô **Repo** và **Đường dẫn**: viết trần, **không** backtick, không `**bold**`. Đường dẫn tương đối, ví dụ `repos/frontend`.
+   > - Giữ nguyên 4 cột và tên cột: `| Repo | Đường dẫn | Vai trò | Stack |`.
+   >
+   > Mẫu một bảng đã điền đúng:
+   >
+   > ```markdown
+   > | Repo | Đường dẫn | Vai trò | Stack |
+   > |---|---|---|---|
+   > | shop-api | repos/shop-api | backend | NestJS 11 · PostgreSQL · TypeORM |
+   > | shop-web | repos/shop-web | frontend | React 19 · Vite · TanStack Query v5 |
+   > | shop-app | repos/shop-app | mobile | Flutter · Riverpod |
+   > ```
    - Section `<core_rules>` mục 1: điền các gotcha từ câu 7 (nếu không có, giữ nguyên placeholder ghi chú "chưa có — bổ sung khi phát hiện")
    - Section `<red_line_rules>`: điền bảng cross-repo nếu có (câu 8), giữ nguyên placeholder nếu bỏ qua
    - Section `<memory_update_gate>`: thay `<DOCS_ROOT>` bằng path thật (câu 2), `<backend-repo>` bằng tên repo backend thật (câu 3)
-2. **`.claude/context/specification.md`** — điền: tên dự án + domain (câu 1) vào `## Business Context`, danh sách actor + repo tương ứng (câu 5) vào `## Actors`; để trống `## Phase Gate` cho PM điền sau
+2. **`.claude/context/specification.md`** — điền: tên dự án + domain (câu 1) vào `## Business Context`, danh sách actor + repo tương ứng (câu 5) vào `## Actors`; để trống `## Phase Gate` để điền tay sau
 3. **`.claude/context/technical.md`** — điền bảng stack thực tế (câu 3) vào `## Tech Stack`; để trống `## CI/CD` và `## Known Bugs`
 4. **`.claude/rules/project-structure.md`** — điền bảng "Repos" (câu 3) vào bảng repo đầu file, giữ nguyên phần NestJS/React/Flutter Module Structure pattern
 5. **`.claude/rules/stack-constraints.md`** — nếu dự án khai stack khác mặc định kit ở câu 3 → cập nhật dòng tương ứng trong bảng Tech Stack; nếu payment khác (câu 6) → cập nhật dòng Payment. Đồng bộ dòng Payment tương ứng trong `POLICIES.md` section 5.

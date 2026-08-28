@@ -13,7 +13,7 @@
 
 ## 1. Vấn đề đang giải quyết
 
-`project-ai-kit` đã chuẩn hoá rất kỹ phần **quy trình** (12 agent, 25 skill, 9 rule, pipeline 8 stage), nhưng phần **điều khiển quy trình** gần như không tồn tại dưới dạng máy đọc được:
+`project-ai-kit` đã chuẩn hoá rất kỹ phần **quy trình** (12 agent, 24 skill, 9 rule, pipeline 8 stage), nhưng phần **điều khiển quy trình** gần như không tồn tại dưới dạng máy đọc được:
 
 | Pipeline cần | Hiện có | Mức enforce |
 |---|---|---|

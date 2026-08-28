@@ -1,5 +1,14 @@
 # SPEC: Orchestrator — Integrations (Backlog · Slack)
 
+> ## ⛔ EPIC E5 ĐÃ BỊ LOẠI KHỎI PHẠM VI (25/08/2026) — xem quyết định **B22** trong `ASSUMPTIONS-GAPS.md`
+>
+> Toàn bộ nội dung dưới đây **không còn được implement**. File giữ lại làm hồ sơ lịch sử, không phải mô tả hiện trạng.
+>
+> - **Backlog** (`AC-E5-01..18`) — đã gỡ khỏi app cùng lúc với `pm-agent`: phần "đẩy" chạy bằng cách spawn chính `pm-agent` (quyết định B21), nên agent bị gỡ thì tính năng mất chỗ dựa. Phần "kéo trạng thái" qua REST cũng gỡ theo vì không còn mapping issue để kéo về.
+> - **Slack** (`AC-E5-19..27`) — vốn đã out-of-scope từ trước theo B20, chưa từng được implement.
+>
+> Việc tạo issue Backlog từ task file giờ làm thủ công theo `.claude/context/backlog-workflow.md` (file này **vẫn còn** trong kit, cùng MCP server `backlog` mà `techlead-tasks-agent` dùng để tra Category).
+
 > EPIC **E5** của sản phẩm Agent Pipeline Orchestrator. Bối cảnh sản phẩm, data model `.orchestrator/`, non-functional dùng chung → `docs/orchestrator/OVERVIEW.md`. Giả định chưa giải quyết → `docs/orchestrator/ASSUMPTIONS-GAPS.md`.
 >
 > Nguồn: `SPEC-pipeline-orchestrator.md` v0.1 §F5.1–F5.2.

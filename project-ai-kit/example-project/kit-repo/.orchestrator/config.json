@@ -1,7 +1,7 @@
 {
   "agents": {
     "ba-agent": {
-      "model": "opus",
+      "model": "haiku",
       "max_turns": 20,
       "permission": "write-scoped",
       "stale": false,
@@ -9,7 +9,7 @@
       "timeout_minutes": 30
     },
     "backend-agent": {
-      "model": "sonnet",
+      "model": "haiku",
       "max_turns": 20,
       "permission": "full",
       "stale": false,
@@ -17,7 +17,7 @@
       "timeout_minutes": 30
     },
     "design-analyst-agent": {
-      "model": "sonnet",
+      "model": "haiku",
       "max_turns": 20,
       "permission": "write-scoped",
       "stale": false,
@@ -25,7 +25,7 @@
       "timeout_minutes": 30
     },
     "designer-agent": {
-      "model": "sonnet",
+      "model": "haiku",
       "max_turns": 20,
       "permission": "write-scoped",
       "stale": false,
@@ -33,7 +33,7 @@
       "timeout_minutes": 30
     },
     "frontend-agent": {
-      "model": "sonnet",
+      "model": "haiku",
       "max_turns": 20,
       "permission": "full",
       "stale": false,
@@ -41,7 +41,7 @@
       "timeout_minutes": 30
     },
     "init-agent": {
-      "model": "sonnet",
+      "model": "haiku",
       "max_turns": 20,
       "permission": "write-scoped",
       "stale": false,
@@ -49,17 +49,9 @@
       "timeout_minutes": 30
     },
     "mobile-agent": {
-      "model": "sonnet",
+      "model": "haiku",
       "max_turns": 20,
       "permission": "full",
-      "stale": false,
-      "newly_discovered": false,
-      "timeout_minutes": 30
-    },
-    "pm-agent": {
-      "model": "sonnet",
-      "max_turns": 20,
-      "permission": "write-scoped",
       "stale": false,
       "newly_discovered": false,
       "timeout_minutes": 30
@@ -81,7 +73,7 @@
       "timeout_minutes": 30
     },
     "qc-automation-agent": {
-      "model": "sonnet",
+      "model": "haiku",
       "max_turns": 20,
       "permission": "write-scoped",
       "stale": false,
@@ -109,7 +101,8 @@
     "mode": "cli-default"
   },
   "node_nicknames": {
-    "ba": "Núi BA"
+    "ba": "Núi BA",
+    "qc-design": "Hoàng QC"
   },
   "max_retries": 2,
   "figma_mcp_server": "figma-bridge"

@@ -2,7 +2,7 @@
 
 > ## ⚠️ FILE NÀY ĐÃ LẠC HẬU — ảnh chụp ngày 14/08/2026, KHÔNG phải hiện trạng
 >
-> Từ 15/08 đến 18/08/2026 đã build thêm (mỗi mục đều có test + đối chiếu AC):
+> Từ 15/08 đến 25/08/2026 đã build thêm (mỗi mục đều có test + đối chiếu AC):
 >
 > | Đợt | Nội dung | AC liên quan |
 > |---|---|---|
@@ -13,9 +13,11 @@
 > | Phase C | `design-analyst-agent.md` cho kit | B17 |
 > | Phase D-a | Run history + Cost & Reports + CSV, Skip/overwrite-warning, Memory Update Gate mềm | `AC-E6-12..18`, `20`, `24..26`, `28`, `AC-E4-30..32` |
 > | Phase D-b | Crash-resume: trạng thái `interrupted`, Resume/Re-run, phát hiện process mồ côi, log ghi tăng dần | `AC-E6-04..07`, `09`, `10` |
-> | Phase E | Backlog: keychain + kiểm tra kết nối, đẩy issue qua `pm-agent`+MCP, kéo trạng thái qua REST | `AC-E1-19..22`, `AC-E5-01..18` |
+> | Phase E | ~~Backlog: keychain + kiểm tra kết nối, đẩy issue qua `pm-agent`+MCP, kéo trạng thái qua REST~~ — **đã gỡ hẳn 25/08/2026 cùng `pm-agent`, xem B24** | `AC-E5-01..18` (không còn implement) |
+> | Phase F (25/08) | Export design asset: `design-analyst-agent` ghi icon/ảnh vào `design-resources/`, app liệt kê chúng làm artifact của node Design-Analyst (chỉ hiển thị, không đổi điều kiện `done`) | `AC-E2-37a`, `AC-E3-01`, `AC-E3-04a` |
+> | Phase G (25/08) | Gỡ `pm-agent` + `PLAN.md` + toàn bộ tính năng Backlog khỏi kit và app; thêm migration `store::legacy_cleanup` dọn `.orchestrator/` cũ | B24 — `AC-E5-01..18`, `AC-E4-09` không còn implement |
 >
-> **Đã loại khỏi phạm vi có chủ đích** (xem `ASSUMPTIONS-GAPS.md`): worktree `AC-E2-25/26` (B19), Slack `AC-E5-19..27` (B20). Các điểm lệch SPEC có chủ đích của Phase E ghi ở B21.
+> **Đã loại khỏi phạm vi có chủ đích** (xem `ASSUMPTIONS-GAPS.md`): worktree `AC-E2-25/26` (B19), Slack `AC-E5-19..27` (B20), và toàn bộ Backlog `AC-E5-01..18` + `AC-E4-09` (B24 — thay thế B21).
 >
 > Bảng số lượng và toàn bộ nội dung bên dưới **giữ nguyên như bản 14/08** để đối chiếu lịch sử. Cần con số chính xác hôm nay thì phải chạy lại audit 185 AC trên source hiện tại.
 
@@ -102,6 +104,8 @@ Data layer backend đã đúng (`domain/config_file.rs`), chỉ thiếu màn hì
 ### [Đúng roadmap] — MVP3: Design-Analyst + Figma MCP (8 AC)
 
 AC-E2-33 đến AC-E2-40 — 100% chưa đụng, bị chặn bởi B17 (`design-analyst-agent.md` chưa tồn tại trong kit). `inference::stage_rules::infer_design_analyst` chỉ kiểm tra file có tồn tại trên đĩa để hiện Board, không liên quan đến việc thật sự chạy agent này.
+
+> **Cập nhật 25/08/2026 (Phase F):** B17 đã đóng, nhánh này chạy thật. `AC-E2-37a` (export icon/ảnh vào `design-resources/`) đã implement ở cả hai phía: Bước 4 bắt buộc trong `.claude/agents/design-analyst-agent.md`, và `build_slot_prompt` nhắc lại đường dẫn tuyệt đối. `AC-E3-04a` (asset chỉ hiển thị, không phải điều kiện `done`) có test khẳng định trong `inference::stage_rules`.
 
 ### [Đúng roadmap] — MVP4: git worktree
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
-import { FolderOpen } from "lucide-react";
+import { FolderOpen, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +19,8 @@ import {
 import { onAgentLogLine, onAgentRunFinished } from "@/lib/events";
 import { slotDisplayName } from "@/lib/slot-label";
 import { estimateThinkingCostUsd } from "@/lib/pricing";
+import { agentDraftKey, emptyAgentDraft, useAppStore } from "@/state/app-store";
+import { useRunConsoleStore } from "@/state/run-console-store";
 import {
   canRetry,
   computeSkipDependents,
@@ -64,29 +66,35 @@ interface ImportFormProps {
   feature: string;
   primary: boolean;
   onStart: (prompt: string) => void;
+  disabled?: boolean;
 }
 
 /** Folder picker + preview + optional context — the feature is already
  * fixed to whichever step this drawer belongs to, so (unlike the original
- * standalone Import Input screen) there is no separate feature-name field. */
-function ImportForm({ feature, primary, onStart }: ImportFormProps) {
-  const [sourceFolder, setSourceFolder] = useState("");
-  const [context, setContext] = useState("");
+ * standalone Import Input screen) there is no separate feature-name field.
+ *
+ * `sourceFolder`/`context` live in the global store as a draft (keyed by
+ * feature, slot fixed to `"ba"`) instead of local `useState`, so navigating
+ * away (e.g. to Settings) and back does not lose what the user already
+ * typed — only an explicit clear or a successful submit does. */
+function ImportForm({ feature, primary, onStart, disabled = false }: ImportFormProps) {
+  const draft = useAppStore((s) => s.agentDrafts[agentDraftKey(feature, "ba")]) ?? emptyAgentDraft;
+  const setAgentDraft = useAppStore((s) => s.setAgentDraft);
+  const clearAgentDraft = useAppStore((s) => s.clearAgentDraft);
+  const sourceFolder = draft.sourceFolder;
+  const context = draft.context;
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  async function browse() {
-    const selected = await open({ directory: true, multiple: false });
-    if (typeof selected !== "string") return;
-    setSourceFolder(selected);
+  async function runPreview(path: string) {
     setPreview(null);
     setPreviewError(null);
     setPreviewLoading(true);
     try {
-      const result = await commands.previewImport(selected);
+      const result = await commands.previewImport(path);
       setPreview(result);
     } catch (err) {
       setPreviewError(extractErrorMessage(err));
@@ -95,8 +103,31 @@ function ImportForm({ feature, primary, onStart }: ImportFormProps) {
     }
   }
 
+  // Re-derives `preview` (not itself part of the draft — it's data fetched
+  // from `sourceFolder`, not something the user typed) when a draft folder
+  // survives a remount, so a restored `sourceFolder` doesn't leave Run
+  // disabled behind a preview that looks like it was never fetched.
+  useEffect(() => {
+    if (draft.sourceFolder.trim() !== "") {
+      runPreview(draft.sourceFolder);
+    }
+    // Only on mount — `browse()` re-fetches on its own for every later pick.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function browse() {
+    const selected = await open({ directory: true, multiple: false });
+    if (typeof selected !== "string") return;
+    setAgentDraft(feature, "ba", { sourceFolder: selected });
+    await runPreview(selected);
+  }
+
   const canSubmit =
-    sourceFolder.trim() !== "" && preview !== null && preview.included.length > 0 && !submitting;
+    !disabled &&
+    sourceFolder.trim() !== "" &&
+    preview !== null &&
+    preview.included.length > 0 &&
+    !submitting;
 
   async function handleRun() {
     if (!canSubmit) return;
@@ -105,6 +136,7 @@ function ImportForm({ feature, primary, onStart }: ImportFormProps) {
     try {
       const run = await commands.importFolder(sourceFolder, feature);
       onStart(buildBaPrompt(run.copiedPath, run.files, context));
+      clearAgentDraft(feature, "ba");
     } catch (err) {
       setSubmitError(extractErrorMessage(err));
     } finally {
@@ -175,7 +207,7 @@ function ImportForm({ feature, primary, onStart }: ImportFormProps) {
         <textarea
           id={`context-${feature}`}
           value={context}
-          onChange={(e) => setContext(e.target.value)}
+          onChange={(e) => setAgentDraft(feature, "ba", { context: e.target.value })}
           placeholder="Ghi chú thêm cho BA Agent, để trống vẫn chạy được"
           rows={3}
           className="rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
@@ -206,6 +238,8 @@ interface BaStepPanelProps {
   pipelineDef: PipelineDef | null;
   /** The Board renders live output in AgentConsoleDock. */
   showConsole?: boolean;
+  /** Project setup is completed through the external `/init-kit` handoff. */
+  projectReady: boolean;
 }
 
 /**
@@ -228,6 +262,7 @@ export function BaStepPanel({
   nickname,
   nodeState,
   pipelineDef,
+  projectReady,
   showConsole = true,
 }: BaStepPanelProps) {
   const [liveActive, setLiveActive] = useState(false);
@@ -238,11 +273,23 @@ export function BaStepPanel({
   const [answer, setAnswer] = useState("");
   /** See `AgentStepPanel` — one auto-open of the question modal per run. */
   const [questionAutoOpened, setQuestionAutoOpened] = useState(false);
+  const clearAgentDraft = useAppStore((s) => s.clearAgentDraft);
+  const clearConsole = useRunConsoleStore((s) => s.clearConsole);
+  /** Reset button's two-step confirm — only needed while there's something
+   * live to lose (a running process, or a paused session waiting for an
+   * answer). See `handleReset`. */
+  const [confirmReset, setConfirmReset] = useState(false);
+  /** Forces the idle import form regardless of `status` once Reset has run
+   * — cleared again the moment a new run actually starts (`startRun`), so
+   * that run's own status transitions render normally afterward. */
+  const [forceReimport, setForceReimport] = useState(false);
 
   // Switching feature keeps this instance mounted, so the new feature's run
-  // must not inherit a spent auto-open.
+  // must not inherit a spent auto-open (or a spent Reset override).
   useEffect(() => {
     setQuestionAutoOpened(false);
+    setForceReimport(false);
+    setConfirmReset(false);
   }, [feature, agent.id]);
   const [refreshKey, setRefreshKey] = useState(0);
   /** Artifact shown in the read-in-place modal; null = closed. */
@@ -330,6 +377,11 @@ export function BaStepPanel({
   const [retryPrompt, setRetryPrompt] = useState<string | null>(null);
   const [maxRetries, setMaxRetries] = useState(DEFAULT_MAX_RETRIES);
   const status = nodeState?.status ?? "idle";
+  /** What the status-driven branches below actually render — pinned to
+   * `"idle"` after Reset regardless of the real backend `status`, so a
+   * failed/interrupted/waiting-input/done node shows the blank import form
+   * instead of picking back up where it left off. */
+  const effectiveStatus = forceReimport ? "idle" : status;
   useEffect(() => {
     if (status !== "failed" && status !== "interrupted") {
       setAttempt(null);
@@ -408,10 +460,51 @@ export function BaStepPanel({
     setStartError(null);
     setStartedAt(Date.now());
     setNow(Date.now());
+    // This run's own status transitions (waiting-input/failed/done...) must
+    // render normally from here on, not stay pinned to the Reset override.
+    setForceReimport(false);
     commands.startRun(feature, agent.id, prompt).catch((err) => {
       setLiveActive(false);
       setStartError(extractErrorMessage(err));
     });
+  }
+
+  /** Abandons whatever this slot is currently doing and returns to a blank
+   * import form + empty console, ready to start over. Always attempts a
+   * kill first — `killRun` is a safe no-op when nothing is running (see its
+   * own doc comment), so this also covers a run that's live server-side but
+   * that this panel instance's local `liveActive` hasn't caught up to yet
+   * (e.g. right after mount). Two-step confirm only when that would
+   * actually discard something live — a paused run waiting for an answer,
+   * or one still streaming. */
+  async function handleReset() {
+    const needsConfirm = liveActive || status === "waiting-input" || status === "running";
+    if (needsConfirm && !confirmReset) {
+      setConfirmReset(true);
+      return;
+    }
+    setConfirmReset(false);
+    try {
+      await commands.killRun(feature, agent.id);
+    } catch {
+      // Best-effort — the run may have already finished on its own.
+    }
+    setLiveActive(false);
+    setLiveLines([]);
+    setStartError(null);
+    setAnswer("");
+    setQuestionAutoOpened(false);
+    setSessionModel(null);
+    setThinkingTokens(0);
+    setLastSummary(null);
+    setConfirmRetry(false);
+    setConfirmSkip(false);
+    setAttempt(null);
+    setRetryPrompt(null);
+    setShowReimport(false);
+    clearAgentDraft(feature, "ba");
+    clearConsole(feature, agent.id);
+    setForceReimport(true);
   }
 
   // AC-E6-05 — continue the interrupted run in its original session. A
@@ -467,6 +560,15 @@ export function BaStepPanel({
     [sessionModel, thinkingTokens],
   );
 
+  // Same button everywhere Reset is reachable (live view + the normal
+  // panel) — one definition keeps the label/confirm state from drifting.
+  const resetButton = (
+    <Button variant="outline" size="sm" onClick={handleReset}>
+      <RotateCcw />
+      {confirmReset ? "Xác nhận Reset" : "Reset"}
+    </Button>
+  );
+
   if (liveActive && showConsole) {
     return (
       <LiveLogView
@@ -475,12 +577,20 @@ export function BaStepPanel({
         elapsedMs={elapsedMs}
         estimatedCostUsd={estimatedCostUsd}
         onKill={handleKill}
+        extraAction={resetButton}
       />
     );
   }
 
   return (
     <div className="flex flex-col gap-3">
+      <div className="flex justify-end">{resetButton}</div>
+      {confirmReset && effectiveStatus === "waiting-input" && (
+        <p className="text-xs text-warning">
+          Sẽ bỏ câu hỏi đang chờ trả lời và xoá console — nhấn lần nữa để xác nhận.
+        </p>
+      )}
+
       {startError && (
         <Alert variant="destructive">
           <AlertTitle>Không chạy được agent</AlertTitle>
@@ -488,9 +598,11 @@ export function BaStepPanel({
         </Alert>
       )}
 
-      {status === "idle" && <ImportForm feature={feature} primary onStart={startRun} />}
+      {effectiveStatus === "idle" && (
+        <ImportForm feature={feature} primary onStart={startRun} disabled={!projectReady} />
+      )}
 
-      {status === "waiting-input" && (
+      {effectiveStatus === "waiting-input" && (
         <WaitingInputPanel
           question={nodeState?.detail}
           agentLabel={slotDisplayName(agent, nickname)}
@@ -502,7 +614,7 @@ export function BaStepPanel({
         />
       )}
 
-      {status === "failed" && (
+      {effectiveStatus === "failed" && (
         <div className="flex flex-col gap-2 rounded-lg border border-destructive/40 p-3">
           <p className="text-sm text-destructive">
             {nodeState?.detail ?? "Agent kết thúc với lỗi."}
@@ -526,7 +638,7 @@ export function BaStepPanel({
               </Button>
             </>
           ) : (
-            <ImportForm feature={feature} primary onStart={startRun} />
+            <ImportForm feature={feature} primary onStart={startRun} disabled={!projectReady} />
           )}
           {confirmSkip && (
             <p className="text-xs text-warning">
@@ -541,7 +653,7 @@ export function BaStepPanel({
         </div>
       )}
 
-      {status === "interrupted" && (
+      {effectiveStatus === "interrupted" && (
         <div className="flex flex-col gap-2 rounded-lg border border-amber-500/40 p-3">
           {/* AC-E6-04/05 — distinct from failed: the choice here is Resume
               (same session) vs Re-run (from scratch), not Retry. */}
@@ -562,7 +674,12 @@ export function BaStepPanel({
               </Button>
             </>
           ) : (
-            <ImportForm feature={feature} primary={false} onStart={startRun} />
+            <ImportForm
+              feature={feature}
+              primary={false}
+              onStart={startRun}
+              disabled={!projectReady}
+            />
           )}
         </div>
       )}
@@ -576,12 +693,19 @@ export function BaStepPanel({
       />
       <ArtifactModal path={modalArtifact} onClose={() => setModalArtifact(null)} />
 
-      {(status === "done" || status === "done-incomplete") && (
+      {!forceReimport && (status === "done" || status === "done-incomplete") && (
         <div className="flex flex-col gap-2">
           <Button variant="outline" size="sm" onClick={() => setShowReimport((v) => !v)}>
             {showReimport ? "Ẩn form import" : "Chạy lại với input khác"}
           </Button>
-          {showReimport && <ImportForm feature={feature} primary={false} onStart={startRun} />}
+          {showReimport && (
+            <ImportForm
+              feature={feature}
+              primary={false}
+              onStart={startRun}
+              disabled={!projectReady}
+            />
+          )}
         </div>
       )}
 

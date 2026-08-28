@@ -1,6 +1,6 @@
 # project-ai-kit — Template BMAD Agent Kit
 
-> Bộ khung multi-agent AI (BA → Tech Lead → PM → Dev → QC → QA → Designer) theo mô hình BMAD. Pull kit này vào 1 dự án mới, bỏ repo source code vào đúng chỗ, chạy 1 lệnh setup, là có ngay bộ agent/command/skill hoạt động cho toàn bộ vòng đời feature (SPEC → DESIGN → task → implement → QA → deploy).
+> Bộ khung multi-agent AI (BA → Tech Lead → Dev → QC → QA → Designer) theo mô hình BMAD. Pull kit này vào 1 dự án mới, bỏ repo source code vào đúng chỗ, chạy 1 lệnh setup, là có ngay bộ agent/command/skill hoạt động cho toàn bộ vòng đời feature (SPEC → DESIGN → task → implement → QA → deploy).
 
 ---
 
@@ -100,7 +100,7 @@ Kit **không giả định số lượng hay tên repo cố định** — 1 repo
 
 ### Bước 4 — Chạy setup 1 lần: `/init-kit`
 
-Mở Claude Code tại thư mục `<ten-du-an>`, chạy:
+Mở Claude Code tại thư mục chứa `AGENTS.md` và `.claude/` (`agentsRoot`), sau đó nhập trong session:
 
 ```
 /init-kit
@@ -108,10 +108,23 @@ Mở Claude Code tại thư mục `<ten-du-an>`, chạy:
 
 (hoặc nói tự nhiên: "hãy chạy init kit cho dự án này")
 
+`/init-kit` là slash command của Claude Code, không phải command chạy trực tiếp trong terminal. Nếu project được tạo bằng Agent Pipeline Orchestrator, app đã tạo scaffold và hiển thị sẵn handoff:
+
+```bash
+cd "<agentsRoot>"
+claude
+```
+
+Sau khi Claude Code mở, nhập `/init-kit` hoặc dùng tên project làm ngữ cảnh:
+
+```text
+/init-kit Tên dự án: <ten-du-an>
+```
+
 `init-agent` sẽ hỏi ~8 câu — **trả lời dựa trên cấu trúc thư mục đã tạo ở Bước 3**:
 
 1. Tên dự án + mô tả domain nghiệp vụ 1-2 câu
-2. Docs root — path thật tới nơi chứa SPEC/DESIGN/PLAN (ví dụ `<ten-du-an>-docs/docs` nếu dùng Cách A, hoặc `docs` nếu dùng Cách B)
+2. Docs root — path thật tới nơi chứa SPEC/DESIGN/tasks (ví dụ `<ten-du-an>-docs/docs` nếu dùng Cách A, hoặc `docs` nếu dùng Cách B)
 3. Danh sách repo: tên, **đường dẫn tương đối thật** (ví dụ `<ten-du-an>-repository/<backend-repo>`), vai trò (`backend`/`frontend`/`mobile`/`other`), stack (Enter để dùng mặc định kit)
 4. Epic code cho mỗi repo (tự đặt hoặc để agent tự đánh số)
 5. Danh sách actor/persona nghiệp vụ (ai dùng hệ thống, dùng repo nào)
@@ -124,9 +137,11 @@ Mở Claude Code tại thư mục `<ten-du-an>`, chạy:
 
 Mở `AGENTS.md` → xác nhận bảng Ecosystem/Actors đã điền đúng đường dẫn repo thật (Bước 3). Sai chỗ nào thì sửa tay hoặc chạy lại `/init-kit` để bổ sung.
 
+Nếu dùng Orchestrator, quay lại app và bấm **Đã chạy init, kiểm tra lại**. App chỉ cho chạy agent sau khi nhận diện `AGENTS.md` đã được init.
+
 ### Bước 5b — (optional) Setup MkDocs site để duyệt docs
 
-Kit có sẵn template MkDocs để render `<DOCS_ROOT>/features/<feature>/` (SPEC/DESIGN/PLAN/tasks) thành 1 site duyệt được bằng browser — không cần sửa `mkdocs.yml` mỗi khi thêm feature mới (nav tự sinh từ cấu trúc thư mục qua plugin `awesome-pages`).
+Kit có sẵn template MkDocs để render `<DOCS_ROOT>/features/<feature>/` (SPEC/DESIGN/tasks) thành 1 site duyệt được bằng browser — không cần sửa `mkdocs.yml` mỗi khi thêm feature mới (nav tự sinh từ cấu trúc thư mục qua plugin `awesome-pages`).
 
 ```bash
 # Copy 2 file template vào ĐÚNG cấp với docs_dir (thư mục chứa "docs/"):
@@ -153,7 +168,6 @@ mkdocs serve   # mở http://localhost:8000
 /create-ui-design     (Designer)   → Figma frames + URL         ┤ (2b, 2c, 2d)
 /test/analyze-req → /test/plan-tcs → /test/gen-tcs (QC)         ┘  → analysis/plan/test-cases.md per module
 /create-tasks        (Tech Lead)  → tasks/task-*.md
-/create-plan         (PM)         → PLAN.md
 "Hãy là Backend/Frontend/Mobile Developer, implement task: <task-x-y.md>"
 "Hãy là QA, verify task: <task-x-y.md>"
 /test/review-tcs (QC, khi có ≥2 QC review chéo)                 → review_report.md
@@ -162,13 +176,13 @@ mkdocs serve   # mở http://localhost:8000
 ```
 
 
-**Shortcut chạy cả pipeline 1 lệnh (không PM):**
+**Shortcut chạy cả pipeline 1 lệnh:**
 ```
 /create-feature <feature> [mô tả]     # Planning: BA → Design → Tasks, dừng ở gate để review
 /create-feature <feature> build       # Build: Dev → QA → QC, chạy sau khi đã duyệt Planning
 ```
 
-Dùng khi muốn chạy nhanh cả pipeline mà không gõ từng lệnh; PM (`/create-plan`, `/create-backlog`) vẫn chạy riêng khi cần timeline/assignee thật.
+Dùng khi muốn chạy nhanh cả pipeline mà không gõ từng lệnh.
 
 **Sơ đồ pipeline BMAD — từ yêu cầu đến deploy:**
 
@@ -235,21 +249,10 @@ flowchart TB
 
         TASKDOC["📄 tasks/task-*.md"]
 
-        PM["🟦 PM Agent"]
-
-        PLAN["📄 PLAN.md"]
-
-        BACKLOG["📋 Backlog"]
-
         DESIGN --> TASK
         FIGMA --> TASK
 
         TASK --> TASKDOC
-
-        TASKDOC --> PM
-
-        PM --> PLAN
-        PM -. /create-backlog .-> BACKLOG
 
     end
 
@@ -265,8 +268,7 @@ flowchart TB
 
     end
 
-    PLAN --> LOCK
-    BACKLOG -.-> LOCK
+    TASKDOC --> LOCK
 
     %% ===== STAGE 5 =====
 
@@ -358,12 +360,12 @@ flowchart TB
     classDef artifact fill:#F9FAFB,stroke:#6B7280,color:#111827
     classDef gate fill:#FEE2E2,stroke:#DC2626,color:#7F1D1D
 
-    class BA,TLD,TASK,PM ba
+    class BA,TLD,TASK ba
     class BE,FE,MOB dev
     class QCPIPE,QA,MANUAL,AUTO qa
     class DES design
 
-    class SPEC,DESIGN,FIGMA,TC,TASKDOC,PLAN,BACKLOG,CODE,REPORT,BUG,E2E artifact
+    class SPEC,DESIGN,FIGMA,TC,TASKDOC,CODE,REPORT,BUG,E2E artifact
 
     class TRIGGER,LOCK gate
 ```
@@ -387,7 +389,7 @@ project-ai-kit/
     ├── agents/       ← persona (BMAD core + init-agent)
     ├── commands/     ← slash command, thin entry point → agent tương ứng (bao gồm QC pipeline /test/analyze-req → plan-tcs → gen-tcs → review-tcs → export-xlsx)
     ├── skills/       ← technical + process skills, load on-demand (bao gồm rbt_manual_testing, component_checklist, testing_dimensions cho QC pipeline)
-    ├── context/      ← business/technical memory — phần lớn RỖNG, điền dần qua BA/PM/init-agent
+    ├── context/      ← business/technical memory — phần lớn RỖNG, điền dần qua BA/init-agent
     ├── rules/        ← coding-style, security, git-workflow, stack-constraints, SECURITY.md (files cấm đọc), POLICY.md (IP protection), RELIABILITY.md (no guessing)...
     ├── scripts/      ← md_to_xlsx.py — Python script convert TC .md → .xlsx theo template Web/App
     ├── workflows/    ← bmad-plan-phase.js/bmad-build-phase.js (dùng bởi /create-feature) + pipeline reference + db-connect templates

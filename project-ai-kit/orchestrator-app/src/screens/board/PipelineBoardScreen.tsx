@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Activity, CircleCheck, FolderTree, Upload } from "lucide-react";
+import { Activity, CircleCheck, FolderTree, Terminal } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import {
   commands,
   isAppCommandError,
@@ -25,6 +26,7 @@ import { FolderExplorerSidebar } from "@/screens/board/FolderExplorerSidebar";
 import { PipelineTree, type TreeSelection } from "@/screens/board/PipelineTree";
 import { ActionPanel } from "@/screens/board/ActionPanel";
 import { AgentConsoleDock } from "@/screens/board/AgentConsoleDock";
+import { ProjectInitHandoff } from "@/screens/launcher/ProjectInitHandoff";
 
 function extractErrorMessage(err: unknown): string {
   if (isAppCommandError(err)) return err.message;
@@ -35,15 +37,21 @@ function extractErrorMessage(err: unknown): string {
 export function PipelineBoardScreen() {
   const activeFeature = useAppStore((s) => s.activeFeature);
   const projectLabel = useAppStore((s) => s.projectLabel);
+  const projectInitStatus = useAppStore((s) => s.projectInitStatus);
+  const projectInitReasons = useAppStore((s) => s.projectInitReasons);
+  const projectAgentsRoot = useAppStore((s) => s.projectAgentsRoot);
   const setActiveFeature = useAppStore((s) => s.setActiveFeature);
-  const setScreen = useAppStore((s) => s.setScreen);
-  const [backlogPushable, setBacklogPushable] = useState(false);
+  const setProjectLabel = useAppStore((s) => s.setProjectLabel);
+  const setProjectInit = useAppStore((s) => s.setProjectInit);
   /** Feature awaiting delete confirmation — `null` means the dialog is closed. */
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
-  /** Toggled by the floating bottom-left button — resets to closed on every
-   * remount (leaving the Board and coming back), same as every other
-   * screen's local UI state in this app. */
-  const [explorerOpen, setExplorerOpen] = useState(false);
+  /** Toggled by the floating bottom-left button. Lives in the global store
+   * (not a local `useState`) so it stays open across leaving the Board and
+   * coming back — it should only close on an explicit user click. */
+  const explorerOpen = useAppStore((s) => s.explorerOpen);
+  const setExplorerOpen = useAppStore((s) => s.setExplorerOpen);
+  const consoleOpen = useAppStore((s) => s.consoleOpen);
+  const setConsoleOpen = useAppStore((s) => s.setConsoleOpen);
   /** B22 — which slots may be run right now, keyed by slot id. */
   const [readiness, setReadiness] = useState<Record<string, SlotReadiness>>({});
 
@@ -55,6 +63,7 @@ export function PipelineBoardScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [watchWarning, setWatchWarning] = useState<string | null>(null);
   const [selection, setSelection] = useState<TreeSelection | null>(null);
+  const [refreshingInit, setRefreshingInit] = useState(false);
 
   /** B22 — readiness is derived from the same state, so it has to be
    * refetched whenever that state moves: finishing a run is exactly what
@@ -141,26 +150,6 @@ export function PipelineBoardScreen() {
     window.addEventListener("focus", refetchFeatures);
     return () => window.removeEventListener("focus", refetchFeatures);
   }, []);
-
-  // AC-E5-01 — a feature with no task files has nothing to push.
-  useEffect(() => {
-    if (!activeFeature) {
-      setBacklogPushable(false);
-      return;
-    }
-    let cancelled = false;
-    commands
-      .getBacklogPushView(activeFeature)
-      .then((view) => {
-        if (!cancelled) setBacklogPushable(view.tasks.length > 0);
-      })
-      .catch(() => {
-        if (!cancelled) setBacklogPushable(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [activeFeature]);
 
   async function handleResolveOrphan(orphan: OrphanInfo, action: "attach" | "kill") {
     const orphanKey = `${orphan.feature}/${orphan.slot}`;
@@ -336,6 +325,21 @@ export function PipelineBoardScreen() {
     [projectConfig],
   );
 
+  async function refreshProjectInit() {
+    setRefreshingInit(true);
+    setErrorMessage(null);
+    try {
+      const result = await commands.refreshProject();
+      setProjectLabel(result.label);
+      setProjectInit(result.initStatus, result.initReasons, result.paths.agentsRoot);
+      if (activeFeature) refreshReadiness(activeFeature);
+    } catch (err) {
+      setErrorMessage(extractErrorMessage(err));
+    } finally {
+      setRefreshingInit(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex h-full">
@@ -395,21 +399,38 @@ export function PipelineBoardScreen() {
     </>
   );
 
+  const initHandoff =
+    projectInitStatus && projectAgentsRoot && projectInitStatus !== "ready" ? (
+      <div className="p-4 pb-0">
+        <ProjectInitHandoff
+          projectName={projectLabel ?? "Project"}
+          agentsRoot={projectAgentsRoot}
+          status={projectInitStatus}
+          reasons={projectInitReasons}
+          refreshing={refreshingInit}
+          onRefresh={() => void refreshProjectInit()}
+        />
+      </div>
+    ) : null;
+
   if (!pipelineDef || !activeFeature) {
     return (
       <div className="flex h-full">
         {sidebar}
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
-          <FolderTree className="size-10 text-muted-foreground/40" aria-hidden="true" />
-          {features.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Chưa có feature nào trong DOCS_ROOT/features/ — bấm + ở cột Workflow để tạo feature đầu tiên.
-            </p>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Chọn một feature ở cột Workflow để xem pipeline.
-            </p>
-          )}
+        <div className="flex flex-1 flex-col gap-3 p-6 text-center">
+          {initHandoff}
+          <div className="flex flex-1 flex-col items-center justify-center gap-3">
+            <FolderTree className="size-10 text-muted-foreground/40" aria-hidden="true" />
+            {features.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Chưa có feature nào trong DOCS_ROOT/features/ — bấm + ở cột Workflow để tạo feature đầu tiên.
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Chọn một feature ở cột Workflow để xem pipeline.
+              </p>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -440,24 +461,6 @@ export function PipelineBoardScreen() {
               </p>
             </div>
           </div>
-          {/* AC-E5-01 — disabled with an explanation until the feature has
-              task files to push. Credentials are NOT a precondition here: the
-              push runs through the project's Backlog MCP server, not the
-              app's own API key (see B21 in ASSUMPTIONS-GAPS.md). */}
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!backlogPushable}
-            title={
-              backlogPushable
-                ? "Đẩy task lên Backlog qua pm-agent"
-                : "Feature này chưa có file tasks/task-*.md để đẩy"
-            }
-            onClick={() => setScreen("backlog")}
-          >
-            <Upload />
-            Push to Backlog
-          </Button>
         </div>
     
         {watchWarning && (
@@ -468,6 +471,8 @@ export function PipelineBoardScreen() {
             </Alert>
           </div>
         )}
+
+        {initHandoff}
     
         {orphans.length > 0 && (
           <div className="p-4 pb-0">
@@ -526,7 +531,7 @@ export function PipelineBoardScreen() {
             />
           </div>
           <div className="flex h-[70vh] max-h-[70vh] w-full shrink-0 min-h-0 flex-col overflow-hidden border-t border-border lg:h-auto lg:max-h-none lg:w-1/3 lg:min-w-80 lg:border-l lg:border-t-0">
-            <div className="min-h-0 flex-[0_0_42%] overflow-hidden border-b border-border">
+            <div className="min-h-0 flex-1 overflow-hidden">
               <ActionPanel
                 feature={activeFeature}
                 selection={selection}
@@ -534,21 +539,35 @@ export function PipelineBoardScreen() {
                 pipelineDef={pipelineDef}
                 nodeNicknames={projectConfig?.node_nicknames ?? {}}
                 readiness={readiness}
+                projectReady={projectInitStatus === "ready"}
                 onRecheckReadiness={() => activeFeature && refreshReadiness(activeFeature)}
-              />
-            </div>
-            <div className="min-h-0 flex-1 overflow-hidden">
-              <AgentConsoleDock
-                feature={activeFeature}
-                pipelineDef={pipelineDef}
-                featureState={featureState}
-                nodeNicknames={projectConfig?.node_nicknames ?? {}}
-                onSelectNode={setSelection}
               />
             </div>
           </div>
         </div>
       </div>
+
+      <Button
+        variant="secondary"
+        size="icon"
+        className="fixed bottom-4 right-4 z-40 rounded-full shadow-md"
+        onClick={() => setConsoleOpen((open) => !open)}
+        aria-label={consoleOpen ? "Đóng terminal agent" : "Mở terminal agent"}
+        title="Agent terminals"
+      >
+        <Terminal />
+      </Button>
+      <Sheet open={consoleOpen} onOpenChange={setConsoleOpen}>
+        <SheetContent side="bottom" className="h-[70vh]">
+          <AgentConsoleDock
+            feature={activeFeature}
+            pipelineDef={pipelineDef}
+            featureState={featureState}
+            nodeNicknames={projectConfig?.node_nicknames ?? {}}
+            onSelectNode={setSelection}
+          />
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

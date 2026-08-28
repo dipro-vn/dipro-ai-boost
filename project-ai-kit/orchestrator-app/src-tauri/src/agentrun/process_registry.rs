@@ -23,8 +23,34 @@ pub struct ProcessRegistry {
 }
 
 impl ProcessRegistry {
-    pub fn insert(&self, key: RunKey, child: Arc<Mutex<Child>>) {
+    /// Inserts only if `*admission == expected_epoch` at the moment this
+    /// runs, checked and inserted under the same `admission` lock so the
+    /// two steps are indivisible from the outside. Returns `false` (does
+    /// NOT insert) when the epoch has moved on — the caller is left holding
+    /// the child it just spawned and must kill it itself; this method never
+    /// kills anything, it only decides whether the process gets tracked.
+    ///
+    /// `AppState::close` bumps the same `admission` mutex right before
+    /// calling `kill_all`, without holding it across `kill_all`. That's
+    /// still race-free: `close`'s bump and this method's check+insert both
+    /// lock `admission`, so one strictly precedes the other. If this
+    /// method's check+insert happens first, the entry exists before the
+    /// bump and `kill_all` (called right after) still finds and kills it.
+    /// If the bump happens first, this method observes the new epoch and
+    /// refuses — no spawn can land in the registry after `close` returns.
+    pub fn insert_if_current(
+        &self,
+        admission: &Mutex<u64>,
+        expected_epoch: u64,
+        key: RunKey,
+        child: Arc<Mutex<Child>>,
+    ) -> bool {
+        let guard = admission.lock().unwrap();
+        if *guard != expected_epoch {
+            return false;
+        }
         self.inner.lock().unwrap().insert(key, child);
+        true
     }
 
     pub fn remove(&self, key: &RunKey) {
@@ -72,31 +98,34 @@ impl ProcessRegistry {
     }
 }
 
+/// A plain, portable long-running OS process — process-registry mechanics
+/// (and `AppState::close`'s race tests) don't need the real `claude` CLI to
+/// verify. `sleep` isn't available on Windows and `timeout.exe` refuses to
+/// run without a console handle when stdin is redirected (as it is under
+/// CI), so `ping` is used on both platforms instead — it has neither
+/// problem.
+#[cfg(test)]
+pub(crate) fn spawn_sleeper() -> Child {
+    use std::process::{Command, Stdio};
+
+    #[cfg(target_os = "windows")]
+    let mut cmd = {
+        let mut c = Command::new("ping");
+        c.args(["-n", "30", "127.0.0.1"]);
+        c
+    };
+    #[cfg(not(target_os = "windows"))]
+    let mut cmd = {
+        let mut c = Command::new("ping");
+        c.args(["-c", "30", "127.0.0.1"]);
+        c
+    };
+    cmd.stdout(Stdio::null()).spawn().unwrap()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::process::{Command, Stdio};
-
-    /// A plain, portable long-running OS process — process-registry
-    /// mechanics don't need the real `claude` CLI to verify. `sleep` isn't
-    /// available on Windows and `timeout.exe` refuses to run without a
-    /// console handle when stdin is redirected (as it is under CI), so
-    /// `ping` is used on both platforms instead — it has neither problem.
-    fn spawn_sleeper() -> Child {
-        #[cfg(target_os = "windows")]
-        let mut cmd = {
-            let mut c = Command::new("ping");
-            c.args(["-n", "30", "127.0.0.1"]);
-            c
-        };
-        #[cfg(not(target_os = "windows"))]
-        let mut cmd = {
-            let mut c = Command::new("ping");
-            c.args(["-c", "30", "127.0.0.1"]);
-            c
-        };
-        cmd.stdout(Stdio::null()).spawn().unwrap()
-    }
 
     #[test]
     fn kill_terminates_the_tracked_process_and_removes_it() {
@@ -106,7 +135,8 @@ mod tests {
             slot: "ba".to_string(),
         };
         let child = Arc::new(Mutex::new(spawn_sleeper()));
-        registry.insert(key.clone(), child.clone());
+        let admission = Mutex::new(0u64);
+        assert!(registry.insert_if_current(&admission, 0, key.clone(), child.clone()));
 
         let killed = registry.kill(&key).unwrap();
         assert!(killed);
@@ -147,8 +177,14 @@ mod tests {
                 slot: "qc-design".to_string(),
             },
         ];
+        let admission = Mutex::new(0u64);
         for key in &keys {
-            registry.insert(key.clone(), Arc::new(Mutex::new(spawn_sleeper())));
+            assert!(registry.insert_if_current(
+                &admission,
+                0,
+                key.clone(),
+                Arc::new(Mutex::new(spawn_sleeper()))
+            ));
         }
 
         let mut listed = registry.keys();
@@ -157,5 +193,45 @@ mod tests {
 
         assert_eq!(registry.kill_all(), 2);
         assert!(registry.keys().is_empty(), "kill_all must untrack too");
+    }
+
+    #[test]
+    fn insert_if_current_registers_when_epoch_matches() {
+        let registry = ProcessRegistry::default();
+        let admission = Mutex::new(0u64);
+        let key = RunKey {
+            feature: "f1".to_string(),
+            slot: "ba".to_string(),
+        };
+        let child = Arc::new(Mutex::new(spawn_sleeper()));
+
+        let registered = registry.insert_if_current(&admission, 0, key.clone(), child.clone());
+
+        assert!(registered);
+        assert!(registry.get(&key).is_some());
+        registry.kill(&key).unwrap();
+    }
+
+    #[test]
+    fn insert_if_current_refuses_and_leaves_registry_empty_when_epoch_is_stale() {
+        let registry = ProcessRegistry::default();
+        // Simulates `AppState::close` having bumped `spawn_admission` after
+        // this spawn's caller captured epoch 0 — the epoch a spawn checks
+        // against is now stale.
+        let admission = Mutex::new(1u64);
+        let key = RunKey {
+            feature: "f1".to_string(),
+            slot: "ba".to_string(),
+        };
+        let child = Arc::new(Mutex::new(spawn_sleeper()));
+
+        let registered = registry.insert_if_current(&admission, 0, key.clone(), child.clone());
+
+        assert!(!registered);
+        assert!(registry.get(&key).is_none());
+        // A refusal never inserts, so the caller (not the registry) owns
+        // cleaning up the child it already spawned — mirrors what
+        // `runner::run_and_stream` does on `AbortedProjectClosed`.
+        child.lock().unwrap().kill().unwrap();
     }
 }

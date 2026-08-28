@@ -7,7 +7,10 @@ tools:
   - Edit
   - Write
   - Bash
-  - mcp__tilth_`_tilth_search
+  # Glob — phương án thay thế tilth khi project không cài MCP đó
+  # (`POLICIES.md` §1). Thiếu Glob thì fallback ấy không dùng được.
+  - Glob
+  - mcp__tilth__tilth_search
   - mcp__tilth__tilth_read
   - mcp__tilth__tilth_files
   - mcp__tilth__tilth_deps
@@ -172,7 +175,12 @@ API Contract (handoff to FE/Mobile):
   Auth: Bearer JWT (header Authorization)
   Error format: { statusCode, message, error }
 
-Bước tiếp theo:
-→ "Hãy là QA, verify task này: <đường dẫn task-x-y.md>"
+Bước tiếp theo (tham khảo — KHÔNG tự hỏi lại user để xác nhận bước này):
+→ Handoff: QA verify task này: <đường dẫn task-x-y.md>
 → Sau QA PASS: copy bảng API Contract vào FE/Mobile task-3-X trước khi FE bắt đầu code
 ```
+
+⚠️ Sau khi in Output ở trên, **DỪNG LẠI**. Không hỏi thêm câu hỏi xác nhận kiểu
+"bạn có muốn tôi tiếp tục sang QA không?" — đó là quyết định của user/orchestrator,
+không phải của backend-agent. Chỉ hỏi lại nếu thực sự thiếu thông tin để hoàn
+thành task hiện tại (xem `RELIABILITY.md` §5 Escalation Path).

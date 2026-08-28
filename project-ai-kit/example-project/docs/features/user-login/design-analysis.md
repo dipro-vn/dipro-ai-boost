@@ -62,3 +62,14 @@ Không thấy trạng thái empty/loading/error/khoá tài khoản trong file �
 
 - **Cho Tech Lead Tasks**: (1) Xác nhận với BA/PO trước khi chia task FE xem ô "Mã đăng nhập" có phải field email hay không — ảnh hưởng trực tiếp đến binding form/validation AC-01, AC-02. (2) Task FE cho `WB_AUTH_002`/`WB_AUTH_003` chưa có design để ước lượng — cần yêu cầu Designer bổ sung frame trước khi giao task. (3) Đánh giá hiệu năng hiệu ứng glass-card trên tablet cũ trước khi cam kết pixel-perfect. (4) Task cần bao gồm việc xây các trạng thái UI còn thiếu (error inline, banner, loading, khoá tài khoản) vì design hiện chỉ có 1 trạng thái mặc định.
 - **Cho PM**: Khối lượng phát sinh — cần Designer bổ sung ít nhất 2 frame còn thiếu (`WB_AUTH_002`, `WB_AUTH_003`) và các trạng thái lỗi/loading/khoá cho `WB_AUTH_001` trước khi Dev có thể bắt đầu đầy đủ. Rủi ro: nút "Đăng ký hợp đồng mới" xuất hiện ngoài scope SPEC — nếu giữ lại cần làm rõ phạm vi (có thể phát sinh thêm work ngoài Out of Scope #8). Field "Mã đăng nhập" mâu thuẫn tiềm ẩn với BR-01 cần chốt sớm để không ảnh hưởng timeline 15/09.
+
+## 6. Assets đã export
+
+Thư mục: `design-resources/`
+
+| File | Loại | Node Figma |
+|---|---|---|
+| — | — | — |
+
+- Đã bỏ qua: không có
+- Không export được: fixture này được tạo trước khi Bước 4 (export asset) tồn tại trong `design-analyst-agent` — chạy lại nhánh Design-Analyst để sinh `design-resources/`.

@@ -41,8 +41,8 @@ interface ContractLockPanelProps {
  */
 export function ContractLockPanel({ feature, contractLockState }: ContractLockPanelProps) {
   const status = contractLockState?.status ?? "not-ready";
+  const checkedDesignMdPaths = contractLockState?.checkedDesignMdPaths ?? [];
   const missingColumns = contractLockState?.missingColumns ?? [];
-  const planMdMissing = contractLockState?.planMdMissing ?? false;
   const applicableRoles = contractLockState?.applicableRoles ?? [];
   const candidateFiles = contractLockState?.candidateFiles ?? [];
   const violatedFiles = contractLockState?.violatedFiles ?? [];
@@ -56,6 +56,13 @@ export function ContractLockPanel({ feature, contractLockState }: ContractLockPa
   const [approverName, setApproverName] = useState("");
   const [locking, setLocking] = useState(false);
   const [lockError, setLockError] = useState<string | null>(null);
+
+  // AC-E4-11b — the manual escape hatch out of `not-ready`.
+  const [skipperName, setSkipperName] = useState("");
+  const [skipReason, setSkipReason] = useState("");
+  const [confirmSkip, setConfirmSkip] = useState(false);
+  const [skipping, setSkipping] = useState(false);
+  const [skipError, setSkipError] = useState<string | null>(null);
 
   const [showHistory, setShowHistory] = useState(false);
   const [history, setHistory] = useState<ContractLockRecord[] | null>(null);
@@ -143,6 +150,38 @@ export function ContractLockPanel({ feature, contractLockState }: ContractLockPa
     }
   }
 
+  /** Xác nhận 2 bước, giống Skip của một slot: bỏ qua gate này là đi vòng
+   * qua một chốt an toàn, không nên chỉ mất một cú click. */
+  async function handleSkip() {
+    if (!skipperName.trim() || !skipReason.trim()) return;
+    if (!confirmSkip) {
+      setConfirmSkip(true);
+      return;
+    }
+    setConfirmSkip(false);
+    setSkipping(true);
+    setSkipError(null);
+    try {
+      await commands.skipContractLock(feature, skipperName.trim(), skipReason.trim());
+    } catch (err) {
+      setSkipError(extractErrorMessage(err));
+    } finally {
+      setSkipping(false);
+    }
+  }
+
+  async function handleUnskip() {
+    setSkipping(true);
+    setSkipError(null);
+    try {
+      await commands.unskipContractLock(feature);
+    } catch (err) {
+      setSkipError(extractErrorMessage(err));
+    } finally {
+      setSkipping(false);
+    }
+  }
+
   /** Shared by `pending-review` (Lock) and `violated` (Re-lock, AC-E4-27) —
    * identical role-confirmation + approver-name form either way. */
   function renderRoleAndApproverForm(buttonLabel: string) {
@@ -196,6 +235,16 @@ export function ContractLockPanel({ feature, contractLockState }: ContractLockPa
               {locking ? "Đang khoá..." : buttonLabel}
             </Button>
           </div>
+          {/* AC-E4-13a — name exactly who's missing instead of leaving the
+              button silently disabled. */}
+          {!allApplicableConfirmed && (
+            <p className="text-xs text-warning">
+              Cần xác nhận thêm: {applicableRoles.filter((role) => !confirmedRoles.has(role)).join(", ")}
+            </p>
+          )}
+          {allApplicableConfirmed && approverName.trim().length === 0 && (
+            <p className="text-xs text-warning">Cần nhập tên người duyệt.</p>
+          )}
           {lockError && (
             <Alert variant="destructive">
               <AlertTitle>Không khoá được</AlertTitle>
@@ -238,11 +287,66 @@ export function ContractLockPanel({ feature, contractLockState }: ContractLockPa
           Chưa tìm thấy bảng "API Definition" trong <code>DESIGN.md</code> nào của feature này —
           Contract Lock chưa mở được.
         </p>
-        {planMdMissing && (
-          <p className="text-xs text-muted-foreground">
-            (Lưu ý: <code>PLAN.md</code> cũng chưa tồn tại — không chặn gate, chỉ là cảnh báo.)
-          </p>
+        {checkedDesignMdPaths.length > 0 && (
+          <div className="flex flex-col gap-1">
+            <p className="text-xs font-medium text-muted-foreground">
+              Đã kiểm tra các file sau, không file nào có bảng API Definition:
+            </p>
+            <ul className="flex flex-col gap-0.5">
+              {checkedDesignMdPaths.map((path) => (
+                <li key={path} className="font-mono text-xs text-muted-foreground">
+                  {path}
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
+        <p className="text-xs text-muted-foreground">
+          Cách pass: yêu cầu <code>techlead-design-agent</code> bổ sung bảng "## 3. API
+          Definition" vào {checkedDesignMdPaths.length > 0 ? "các file trên" : "DESIGN.md tương ứng"}.
+        </p>
+
+        <Separator />
+
+        {/* AC-E4-11b — lối thoát cho feature thật sự không thêm endpoint
+            nào. Đặt dưới hướng dẫn ở trên, không thay thế nó: bổ sung bảng
+            vẫn là cách xử lý mặc định, đây là ngoại lệ có ghi lý do. */}
+        <div className="flex flex-col gap-2">
+          <p className="text-xs font-medium text-muted-foreground">
+            Feature này không thêm endpoint nào nên không cần Contract Lock? Bỏ qua gate và ghi
+            lại lý do:
+          </p>
+          <Input
+            value={skipperName}
+            onChange={(e) => {
+              setSkipperName(e.target.value);
+              setConfirmSkip(false);
+            }}
+            placeholder="Tên người bỏ qua"
+          />
+          <Input
+            value={skipReason}
+            onChange={(e) => {
+              setSkipReason(e.target.value);
+              setConfirmSkip(false);
+            }}
+            placeholder="Lý do bỏ qua (bắt buộc)"
+          />
+          {confirmSkip && (
+            <p className="text-xs text-warning">
+              Bỏ qua Contract Lock nghĩa là stage ⑤ trở đi chạy mà không có contract nào được
+              khoá. Nhấn lần nữa để xác nhận.
+            </p>
+          )}
+          {skipError && <p className="text-xs text-destructive">{skipError}</p>}
+          <Button
+            variant="outline"
+            disabled={!skipperName.trim() || !skipReason.trim() || skipping}
+            onClick={handleSkip}
+          >
+            {confirmSkip ? "Xác nhận bỏ qua" : "Bỏ qua Contract Lock"}
+          </Button>
+        </div>
       </div>
     );
   }
@@ -252,6 +356,22 @@ export function ContractLockPanel({ feature, contractLockState }: ContractLockPa
       <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
         <Badge variant="secondary">Không áp dụng</Badge>
         <p className="text-sm text-muted-foreground">{contractLockState?.notApplicableReason}</p>
+        {/* Chỉ bản bỏ qua thủ công mới gỡ lại được — trạng thái suy ra từ
+            scope của feature thì không có gì để gỡ. */}
+        {contractLockState?.manuallySkipped && (
+          <>
+            {skipError && <p className="text-xs text-destructive">{skipError}</p>}
+            <Button
+              variant="outline"
+              size="sm"
+              className="self-start"
+              disabled={skipping}
+              onClick={handleUnskip}
+            >
+              Bỏ đánh dấu
+            </Button>
+          </>
+        )}
       </div>
     );
   }
@@ -433,13 +553,10 @@ export function ContractLockPanel({ feature, contractLockState }: ContractLockPa
       {missingColumns.length > 0 && (
         <Alert variant="destructive">
           <AlertTitle>Bảng API Definition thiếu cột</AlertTitle>
-          <AlertDescription>{missingColumns.join(", ")}</AlertDescription>
-        </Alert>
-      )}
-      {planMdMissing && (
-        <Alert>
-          <AlertTitle>Chưa có PLAN.md</AlertTitle>
-          <AlertDescription>Không chặn gate — chỉ là cảnh báo.</AlertDescription>
+          <AlertDescription>
+            {missingColumns.join(", ")} — bổ sung các cột này vào bảng API Definition trong{" "}
+            <code>DESIGN.md</code> tương ứng.
+          </AlertDescription>
         </Alert>
       )}
       {loadError && (

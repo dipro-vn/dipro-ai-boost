@@ -17,7 +17,7 @@ use crate::domain::config_file::{self, AgentConfig, ProjectConfig};
 use crate::domain::contract_lock::{ContractLockRecord, ContractLockStatus, LockedFile};
 use crate::domain::gate_state::{GateState, GateStatus};
 use crate::domain::pipeline_def::{gate, slot, AgentSlot};
-use crate::domain::project::{EcosystemRepo, ProjectPaths};
+use crate::domain::project::{EcosystemRepo, ProjectInitStatus, ProjectPaths};
 use crate::domain::run_summary::{RunOutcome, RunSummary};
 use crate::domain::state_file::StateFile;
 use crate::error::{AppError, AppResult};
@@ -45,6 +45,46 @@ fn current_project(state: &State<AppState>) -> AppResult<ProjectPaths> {
         .unwrap()
         .clone()
         .ok_or(AppError::NoProjectOpen)
+}
+
+/// Reserves `(feature, slot)` in `pending_spawns` for the run's whole
+/// duration and returns the `spawn_admission` epoch to capture *now*, in
+/// the synchronous command handler — before this run's background thread
+/// starts any pre-spawn I/O — and pass through to `run_to_completion`
+/// unchanged (see that function's `spawn_epoch` doc comment for why it must
+/// not be re-read later).
+///
+/// `HashSet::insert`'s return value makes the "already reserved?" check and
+/// the reservation itself one atomic step under `pending_spawns`'s lock —
+/// this is the double-click guard `PendingSpawnGuard`'s doc comment already
+/// described (a second Run click while pre-spawn work is still in flight
+/// must not start a second process for the same slot); nothing previously
+/// called `.insert()`, so that guard was dead code until now.
+fn reserve_spawn(state: &State<AppState>, key: RunKey) -> AppResult<u64> {
+    if !state.pending_spawns.lock().unwrap().insert(key) {
+        return Err(AppError::Invalid {
+            message: "Slot này đang chạy hoặc vừa được yêu cầu chạy".to_string(),
+        });
+    }
+    Ok(*state.spawn_admission.lock().unwrap())
+}
+
+pub(crate) fn ensure_project_ready(agents_root: &Path) -> AppResult<()> {
+    let (status, reasons) = agents_reader::read_init_status(agents_root);
+    if status == ProjectInitStatus::Ready {
+        return Ok(());
+    }
+
+    let detail = if reasons.is_empty() {
+        "chưa hoàn tất init kit".to_string()
+    } else {
+        reasons.join(", ")
+    };
+    Err(AppError::Invalid {
+        message: format!(
+            "Project chưa sẵn sàng chạy agent ({detail}). Chạy /init-kit trong Claude Code tại agentsRoot rồi kiểm tra lại."
+        ),
+    })
 }
 
 /// Falls back to the kit's own defaults (`config_file::default_model_for`/
@@ -116,6 +156,21 @@ fn figma_mcp_available(agents_root: &Path) -> bool {
         .unwrap_or(false)
 }
 
+/// The one place the "app couldn't read your Vai trò cell" wording lives on
+/// the Rust side, so the pre-spawn guard and `run_slot` can't drift apart.
+/// Quotes each offending row back verbatim — the fix is a one-line edit in
+/// `AGENTS.md`, but only if the user is told which line.
+fn unreadable_role_message(role: &str, entries: &[readiness::UnreadableRole]) -> String {
+    let listed = entries
+        .iter()
+        .map(|entry| format!("\"{}\" (vai trò: \"{}\")", entry.repo_name, entry.declared_role))
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!(
+        "AGENTS.md không khai repo nào vai trò \"{role}\" đọc được. Ô \"Vai trò\" của {listed}          không đọc ra được backend/frontend/mobile — sửa ô đó thành đúng một từ trong bảng Ecosystem."
+    )
+}
+
 /// AC-E4-23 — reads the real lock-record directory directly (same
 /// principle as `pipeline_state::compute_and_persist`'s own contract-lock
 /// read: never trust a cache, `read_latest_lock` IS the source of truth),
@@ -129,8 +184,13 @@ fn contract_is_violated(
 ) -> bool {
     let dir = orchestrator_dir::contract_lock_dir(agents_root, feature);
     let previous_lock = crate::store::contract_lock::read_latest_lock(&dir);
-    let state =
-        contract_lock_rules::infer_contract_lock_state(feature_dir, ecosystem, previous_lock);
+    let skip = crate::store::contract_lock::read_skip(&dir);
+    let state = contract_lock_rules::infer_contract_lock_state(
+        feature_dir,
+        ecosystem,
+        previous_lock,
+        skip,
+    );
     state.status == crate::domain::contract_lock::ContractLockStatus::Violated
 }
 
@@ -277,6 +337,7 @@ impl Drop for PendingSpawnGuard {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn run_to_completion(
     app: AppHandle,
     agents_root: PathBuf,
@@ -285,6 +346,11 @@ fn run_to_completion(
     slot: String,
     prompt: String,
     resume_session_id: Option<String>,
+    // Captured synchronously by the caller (before this thread started, and
+    // before any pre-spawn I/O) — must NOT be re-read from `AppState` in
+    // here, or a close-then-reopen-a-different-project sequence in between
+    // would make this run see the new project's epoch and wrongly proceed.
+    spawn_epoch: u64,
 ) {
     let _pending_guard = PendingSpawnGuard {
         app: app.clone(),
@@ -293,6 +359,18 @@ fn run_to_completion(
             slot: slot.clone(),
         },
     };
+    if let Err(err) = ensure_project_ready(&agents_root) {
+        record_pre_spawn_outcome(
+            &app,
+            &agents_root,
+            &feature,
+            &slot,
+            RunOutcome::Blocked,
+            err.to_string(),
+        );
+        recompute_and_emit(&app, &agents_root, &docs_root, &feature);
+        return;
+    }
     let agent_name = resolve_agent_name(&agents_root, &slot);
     let config = load_agent_config(&agents_root, &agent_name);
     let resolved_auth = match auth::resolve_for_spawn(&agents_root) {
@@ -348,6 +426,18 @@ fn run_to_completion(
             recompute_and_emit(&app, &agents_root, &docs_root, &feature);
             return;
         }
+        RepoReadiness::RoleUnreadable { entries } => {
+            record_pre_spawn_outcome(
+                &app,
+                &agents_root,
+                &feature,
+                &slot,
+                RunOutcome::Blocked,
+                unreadable_role_message(slot_repo_role(&slot).unwrap_or(&slot), &entries),
+            );
+            recompute_and_emit(&app, &agents_root, &docs_root, &feature);
+            return;
+        }
         RepoReadiness::Ready => {}
     }
 
@@ -395,14 +485,37 @@ fn run_to_completion(
     let (tx, rx) = std::sync::mpsc::channel();
     let forwarder = runner::spawn_event_forwarder(app.clone(), feature.clone(), slot.clone(), rx);
 
+    // AC-E2-23's Import Input copies the user's chosen folder into
+    // `.orchestrator/inputs/<run-id>/` under `agentsRoot` — NOT under
+    // `feature_dir` (cwd, under `docsRoot`; see A1: the roots can be three
+    // unrelated directories). Without granting this directory too, `ba-agent`
+    // (or any future slot that reads user-supplied files this way) hits
+    // Claude Code's own path-based permission check reading an absolute path
+    // outside both `cwd` and every `--add-dir` — which, with no TTY to answer
+    // it, is the "agent asks for permission to read the file" the user hit.
+    // Best-effort create: `inputs_dir` is deliberately NOT part of
+    // `ensure_skeleton` (only comes to exist once something is imported), so
+    // a project that has never imported anything yet would otherwise hand
+    // the CLI a `--add-dir` for a directory that isn't there.
+    let _ = std::fs::create_dir_all(orchestrator_dir::inputs_dir(&agents_root));
+    let extra_add_dirs = vec![orchestrator_dir::inputs_dir(&agents_root)];
+
+    // The kit's hooks (H01/H03/H05) live in `<agentsRoot>/.claude/settings.json`,
+    // but cwd below is the feature dir under `docsRoot` — a directory that need
+    // not sit under `agentsRoot` at all (A1). Name the file so the hooks apply
+    // regardless of how the three roots are arranged. Absent file: skip, a
+    // project that hasn't scaffolded the kit still has to run.
+    let settings_path = agents_root.join(".claude").join("settings.json");
+    let settings_file = settings_path.is_file().then_some(settings_path.as_path());
+
     let params = SpawnParams {
         agent_name: &agent_name,
         prompt: &prompt,
         cwd: &feature_dir,
         config: &config,
         resume_session_id: resume_session_id.as_deref(),
-        // Pipeline runs already sit inside the feature dir they work on.
-        add_dirs: &[],
+        settings_file,
+        add_dirs: &extra_add_dirs,
         auth: match (resolved_auth.mode, resolved_auth.api_key.as_deref()) {
             (crate::domain::config_file::ClaudeAuthMode::CliDefault, _) => {
                 spawn::SpawnAuth::CliDefault
@@ -456,7 +569,16 @@ fn run_to_completion(
         log_path: crate::store::orchestrator_dir::agent_run_log_path(&agents_root, &feature, &slot),
     };
 
-    let run_result = runner::run_and_stream(registry, key, &params, tx, timeout, Some(durability));
+    let run_result = runner::run_and_stream(
+        registry,
+        key,
+        &params,
+        tx,
+        timeout,
+        Some(durability),
+        &app.state::<AppState>().spawn_admission,
+        spawn_epoch,
+    );
     // The forwarder exits on its own once `tx` (moved into `run_and_stream`)
     // is dropped at the end of that call — join to make sure every event
     // has actually reached the frontend before this thread moves on.
@@ -464,11 +586,10 @@ fn run_to_completion(
     // CHỈ join khi stdout đã đóng sạch: nếu hết hạn ân hạn, thread đọc bị
     // bỏ mặc vẫn đang giữ `tx`, nên join sẽ treo đúng như lỗi vừa sửa
     // trong `runner`.
-    if run_result
-        .as_ref()
-        .map(|result| result.stdout_drained)
-        .unwrap_or(false)
-    {
+    if matches!(
+        &run_result,
+        Ok(runner::SpawnOutcome::Ran(result)) if result.stdout_drained
+    ) {
         let _ = forwarder.join();
     }
 
@@ -480,7 +601,24 @@ fn run_to_completion(
     // The durability marker must not linger though, or the next startup
     // would call this never-started run `interrupted`.
     let result = match run_result {
-        Ok(result) => result,
+        Ok(runner::SpawnOutcome::Ran(result)) => result,
+        // The project closed while this run was still doing pre-spawn I/O
+        // (`AppState::close` bumped `spawn_admission` before this thread's
+        // `run_and_stream` call registered its child) — `run_and_stream`
+        // already killed the child before returning this variant.
+        Ok(runner::SpawnOutcome::AbortedProjectClosed) => {
+            record_post_spawn_failure(
+                &app,
+                &agents_root,
+                &feature,
+                &slot,
+                &marker_path_for_cleanup,
+                started_at,
+                "Project đã đóng khi agent chuẩn bị chạy — huỷ.".to_string(),
+            );
+            recompute_and_emit(&app, &agents_root, &docs_root, &feature);
+            return;
+        }
         Err(err) => {
             record_post_spawn_failure(
                 &app,
@@ -627,8 +765,8 @@ fn statuses_and_passed_gates(
 /// The auto-spawn prompt per slot — each points the agent at the exact
 /// primary input its OWN kit file's `## Bước 1`/`## Quy trình` declares
 /// (verified against `.claude/agents/*.md`, not guessed):
-/// `techlead-tasks-agent` and `pm-agent` self-discover `DESIGN.md`/tasks
-/// from the feature folder; `qa-agent` takes task-file paths; the QC pair
+/// `techlead-tasks-agent` self-discovers `DESIGN.md`/tasks from the
+/// feature folder; `qa-agent` takes task-file paths; the QC pair
 /// and everything else start from `SPEC.md` (same wording
 /// `approve_trigger_gate` already uses for stage ②).
 ///
@@ -638,7 +776,7 @@ fn statuses_and_passed_gates(
 /// stopping to ask and needing a second resumed run.
 fn build_slot_prompt(slot_id: &str, feature_dir: &Path, extra_input: Option<&str>) -> String {
     let spec_path = feature_dir.join("SPEC.md");
-    // AC-E2-39 — stage ③ (techlead-tasks, pm) gets the design analysis in
+    // AC-E2-39 — stage ③ (techlead-tasks) gets the design analysis in
     // its context when stage ②c actually produced one. Appended, never
     // required — a feature without the design-analyst branch still chains.
     let design_analysis = feature_dir.join("design-analysis.md");
@@ -653,11 +791,6 @@ fn build_slot_prompt(slot_id: &str, feature_dir: &Path, extra_input: Option<&str
     match slot_id {
         s if s == slot::TECHLEAD_TASKS => format!(
             "Feature folder tại đường dẫn tuyệt đối sau:\n{}\nĐọc các DESIGN.md trong đó và thực hiện đúng quy trình của bạn.{design_analysis_note}",
-            feature_dir.display()
-        ),
-        s if s == slot::PM => format!(
-            "Đọc SPEC.md tại đường dẫn tuyệt đối sau và thực hiện đúng quy trình của bạn:\n{}\n(Feature folder: {}){design_analysis_note}",
-            spec_path.display(),
             feature_dir.display()
         ),
         s if s == slot::FRONTEND || s == slot::MOBILE || s == slot::QA => {
@@ -681,16 +814,24 @@ fn build_slot_prompt(slot_id: &str, feature_dir: &Path, extra_input: Option<&str
         }
         s if s == slot::DESIGN_ANALYST => {
             let figma_url = extra_input.map(str::trim).filter(|url| !url.is_empty());
+            // AC-E2-37a — the agent file makes exporting a mandatory step,
+            // but that step was silently skipped often enough to be worth
+            // naming in the prompt too, with the absolute target path so
+            // there is nothing to infer from cwd.
+            let export_note = format!(
+                "\n\nExport icon/ảnh đọc được từ Figma vào thư mục: {}\nrồi liệt kê ở mục 6 của design-analysis.md. Không export được thì ghi rõ lý do ở mục 6 — đừng dừng lại để hỏi, đừng chặn nhánh.",
+                feature_dir.join("design-resources").display()
+            );
             match figma_url {
                 Some(url) => format!(
-                    "Đọc SPEC.md tại đường dẫn tuyệt đối sau và thực hiện đúng quy trình của bạn:\n{}\n(Feature folder: {})\n\nURL Figma (selection) người dùng đã cung cấp — dùng URL này, KHÔNG hỏi lại:\n{url}",
+                    "Đọc SPEC.md tại đường dẫn tuyệt đối sau và thực hiện đúng quy trình của bạn:\n{}\n(Feature folder: {})\n\nURL Figma (selection) người dùng đã cung cấp — dùng URL này, KHÔNG hỏi lại:\n{url}{export_note}",
                     spec_path.display(),
                     feature_dir.display()
                 ),
                 // No URL typed: the agent's own Bước 2 takes over and stops
                 // to ask, landing the slot in `waiting-input` as before.
                 None => format!(
-                    "Đọc SPEC.md tại đường dẫn tuyệt đối sau và thực hiện đúng quy trình của bạn:\n{}\n(Feature folder: {})",
+                    "Đọc SPEC.md tại đường dẫn tuyệt đối sau và thực hiện đúng quy trình của bạn:\n{}\n(Feature folder: {}){export_note}",
                     spec_path.display(),
                     feature_dir.display()
                 ),
@@ -714,6 +855,14 @@ pub fn start_run(
     slot: String,
     prompt: String,
 ) -> AppResult<()> {
+    orchestrator_dir::validate_run_ids(&feature, &slot)?;
+    if slot != slot::BA {
+        return Err(AppError::Invalid {
+            message:
+                "start_run chỉ dành cho BA và retry được xác thực; dùng run_slot cho slot khác"
+                    .to_string(),
+        });
+    }
     if !spawn::is_claude_cli_available() {
         return Err(AppError::Invalid {
             message: crate::agentrun::cli_path::not_found_message(),
@@ -722,10 +871,27 @@ pub fn start_run(
     let project = current_project(&state)?;
     let agents_root = PathBuf::from(project.agents_root);
     let docs_root = PathBuf::from(project.docs_root);
+    ensure_project_ready(&agents_root)?;
     auth::resolve_for_spawn(&agents_root)?;
 
+    let spawn_epoch = reserve_spawn(
+        &state,
+        RunKey {
+            feature: feature.clone(),
+            slot: slot.clone(),
+        },
+    )?;
     std::thread::spawn(move || {
-        run_to_completion(app, agents_root, docs_root, feature, slot, prompt, None);
+        run_to_completion(
+            app,
+            agents_root,
+            docs_root,
+            feature,
+            slot,
+            prompt,
+            None,
+            spawn_epoch,
+        );
     });
     Ok(())
 }
@@ -737,6 +903,7 @@ pub fn get_slot_readiness(
     state: State<AppState>,
     feature: String,
 ) -> AppResult<std::collections::BTreeMap<String, SlotReadiness>> {
+    orchestrator_dir::validate_feature_id(&feature)?;
     let project = current_project(&state)?;
     let agents_root = PathBuf::from(&project.agents_root);
     let docs_root = PathBuf::from(&project.docs_root);
@@ -750,6 +917,10 @@ pub fn get_slot_readiness(
     let (statuses, passed_gates, skipped_gates) = statuses_and_passed_gates(&feature_state);
     let def = crate::commands::pipeline::read_or_init_pipeline_def(&agents_root)?;
     let agents_found = agents_reader::discover_agents(&agents_root).unwrap_or_default();
+    let slots_without_work = stage_rules::slots_without_work_in_feature(
+        &docs_root.join("features").join(&feature),
+        &ecosystem,
+    );
 
     Ok(def
         .stages
@@ -765,6 +936,7 @@ pub fn get_slot_readiness(
                     &skipped_gates,
                     &agents_found,
                     &ecosystem,
+                    &slots_without_work,
                     &agent_slot.id,
                 ),
             )
@@ -787,6 +959,7 @@ pub fn run_slot(
     slot: String,
     extra_input: Option<String>,
 ) -> AppResult<()> {
+    orchestrator_dir::validate_run_ids(&feature, &slot)?;
     if !spawn::is_claude_cli_available() {
         return Err(AppError::Invalid {
             message: crate::agentrun::cli_path::not_found_message(),
@@ -795,6 +968,7 @@ pub fn run_slot(
     let project = current_project(&state)?;
     let agents_root = PathBuf::from(&project.agents_root);
     let docs_root = PathBuf::from(&project.docs_root);
+    ensure_project_ready(&agents_root)?;
     // Cùng lý do như `get_slot_readiness` — và `run_to_completion` đọc cache
     // này lại lần nữa ngay trước khi spawn, nên refresh ở đây cũng làm mới
     // luôn cho lớp phòng thủ đó.
@@ -810,6 +984,10 @@ pub fn run_slot(
     let (statuses, passed_gates, skipped_gates) = statuses_and_passed_gates(&feature_state);
     let def = crate::commands::pipeline::read_or_init_pipeline_def(&agents_root)?;
     let agents_found = agents_reader::discover_agents(&agents_root).unwrap_or_default();
+    let slots_without_work = stage_rules::slots_without_work_in_feature(
+        &docs_root.join("features").join(&feature),
+        &ecosystem,
+    );
 
     match readiness::compute_slot_readiness(
         &def,
@@ -818,6 +996,7 @@ pub fn run_slot(
         &skipped_gates,
         &agents_found,
         &ecosystem,
+        &slots_without_work,
         &slot,
     ) {
         SlotReadiness::Ready => {}
@@ -874,6 +1053,34 @@ pub fn run_slot(
             recompute_and_emit(&app, &agents_root, &docs_root, &feature);
             return Ok(());
         }
+        // NOT `Skipped` like `RepoRoleMissing`: this isn't "the slot doesn't
+        // apply", it's "AGENTS.md has a typo". Blocking with the reason
+        // keeps the slot runnable the moment the cell is fixed.
+        SlotReadiness::RepoRoleUnreadable { role, entries } => {
+            return Err(AppError::Invalid {
+                message: format!(
+                    "Chưa chạy được — {}",
+                    unreadable_role_message(&role, &entries)
+                ),
+            })
+        }
+        // Same shape as `RepoRoleMissing`: nothing to run, so record it as
+        // skipped rather than spawning an agent with no task file to read.
+        // Re-checked here, not trusted from the disabled button alone.
+        SlotReadiness::NoWorkInFeature { role } => {
+            record_pre_spawn_outcome(
+                &app,
+                &agents_root,
+                &feature,
+                &slot,
+                RunOutcome::Skipped,
+                format!(
+                    "Feature này không có task nào cho {role} — bỏ qua agent này (không áp dụng)."
+                ),
+            );
+            recompute_and_emit(&app, &agents_root, &docs_root, &feature);
+            return Ok(());
+        }
         SlotReadiness::UnknownSlot => {
             return Err(AppError::Invalid {
                 message: format!("Slot \"{slot}\" không có trong pipeline"),
@@ -901,8 +1108,24 @@ pub fn run_slot(
         build_slot_prompt(&slot, &feature_dir, extra_input.as_deref())
     };
 
+    let spawn_epoch = reserve_spawn(
+        &state,
+        RunKey {
+            feature: feature.clone(),
+            slot: slot.clone(),
+        },
+    )?;
     std::thread::spawn(move || {
-        run_to_completion(app, agents_root, docs_root, feature, slot, prompt, None);
+        run_to_completion(
+            app,
+            agents_root,
+            docs_root,
+            feature,
+            slot,
+            prompt,
+            None,
+            spawn_epoch,
+        );
     });
     Ok(())
 }
@@ -918,6 +1141,7 @@ pub fn send_clarification_answer(
     slot: String,
     answer: String,
 ) -> AppResult<()> {
+    orchestrator_dir::validate_run_ids(&feature, &slot)?;
     if !spawn::is_claude_cli_available() {
         return Err(AppError::Invalid {
             message: crate::agentrun::cli_path::not_found_message(),
@@ -926,6 +1150,7 @@ pub fn send_clarification_answer(
     let project = current_project(&state)?;
     let agents_root = PathBuf::from(&project.agents_root);
     let docs_root = PathBuf::from(project.docs_root);
+    ensure_project_ready(&agents_root)?;
     auth::resolve_for_spawn(&agents_root)?;
 
     let session_id = run_log::read_run_summary(&agents_root, &feature, &slot)
@@ -935,6 +1160,13 @@ pub fn send_clarification_answer(
             message: "Không tìm thấy session trước đó để trả lời tiếp".to_string(),
         })?;
 
+    let spawn_epoch = reserve_spawn(
+        &state,
+        RunKey {
+            feature: feature.clone(),
+            slot: slot.clone(),
+        },
+    )?;
     std::thread::spawn(move || {
         run_to_completion(
             app,
@@ -944,6 +1176,7 @@ pub fn send_clarification_answer(
             slot,
             answer,
             Some(session_id),
+            spawn_epoch,
         );
     });
     Ok(())
@@ -953,6 +1186,7 @@ pub fn send_clarification_answer(
 /// error) when nothing is currently running there.
 #[tauri::command]
 pub fn kill_run(state: State<AppState>, feature: String, slot: String) -> AppResult<bool> {
+    orchestrator_dir::validate_run_ids(&feature, &slot)?;
     let key = RunKey { feature, slot };
     state.agent_runs.kill(&key)
 }
@@ -967,6 +1201,7 @@ pub fn get_run_summary(
     feature: String,
     slot: String,
 ) -> AppResult<Option<RunSummary>> {
+    orchestrator_dir::validate_run_ids(&feature, &slot)?;
     let project = current_project(&state)?;
     Ok(run_log::read_run_summary(
         Path::new(&project.agents_root),
@@ -985,6 +1220,7 @@ pub fn read_run_log(
     feature: String,
     slot: String,
 ) -> AppResult<Vec<StreamEvent>> {
+    orchestrator_dir::validate_run_ids(&feature, &slot)?;
     let project = current_project(&state)?;
     run_log::read_run_log(Path::new(&project.agents_root), &feature, &slot)
 }
@@ -1001,6 +1237,7 @@ pub fn skip_run(
     feature: String,
     slot: String,
 ) -> AppResult<()> {
+    orchestrator_dir::validate_run_ids(&feature, &slot)?;
     let project = current_project(&state)?;
     let agents_root = PathBuf::from(project.agents_root);
     let docs_root = PathBuf::from(project.docs_root);
@@ -1025,6 +1262,69 @@ pub fn skip_run(
     Ok(())
 }
 
+/// Force-marks a `backend`/`frontend`/`mobile` slot `done`, overriding
+/// whatever its own completion heuristic decided. Those 3 slots are the
+/// only ones `classify_outcome` (`agentrun::run_log`) infers from the
+/// agent's own last message starting with `✅` — a session that actually
+/// finished the work but drifted off that convention on a later resumed
+/// turn (a clarification reply, a stray "ok" from the user, ...) stays
+/// `waiting-input` forever with no automatic way out. This is that way out.
+///
+/// Kills any live process for the slot first — unlike `skip_run`, which
+/// refuses while one is running, Force Done supersedes it outright; the
+/// user is telling the app the work is already done, so a stale process
+/// still streaming into this slot must not keep writing over that.
+///
+/// Refuses for any slot other than backend/frontend/mobile: every other
+/// slot's `Done` status comes from `RunOutcome::Done` only when
+/// `run_log_is_authoritative` (`pipeline_state::apply_agent_run_metadata`)
+/// — for those, file-system inference (does the expected artifact exist?)
+/// always wins on the next recompute, so persisting `Done` here would
+/// silently do nothing.
+#[tauri::command]
+pub fn force_done_run(app: AppHandle, state: State<AppState>, feature: String, slot: String) -> AppResult<()> {
+    orchestrator_dir::validate_run_ids(&feature, &slot)?;
+    if slot_repo_role(&slot).is_none() {
+        return Err(AppError::Invalid {
+            message: format!(
+                "Force Done chỉ áp dụng cho slot backend/frontend/mobile — \"{slot}\" không thuộc nhóm này, trạng thái của nó luôn do artifact trên đĩa quyết định, không thể ghi đè thủ công."
+            ),
+        });
+    }
+
+    let project = current_project(&state)?;
+    let agents_root = PathBuf::from(&project.agents_root);
+    let docs_root = PathBuf::from(project.docs_root);
+
+    state.agent_runs.kill(&RunKey {
+        feature: feature.clone(),
+        slot: slot.clone(),
+    })?;
+
+    let previous = run_log::read_run_summary(&agents_root, &feature, &slot);
+    let now = chrono::Utc::now().to_rfc3339();
+    let attempt = run_log::next_attempt(&agents_root, &feature, &slot);
+    let summary = RunSummary {
+        outcome: RunOutcome::Done,
+        session_id: previous
+            .as_ref()
+            .map(|p| p.session_id.clone())
+            .unwrap_or_default(),
+        cost_usd: previous.as_ref().map(|p| p.cost_usd).unwrap_or(0.0),
+        started_at: previous
+            .as_ref()
+            .map(|p| p.started_at.clone())
+            .unwrap_or_else(|| now.clone()),
+        ended_at: now,
+        last_message: None,
+        attempt,
+        prompt: None,
+    };
+    persist_and_notify(&app, &agents_root, &feature, &slot, summary);
+    recompute_and_emit(&app, &agents_root, &docs_root, &feature);
+    Ok(())
+}
+
 /// AC-E6-05 — continues an `interrupted` run in its original CLI session
 /// (`--resume <session-id>`, same mechanism as clarification answers).
 /// AC-E6-06 — a run whose session id never made it to disk gets a clear
@@ -1036,6 +1336,7 @@ pub fn resume_run(
     feature: String,
     slot: String,
 ) -> AppResult<()> {
+    orchestrator_dir::validate_run_ids(&feature, &slot)?;
     if !spawn::is_claude_cli_available() {
         return Err(AppError::Invalid {
             message: crate::agentrun::cli_path::not_found_message(),
@@ -1044,6 +1345,7 @@ pub fn resume_run(
     let project = current_project(&state)?;
     let agents_root = PathBuf::from(&project.agents_root);
     let docs_root = PathBuf::from(project.docs_root);
+    ensure_project_ready(&agents_root)?;
     auth::resolve_for_spawn(&agents_root)?;
 
     let summary = run_log::read_run_summary(&agents_root, &feature, &slot).ok_or_else(|| {
@@ -1065,6 +1367,13 @@ pub fn resume_run(
     }
 
     let session_id = summary.session_id;
+    let spawn_epoch = reserve_spawn(
+        &state,
+        RunKey {
+            feature: feature.clone(),
+            slot: slot.clone(),
+        },
+    )?;
     std::thread::spawn(move || {
         run_to_completion(
             app,
@@ -1074,6 +1383,7 @@ pub fn resume_run(
             slot,
             "Phiên trước bị gián đoạn giữa chừng. Kiểm tra công việc còn dang dở và hoàn tất nốt theo đúng quy trình của bạn.".to_string(),
             Some(session_id),
+            spawn_epoch,
         );
     });
     Ok(())
@@ -1118,6 +1428,7 @@ pub fn resolve_orphan(
     slot: String,
     action: String,
 ) -> AppResult<()> {
+    orchestrator_dir::validate_run_ids(&feature, &slot)?;
     let project = current_project(&state)?;
     let agents_root = PathBuf::from(&project.agents_root);
     let docs_root = PathBuf::from(&project.docs_root);
@@ -1211,6 +1522,48 @@ fn stage_two_agent_slots(agents_root: &Path) -> Vec<AgentSlot> {
 /// primitive. A slot whose agent file doesn't exist in the kit yet is
 /// skipped via the same `record_pre_spawn_outcome`/`RunOutcome::Skipped`
 /// path AC-E2-12 already built, rather than blocking the other slots.
+/// The read-modify-write half of `approve_trigger_gate`, split out so the
+/// `lock_state_file()` guard provably ends with this function.
+///
+/// That scope is the whole point, not tidiness: the guard used to live in
+/// `approve_trigger_gate`'s own body and was therefore still held when that
+/// function reached `recompute_and_emit` -> `pipeline_state::compute_and_persist`,
+/// which takes the SAME non-reentrant mutex on the SAME thread. Tauri runs
+/// non-async commands on the main thread, so that self-deadlock froze the
+/// whole window while the approval was already on disk (hence "restart and
+/// it is approved").
+///
+/// Re-reads `state.json` fresh rather than reusing the `FeatureState` the
+/// caller just computed, so a concurrent write from an unrelated in-flight
+/// run is never clobbered. Re-reading alone only narrows the window; the
+/// lock closes it.
+fn persist_trigger_gate_approval(
+    agents_root: &Path,
+    feature: &str,
+    approved_by: String,
+) -> AppResult<()> {
+    let _state_guard = orchestrator_dir::lock_state_file();
+    let state_path = orchestrator_dir::state_json_path(agents_root);
+    let mut file: StateFile = std::fs::read_to_string(&state_path)
+        .ok()
+        .and_then(|raw| serde_json::from_str(&raw).ok())
+        .unwrap_or_default();
+    file.features
+        .entry(feature.to_string())
+        .or_default()
+        .gates
+        .insert(
+            gate::TRIGGER.to_string(),
+            GateState {
+                status: GateStatus::Approved,
+                approved_by: Some(approved_by),
+                approved_at: Some(chrono::Utc::now().to_rfc3339()),
+                missing_sections: vec![],
+            },
+        );
+    write_json_atomic(&state_path, &file)
+}
+
 #[tauri::command]
 pub fn approve_trigger_gate(
     app: AppHandle,
@@ -1244,32 +1597,7 @@ pub fn approve_trigger_gate(
         });
     }
 
-    // Persist the approval — re-read `state.json` fresh (not the
-    // `current_state` above) so a concurrent write from an unrelated
-    // in-flight run is never clobbered. Re-reading alone only narrows the
-    // window; the lock closes it. Taken HERE, not at the top of the
-    // function: `compute_and_persist` above takes the same non-reentrant
-    // lock.
-    let _state_guard = orchestrator_dir::lock_state_file();
-    let state_path = orchestrator_dir::state_json_path(&agents_root);
-    let mut file: StateFile = std::fs::read_to_string(&state_path)
-        .ok()
-        .and_then(|raw| serde_json::from_str(&raw).ok())
-        .unwrap_or_default();
-    file.features
-        .entry(feature.clone())
-        .or_default()
-        .gates
-        .insert(
-            gate::TRIGGER.to_string(),
-            GateState {
-                status: GateStatus::Approved,
-                approved_by: Some(approved_by),
-                approved_at: Some(chrono::Utc::now().to_rfc3339()),
-                missing_sections: vec![],
-            },
-        );
-    write_json_atomic(&state_path, &file)?;
+    persist_trigger_gate_approval(&agents_root, &feature, approved_by)?;
 
     let stage_two_slots = stage_two_agent_slots(&agents_root);
     let agents_found = agents_reader::discover_agents(&agents_root).unwrap_or_default();
@@ -1449,6 +1777,110 @@ pub fn lock_contract(
     Ok(())
 }
 
+/// Recomputes the gate purely from disk, the same way every other
+/// contract-lock read in this file does — never trusting the `state.json`
+/// cache the frontend happened to be looking at when the button was
+/// clicked.
+fn current_contract_lock_status(
+    agents_root: &Path,
+    docs_root: &Path,
+    feature: &str,
+    ecosystem: &[EcosystemRepo],
+) -> ContractLockStatus {
+    let feature_dir = docs_root.join("features").join(feature);
+    let dir = orchestrator_dir::contract_lock_dir(agents_root, feature);
+    contract_lock_rules::infer_contract_lock_state(
+        &feature_dir,
+        ecosystem,
+        contract_lock_store::read_latest_lock(&dir),
+        contract_lock_store::read_skip(&dir),
+    )
+    .status
+}
+
+/// AC-E4-11b — lets the PM take a feature past a Contract Lock that
+/// inference cannot clear on its own: the feature genuinely spans backend
+/// and a consumer, but this change adds no endpoint, so no `DESIGN.md`
+/// carries an API Definition table and the gate would sit at `NotReady`
+/// forever with nothing to click.
+///
+/// Deliberately NOT allowed from any other status. From `PendingReview`
+/// the correct action is Lock — a skip there would quietly discard the
+/// contract the gate exists to freeze; from `Locked`/`Violated` there is a
+/// real lock whose checksums still have to be honoured. Re-checked here
+/// rather than trusted from the frontend, same as `lock_contract`.
+#[tauri::command]
+pub fn skip_contract_lock(
+    app: AppHandle,
+    state: State<AppState>,
+    feature: String,
+    skipped_by: String,
+    reason: String,
+) -> AppResult<()> {
+    orchestrator_dir::validate_feature_id(&feature)?;
+    let skipped_by = skipped_by.trim().to_string();
+    let reason = reason.trim().to_string();
+    if skipped_by.is_empty() {
+        return Err(AppError::Invalid {
+            message: "Cần nhập tên người bỏ qua gate".to_string(),
+        });
+    }
+    if reason.is_empty() {
+        return Err(AppError::Invalid {
+            message: "Cần nhập lý do bỏ qua Contract Lock".to_string(),
+        });
+    }
+
+    let project = current_project(&state)?;
+    let agents_root = PathBuf::from(project.agents_root);
+    let docs_root = PathBuf::from(project.docs_root);
+    let ecosystem = state.ecosystem.lock().unwrap().clone();
+
+    let status = current_contract_lock_status(&agents_root, &docs_root, &feature, &ecosystem);
+    if status != ContractLockStatus::NotReady {
+        return Err(AppError::Invalid {
+            message:
+                "Chỉ bỏ qua được khi gate đang bị chặn vì thiếu bảng API Definition — trạng thái hiện tại không cho phép"
+                    .to_string(),
+        });
+    }
+
+    let dir = orchestrator_dir::contract_lock_dir(&agents_root, &feature);
+    std::fs::create_dir_all(&dir)?;
+    contract_lock_store::write_skip(
+        &dir,
+        &crate::domain::contract_lock::ContractLockSkip {
+            skipped_by,
+            reason,
+            skipped_at: chrono::Utc::now().to_rfc3339(),
+        },
+    )?;
+
+    recompute_and_emit(&app, &agents_root, &docs_root, &feature);
+    Ok(())
+}
+
+/// AC-E4-11b — takes the skip back, so a mis-click isn't permanent. The
+/// gate returns to whatever inference says on its own (normally
+/// `NotReady`, i.e. blocking again).
+#[tauri::command]
+pub fn unskip_contract_lock(
+    app: AppHandle,
+    state: State<AppState>,
+    feature: String,
+) -> AppResult<()> {
+    orchestrator_dir::validate_feature_id(&feature)?;
+    let project = current_project(&state)?;
+    let agents_root = PathBuf::from(project.agents_root);
+    let docs_root = PathBuf::from(project.docs_root);
+
+    let dir = orchestrator_dir::contract_lock_dir(&agents_root, &feature);
+    contract_lock_store::clear_skip(&dir)?;
+
+    recompute_and_emit(&app, &agents_root, &docs_root, &feature);
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1458,8 +1890,9 @@ mod tests {
     ) -> crate::domain::contract_lock::ContractLockState {
         crate::domain::contract_lock::ContractLockState {
             status,
+            checked_design_md_paths: vec![],
             missing_columns: vec![],
-            plan_md_missing: false,
+            manually_skipped: false,
             not_applicable_reason: None,
             applicable_roles: vec![],
             candidate_files: vec![],
@@ -1478,6 +1911,90 @@ mod tests {
             contract_lock: Some(contract_lock_state(status)),
             updated_at: String::new(),
         }
+    }
+
+    /// Reproduces the freeze: `approve_trigger_gate` writes the approval,
+    /// then calls `recompute_and_emit` -> `compute_and_persist`, which
+    /// re-locks `state.json`. With the guard still held by the write half,
+    /// that second lock never returns — on Tauri's main thread, the window.
+    ///
+    /// Driven through the same two functions the command calls, in the same
+    /// order, so it fails (hangs before the fix, panics with the reentrancy
+    /// assert) if anyone ever widens that guard's scope again.
+    #[test]
+    fn persisting_a_gate_approval_releases_the_state_lock_before_recompute() {
+        let tmp = tempfile::tempdir().unwrap();
+        let agents_root = tmp.path().join("agents-root");
+        let docs_root = tmp.path().join("docs-root");
+        std::fs::create_dir_all(docs_root.join("features/login")).unwrap();
+        std::fs::create_dir_all(&agents_root).unwrap();
+
+        persist_trigger_gate_approval(&agents_root, "login", "PM Test".to_string()).unwrap();
+
+        // The lock must be free by now — this is what `recompute_and_emit`
+        // reaches immediately afterwards in the real command.
+        let (state, _) = compute_and_persist(&agents_root, &docs_root, "login", &[]).unwrap();
+
+        let approved = state.gates.get(gate::TRIGGER).unwrap();
+        assert_eq!(approved.status, GateStatus::Approved);
+        assert_eq!(approved.approved_by.as_deref(), Some("PM Test"));
+    }
+
+    fn ecosystem_repo(name: &str, role: &str) -> EcosystemRepo {
+        EcosystemRepo {
+            name: name.to_string(),
+            declared_path: format!("repos/{name}"),
+            role: role.to_string(),
+            // Derived exactly as the parser does, so a fixture can never
+            // claim a role the real pipeline wouldn't read off that cell.
+            role_key: crate::agents_reader::canonical_role(role).map(str::to_string),
+            stack: "x".to_string(),
+            cloned: true,
+        }
+    }
+
+    /// The guard `skip_contract_lock` runs before writing anything. Driven
+    /// through the same helper the command uses, so the two can't drift.
+    ///
+    /// Skip is only ever legitimate from `NotReady`: from `PendingReview`
+    /// there IS a contract and skipping would silently throw it away, which
+    /// is precisely what this gate exists to prevent.
+    #[test]
+    fn contract_lock_skip_is_only_offered_from_the_blocked_state() {
+        let tmp = tempfile::tempdir().unwrap();
+        let agents_root = tmp.path().join("agents-root");
+        let docs_root = tmp.path().join("docs-root");
+        let feature_dir = docs_root.join("features").join("login");
+        std::fs::create_dir_all(&agents_root).unwrap();
+        let ecosystem = vec![
+            ecosystem_repo("shop-api", "backend"),
+            ecosystem_repo("shop-web", "frontend"),
+        ];
+
+        let write = |repo: &str, content: &str| {
+            let path = feature_dir.join(repo).join("DESIGN.md");
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, content).unwrap();
+        };
+
+        // Backend + frontend, no API table anywhere -> blocked, skippable.
+        write("shop-api", "## 1. Tổng quan\nx\n");
+        write("shop-web", "## 1. Tổng quan\nx\n");
+        assert_eq!(
+            current_contract_lock_status(&agents_root, &docs_root, "login", &ecosystem),
+            ContractLockStatus::NotReady
+        );
+
+        // Table appears -> the gate can be opened properly, so skip must be
+        // refused from here on.
+        write(
+            "shop-api",
+            "## 3. API Definition\n\n| Method | Endpoint | Auth | Request | Response | Error codes |\n|---|---|---|---|---|---|\n| POST | `/x` | JWT | `{}` | `{}` | 400 |\n",
+        );
+        assert_eq!(
+            current_contract_lock_status(&agents_root, &docs_root, "login", &ecosystem),
+            ContractLockStatus::PendingReview
+        );
     }
 
     /// AC-E4-11 — feature 1 repo không cần Contract Lock. Trước đây chỉ
@@ -1658,16 +2175,13 @@ mod tests {
         let feature_dir = tmp.path().join("feature");
         std::fs::create_dir_all(&feature_dir).unwrap();
 
-        for slot_id in [slot::TECHLEAD_TASKS, slot::PM] {
-            let without = build_slot_prompt(slot_id, &feature_dir, None);
-            assert!(!without.contains("design-analysis.md"), "slot {slot_id}");
-        }
+        // Stage ③ is a single slot since `pm-agent` was removed.
+        let without = build_slot_prompt(slot::TECHLEAD_TASKS, &feature_dir, None);
+        assert!(!without.contains("design-analysis.md"));
 
         std::fs::write(feature_dir.join("design-analysis.md"), "# analysis").unwrap();
-        for slot_id in [slot::TECHLEAD_TASKS, slot::PM] {
-            let with = build_slot_prompt(slot_id, &feature_dir, None);
-            assert!(with.contains("design-analysis.md"), "slot {slot_id}"); // AC-E2-39
-        }
+        let with = build_slot_prompt(slot::TECHLEAD_TASKS, &feature_dir, None);
+        assert!(with.contains("design-analysis.md")); // AC-E2-39
     }
 
     #[test]
@@ -1730,6 +2244,9 @@ mod tests {
         assert!(with_url.contains("https://figma.com/design/abc?node-id=1-2"));
         assert!(with_url.contains("KHÔNG hỏi lại"));
         assert!(with_url.contains("SPEC.md"));
+        // AC-E2-37a — the export target is named with an absolute path in
+        // both branches, so the agent never has to infer it from cwd.
+        assert!(with_url.contains(&feature_dir.join("design-resources").display().to_string()));
 
         // Blank or absent input must not fabricate a URL — the agent's own
         // Bước 2 takes over and asks.
@@ -1740,6 +2257,7 @@ mod tests {
                 "empty input leaked a URL branch"
             );
             assert!(without.contains("SPEC.md"));
+            assert!(without.contains(&feature_dir.join("design-resources").display().to_string()));
         }
     }
 }

@@ -1,9 +1,39 @@
+use std::cell::Cell;
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard, OnceLock};
 
 use crate::error::{AppError, AppResult};
 
 pub const ORCHESTRATOR_DIR_NAME: &str = ".orchestrator";
+
+/// Feature and slot ids are used as directory components throughout the app.
+/// Validate them once at the storage boundary so IPC callers cannot smuggle
+/// absolute paths or `..` segments into `.orchestrator`.
+pub fn validate_run_ids(feature: &str, slot: &str) -> AppResult<()> {
+    validate_run_id(feature, "feature")?;
+    validate_run_id(slot, "slot")
+}
+
+pub fn validate_feature_id(feature: &str) -> AppResult<()> {
+    validate_run_id(feature, "feature")
+}
+
+fn validate_run_id(value: &str, kind: &str) -> AppResult<()> {
+    if value.is_empty()
+        || value.len() > 100
+        || !value
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+        || value.starts_with('-')
+        || value.ends_with('-')
+        || value.contains("--")
+    {
+        return Err(AppError::Invalid {
+            message: format!("Tên {kind} không hợp lệ"),
+        });
+    }
+    Ok(())
+}
 
 pub fn orchestrator_dir(project_root: &Path) -> PathBuf {
     project_root.join(ORCHESTRATOR_DIR_NAME)
@@ -36,14 +66,61 @@ pub fn pipeline_json_path(project_root: &Path) -> PathBuf {
 /// ordering, not data, so there is no invariant a panicking thread could
 /// have left broken.
 ///
-/// NOT reentrant. `approve_trigger_gate` calls `compute_and_persist` (which
-/// takes this lock) before doing its own read-modify-write, so it must take
-/// the lock only AFTER that call returns.
-pub fn lock_state_file() -> MutexGuard<'static, ()> {
+/// NOT reentrant, and the reentrancy hazard runs in BOTH directions: a
+/// caller must neither take this lock before calling something that takes
+/// it (`compute_and_persist`), nor still hold it when calling something
+/// that does (`fswatch::watcher::recompute_and_emit`). The second half is
+/// what `approve_trigger_gate` got wrong: it held the guard across its own
+/// `recompute_and_emit`, and since Tauri runs non-async commands on the
+/// main thread, the resulting self-deadlock froze the entire window.
+///
+/// So that a repeat never presents as a silent hang again, re-entry from a
+/// thread that already holds the lock **panics** instead of parking
+/// forever. A panic inside a Tauri command surfaces as an IPC error the
+/// user can see and the app survives; a deadlock on the main thread is
+/// unrecoverable. This is a correctness assertion, not a soft check — it is
+/// compiled in release too, because that is where the freeze was observed.
+pub fn lock_state_file() -> StateFileGuard {
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-    LOCK.get_or_init(|| Mutex::new(()))
+
+    HELD_BY_THIS_THREAD.with(|held| {
+        assert!(
+            !held.get(),
+            "lock_state_file() is not reentrant — this thread already holds it. \
+             Drop the guard before calling anything that locks state.json \
+             (compute_and_persist / recompute_and_emit)."
+        );
+        held.set(true);
+    });
+
+    let guard = LOCK
+        .get_or_init(|| Mutex::new(()))
         .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    StateFileGuard { _guard: guard }
+}
+
+thread_local! {
+    /// Set for exactly as long as this thread holds `lock_state_file()`'s
+    /// mutex — the flag `lock_state_file` asserts on. A `thread_local` (not
+    /// a global) because reentrancy is per-thread: another thread blocking
+    /// on the same mutex is the normal, correct case.
+    static HELD_BY_THIS_THREAD: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Guard returned by [`lock_state_file`]. Releasing the mutex and clearing
+/// the per-thread held-flag are one operation, so no exit path — including
+/// an early `?` or a panic unwind — can leave the flag set on a thread that
+/// no longer holds the lock (which would make every later acquisition on
+/// that thread panic).
+pub struct StateFileGuard {
+    _guard: MutexGuard<'static, ()>,
+}
+
+impl Drop for StateFileGuard {
+    fn drop(&mut self) {
+        HELD_BY_THIS_THREAD.with(|held| held.set(false));
+    }
 }
 
 pub fn state_json_path(project_root: &Path) -> PathBuf {
@@ -58,11 +135,33 @@ pub fn runs_dir(project_root: &Path) -> PathBuf {
     orchestrator_dir(project_root).join("runs")
 }
 
-/// Deliberately a SEPARATE tree from `runs_dir` — that one is a flat,
-/// app-defined namespace of report conventions (AC-E3-05, `<run-id>/<file>`,
-/// not partitioned by feature). Agent-run bookkeeping (T2.3) needs to be
-/// keyed by `(feature, slot)` specifically, so it gets its own directory
-/// rather than overloading `runs_dir`'s existing shape.
+/// The single canonical shape for `runs_dir`'s app-defined report
+/// convention (AC-E3-05) — `<runs_dir>/<run_id>/<filename>`, used by both
+/// the writer (`agentrun::run_log::finalize_run`, after a QA/QC-testing/
+/// QC-automation run) and every reader (`inference::stage_rules::run_files`
+/// and friends). `run_id` is prefixed `<feature>--` so a report from one
+/// feature's run can never be read as another feature's — this directory is
+/// a single flat namespace shared by every feature in the project (unlike
+/// `agent_runs_dir`, which nests by feature/slot on disk), so the feature
+/// boundary has to live in the name itself. Keep this and `runs_dir_prefix`
+/// in sync — the writer's `run_id` and the reader's filter MUST agree on
+/// the exact same prefix or a report becomes permanently invisible.
+pub fn runs_dir_run_id(feature: &str, slot: &str) -> String {
+    format!("{feature}--{slot}")
+}
+
+/// The `run_id` prefix that scopes `runs_dir` entries to one feature — see
+/// `runs_dir_run_id`.
+pub fn runs_dir_prefix(feature: &str) -> String {
+    format!("{feature}--")
+}
+
+/// A SEPARATE tree from `runs_dir` — that one is a flat, app-defined
+/// namespace of report conventions (AC-E3-05, `<run-id>/<file>`, scoped by
+/// prefix rather than nesting — see `runs_dir_run_id`). Agent-run
+/// bookkeeping (T2.3) needs to be keyed by `(feature, slot)` specifically,
+/// so it gets its own directory rather than overloading `runs_dir`'s
+/// existing shape.
 pub fn agent_runs_dir(project_root: &Path) -> PathBuf {
     orchestrator_dir(project_root).join("agent-runs")
 }
@@ -113,24 +212,6 @@ pub fn contract_lock_violations_dir(project_root: &Path, feature: &str) -> PathB
 }
 
 /// Per-feature Backlog integration state (AC-E5-09/16): the
-/// `task file ↔ issue key` mapping the push agent writes, and the status
-/// cache the refresh keeps. Lazily created on first push, like
-/// `contract_lock_dir`.
-pub fn backlog_dir(project_root: &Path, feature: &str) -> PathBuf {
-    orchestrator_dir(project_root).join("backlog").join(feature)
-}
-
-pub fn backlog_mapping_path(project_root: &Path, feature: &str) -> PathBuf {
-    backlog_dir(project_root, feature).join("mapping.json")
-}
-
-/// Last successful status pull — kept so a failed refresh can still show
-/// the previous numbers with an "as of" label instead of blanking out
-/// (AC-E5-16).
-pub fn backlog_status_cache_path(project_root: &Path, feature: &str) -> PathBuf {
-    backlog_dir(project_root, feature).join("status-cache.json")
-}
-
 /// One immutable timestamped JSON file per agent run, cross-feature
 /// (AC-E6-12..18) — see `store::run_history`. Separate from `agent-runs/`
 /// (latest-run bookkeeping) so deleting logs there never touches cost
@@ -235,6 +316,25 @@ pub fn assert_within_any(path: &Path, allowed_roots: &[&Path]) -> AppResult<Path
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The bug this guards: `approve_trigger_gate` held the guard across a
+    /// call that re-locked, on Tauri's main thread, and the window froze
+    /// with no error anywhere. Panicking is strictly better than that.
+    #[test]
+    #[should_panic(expected = "not reentrant")]
+    fn lock_state_file_panics_instead_of_deadlocking_on_reentry() {
+        let _first = lock_state_file();
+        let _second = lock_state_file();
+    }
+
+    /// The other half: the flag must be cleared on drop, or the first
+    /// legitimate acquisition would poison every later one on that thread.
+    #[test]
+    fn lock_state_file_can_be_retaken_after_the_guard_drops() {
+        drop(lock_state_file());
+        drop(lock_state_file());
+        let _held = lock_state_file();
+    }
 
     /// The `log.jsonl` files under here hold whole source files verbatim, so
     /// "not committed" has to be true from the very first run — not something

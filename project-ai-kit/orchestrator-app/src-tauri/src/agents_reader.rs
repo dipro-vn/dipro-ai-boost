@@ -10,7 +10,7 @@
 
 use std::path::Path;
 
-use crate::domain::project::EcosystemRepo;
+use crate::domain::project::{EcosystemRepo, ProjectInitStatus};
 use crate::error::AppResult;
 
 /// Lists `.claude/agents/*.md` under `agents_root`, returning agent names
@@ -41,11 +41,222 @@ pub fn has_claude_agents_dir(agents_root: &Path) -> bool {
     agents_root.join(".claude").join("agents").is_dir()
 }
 
+/// Determines whether the project has completed the human-driven kit setup.
+/// Scaffold files alone are not enough: `AGENTS.md` must contain a real
+/// project name/domain and at least one real Ecosystem repo.
+pub fn assess_init_status(
+    agents_md: Option<&str>,
+    has_agents_dir: bool,
+) -> (ProjectInitStatus, Vec<String>) {
+    if !has_agents_dir {
+        return (
+            ProjectInitStatus::MissingKit,
+            vec!["Thiếu thư mục .claude/agents/".to_string()],
+        );
+    }
+
+    let Some(content) = agents_md else {
+        return (
+            ProjectInitStatus::MissingKit,
+            vec!["Không tìm thấy AGENTS.md tại agentsRoot".to_string()],
+        );
+    };
+
+    let Some(rows) = parse_ecosystem_table(content) else {
+        return (
+            ProjectInitStatus::Invalid,
+            vec!["AGENTS.md không có bảng ## Repos đúng cấu trúc".to_string()],
+        );
+    };
+
+    let mut reasons = Vec::new();
+    if content.contains("<PROJECT_NAME>") || content.contains("\\<PROJECT_NAME\\>") {
+        reasons.push("Chưa điền tên project".to_string());
+    }
+    let domain_line = content.lines().find(|line| line.contains("**Domain:**"));
+    if domain_line.is_none()
+        || domain_line.is_some_and(|line| line.contains("1-2 câu") || line.contains("điền qua"))
+    {
+        reasons.push("Chưa điền domain nghiệp vụ".to_string());
+    }
+    // `<DOCS_ROOT>` is the bullet's LABEL in the template, not its value:
+    // `- **`<DOCS_ROOT>`:** <giá trị>`. A real init fills the value and may
+    // keep the label AND the descriptive prose after it, e.g.
+    //   - **`<DOCS_ROOT>`:** `docs/` — single long-memory chứa …
+    // so neither the literal `<DOCS_ROOT>` nor that prose says anything
+    // about whether setup ran. `<memory_update_gate>` also keeps
+    // `<DOCS_ROOT>` on purpose, as a generic path pattern.
+    //
+    // What actually distinguishes unfilled is the VALUE right after `:**`:
+    // the template starts it with its own description and still carries the
+    // `<project>-docs` example placeholder.
+    //
+    // A missing bullet is deliberately NOT a reason here (unlike Domain):
+    // an init that replaced the label with the real path is also valid, and
+    // the repo table + Domain already catch a project that never ran init.
+    let docs_root_value = content
+        .lines()
+        .find(|line| line.trim_start().starts_with("- **") && line.contains("DOCS_ROOT"))
+        .and_then(|line| line.split_once(":**"))
+        .map(|(_, value)| value.trim());
+    if docs_root_value.is_some_and(|value| {
+        value.starts_with("single long-memory") || value.contains("<project>-docs")
+    }) {
+        reasons.push("Chưa điền DOCS_ROOT".to_string());
+    }
+    if rows.is_empty() {
+        reasons.push("Chưa khai báo repo trong Ecosystem".to_string());
+    }
+
+    if reasons.is_empty() {
+        (ProjectInitStatus::Ready, reasons)
+    } else {
+        (ProjectInitStatus::NeedsInit, reasons)
+    }
+}
+
+/// Reads the same AGENTS.md locations that project opening accepts, so the
+/// spawn guard and Launcher cannot disagree about whether setup is complete.
+pub fn read_init_status(agents_root: &Path) -> (ProjectInitStatus, Vec<String>) {
+    let mut candidates = vec![agents_root.join("AGENTS.md")];
+    if let Some(parent) = agents_root.parent() {
+        candidates.push(parent.join("AGENTS.md"));
+    }
+    let content = candidates
+        .into_iter()
+        .find_map(|path| std::fs::read_to_string(path).ok());
+    assess_init_status(content.as_deref(), has_claude_agents_dir(agents_root))
+}
+
 /// Looks for a placeholder cell in the kit's convention, e.g. `_(tên repo)_`
 /// — an unfilled template row that should not be treated as a real repo.
 fn is_placeholder_cell(cell: &str) -> bool {
     let trimmed = cell.trim();
     trimmed.starts_with("_(") && trimmed.ends_with(")_")
+}
+
+/// Strips markdown emphasis from a cell that is an IDENTIFIER (repo name,
+/// path) rather than prose. `/init-kit` writes these in backticks often
+/// enough that a literal read breaks everything downstream: a
+/// `declared_path` of `` `repos/frontend` `` makes `resolve_repo_cloned`
+/// look for a directory whose name contains backticks, so a repo sitting
+/// right there on disk reads as "not cloned".
+///
+/// Not applied to the Stack column (prose, display-only) nor destructively
+/// to the Vai trò column — that one keeps its text for display and gets a
+/// derived key instead (`canonical_role`).
+fn strip_cell_decoration(cell: &str) -> String {
+    let mut trimmed = cell.trim();
+    loop {
+        let stripped = trimmed
+            .strip_prefix("**")
+            .and_then(|rest| rest.strip_suffix("**"))
+            .or_else(|| {
+                trimmed
+                    .strip_prefix("__")
+                    .and_then(|rest| rest.strip_suffix("__"))
+            })
+            .or_else(|| {
+                trimmed
+                    .strip_prefix('`')
+                    .and_then(|rest| rest.strip_suffix('`'))
+            })
+            .or_else(|| {
+                trimmed
+                    .strip_prefix('*')
+                    .and_then(|rest| rest.strip_suffix('*'))
+            })
+            .or_else(|| {
+                trimmed
+                    .strip_prefix('_')
+                    .and_then(|rest| rest.strip_suffix('_'))
+            });
+        match stripped {
+            Some(inner) => trimmed = inner.trim(),
+            None => break,
+        }
+    }
+    trimmed.to_string()
+}
+
+/// The repo roles the pipeline knows how to target — `slot_repo_role`'s
+/// range. `other` is deliberately absent: it is a valid thing to write in
+/// `AGENTS.md`, but no slot targets it, so it stays unmatched.
+const KNOWN_ROLES: &[&str] = &["backend", "frontend", "mobile"];
+
+/// Reads a repo role out of the free-text "Vai trò" cell.
+///
+/// That cell is written by hand (and by `/init-kit`, whose instructions
+/// never forbade qualifiers), so in the field it is prose, not an enum:
+/// `frontend — nơi landing page được implement` has to read as `frontend`.
+/// Every consumer used to compare the whole cell with `eq_ignore_ascii_case`,
+/// which meant a fully-configured project reported "no repo with role
+/// frontend" while `repos/frontend` sat on disk.
+///
+/// Returns `None` when the cell can't be read confidently. Callers must
+/// surface that to the user rather than guessing a role — the app's rule is
+/// that `AGENTS.md` is the source of truth and it never fills in a value it
+/// only suspects (AC-E1-03).
+pub fn canonical_role(role_cell: &str) -> Option<&'static str> {
+    // Emphasis is stripped wherever it sits, not just around the whole
+    // cell: `**Frontend** (web admin)` has its markers in the middle, so
+    // unwrapping alone would leave `**frontend**` and read as unknown.
+    // Only ` and * are removed blindly — neither ever occurs inside a word,
+    // whereas `_` does, so that one stays with the unwrap-only path.
+    let cell = strip_cell_decoration(role_cell)
+        .replace(['`', '*'], "")
+        .to_lowercase();
+    let cell = strip_cell_decoration(&cell);
+
+    // The kit's own placeholder is `backend / frontend / mobile / other`.
+    // Taking the leading token there would silently label an undeclared
+    // repo `backend`, so a cell that offers several roles counts as
+    // unfilled, not as its first option.
+    if KNOWN_ROLES
+        .iter()
+        .filter(|role| contains_word(&cell, role))
+        .count()
+        > 1
+    {
+        return None;
+    }
+
+    let head = leading_token(&cell);
+    KNOWN_ROLES.iter().find(|role| **role == head).copied()
+}
+
+/// Whole-word containment, so `frontend` doesn't match inside a longer
+/// word. Word chars here are alphanumerics — every separator the role cell
+/// realistically uses (space, `/`, `—`, `,`, `(`) is not one.
+fn contains_word(haystack: &str, needle: &str) -> bool {
+    haystack
+        .match_indices(needle)
+        .any(|(start, matched)| {
+            let before = haystack[..start].chars().next_back();
+            let after = haystack[start + matched.len()..].chars().next();
+            !before.is_some_and(char::is_alphanumeric)
+                && !after.is_some_and(char::is_alphanumeric)
+        })
+}
+
+/// The cell up to its first separator — what's left is the role itself when
+/// the rest of the cell is a human note. A bare `-` is only a separator
+/// when it has space around it, so a hyphenated word survives intact
+/// (`front-end` stays `front-end`, and therefore stays unrecognized rather
+/// than being silently read as `front`).
+fn leading_token(cell: &str) -> String {
+    let mut cut = cell.len();
+    for (idx, ch) in cell.char_indices() {
+        let is_separator = matches!(ch, '—' | '–' | '(' | '/' | ',' | ':' | '·' | ';')
+            || (ch == '-'
+                && cell[..idx].ends_with(' ')
+                && cell[idx + ch.len_utf8()..].starts_with(' '));
+        if is_separator {
+            cut = idx;
+            break;
+        }
+    }
+    cell[..cut].trim().to_string()
 }
 
 /// `pub(crate)` — also reused by `inference::api_definition` for parsing
@@ -142,6 +353,8 @@ pub fn declared_repo_paths(agents_md: &str) -> Vec<String> {
         .into_iter()
         .map(|(_, declared_path, _, _)| declared_path)
         .filter(|path| !path.is_empty() && !is_placeholder_cell(path))
+        .map(|path| strip_cell_decoration(&path))
+        .filter(|path| !path.is_empty())
         .collect()
 }
 
@@ -170,12 +383,20 @@ pub fn build_ecosystem(
     };
     let repos = rows
         .into_iter()
-        .map(|(name, declared_path, role, stack)| EcosystemRepo {
-            cloned: resolve_repo_cloned(&declared_path, candidate_bases),
-            name,
-            declared_path,
-            role,
-            stack,
+        .map(|(name, declared_path, role, stack)| {
+            // Name and path are identifiers: decoration comes off before
+            // anything resolves them against disk or against a feature's
+            // repo subfolder.
+            let name = strip_cell_decoration(&name);
+            let declared_path = strip_cell_decoration(&declared_path);
+            EcosystemRepo {
+                cloned: resolve_repo_cloned(&declared_path, candidate_bases),
+                name,
+                declared_path,
+                role_key: canonical_role(&role).map(str::to_string),
+                role,
+                stack,
+            }
         })
         .collect();
     Ok(Some(repos))
@@ -215,6 +436,107 @@ Mỗi repo có 1 **Epic code** ngắn tham chiếu xuyên suốt SPEC/DESIGN/tas
         // distinguish "no ## Repos section" from "section exists but empty".
         let rows = parse_ecosystem_table(KIT_TEMPLATE_UNFILLED).expect("table shape recognized");
         assert!(rows.is_empty());
+    }
+
+    /// Verbatim row shape from a real `/init-kit` output
+    /// (`test-project-automatic`): identifiers in backticks, and a role cell
+    /// that is the role plus a human note. Every consumer used to compare
+    /// the whole role cell, so this project reported "no repo with role
+    /// frontend" while `repos/frontend` sat on disk.
+    const REAL_INIT_KIT_OUTPUT: &str = r#"
+## Repos
+
+| Repo | Đường dẫn | Vai trò | Stack |
+|---|---|---|---|
+| `frontend` | `repos/frontend` | frontend — nơi landing page được implement | React 19 · Vite 8 |
+| `backend` | `repos/backend` | backend — **chỉ chứa template residual, ngoài scope landing page** | NestJS 11 |
+"#;
+
+    #[test]
+    fn a_role_cell_with_a_human_note_still_reads_as_its_role() {
+        assert_eq!(
+            canonical_role("frontend — nơi landing page được implement"),
+            Some("frontend")
+        );
+        assert_eq!(
+            canonical_role("backend — **chỉ chứa template residual**"),
+            Some("backend")
+        );
+        assert_eq!(canonical_role("**Frontend** (web admin)"), Some("frontend"));
+        assert_eq!(canonical_role("`mobile`"), Some("mobile"));
+        assert_eq!(canonical_role("Backend"), Some("backend"));
+        assert_eq!(canonical_role("frontend, chỉ phần public"), Some("frontend"));
+    }
+
+    /// The app must say "I can't read this" rather than pick something —
+    /// `AGENTS.md` is the source of truth and guessing a role would silently
+    /// point an agent at the wrong repo (AC-E1-03).
+    #[test]
+    fn an_unreadable_role_cell_yields_none_rather_than_a_guess() {
+        // The kit's own placeholder: taking the leading token would read it
+        // as `backend` and mislabel a repo nobody declared a role for.
+        assert_eq!(canonical_role("backend / frontend / mobile / other"), None);
+        assert_eq!(canonical_role("FE"), None);
+        assert_eq!(canonical_role("web"), None);
+        assert_eq!(canonical_role("other"), None);
+        assert_eq!(canonical_role(""), None);
+        // A hyphenated word must not be cut at its hyphen into `front`.
+        assert_eq!(canonical_role("front-end"), None);
+    }
+
+    #[test]
+    fn identifiers_wrapped_in_markdown_are_read_as_plain_paths() {
+        let rows = parse_ecosystem_table(REAL_INIT_KIT_OUTPUT).unwrap();
+        assert_eq!(rows.len(), 2);
+
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(tmp.path().join("repos/frontend")).unwrap();
+        std::fs::create_dir_all(tmp.path().join("repos/backend")).unwrap();
+        let ecosystem = build_ecosystem(REAL_INIT_KIT_OUTPUT, &[tmp.path()])
+            .unwrap()
+            .unwrap();
+
+        let frontend = &ecosystem[0];
+        assert_eq!(frontend.name, "frontend");
+        assert_eq!(frontend.declared_path, "repos/frontend");
+        assert_eq!(frontend.role_key.as_deref(), Some("frontend"));
+        // Backticks in the path used to make this false, which would have
+        // produced a second wrong message ("clone repo về") the moment the
+        // role was fixed.
+        assert!(frontend.cloned);
+
+        // The note the user wrote is kept — the Launcher's Ecosystem table
+        // shows this cell verbatim.
+        assert!(frontend.role.contains("nơi landing page"));
+    }
+
+    /// The seam this bug lived in: parser tests never asserted on `role`,
+    /// and readiness tests built `EcosystemRepo` by hand, so nothing ever
+    /// ran `AGENTS.md` text all the way to a Run-button decision.
+    #[test]
+    fn a_real_init_kit_agents_md_makes_its_dev_slots_runnable() {
+        use crate::agentrun::readiness::{resolve_repo_readiness, RepoReadiness};
+
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(tmp.path().join("repos/frontend")).unwrap();
+        std::fs::create_dir_all(tmp.path().join("repos/backend")).unwrap();
+        let ecosystem = build_ecosystem(REAL_INIT_KIT_OUTPUT, &[tmp.path()])
+            .unwrap()
+            .unwrap();
+
+        assert!(matches!(
+            resolve_repo_readiness(&ecosystem, "frontend"),
+            RepoReadiness::Ready
+        ));
+        assert!(matches!(
+            resolve_repo_readiness(&ecosystem, "backend"),
+            RepoReadiness::Ready
+        ));
+        // This project genuinely has no mobile repo — AC-E2-12 still holds.
+        assert!(matches!(
+            resolve_repo_readiness(&ecosystem, "mobile"),
+            RepoReadiness::RoleNotInEcosystem
+        ));
     }
 
     #[test]
@@ -272,5 +594,152 @@ Mỗi repo có 1 **Epic code** ngắn tham chiếu xuyên suốt SPEC/DESIGN/tas
         let agents = discover_agents(tmp.path()).expect("dir exists");
         assert_eq!(agents, vec!["ba-agent", "qc-agent"]);
         assert!(has_claude_agents_dir(tmp.path()));
+    }
+
+    #[test]
+    fn unfilled_project_is_marked_needs_init() {
+        let content = r#"
+# <PROJECT_NAME> — Project Rules for AI Agents
+- **Domain:** _(1-2 câu, điền qua `/init-kit`)_
+## Repos
+| Repo | Đường dẫn | Vai trò | Stack |
+|---|---|---|---|
+| _(tên repo)_ | _(đường dẫn tương đối)_ | backend | _(NestJS)_ |
+"#;
+
+        let (status, reasons) = assess_init_status(Some(content), true);
+
+        assert_eq!(status, ProjectInitStatus::NeedsInit);
+        assert_eq!(reasons.len(), 3);
+    }
+
+    #[test]
+    fn filled_project_is_ready() {
+        let content = r#"
+# Shop — Project Rules for AI Agents
+- **Domain:** Nền tảng bán hàng cho cửa hàng nội bộ.
+## Repos
+| Repo | Đường dẫn | Vai trò | Stack |
+|---|---|---|---|
+| shop-api | repos/shop-api | backend | NestJS |
+"#;
+
+        let (status, reasons) = assess_init_status(Some(content), true);
+
+        assert_eq!(status, ProjectInitStatus::Ready);
+        assert!(reasons.is_empty());
+    }
+
+    #[test]
+    fn missing_kit_is_not_reported_as_needs_init() {
+        let (status, reasons) = assess_init_status(None, false);
+
+        assert_eq!(status, ProjectInitStatus::MissingKit);
+        assert!(!reasons.is_empty());
+    }
+
+    #[test]
+    fn malformed_agents_file_is_invalid() {
+        let (status, reasons) = assess_init_status(Some("# Shop"), true);
+
+        assert_eq!(status, ProjectInitStatus::Invalid);
+        assert!(!reasons.is_empty());
+    }
+
+    /// Reproduces the real flow: app scaffolds the kit (with the project
+    /// name rendered in), a human runs `/init-kit`, then the app re-checks.
+    /// The checked-in `example-project` is a REAL inited project. If the
+    /// app cannot see it as ready, no user's project can be either.
+    #[test]
+    fn the_example_project_is_seen_as_inited() {
+        let agents_md = include_str!("../../../example-project/kit-repo/AGENTS.md");
+        let (status, reasons) = assess_init_status(Some(agents_md), true);
+        println!("EXAMPLE = {status:?} reasons={reasons:?}");
+        assert_eq!(status, ProjectInitStatus::Ready, "reasons: {reasons:?}");
+    }
+
+    #[test]
+    fn a_correctly_inited_agents_md_reads_as_ready() {
+        let tmp = tempfile::tempdir().unwrap();
+        let agents_root = tmp.path().join("proj");
+        let docs_root = agents_root.join("docs");
+        crate::store::kit_template::materialize_for_project(
+            &agents_root,
+            &docs_root,
+            Some("Shop Online"),
+        )
+        .unwrap();
+
+        let path = agents_root.join("AGENTS.md");
+        let scaffolded = std::fs::read_to_string(&path).unwrap();
+
+        // What the app says BEFORE init.
+        let (before, before_reasons) =
+            assess_init_status(Some(&scaffolded), has_claude_agents_dir(&agents_root));
+        println!("BEFORE = {before:?} reasons={before_reasons:?}");
+
+        // Now apply exactly what `init-agent.md` Bước 3.1 instructs.
+        let inited = scaffolded
+            .replace(
+                "| _(tên repo)_ | _(đường dẫn tương đối)_ | backend / frontend / mobile / other | _(NestJS / React / Flutter / ...)_ |",
+                "| shop-api | ./repos/shop-api | backend | NestJS |",
+            )
+            .replace(
+                "- **Domain:** _(1-2 câu, điền qua `/init-kit`)_",
+                "- **Domain:** Nền tảng bán hàng online.",
+            )
+            .replace("<DOCS_ROOT>", "shop-docs/docs/features");
+        std::fs::write(&path, &inited).unwrap();
+
+        let (after, after_reasons) = read_init_status(&agents_root);
+        println!("AFTER  = {after:?} reasons={after_reasons:?}");
+        assert_eq!(
+            after,
+            ProjectInitStatus::Ready,
+            "reasons: {after_reasons:?}"
+        );
+    }
+
+    /// The shape a real `/init-kit` run produces: value filled in right
+    /// after the label, with the template's descriptive prose kept as a
+    /// trailing clause. Regression for a check that grepped the line for
+    /// that prose and pinned the project at `NeedsInit` forever.
+    #[test]
+    fn docs_root_filled_before_the_kept_description_is_ready() {
+        let agents_md = "\
+## Repos
+
+| Repo | Đường dẫn | Vai trò | Stack |
+|---|---|---|---|
+| frontend | repos/frontend | frontend | React |
+
+- **Domain:** Landing page cho thương hiệu outdoor.
+- **`<DOCS_ROOT>`:** `docs/` — single long-memory chứa SPEC/DESIGN/tasks/test-cases cho mọi feature (`docs/features/`).
+
+> Dev agent cập nhật overview docs (`<DOCS_ROOT>/<layer>/<repo>/overview/`).
+";
+        let (status, reasons) = assess_init_status(Some(agents_md), true);
+        assert_eq!(status, ProjectInitStatus::Ready, "reasons: {reasons:?}");
+    }
+
+    /// The mirror image: the untouched template must still be caught.
+    #[test]
+    fn docs_root_left_as_the_template_description_is_needs_init() {
+        let agents_md = "\
+## Repos
+
+| Repo | Đường dẫn | Vai trò | Stack |
+|---|---|---|---|
+| frontend | repos/frontend | frontend | React |
+
+- **Domain:** Landing page cho thương hiệu outdoor.
+- **`<DOCS_ROOT>`:** single long-memory chứa SPEC/DESIGN/tasks/test-cases cho mọi feature (ví dụ `<project>-docs/docs/features/`).
+";
+        let (status, reasons) = assess_init_status(Some(agents_md), true);
+        assert_eq!(status, ProjectInitStatus::NeedsInit);
+        assert!(
+            reasons.iter().any(|r| r.contains("DOCS_ROOT")),
+            "{reasons:?}"
+        );
     }
 }

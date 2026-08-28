@@ -12,11 +12,18 @@ use chrono::Utc;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
-use crate::domain::contract_lock::{ContractLockRecord, ViolationEvent};
+use crate::domain::contract_lock::{ContractLockRecord, ContractLockSkip, ViolationEvent};
 use crate::error::AppResult;
 use crate::store::atomic_write::write_json_atomic;
 
 const TIMESTAMP_FORMAT: &str = "%Y%m%dT%H%M%S%3fZ";
+
+/// The one non-record file that lives in `contract_lock_dir` (AC-E4-11b).
+/// It sits there rather than in a sibling tree so `delete_feature`'s
+/// existing `remove_dir_all(contract_lock_dir(..))` cleans it up too —
+/// which means every reader of that directory has to skip it explicitly,
+/// or a `ContractLockSkip` would be read as a corrupt lock record.
+const SKIP_FILENAME: &str = "skip.json";
 
 fn write_record<T: Serialize>(dir: &Path, record: &T) -> AppResult<()> {
     let filename = format!("{}.json", Utc::now().format(TIMESTAMP_FORMAT));
@@ -32,6 +39,7 @@ fn list_records<T: DeserializeOwned>(dir: &Path) -> Vec<T> {
         .into_iter()
         .flatten()
         .filter_map(|entry| entry.ok())
+        .filter(|entry| entry.file_name() != SKIP_FILENAME)
         .filter_map(|entry| {
             let filename = entry.file_name().to_string_lossy().into_owned();
             let raw = std::fs::read_to_string(entry.path()).ok()?;
@@ -77,12 +85,35 @@ pub fn has_unreadable_lock_file(dir: &Path) -> bool {
         .into_iter()
         .flatten()
         .filter_map(|entry| entry.ok())
+        .filter(|entry| entry.file_name() != SKIP_FILENAME)
         .any(|entry| {
             let Ok(raw) = std::fs::read_to_string(entry.path()) else {
                 return true;
             };
             serde_json::from_str::<ContractLockRecord>(&raw).is_err()
         })
+}
+
+/// AC-E4-11b — the PM's "this feature doesn't need a Contract Lock"
+/// override. Unlike lock records this is a single mutable file: it is
+/// current state, not history, and `unskip` must be able to take it back.
+pub fn read_skip(dir: &Path) -> Option<ContractLockSkip> {
+    let raw = std::fs::read_to_string(dir.join(SKIP_FILENAME)).ok()?;
+    serde_json::from_str(&raw).ok()
+}
+
+pub fn write_skip(dir: &Path, skip: &ContractLockSkip) -> AppResult<()> {
+    write_json_atomic(&dir.join(SKIP_FILENAME), skip)
+}
+
+/// Idempotent — clearing a skip that isn't there is a no-op, not an error,
+/// so a double-click on "Bỏ đánh dấu" can't fail the second time.
+pub fn clear_skip(dir: &Path) -> AppResult<()> {
+    match std::fs::remove_file(dir.join(SKIP_FILENAME)) {
+        Ok(()) => Ok(()),
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(err) => Err(err.into()),
+    }
 }
 
 /// AC-E4-26 — writes a new violation event, always a new file, never
@@ -177,6 +208,49 @@ mod tests {
 
         std::fs::write(dir.join("20260101T000000000Z.json"), "not json").unwrap();
         assert!(has_unreadable_lock_file(&dir));
+    }
+
+    /// `skip.json` shares a directory with the lock records, so the record
+    /// readers must not mistake it for one — otherwise a skipped feature
+    /// reports a bogus "lịch sử Contract Lock bị hỏng" warning forever.
+    #[test]
+    fn a_skip_file_is_invisible_to_the_lock_record_readers() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("locks");
+        std::fs::create_dir_all(&dir).unwrap();
+        write_skip(
+            &dir,
+            &ContractLockSkip {
+                skipped_by: "PM Test".to_string(),
+                reason: "Feature không có API mới".to_string(),
+                skipped_at: "2026-08-26T00:00:00Z".to_string(),
+            },
+        )
+        .unwrap();
+
+        assert!(list_locks(&dir).is_empty());
+        assert!(!has_unreadable_lock_file(&dir));
+    }
+
+    #[test]
+    fn skip_round_trips_and_clear_is_idempotent() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("locks");
+        std::fs::create_dir_all(&dir).unwrap();
+        assert!(read_skip(&dir).is_none());
+
+        let skip = ContractLockSkip {
+            skipped_by: "PM Test".to_string(),
+            reason: "Dùng lại endpoint cũ".to_string(),
+            skipped_at: "2026-08-26T00:00:00Z".to_string(),
+        };
+        write_skip(&dir, &skip).unwrap();
+        assert_eq!(read_skip(&dir).as_ref(), Some(&skip));
+
+        clear_skip(&dir).unwrap();
+        assert!(read_skip(&dir).is_none());
+        // Clearing again must not error — the button can be double-clicked.
+        clear_skip(&dir).unwrap();
     }
 
     #[test]

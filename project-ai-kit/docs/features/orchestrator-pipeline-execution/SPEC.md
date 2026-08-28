@@ -60,7 +60,7 @@ Pipeline này **không** bắt đầu từ trang giấy trắng. Cả hai đầu
 13. `design-analyst-agent` **không đọc SPEC để vẽ Figma**. Nó hỏi ngay: "cho tôi URL selection của design cần phân tích". Node chuyển `waiting-input`.
 14. BA mở Figma, copy URL của page hoặc feature tương ứng, dán vào ô nhập trong Log Console.
 15. `design-analyst-agent` gọi **Figma MCP đã cấu hình trong project** để đọc design tại URL đó, rồi ghi ra `design-analysis.md` trong folder feature. Node chuyển `done`.
-16. Cả 3 nhánh xong → app spawn `techlead-tasks-agent` (stage ③), rồi `pm-agent`. Hai agent này dùng `design-analysis.md` làm đầu vào cùng với `DESIGN.md`.
+16. Cả 3 nhánh xong → app spawn `techlead-tasks-agent` (stage ③). Agent này dùng `design-analysis.md` làm đầu vào cùng với `DESIGN.md`.
 17. Stage ④ Contract Lock (E4) chặn lại. Sau khi lock, app spawn `backend-agent`.
 18. `backend-agent` xong → app spawn `frontend-agent` và `mobile-agent` **song song**, mỗi agent chạy trong **git worktree riêng** của repo tương ứng.
 19. Stage ⑥ `qa-agent`, stage ⑦ `qc-agent` ∥ `qc-automation-agent` song song.
@@ -74,7 +74,7 @@ Pipeline khai báo dạng DAG trong `.orchestrator/pipeline.json`. v1 dùng temp
 |---|---|---|
 | ① Input | `ba-agent` | Tuần tự. Đầu vào là **folder tài liệu đã import**, không phải mô tả tự do |
 | ② Design | `techlead-design-agent` ∥ `design-analyst-agent` ∥ `qc-agent` | 3 nhánh song song, cùng bắt đầu sau khi Trigger gate mở. Nhánh Design-Analyst **luôn** dừng hỏi URL Figma trước khi làm việc |
-| ③ Planning | `techlead-tasks-agent` → `pm-agent` | Tuần tự |
+| ③ Planning | `techlead-tasks-agent` | Tuần tự |
 | ④ Contract Lock | — (gate, thuộc E4) | Chặn |
 | ⑤ Build | `backend-agent` → (`frontend-agent` ∥ `mobile-agent`) → integration | BE xong mới tới FE/Mobile |
 | ⑥ Verify | `qa-agent` | Tuần tự, per task |
@@ -92,6 +92,8 @@ Pipeline khai báo dạng DAG trong `.orchestrator/pipeline.json`. v1 dùng temp
 | AF-3 | Agent thoát với mã lỗi khác 0 | Node → `failed`, giữ nguyên toàn bộ log, hiện nút Retry và Skip |
 | AF-4 | Agent chạy quá timeout (mặc định 30 phút, chỉnh được per agent) | Kill process, node → `failed`, ghi rõ nguyên nhân là timeout chứ không phải lỗi agent |
 | AF-5 | PM bấm Retry | Spawn lại agent đó với cùng input; số lần retry tối đa mặc định 2, vượt thì nút Retry bị vô hiệu |
+| AF-5b | PM bấm Re-run trên một node đã `done` | Spawn lại agent đó qua `run_slot` (prompt xây lại từ đĩa, giống một lượt chạy mới), không tính vào giới hạn retry của AF-5. Vì bộ đếm attempt dùng chung cho mọi lượt chạy của slot (`run_slot` lẫn `start_run`), một node được Re-run nhiều lần rồi về sau lại `failed` có thể chạm ngay giới hạn Retry — chấp nhận được ở v1, không tự xử lý |
+| AF-5c | PM bấm Re-run nhưng dependency/gate của slot đó không còn thoả (ví dụ stage trước đang chạy lại, chưa `done`) | Từ chối với thông báo rõ đang chờ gì — cùng nội dung lỗi readiness mà nút Run bình thường trả về, không phải lỗi chung chung |
 | AF-6 | PM bấm Skip | Node → `skipped (manual)`, pipeline chạy tiếp stage sau. Trạng thái này hiển thị khác `done` |
 | AF-7 | PM bấm Kill khi agent đang chạy | Process bị dừng, node → `failed`, log giữ nguyên tới thời điểm bị kill |
 | AF-8 | Một trong 3 nhánh song song stage ② fail | Hai nhánh còn lại **chạy tiếp tới hết**. Stage ② chỉ `done` khi cả 3 xong; nhánh fail chặn việc mở stage ③ |
@@ -112,6 +114,7 @@ Pipeline khai báo dạng DAG trong `.orchestrator/pipeline.json`. v1 dùng temp
 | AF-23 | Người dùng dán URL Figma sai hoặc không có quyền truy cập | Agent quay lại `waiting-input` để nhập URL khác, không tự bỏ qua |
 | AF-24 | Design cần phân tích trải trên nhiều URL | Người dùng dán nhiều URL trong cùng một câu trả lời; agent phân tích tất cả vào một `design-analysis.md` |
 | AF-25 | `design-analysis.md` đã tồn tại từ lần chạy trước | Cảnh báo sẽ ghi đè, cho người dùng xác nhận trước khi chạy lại nhánh Design-Analyst |
+| AF-25b | MCP đang dùng không hỗ trợ export icon/ảnh (connector `claude.ai Figma` không có tool export, và không có `figma-bridge`) | `design-analyst-agent` vẫn tạo `design-analysis.md` bình thường, ghi rõ trong file là không export được asset do thiếu tool — không chặn cả nhánh, không hỏi lại |
 | AF-26 | `.claude/agents/design-analyst-agent.md` chưa tồn tại trong kit | Nhánh Design-Analyst → `blocked` ngay từ đầu, thông báo nêu rõ thiếu file agent — khác với AF-21 (thiếu MCP) |
 
 ## Acceptance Criteria
@@ -121,6 +124,9 @@ Pipeline khai báo dạng DAG trong `.orchestrator/pipeline.json`. v1 dùng temp
 - **AC-E2-01** — `.orchestrator/pipeline.json` khai báo tường minh, với mỗi stage: mã stage, danh sách agent, và stage phụ thuộc. App đọc file này để quyết định thứ tự chạy — không suy diễn từ tên file agent.
 - **AC-E2-02** — Ba agent của stage ② (`techlead-design-agent`, `design-analyst-agent`, `qc-agent`) được spawn **đồng thời** — cả ba đều ở trạng thái `running` cùng lúc, quan sát được trên Pipeline Board.
 - **AC-E2-03** — Ở stage ⑤, `frontend-agent` và `mobile-agent` chỉ được spawn **sau khi** `backend-agent` kết thúc với trạng thái `done`.
+- **AC-E2-03a** — Ràng buộc `AC-E2-03` **chỉ áp dụng khi backend thật sự có việc trong feature đó**. "Có việc" = tồn tại thư mục con của feature khớp một repo vai trò `backend` trong bảng Ecosystem **và** thư mục đó có ít nhất một `tasks/task-*.md`. Feature không có task backend nào (vd landing page thuần FE) thì Frontend/Mobile chạy được ngay, không chờ. Suy luận này chỉ được dùng khi **mọi** thư mục con của feature khớp được repo đã khai (giống chốt an toàn `AC-E4-11a`) và khi feature **đã có ít nhất một task** — chưa chạy Tech Lead Tasks thì không kết luận gì.
+- **AC-E2-03b** — Slot stage ⑤ không có task nào trong feature được đánh dấu `skipped (không áp dụng)`, nêu rõ lý do, và nút Run bị tắt. Khác với `AC-E2-12` (project không có repo vai trò đó) và khác với Skip thủ công: **Skip thủ công vẫn chặn** Frontend/Mobile, vì đó là người dùng bỏ qua phần backend đã được lên kế hoạch, không phải kế hoạch không có phần backend.
+- **AC-E2-03c** — Slot stage ⑤ không sinh artifact nên trạng thái hoàn tất của nó suy từ **run log**, không từ file trên đĩa: một lần chạy kết thúc `done` phải đưa node sang `done`. (Với slot có artifact thì ngược lại — artifact vẫn là nguồn sự thật, `done` từ run log không nâng cấp một artifact còn thiếu nội dung.)
 - **AC-E2-04** — Ở stage ⑦, `qc-agent` và `qc-automation-agent` được spawn đồng thời sau khi stage ⑥ đạt `done`.
 - **AC-E2-05** — Một stage chỉ đạt `done` khi **tất cả** agent thuộc stage đó đạt `done` hoặc `skipped`. Còn một agent `failed` hoặc `blocked` thì stage không `done` và stage kế tiếp không được spawn.
 
@@ -135,6 +141,8 @@ Pipeline khai báo dạng DAG trong `.orchestrator/pipeline.json`. v1 dùng temp
 - **AC-E2-12** — Agent nhắm vào vai trò repo mà project không có (vd `mobile-agent` khi không có repo mobile) được đánh dấu `skipped (không áp dụng)` và **không** bị spawn.
 - **AC-E2-13** — Nút Retry spawn lại đúng agent đó với input ban đầu. Sau số lần retry tối đa theo cấu hình (mặc định 2), nút Retry bị vô hiệu hoá.
 - **AC-E2-14** — Trạng thái `skipped (manual)` hiển thị khác biệt rõ ràng với `done` trên Pipeline Board — người xem phân biệt được stage nào thực sự chạy và stage nào bị bỏ qua.
+- **AC-E2-41** — Một agent slot ở trạng thái `done` hoặc `done-incomplete` hiển thị nút **Re-run**, spawn lại qua đúng cơ chế `run_slot` (như một lượt chạy mới bình thường — prompt được xây lại từ trạng thái đĩa hiện tại, không phải replay chuỗi prompt cũ) — cho phép cập nhật node khi input thượng nguồn (ví dụ `SPEC.md` do `ba-agent` sửa lại) đã đổi sau khi node này đã xong. Re-run vẫn đi qua đúng bộ điều kiện readiness như một lần chạy mới (dependency, gate, repo đã clone...) — không bỏ qua các kiểm tra đó.
+- **AC-E2-42** — Re-run một slot đã có artifact hiển thị cảnh báo sẽ ghi đè artifact hiện có trước khi chạy (cùng cơ chế xác nhận 2 bước với Retry, `AC-E6-24`), và **không** bị giới hạn bởi số lần retry tối đa (`AC-E6-23`) — giới hạn đó chỉ áp dụng cho việc thử lại sau lỗi, không áp dụng cho việc chủ động chạy lại một node đã thành công.
 
 **Clarification loop (human-in-the-loop)**
 
@@ -176,8 +184,11 @@ Pipeline khai báo dạng DAG trong `.orchestrator/pipeline.json`. v1 dùng temp
 - **AC-E2-35** — Người dùng dán URL Figma vào ô nhập trong Log Console; app gửi vào cùng session của agent theo đúng cơ chế clarification loop (`AC-E2-17`).
 - **AC-E2-36** — Sau khi nhận URL, `design-analyst-agent` đọc design qua Figma MCP **của project** và ghi ra file phân tích design tại `<DOCS_ROOT>/features/<feature>/design-analysis.md`.
 - **AC-E2-37** — Nhánh Design-Analyst chỉ đạt `done` khi `design-analysis.md` tồn tại. Agent kết thúc mà không sinh ra file này thì node chuyển `failed`.
+- **AC-E2-37a** — Khi đọc design qua Figma MCP, `design-analyst-agent` còn export mọi icon/ảnh xác định được trong selection vào `<DOCS_ROOT>/features/<feature>/design-resources/`, và liệt kê danh sách file đã export vào `design-analysis.md`. Điều kiện `done` của nhánh này (`AC-E2-37`) **không đổi** — vẫn chỉ dựa vào sự tồn tại của `design-analysis.md`; thiếu `design-resources/` không chặn `done`.
+- **AC-E2-37b** — Vế tiêu thụ của `AC-E2-37a`: `frontend-agent` / `mobile-agent` copy asset từ `design-resources/` vào thư mục asset của repo đích **bằng `cp`**, không dùng Read→Write. `Read` trả về ảnh đã render chứ không phải bytes, nên round-trip qua `Write` làm hỏng mọi file nhị phân (`.png`/`.jpg`) mà không báo lỗi — chỉ `.svg` tình cờ chạy được vì là text. Hai agent này vì vậy được cấp `Bash` trong `tools:`, giới hạn phạm vi bằng comment ngay tại chỗ khai. Asset được copy **nguyên tên, nguyên định dạng**; không resize/convert.
+- **AC-E2-37c** — App truyền `--settings <agentsRoot>/.claude/settings.json` khi file đó tồn tại, để hook của kit (H01/H03/H05) có hiệu lực cho agent chạy qua app. Cần thiết vì run của pipeline có `cwd` là thư mục feature dưới `docsRoot`, và **đã kiểm chứng bằng thực nghiệm**: Claude Code không dò `.claude/settings.json` ngược lên thư mục cha từ một `cwd` sâu (kể cả khi thư mục gốc là git repo), nên nếu không truyền cờ này thì hook hoàn toàn không được nạp. Cùng thực nghiệm cũng xác nhận PreToolUse hook **vẫn chạy và vẫn chặn được** dưới `-p` headless + `--permission-mode bypassPermissions`.
 - **AC-E2-38** — URL không hợp lệ hoặc Figma MCP không đọc được nội dung thì agent quay lại `waiting-input` để người dùng nhập URL khác — app **không** tự đoán URL và **không** bỏ qua bước này.
-- **AC-E2-39** — `design-analysis.md` được đưa vào ngữ cảnh của `techlead-tasks-agent` và `pm-agent` ở stage ③.
+- **AC-E2-39** — `design-analysis.md` được đưa vào ngữ cảnh của `techlead-tasks-agent` ở stage ③.
 - **AC-E2-40** — File `.claude/agents/design-analyst-agent.md` không tồn tại trong kit thì app phát hiện được điều này khi liệt kê agent (liên kết `AC-E1-08`) và hiển thị cảnh báo rõ ràng "thiếu agent `design-analyst-agent`" thay vì lỗi chung chung khi spawn thất bại.
 
 ## Out of Scope

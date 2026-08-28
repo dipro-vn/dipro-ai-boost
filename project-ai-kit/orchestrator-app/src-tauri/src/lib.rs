@@ -9,7 +9,6 @@ mod fs_detect;
 mod fswatch;
 mod gitutil;
 mod inference;
-mod integrations;
 mod pipeline_state;
 mod store;
 
@@ -27,7 +26,9 @@ pub fn run() {
             commands::theme::set_theme,
             commands::project::detect_project_paths,
             commands::project::open_project,
+            commands::project::open_existing_project,
             commands::project::scaffold_kit,
+            commands::project::refresh_project,
             commands::project::list_recent_projects,
             commands::project::remove_recent_project,
             commands::pipeline::list_features,
@@ -48,7 +49,10 @@ pub fn run() {
             commands::agentrun::read_run_log,
             commands::agentrun::approve_trigger_gate,
             commands::agentrun::lock_contract,
+            commands::agentrun::skip_contract_lock,
+            commands::agentrun::unskip_contract_lock,
             commands::agentrun::skip_run,
+            commands::agentrun::force_done_run,
             commands::agentrun::resume_run,
             commands::agentrun::get_slot_readiness,
             commands::agentrun::run_slot,
@@ -80,15 +84,6 @@ pub fn run() {
             commands::reports::list_run_history,
             commands::reports::export_cost_csv,
             commands::reports::clear_run_logs,
-            commands::integrations::test_backlog_connection,
-            commands::integrations::save_backlog_credentials,
-            commands::integrations::get_backlog_status,
-            commands::integrations::clear_backlog_credentials,
-            commands::backlog::get_backlog_push_view,
-            commands::backlog::push_to_backlog,
-            commands::backlog::hash_task_file,
-            commands::integrations::refresh_backlog_status,
-            commands::integrations::get_backlog_status_cache,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

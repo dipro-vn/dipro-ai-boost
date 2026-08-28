@@ -8,7 +8,8 @@ use crate::agents_reader;
 use crate::app_state::AppState;
 use crate::domain::config_file::ProjectConfig;
 use crate::domain::project::{
-    DetectedPaths, EcosystemRepo, ProjectPaths, ProjectSummary, RecentProjectEntry,
+    DetectedPaths, EcosystemRepo, ProjectInitStatus, ProjectPaths, ProjectSummary,
+    RecentProjectEntry,
 };
 use crate::error::{AppError, AppResult};
 use crate::fs_detect;
@@ -116,7 +117,7 @@ fn load_or_reset_config(
 ///
 /// Cố ý KHÔNG tự sửa một path đang là file: đó là lỗi thật, đoán ý người
 /// dùng ở đây chỉ làm hỏng thêm.
-fn prepare_roots(roots: &[(&str, &Path)]) -> AppResult<Vec<String>> {
+fn prepare_roots(roots: &[(&str, &Path)], create_missing: bool) -> AppResult<Vec<String>> {
     let mut created = Vec::new();
 
     for (field, path) in roots {
@@ -134,6 +135,11 @@ fn prepare_roots(roots: &[(&str, &Path)]) -> AppResult<Vec<String>> {
                     "{field} đang trỏ tới một file, không phải thư mục: {}",
                     path.display()
                 ),
+            });
+        }
+        if !create_missing {
+            return Err(AppError::Invalid {
+                message: format!("{field} không tồn tại: {}", path.display()),
             });
         }
         std::fs::create_dir_all(path).map_err(|err| AppError::Invalid {
@@ -164,9 +170,12 @@ fn build_ecosystem_with_warnings(
     }
 
     match agents_reader::build_ecosystem(&content, &candidate_bases) {
+        // Bảng parse được nhưng mọi dòng còn là placeholder. Trước đây
+        // nhánh này im hoàn toàn, nên project chưa init trông y hệt project
+        // đã init mà app đọc hụt.
         Ok(Some(repos)) if repos.is_empty() => {
             warnings.push(format!(
-                "{AGENTS_MD_FILENAME} có bảng ## Repos nhưng chỉ chứa dòng mẫu chưa điền — project có thể chưa chạy /init-kit"
+                "Bảng ## Repos trong {AGENTS_MD_FILENAME} chưa có dòng repo nào được điền — chạy /init-kit trong Claude Code tại agentsRoot"
             ));
             Vec::new()
         }
@@ -185,6 +194,21 @@ fn build_ecosystem_with_warnings(
                     missing.len(),
                     missing.join(", "),
                     repository_root.display(),
+                ));
+            }
+            // Ô "Vai trò" đọc không ra thì repo vẫn hiện trong bảng
+            // Ecosystem, nhưng mọi agent nhắm vào vai trò đó bị chặn — nói
+            // ngay lúc mở project, đừng để tới lúc bấm Run mới lộ.
+            let unreadable: Vec<String> = repos
+                .iter()
+                .filter(|repo| repo.role_key.is_none())
+                .map(|repo| format!("{} (vai trò: \"{}\")", repo.name, repo.role))
+                .collect();
+            if !unreadable.is_empty() {
+                warnings.push(format!(
+                    "Không đọc được vai trò của {} repo trong {AGENTS_MD_FILENAME}: {}. Ô \"Vai trò\" phải là đúng một từ backend/frontend/mobile/other — agent tương ứng sẽ không chạy được cho tới khi sửa.",
+                    unreadable.len(),
+                    unreadable.join(", "),
                 ));
             }
             repos
@@ -208,15 +232,84 @@ pub fn open_project(
     repository_root: String,
     label: String,
 ) -> AppResult<ProjectSummary> {
+    open_project_internal(
+        app,
+        state,
+        agents_root,
+        docs_root,
+        repository_root,
+        label,
+        true,
+    )
+}
+
+/// Opens a recent project without recreating roots that were deleted or
+/// renamed. Missing paths must return to the launcher so the user can repair
+/// the saved entry instead of receiving a fresh empty project.
+#[tauri::command]
+pub fn open_existing_project(
+    app: AppHandle,
+    state: State<AppState>,
+    agents_root: String,
+    docs_root: String,
+    repository_root: String,
+    label: String,
+) -> AppResult<ProjectSummary> {
+    open_project_internal(
+        app,
+        state,
+        agents_root,
+        docs_root,
+        repository_root,
+        label,
+        false,
+    )
+}
+
+fn open_project_internal(
+    app: AppHandle,
+    state: State<AppState>,
+    agents_root: String,
+    docs_root: String,
+    repository_root: String,
+    label: String,
+    create_missing: bool,
+) -> AppResult<ProjectSummary> {
+    let label = label.trim().to_string();
+    if label.is_empty() {
+        return Err(AppError::Invalid {
+            message: "Tên project chưa được điền".to_string(),
+        });
+    }
     let agents_root_path = PathBuf::from(&agents_root);
     let docs_root_path = PathBuf::from(&docs_root);
     let repository_root_path = PathBuf::from(&repository_root);
 
-    let created_roots = prepare_roots(&[
-        ("agentsRoot", &agents_root_path),
-        ("docsRoot", &docs_root_path),
-        ("repositoryRoot", &repository_root_path),
-    ])?;
+    // Claimed for this whole function's duration (dropped on every return
+    // path) so two concurrent open calls can't both pass the `is_some()`
+    // check below before either sets `current_project` — see
+    // `AppState::try_claim_opening`.
+    let Some(_opening_guard) = state.try_claim_opening() else {
+        return Err(AppError::Invalid {
+            message: "Một project khác đang được mở — vui lòng đợi rồi thử lại.".to_string(),
+        });
+    };
+
+    if state.current_project.lock().unwrap().is_some() {
+        return Err(AppError::Invalid {
+            message: "Đã có project đang mở — hãy đóng project trước khi mở project khác"
+                .to_string(),
+        });
+    }
+
+    let created_roots = prepare_roots(
+        &[
+            ("agentsRoot", &agents_root_path),
+            ("docsRoot", &docs_root_path),
+            ("repositoryRoot", &repository_root_path),
+        ],
+        create_missing,
+    )?;
 
     let mut warnings = Vec::new();
 
@@ -236,15 +329,20 @@ pub fn open_project(
     //
     // `match` chứ không `?`: không ghi được `.claude/` (thư mục chỉ đọc,
     // hết quota) mà lại không mở nổi project để xem chuyện gì xảy ra thì là
-    // bước lùi. Cảnh báo + nút "Khởi tạo" trên Launcher là đường thử lại.
-    match kit_template::materialize(&agents_root_path, &docs_root_path) {
-        Ok(report) if !report.created.is_empty() => warnings.push(format!(
-            "Đã dựng khung kit cho project: tạo mới {} mục trong .claude/ và <docsRoot>/features/ (không ghi đè file nào có sẵn).",
-            report.created.len()
+    // bước lùi. Cảnh báo + nút "Bổ sung khung kit" trên Launcher là đường thử lại.
+    match kit_template::materialize_for_project(
+        &agents_root_path,
+        &docs_root_path,
+        Some(&label),
+    ) {
+        Ok(report) if !report.created.is_empty() || !report.updated.is_empty() => warnings.push(format!(
+            "Đã dựng khung kit cho project: tạo mới {} mục, cập nhật {} template trong .claude/ và <docsRoot>/features/ (không ghi đè file custom).",
+            report.created.len(),
+            report.updated.len()
         )),
         Ok(_) => {}
         Err(err) => warnings.push(format!(
-            "Không dựng được khung kit: {err}. Project vẫn mở được — dùng nút \"Khởi tạo\" để thử lại."
+            "Không dựng được khung kit: {err}. Project vẫn mở được — dùng nút \"Bổ sung khung kit\" để thử lại."
         )),
     }
 
@@ -264,6 +362,13 @@ pub fn open_project(
         &repository_root_path,
         &mut warnings,
     );
+    let (init_status, init_reasons) = agents_reader::read_init_status(&agents_root_path);
+    if init_status == ProjectInitStatus::NeedsInit {
+        warnings.push(
+            "Project chưa init: chạy /init-kit trong Claude Code tại agentsRoot rồi kiểm tra lại."
+                .to_string(),
+        );
+    }
 
     // .orchestrator/ lives under agentsRoot: it's the closest thing to a
     // stable "this is the kit-managed project" anchor across the 3
@@ -281,6 +386,14 @@ pub fn open_project(
             "Thư mục .orchestrator/ đang được git theo dõi — nó chứa transcript agent (gồm nguyên văn nội dung file agent đã đọc/ghi) và bản sao input. Chạy `git rm -r --cached .orchestrator` rồi commit để gỡ khỏi repo."
                 .to_string(),
         );
+    }
+
+    // Legacy data from builds that still had `pm-agent` and Push to
+    // Backlog. Runs BEFORE `load_pipeline_def` / `load_or_reset_config`:
+    // those two read the very files this cleans, and `reconcile()` would
+    // otherwise tombstone `pm-agent` as `stale` instead of dropping it.
+    if let Some(message) = crate::store::legacy_cleanup::purge(&agents_root_path).warning() {
+        warnings.push(message);
     }
 
     // Migrate `pipeline.json` before anything reads it — a file written by
@@ -337,6 +450,7 @@ pub fn open_project(
     };
 
     *state.current_project.lock().unwrap() = Some(paths.clone());
+    *state.current_project_label.lock().unwrap() = Some(label.clone());
     *state.ecosystem.lock().unwrap() = ecosystem.clone();
 
     upsert_recent_project(&app, &paths, &label)?;
@@ -349,6 +463,8 @@ pub fn open_project(
         ecosystem,
         agents_found,
         warnings,
+        init_status,
+        init_reasons,
     })
 }
 
@@ -369,7 +485,60 @@ pub fn scaffold_kit(state: State<AppState>) -> AppResult<kit_template::ScaffoldR
         .unwrap()
         .clone()
         .ok_or(AppError::NoProjectOpen)?;
-    kit_template::materialize(Path::new(&paths.agents_root), Path::new(&paths.docs_root))
+    let label = state.current_project_label.lock().unwrap().clone();
+    kit_template::materialize_for_project(
+        Path::new(&paths.agents_root),
+        Path::new(&paths.docs_root),
+        label.as_deref(),
+    )
+}
+
+/// Re-reads project files after the user completes the external Claude Code
+/// `/init-kit` handoff. Unlike `open_project`, this does not rewrite recent
+/// project metadata or recreate runtime config; it only refreshes inspection
+/// state and the cached Ecosystem.
+#[tauri::command]
+pub fn refresh_project(state: State<AppState>) -> AppResult<ProjectSummary> {
+    let paths = state
+        .current_project
+        .lock()
+        .unwrap()
+        .clone()
+        .ok_or(AppError::NoProjectOpen)?;
+    let label = state
+        .current_project_label
+        .lock()
+        .unwrap()
+        .clone()
+        .unwrap_or_else(|| "Project".to_string());
+    let agents_root = Path::new(&paths.agents_root);
+    let docs_root = Path::new(&paths.docs_root);
+    let repository_root = Path::new(&paths.repository_root);
+    let mut warnings = Vec::new();
+    let read_only = !agents_reader::has_claude_agents_dir(agents_root);
+    let agents_found = agents_reader::discover_agents(agents_root).unwrap_or_default();
+    let ecosystem =
+        build_ecosystem_with_warnings(agents_root, docs_root, repository_root, &mut warnings);
+    let (init_status, init_reasons) = agents_reader::read_init_status(agents_root);
+    if init_status == ProjectInitStatus::NeedsInit {
+        warnings.push(
+            "Project chưa init: chạy /init-kit trong Claude Code tại agentsRoot rồi kiểm tra lại."
+                .to_string(),
+        );
+    }
+    *state.ecosystem.lock().unwrap() = ecosystem.clone();
+
+    Ok(ProjectSummary {
+        missing_kit: kit_template::missing_groups(agents_root, docs_root),
+        paths,
+        label,
+        read_only,
+        ecosystem,
+        agents_found,
+        warnings,
+        init_status,
+        init_reasons,
+    })
 }
 
 /// Tính lại bảng Ecosystem từ `AGENTS.md` + tình trạng thật trên đĩa, rồi
@@ -419,48 +588,14 @@ pub fn list_running_slots(state: State<AppState>) -> Vec<RunningSlot> {
 
 /// Releases the currently open project so another one can be opened.
 ///
-/// Refuses while any agent is running unless `force`, because `RunKey`
-/// (feature + slot) carries no project id: leaving a run tracked while a
-/// different project is open means the new project's Board could match
-/// that key, show a foreign run as its own, and Kill the wrong process.
-/// `force` kills them first rather than leaving that hazard behind.
-///
-/// Everything project-scoped in `AppState` is cleared here — the watcher,
-/// the roots, the Ecosystem, and any pending spawn reservations — so the
-/// next `open_project` starts from nothing rather than inheriting state
-/// that belongs to a different directory.
+/// Everything project-scoped in `AppState` is cleared — the watcher, the
+/// roots, the Ecosystem, and any pending spawn reservations — so the next
+/// `open_project` starts from nothing rather than inheriting state that
+/// belongs to a different directory. See `AppState::close` for why a
+/// spawn racing this close can never land in `agent_runs` afterward.
 #[tauri::command]
 pub fn close_project(state: State<AppState>, force: bool) -> AppResult<()> {
-    let running = state.agent_runs.keys();
-    if !running.is_empty() {
-        if !force {
-            let names: Vec<String> = running
-                .iter()
-                .map(|key| format!("{}/{}", key.feature, key.slot))
-                .collect();
-            return Err(AppError::Invalid {
-                message: format!(
-                    "Đang có {} agent chạy ({}) — dừng (Kill) trước, hoặc xác nhận đóng để kill hết",
-                    running.len(),
-                    names.join(", ")
-                ),
-            });
-        }
-        state.agent_runs.kill_all();
-    }
-
-    // Same order `stop_watching` uses: bump the generation first so an
-    // in-flight reconnect gives up instead of resurrecting a watch on a
-    // project that is no longer open.
-    state
-        .watch_generation
-        .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-    *state.watcher.lock().unwrap() = None;
-    *state.current_project.lock().unwrap() = None;
-    state.ecosystem.lock().unwrap().clear();
-    state.pending_spawns.lock().unwrap().clear();
-    cli_path::set_override(None);
-    Ok(())
+    state.close(force)
 }
 
 fn read_recent_projects(app: &AppHandle) -> AppResult<Vec<RecentProjectEntry>> {
@@ -577,7 +712,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let nested = tmp.path().join("a/b/docs");
 
-        let created = prepare_roots(&[("docsRoot", &nested)]).unwrap();
+        let created = prepare_roots(&[("docsRoot", &nested)], true).unwrap();
 
         assert!(nested.is_dir());
         assert_eq!(created.len(), 1);
@@ -593,7 +728,8 @@ mod tests {
         std::fs::create_dir_all(&existing).unwrap();
         let fresh = tmp.path().join("brand-new");
 
-        let created = prepare_roots(&[("agentsRoot", &existing), ("docsRoot", &fresh)]).unwrap();
+        let created =
+            prepare_roots(&[("agentsRoot", &existing), ("docsRoot", &fresh)], true).unwrap();
 
         assert_eq!(created.len(), 1);
         assert!(created[0].starts_with("docsRoot ("));
@@ -602,7 +738,7 @@ mod tests {
     #[test]
     fn prepare_roots_rejects_an_empty_path() {
         let empty = PathBuf::new();
-        let err = prepare_roots(&[("docsRoot", &empty)]).unwrap_err();
+        let err = prepare_roots(&[("docsRoot", &empty)], true).unwrap_err();
         assert!(format!("{err:?}").contains("docsRoot"));
     }
 
@@ -613,7 +749,7 @@ mod tests {
         let as_file = tmp.path().join("docs");
         std::fs::write(&as_file, "").unwrap();
 
-        let err = prepare_roots(&[("docsRoot", &as_file)]).unwrap_err();
+        let err = prepare_roots(&[("docsRoot", &as_file)], true).unwrap_err();
         assert!(format!("{err:?}").contains("docsRoot"));
         assert!(as_file.is_file(), "không được đụng vào file của người dùng");
     }
@@ -624,8 +760,13 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let root = tmp.path().join("docs");
 
-        assert_eq!(prepare_roots(&[("docsRoot", &root)]).unwrap().len(), 1);
-        assert!(prepare_roots(&[("docsRoot", &root)]).unwrap().is_empty());
+        assert_eq!(
+            prepare_roots(&[("docsRoot", &root)], true).unwrap().len(),
+            1
+        );
+        assert!(prepare_roots(&[("docsRoot", &root)], true)
+            .unwrap()
+            .is_empty());
     }
 
     #[test]
@@ -685,7 +826,7 @@ mod tests {
         // testable end to end.
         let root = fixture_root();
         let agents = agents_reader::discover_agents(&root.join("kit-repo")).expect("dir exists");
-        assert_eq!(agents.len(), 13);
+        assert_eq!(agents.len(), 12);
         assert!(agents.iter().any(|a| a == "design-analyst-agent"));
     }
 }

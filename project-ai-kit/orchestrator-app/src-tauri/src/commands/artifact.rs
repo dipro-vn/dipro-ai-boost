@@ -126,6 +126,7 @@ fn synthetic_current_version() -> VersionRef {
 #[tauri::command]
 pub fn list_artifact_versions(state: State<AppState>, path: String) -> AppResult<Vec<VersionRef>> {
     let (project, canonical) = resolve_and_guard(&state, &path)?;
+    assert_not_restricted(&project, &canonical)?;
 
     let mut versions = vec![synthetic_current_version()];
 
@@ -150,6 +151,7 @@ pub fn diff_artifact(
     to_id: String,
 ) -> AppResult<DiffResult> {
     let (project, canonical) = resolve_and_guard(&state, &path)?;
+    assert_not_restricted(&project, &canonical)?;
     let is_git = git_source::is_git_tracked(&canonical);
     let source = if is_git {
         VersionSource::Git

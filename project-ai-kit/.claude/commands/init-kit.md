@@ -6,4 +6,6 @@ description: Setup kit AI agent cho dự án mới — hỏi thông tin dự án
 
 Toàn bộ workflow (Bước 1→3), checklist câu hỏi bắt buộc, và danh sách file cần sinh nằm trong `init-agent.md` — tuân thủ đầy đủ, không bỏ qua bước hỏi user.
 
+Lệnh này phải được nhập trong một session Claude Code đang mở tại `agentsRoot`. App Orchestrator chỉ hỗ trợ handoff và kiểm tra lại trạng thái; không tự chạy lệnh này.
+
 Nếu `$ARGUMENTS` có nội dung (vd user đã mô tả sẵn dự án), dùng làm ngữ cảnh trả lời trước cho các câu hỏi liên quan thay vì hỏi lại.

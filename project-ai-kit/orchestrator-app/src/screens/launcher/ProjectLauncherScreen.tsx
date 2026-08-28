@@ -22,6 +22,7 @@ import { useAppStore } from "@/state/app-store";
 import { RecentProjectList } from "@/screens/launcher/RecentProjectList";
 import { ThreePathForm } from "@/screens/launcher/ThreePathForm";
 import { EcosystemRepoTable } from "@/screens/launcher/EcosystemRepoTable";
+import { ProjectInitHandoff } from "@/screens/launcher/ProjectInitHandoff";
 
 const EMPTY_PATHS: ProjectPaths = {
   agentsRoot: "",
@@ -40,6 +41,7 @@ function extractErrorMessage(err: unknown): string {
 export function ProjectLauncherScreen() {
   const setScreen = useAppStore((s) => s.setScreen);
   const setProjectLabel = useAppStore((s) => s.setProjectLabel);
+  const setProjectInit = useAppStore((s) => s.setProjectInit);
 
   const [view, setView] = useState<View>("recent");
   const [recentEntries, setRecentEntries] = useState<RecentProjectEntry[]>([]);
@@ -54,18 +56,20 @@ export function ProjectLauncherScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [summary, setSummary] = useState<ProjectSummary | null>(null);
   const [scaffolding, setScaffolding] = useState(false);
+  const [refreshingInit, setRefreshingInit] = useState(false);
 
   /** Dựng phần khung kit còn thiếu rồi mở lại chính project đó — mở lại là
    * cách duy nhất làm mới `readOnly`/`agentsFound`/`ecosystem`, và
    * `summary` đã mang sẵn `paths` + `label` nên không cần state phụ. */
-  async function scaffoldKit(current: ProjectSummary) {
+  async function scaffoldKit() {
     setScaffolding(true);
     setErrorMessage(null);
     try {
       await commands.scaffoldKit();
-      setSummary(
-        await commands.openProject({ ...current.paths, label: current.label }),
-      );
+      const refreshed = await commands.refreshProject();
+      setSummary(refreshed);
+      setProjectLabel(refreshed.label);
+      setProjectInit(refreshed.initStatus, refreshed.initReasons, refreshed.paths.agentsRoot);
     } catch (err) {
       setErrorMessage(extractErrorMessage(err));
     } finally {
@@ -109,6 +113,7 @@ export function ProjectLauncherScreen() {
     try {
       const result = await commands.openProject({ ...paths, label });
       setProjectLabel(result.label);
+      setProjectInit(result.initStatus, result.initReasons, result.paths.agentsRoot);
       setSummary(result);
       setView("summary");
     } catch (err) {
@@ -118,22 +123,44 @@ export function ProjectLauncherScreen() {
     }
   }
 
-  // AC-E1-07: recent entries go straight to the board — no re-asking the 3
-  // paths. AF-5: if the paths are no longer valid, drop into the form
-  // pre-filled with the broken entry so the user can fix it instead of
+  async function refreshCurrentProject() {
+    setRefreshingInit(true);
+    setErrorMessage(null);
+    try {
+      const result = await commands.refreshProject();
+      setProjectLabel(result.label);
+      setProjectInit(result.initStatus, result.initReasons, result.paths.agentsRoot);
+      setSummary(result);
+    } catch (err) {
+      setErrorMessage(extractErrorMessage(err));
+    } finally {
+      setRefreshingInit(false);
+    }
+  }
+
+  // AC-E1-07: ready recent entries go straight to the board — no re-asking
+  // the 3 paths. Uninitialized entries return to Summary for handoff. AF-5:
+  // if the paths are no longer valid, drop into the form pre-filled with the
+  // broken entry so the user can fix it instead of
   // silently failing.
   async function openRecent(entry: RecentProjectEntry) {
     setErrorMessage(null);
     setOpeningRecentLabel(entry.label);
     try {
-      await commands.openProject({
+      const result = await commands.openExistingProject({
         agentsRoot: entry.agentsRoot,
         docsRoot: entry.docsRoot,
         repositoryRoot: entry.repositoryRoot,
         label: entry.label,
       });
-      setProjectLabel(entry.label);
-      setScreen("board");
+      setProjectLabel(result.label);
+      setProjectInit(result.initStatus, result.initReasons, result.paths.agentsRoot);
+      if (result.initStatus === "ready") {
+        setScreen("board");
+      } else {
+        setSummary(result);
+        setView("summary");
+      }
     } catch (err) {
       setErrorMessage(
         `Không mở được "${entry.label}": ${extractErrorMessage(err)}`,
@@ -216,6 +243,9 @@ export function ProjectLauncherScreen() {
             <CardTitle className="flex items-center gap-2">
               {summary.label}
               {summary.readOnly && <Badge variant="outline">read-only</Badge>}
+              {summary.initStatus === "needs-init" && <Badge variant="outline">chưa init</Badge>}
+              {summary.initStatus === "missing-kit" && <Badge variant="destructive">thiếu kit</Badge>}
+              {summary.initStatus === "invalid" && <Badge variant="destructive">cấu hình lỗi</Badge>}
             </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
@@ -231,13 +261,21 @@ export function ProjectLauncherScreen() {
                 </AlertDescription>
               </Alert>
             )}
+            <ProjectInitHandoff
+              projectName={summary.label}
+              agentsRoot={summary.paths.agentsRoot}
+              status={summary.initStatus}
+              reasons={summary.initReasons}
+              refreshing={refreshingInit}
+              onRefresh={() => void refreshCurrentProject()}
+            />
             {summary.missingKit.length > 0 && (
               <div className="flex flex-col gap-3 rounded-lg border border-warning p-3">
                 <div>
                   <p className="text-sm font-medium">Project chưa đủ khung kit</p>
                   <p className="text-xs text-muted-foreground">
                     Thiếu những phần dưới đây thì Board vẫn hiện đủ node nhưng không node
-                    nào chạy được. Khởi tạo chỉ tạo phần còn thiếu, không ghi đè file nào
+                    nào chạy được. Bổ sung khung kit chỉ tạo phần còn thiếu, không ghi đè file nào
                     đã có.
                   </p>
                 </div>
@@ -256,10 +294,10 @@ export function ProjectLauncherScreen() {
                     variant="outline"
                     size="sm"
                     disabled={scaffolding}
-                    onClick={() => scaffoldKit(summary)}
+                    onClick={() => scaffoldKit()}
                   >
                     <PackagePlus />
-                    {scaffolding ? "Đang khởi tạo..." : "Khởi tạo"}
+                    {scaffolding ? "Đang bổ sung..." : "Bổ sung khung kit"}
                   </Button>
                 </div>
               </div>

@@ -1,5 +1,6 @@
 import { FileText } from "lucide-react";
 import { useEffect, useState } from "react";
+import { isPreviewableArtifact } from "@/lib/artifact-preview";
 import { commands, isAppCommandError, type NodeDetail } from "@/lib/tauri-client";
 import { useAppStore } from "@/state/app-store";
 
@@ -76,17 +77,32 @@ export function ArtifactSummary({
           </div>
         ) : (
           <ul className="flex flex-col gap-1">
-            {detail.artifacts.map((artifact) => (
-              <li key={artifact.path}>
-                <button
-                  type="button"
-                  onClick={() => open(artifact.path)}
-                  className="text-left font-mono text-xs text-primary underline-offset-2 hover:underline"
-                >
-                  {artifact.label}
-                </button>
-              </li>
-            ))}
+            {detail.artifacts.map((artifact) =>
+              isPreviewableArtifact(artifact.path) ? (
+                <li key={artifact.path}>
+                  <button
+                    type="button"
+                    onClick={() => open(artifact.path)}
+                    className="text-left font-mono text-xs text-primary underline-offset-2 hover:underline"
+                  >
+                    {artifact.label}
+                  </button>
+                </li>
+              ) : (
+                // Binary asset (exported .png and friends): listed with its
+                // path, not clickable — `read_artifact` decodes UTF-8 and
+                // would just throw. AC-E3-04a wants these visible, not
+                // openable.
+                <li key={artifact.path}>
+                  <span
+                    title={artifact.path}
+                    className="font-mono text-xs text-muted-foreground"
+                  >
+                    {artifact.label}
+                  </span>
+                </li>
+              ),
+            )}
           </ul>
         )}
       </div>

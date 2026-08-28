@@ -68,7 +68,7 @@ pub fn compute_and_persist(
         Err(_) => StateFile::default(),
     };
 
-    let mut nodes = stage_rules::infer_feature_state(&feature_dir, &runs_dir);
+    let mut nodes = stage_rules::infer_feature_state(&feature_dir, &runs_dir, ecosystem);
     apply_agent_run_metadata(agents_root, feature, &mut nodes);
 
     // AC-E4-01/02/07 — read the previously persisted gate (if any) so
@@ -95,8 +95,13 @@ pub fn compute_and_persist(
     // philosophy the rest of this function already follows.
     let contract_lock_dir = orchestrator_dir::contract_lock_dir(agents_root, feature);
     let previous_lock = contract_lock::read_latest_lock(&contract_lock_dir);
-    let contract_lock =
-        contract_lock_rules::infer_contract_lock_state(&feature_dir, ecosystem, previous_lock);
+    let skip = contract_lock::read_skip(&contract_lock_dir);
+    let contract_lock = contract_lock_rules::infer_contract_lock_state(
+        &feature_dir,
+        ecosystem,
+        previous_lock,
+        skip,
+    );
 
     // AC-E4-29 (adapted — see this phase's plan doc for why the recovery
     // differs from the single-mutable-file model the AC assumes): never
@@ -221,7 +226,19 @@ fn apply_agent_run_metadata(
             continue;
         };
 
-        if node.status == NodeStatus::Idle {
+        // Stage ⑤ slots leave no artifact behind (`artifact_paths_for_slot`
+        // returns nothing for them), so inference can't see them at all and
+        // their run log is the ONLY evidence they ran — it has to override
+        // whatever default `infer_feature_state` put there. Without this a
+        // successful backend run stayed `Idle` forever, which made
+        // `after_slots: [backend]` unsatisfiable in every project and left
+        // stage ⑥ waiting on a stage ⑤ that could never complete.
+        //
+        // Every other slot is the opposite: the artifact on disk is the
+        // truth, and a `Done` run must not paper over one that inference
+        // judged `DoneIncomplete`.
+        let run_log_is_authoritative = crate::agentrun::readiness::slot_repo_role(slot_id).is_some();
+        if run_log_is_authoritative || node.status == NodeStatus::Idle {
             *node = match summary.outcome {
                 RunOutcome::WaitingInput => {
                     NodeState::waiting_input(summary.last_message.clone().unwrap_or_default())
@@ -238,6 +255,7 @@ fn apply_agent_run_metadata(
                 RunOutcome::Interrupted => {
                     NodeState::interrupted(summary.last_message.clone().unwrap_or_default())
                 }
+                RunOutcome::Done if run_log_is_authoritative => NodeState::done(),
                 RunOutcome::Done => node.clone(),
             };
         }
@@ -415,7 +433,6 @@ mod tests {
             "design-analyst",
             "qc-design",
             "techlead-tasks",
-            "pm",
         ] {
             assert_eq!(
                 user_login.nodes[done_slot].status,
@@ -675,6 +692,70 @@ mod tests {
     }
 
     /// AC-E6-04 — an `interrupted` summary written by the startup scan must
+    fn summary(outcome: RunOutcome) -> crate::domain::run_summary::RunSummary {
+        crate::domain::run_summary::RunSummary {
+            outcome,
+            session_id: "sess-1".to_string(),
+            cost_usd: 0.0,
+            started_at: "2026-08-17T00:00:00Z".to_string(),
+            ended_at: "2026-08-17T00:05:00Z".to_string(),
+            last_message: None,
+            attempt: 1,
+            prompt: None,
+        }
+    }
+
+    fn write_summary(agents_root: &Path, feature: &str, slot: &str, outcome: RunOutcome) {
+        let path = orchestrator_dir::agent_run_summary_path(agents_root, feature, slot);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        crate::store::atomic_write::write_json_atomic(&path, &summary(outcome)).unwrap();
+    }
+
+    /// Stage ⑤ slots produce no artifact, so inference always called them
+    /// `Idle` and `RunOutcome::Done` mapped to "keep what inference said" —
+    /// i.e. a successful backend run stayed `Idle` forever. That made
+    /// `after_slots: [backend]` unsatisfiable in EVERY project and left
+    /// stage ⑥ waiting on a stage ⑤ that could never complete.
+    #[test]
+    fn a_successful_build_run_actually_reaches_done() {
+        let tmp = tempfile::tempdir().unwrap();
+        let agents_root = tmp.path().join("agents-root");
+        let docs_root = tmp.path().join("docs-root");
+        std::fs::create_dir_all(docs_root.join("features/feature-a")).unwrap();
+        std::fs::create_dir_all(&agents_root).unwrap();
+
+        write_summary(&agents_root, "feature-a", "backend", RunOutcome::Done);
+
+        let (state, _) = compute_and_persist(&agents_root, &docs_root, "feature-a", &[]).unwrap();
+        assert_eq!(
+            state.nodes.get("backend").unwrap().status,
+            crate::domain::node_status::NodeStatus::Done
+        );
+    }
+
+    /// The other half: for a slot that DOES leave an artifact, the artifact
+    /// stays the truth. A `Done` run must not paper over a `SPEC.md` that
+    /// inference judged incomplete.
+    #[test]
+    fn a_done_run_never_upgrades_an_incomplete_artifact() {
+        let tmp = tempfile::tempdir().unwrap();
+        let agents_root = tmp.path().join("agents-root");
+        let docs_root = tmp.path().join("docs-root");
+        let feature_dir = docs_root.join("features/feature-a");
+        std::fs::create_dir_all(&feature_dir).unwrap();
+        std::fs::create_dir_all(&agents_root).unwrap();
+        // Present but missing the required sections.
+        std::fs::write(feature_dir.join("SPEC.md"), "# Chỉ có tiêu đề\n").unwrap();
+
+        write_summary(&agents_root, "feature-a", "ba", RunOutcome::Done);
+
+        let (state, _) = compute_and_persist(&agents_root, &docs_root, "feature-a", &[]).unwrap();
+        assert_eq!(
+            state.nodes.get("ba").unwrap().status,
+            crate::domain::node_status::NodeStatus::DoneIncomplete
+        );
+    }
+
     /// surface as `NodeStatus::Interrupted` in state.json, distinct from
     /// `failed`, whenever inference alone would call the slot idle.
     #[test]

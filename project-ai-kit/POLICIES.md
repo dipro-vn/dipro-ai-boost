@@ -91,7 +91,6 @@ Mỗi persona có checklist câu hỏi riêng trước khi hành động:
 - **BA**: checklist câu hỏi trong `.claude/agents/ba-agent.md` Bước 2
 - **Tech Lead Design**: Hỏi nếu SPEC không đủ rõ về AC, data model, integration
 - **Tech Lead Tasks**: Hỏi nếu DESIGN còn mơ hồ về scope/file
-- **PM**: checklist câu hỏi trong `.claude/agents/pm-agent.md` Bước 2 (deadline, dev available, dependency, deploy, QA)
 - **Dev**: Hỏi nếu task không đủ context để implement trong 4–8h
 
 **Không bao giờ tự giả định.** Thà hỏi 1 câu thừa còn hơn sinh ra docs/code sai phải undo.

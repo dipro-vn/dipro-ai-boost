@@ -28,7 +28,7 @@ Khi mở app, ở màn hình "Mở project mới", chọn `example-project/` là
 
 | Feature | Trạng thái mong đợi |
 |---|---|
-| `user-login` | Gần như toàn bộ node **Done** (SPEC đủ 7 section, có DESIGN.md, design-analysis.md, tasks/, test-cases/, PLAN.md) |
+| `user-login` | Gần như toàn bộ node **Done** (SPEC đủ 7 section, có DESIGN.md, design-analysis.md, tasks/, test-cases/) |
 | `payment-checkout` | Node BA ở trạng thái **Done (chưa đầy đủ)** — SPEC.md chỉ có 3/7 section bắt buộc |
 | `notification-center` | Toàn bộ **Idle** — feature vừa tạo, chưa có gì |
 
@@ -80,9 +80,9 @@ khách hàng, biên bản họp, ghi chú kỹ thuật, mô tả màn hình vẽ
 | `example-web` | đã clone (có folder `repos/example-web/`) |
 | `example-mobile` | **chưa clone** (không có folder tương ứng — cố ý, để test badge "chưa clone") |
 
-## Điểm cố ý mô phỏng gap thật của kit (B17)
+## Agent files trong fixture
 
-`kit-repo/.claude/agents/` có 12 agent file thật của kit, **cố ý KHÔNG có** `design-analyst-agent.md` — vì file này chưa tồn tại trong kit thật (xem `ASSUMPTIONS-GAPS.md` mục B17). Trên Pipeline Board, node "Design-Analyst" ở stage ② vẫn hiển thị bình thường (idle) dù agent chưa tồn tại — đúng hành vi kỳ vọng.
+`kit-repo/.claude/agents/` mirror đúng 12 agent file thật của kit (gồm `design-analyst-agent.md`, bổ sung ở Phase C — B17 đã đóng). `pm-agent.md` không còn: agent PM đã bị gỡ khỏi kit cùng với `PLAN.md` và tính năng đẩy issue lên Backlog.
 
 ## Giới hạn
 

@@ -1,8 +1,8 @@
 pub mod atomic_write;
-pub mod backlog_map;
 pub mod contract_lock;
 pub mod keychain;
 pub mod kit_template;
+pub mod legacy_cleanup;
 pub mod mcp_config;
 pub mod mcp_status;
 pub mod orchestrator_dir;

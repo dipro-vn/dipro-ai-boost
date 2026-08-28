@@ -18,16 +18,15 @@
 | 2b | Design | `qc-agent` (manual TC lần 1) | Pipeline: `/test/analyze-req` → `/test/plan-tcs` → `/test/gen-tcs` | 2a, 2c |
 | 2c | Design | `designer-agent` | `/create-ui-design <SPEC.md>` | 2a, 2b |
 | 3 | Planning | `techlead-tasks-agent` | `/create-tasks <feature/>` | — |
-| 4 | Planning | `pm-agent` | `/create-plan <feature/>` (+ optional `/create-backlog`) | — |
-| 5a | Build | `backend-agent` | Implement task Phase 1 → 2 | — |
-| 5b | Build | (manual) copy API Contract → task-3-x | — | — |
-| 5c | Build | `frontend-agent` | Implement task Phase 3 | 5d |
-| 5d | Build | `mobile-agent` | Implement task Phase 3 | 5c |
-| 5e | Integration | BE + FE + Mobile | task-4-x integration test | — |
-| 6 | Verify | `qa-agent` | `"Hãy là QA, verify task: <path>"` | — |
-| 7a | Test | `qc-agent` (execution lần 2) | `/test/generate_test_execution_checklist` | 7c |
-| 7b | Test | `qc-agent` (regression optional) | `/test/generate_regression_suite` | — |
-| 7c | Test | `qc-automation-agent` | `"Hãy là QC Automation, test feature: ..."` | 7a |
+| 4a | Build | `backend-agent` | Implement task Phase 1 → 2 | — |
+| 4b | Build | (manual) copy API Contract → task-3-x | — | — |
+| 4c | Build | `frontend-agent` | Implement task Phase 3 | 4d |
+| 4d | Build | `mobile-agent` | Implement task Phase 3 | 4c |
+| 4e | Integration | BE + FE + Mobile | task-4-x integration test | — |
+| 5 | Verify | `qa-agent` | `"Hãy là QA, verify task: <path>"` | — |
+| 6a | Test | `qc-agent` (execution lần 2) | `/test/generate_test_execution_checklist` | 6c |
+| 6b | Test | `qc-agent` (regression optional) | `/test/generate_regression_suite` | — |
+| 6c | Test | `qc-automation-agent` | `"Hãy là QC Automation, test feature: ..."` | 6a |
 
 > **On-demand (không thuộc phase-gate):** `/test/review-tcs` (deep review khi ≥2 QC) · `/test/export-xlsx <path> web\|app` (Excel bàn giao) · `/test/gen-bug-report` (bug template).
 
@@ -40,7 +39,7 @@
 | Rule | Áp dụng cho |
 |---|---|
 | Bước 1 = đọc context + skill trước khi hành động | Mọi agent |
-| Chỉ tạo/sửa `.md` (trừ Dev) | BA, PM, Tech Lead, QC, QA, Designer, QC-Auto |
+| Chỉ tạo/sửa `.md` (trừ Dev) | BA, Tech Lead, QC, QA, Designer, QC-Auto |
 | `tilth_deps` blast radius BẮT BUỘC trước khi đổi public interface | Tech Lead Design, Tech Lead Tasks, Backend, Frontend, Mobile |
 | Không tự đoán khi thiếu context — phải hỏi user | Mọi agent |
 | Handover message = natural language + slash command song song | Mọi agent |
@@ -120,7 +119,7 @@ flowchart TD
 
 ### 3.3 `qc-agent` — QC Manual Tester
 
-> **Chạy 3 lần trong pipeline:** lần 1 = sinh TC sau SPEC (2b — pipeline 3 bước) · lần 2 = execution checklist trước release (7a) · lần 3 song song với 7c (QC Automation).
+> **Chạy 3 lần trong pipeline:** lần 1 = sinh TC sau SPEC (2b — pipeline 3 bước) · lần 2 = execution checklist trước release (6a) · lần 3 song song với 6c (QC Automation).
 
 ```mermaid
 flowchart TD
@@ -136,10 +135,10 @@ flowchart TD
     C4 -- OK --> C5["/test/gen-tcs<br/>TC chi tiết + Visual states +<br/>Traceability ID → AC-XX"]
     C5 --> C6["Output: test-cases/&lt;module&gt;/<br/>{analysis, plan-tcs, test-cases}.md"]
 
-    B -- "Lần 2: pre-release (7a)" --> D["/test/generate_test_execution_checklist"]
+    B -- "Lần 2: pre-release (6a)" --> D["/test/generate_test_execution_checklist"]
     D --> D1[Output: checklist_release.md]
 
-    B -- "Lần 3: song song 7c" --> E[Cross-check với E2E<br/>của qc-automation-agent]
+    B -- "Lần 3: song song 6c" --> E[Cross-check với E2E<br/>của qc-automation-agent]
 
     C6 --> F{On-demand?}
     F -- ≥2 QC review chéo --> F1["/test/review-tcs (8 tiêu chí)"]
@@ -194,35 +193,14 @@ flowchart TD
     K -- Có --> L[Hỏi user - KHÔNG tự đoán]
     L --> K
     K -- Không --> M["Viết task-{phase}-{index}.md:<br/>Backlog Info · Metadata · Mục tiêu ·<br/>Context · Yêu cầu implement ·<br/>Unit Tests BẮT BUỘC ·<br/>API Definition (Phase 2) ·<br/>Non-Regression Table · Không được làm · DoD"]
-    M --> N[Bàn giao PM<br/>/create-plan]
+    M --> N[Bàn giao Contract Lock<br/>trước khi Dev Phase 3]
 ```
 
 **❌ Không:** task > 8h · task thiếu Unit Test · tự đoán khi DESIGN mơ hồ · sửa source code.
 
 ---
 
-### 3.6 `pm-agent` — Project Manager
-
-```mermaid
-flowchart TD
-    A["/create-plan &lt;feature/&gt;"] --> B["Đọc SPEC + context/specification.md +<br/>skill project-planning +<br/>tilth_files DESIGN + tasks/task-* +<br/>check ## Screens Figma Link"]
-    B --> C[Hỏi 5 câu:<br/>1 Deadline + phase-gate<br/>2 Dev available<br/>3 Dependency<br/>4 Deploy STG / PROD<br/>5 QA riêng hay dev tự test]
-    C --> D["Viết PLAN.md:<br/>Summary · Phase-Gate · Timeline Gantt ASCII ·<br/>Contract Lock REST+WS+Push ·<br/>Dependencies + Risks · Assignees · DoD"]
-    D --> E{User yêu cầu sync Backlog?}
-    E -- Không --> J[Bàn giao Dev<br/>BE Phase 1 trước<br/>FE/Mobile Phase 3 sau]
-    E -- Có --> F[Backlog metadata:<br/>get_project_list + get_issue +<br/>get_users + get_categories +<br/>get_version_milestone_list +<br/>get_issue_types + get_priorities]
-    F --> G[Tạo 1 issue thử → user confirm]
-    G --> H{User OK?}
-    H -- Không --> G
-    H -- OK --> I[Batch tạo N-1 issues còn lại<br/>ghi Backlog issue keys vào PLAN.md]
-    I --> J
-```
-
-**❌ Không:** phân tích yêu cầu (BA việc) · design kỹ thuật (Tech Lead việc) · ghi số giả (dùng `TBD`) · sửa source code.
-
----
-
-### 3.7 `backend-agent` — Backend Developer (NestJS)
+### 3.6 `backend-agent` — Backend Developer (NestJS)
 
 ```mermaid
 flowchart TD
@@ -241,13 +219,14 @@ flowchart TD
     K --> L{QA PASS?}
     L -- FAIL --> F
     L -- PASS --> M[Copy API Contract<br/>vào task-3-x FE/Mobile]
+    M --> Z[STOP — dừng session,<br/>không tự hỏi thêm xác nhận<br/>trừ khi thiếu thông tin thật]
 ```
 
 **❌ Không:** sửa migration / linter / test config không được yêu cầu · commit khi không được yêu cầu · hard-code secret · N+1 query.
 
 ---
 
-### 3.8 `frontend-agent` — Frontend Developer (React)
+### 3.7 `frontend-agent` — Frontend Developer (React)
 
 ```mermaid
 flowchart TD
@@ -272,7 +251,7 @@ flowchart TD
 
 ---
 
-### 3.9 `mobile-agent` — Mobile Developer (Flutter)
+### 3.8 `mobile-agent` — Mobile Developer (Flutter)
 
 ```mermaid
 flowchart TD
@@ -294,7 +273,7 @@ flowchart TD
 
 ---
 
-### 3.10 `qa-agent` — QA Engineer
+### 3.9 `qa-agent` — QA Engineer
 
 ```mermaid
 flowchart TD
@@ -309,14 +288,14 @@ flowchart TD
     H --> I{Kết luận?}
     I -- FAIL --> J[Issue list file:line +<br/>đề xuất fix →<br/>quay lại Dev]
     J --> E
-    I -- PASS --> K[Status Testing Request →<br/>QC execution checklist 7a]
+    I -- PASS --> K[Status Testing Request →<br/>QC execution checklist 6a]
 ```
 
 **❌ Không:** sửa source code · sinh manual TC (qc-agent việc) · so với assumption thay vì SPEC · thay đổi test cases đã approve.
 
 ---
 
-### 3.11 `qc-automation-agent` — QC Automation Tester
+### 3.10 `qc-automation-agent` — QC Automation Tester
 
 ```mermaid
 flowchart TD
@@ -369,7 +348,6 @@ flowchart TD
 | QC Automation sinh selector CSS class | Không đọc Figma labels | qc-automation-agent Bước 3 đọc Figma trước khi viết spec |
 | QA PASS nhưng vẫn miss AC | So với assumption thay vì SPEC | qa-agent Bước 3 đối chiếu AC ID từ SPEC.md |
 | Task quá lớn, dev không xong trong session | techlead-tasks-agent ước lượng sai | Enforce 4-8h/task, chia nhỏ nếu > 8h |
-| Backlog issues sync thiếu / sai | pm-agent Bước 4.2 verify metadata không kỹ | Tạo issue thử trước, user confirm mới batch |
 | QC gọi thẳng `/gen-tcs` khi chưa có `plan-tcs.md` | Skip pipeline steps | Command tự dừng + hướng dẫn quay lại `/plan-tcs` |
 | Test data placeholder ("email hợp lệ") lọt vào TC | `/gen-tcs` self-check yếu | Self-check tự grep placeholder, tự fix trước khi lưu |
 

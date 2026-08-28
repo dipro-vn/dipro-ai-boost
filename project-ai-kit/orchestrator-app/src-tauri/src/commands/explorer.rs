@@ -21,14 +21,16 @@ const RUN_SLOTS: &[&str] = &[
     slot::DESIGN_ANALYST,
     slot::QC_DESIGN,
     slot::TECHLEAD_TASKS,
-    slot::PM,
     slot::BACKEND,
     slot::FRONTEND,
     slot::MOBILE,
     slot::QA,
     slot::QC_TESTING,
     slot::QC_AUTOMATION,
-    crate::commands::backlog::BACKLOG_PUSH_SLOT,
+    // Legacy ids kept as literals so deleting a feature still sweeps run
+    // dirs left behind by the removed `pm-agent` and Backlog push.
+    "pm",
+    "backlog-push",
 ];
 
 fn current_project(state: &State<AppState>) -> AppResult<ProjectPaths> {

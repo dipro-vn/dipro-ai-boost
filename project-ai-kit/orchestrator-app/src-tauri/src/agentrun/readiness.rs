@@ -60,6 +60,20 @@ pub enum SlotReadiness {
     /// AC-E2-12 — no repo of this role exists in the Ecosystem at all, so
     /// the slot doesn't apply to this project.
     RepoRoleMissing { role: String },
+    /// No repo matched this role, but at least one repo's Vai trò cell
+    /// couldn't be read as a role at all — so "this project has no frontend"
+    /// is almost certainly the wrong conclusion to hand the user. Names the
+    /// offending repos and their cells verbatim so the fix is a one-line
+    /// edit in `AGENTS.md` rather than a hunt.
+    RepoRoleUnreadable {
+        role: String,
+        entries: Vec<UnreadableRole>,
+    },
+    /// This feature has no `task-*.md` for the repo role this slot targets,
+    /// so there is nothing for its agent to do — distinct from
+    /// `RepoRoleMissing` (the PROJECT has no such repo at all) and from a
+    /// manual Skip (the user decided, rather than the plan).
+    NoWorkInFeature { role: String },
     /// The slot isn't declared in `pipeline.json` at all.
     UnknownSlot,
 }
@@ -75,6 +89,15 @@ pub fn slot_repo_role(slot_id: &str) -> Option<&'static str> {
     }
 }
 
+/// One Ecosystem row whose Vai trò cell the app could not read, quoted
+/// back verbatim for the error message.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UnreadableRole {
+    pub repo_name: String,
+    pub declared_role: String,
+}
+
 /// AC-E2-11/12. Only `backend`/`frontend`/`mobile` target a specific repo
 /// role; every other slot works at the feature/docs level and is always
 /// `Ready`.
@@ -83,6 +106,9 @@ pub enum RepoReadiness {
     Ready,
     /// AC-E2-12 — no repo of this role exists in the Ecosystem at all.
     RoleNotInEcosystem,
+    /// No repo matched, and the Ecosystem contains rows whose Vai trò cell
+    /// is unreadable — report those instead of claiming the role is absent.
+    RoleUnreadable { entries: Vec<UnreadableRole> },
     /// AC-E2-11 — a repo of this role exists but isn't cloned yet. Carries
     /// the repo's name and declared path so the message can be specific.
     RepoNotCloned {
@@ -95,11 +121,36 @@ pub fn resolve_repo_readiness(ecosystem: &[EcosystemRepo], slot_id: &str) -> Rep
     let Some(role) = slot_repo_role(slot_id) else {
         return RepoReadiness::Ready;
     };
+    // Matches on `role_key`, never on the raw `role` cell — that cell is
+    // prose in the field ("frontend — nơi landing page được implement") and
+    // comparing it whole is what made a fully-configured project report
+    // "no repo with role frontend".
     match ecosystem
         .iter()
-        .find(|repo| repo.role.eq_ignore_ascii_case(role))
+        .find(|repo| repo.role_key.as_deref() == Some(role))
     {
-        None => RepoReadiness::RoleNotInEcosystem,
+        None => {
+            // Distinguishing these two matters: "project has no frontend
+            // repo" is a legitimate, permanent state (AC-E2-12), whereas an
+            // unreadable Vai trò cell is a typo the user can fix in a
+            // second — but only if the app says so instead of blaming the
+            // project's shape.
+            let unreadable: Vec<UnreadableRole> = ecosystem
+                .iter()
+                .filter(|repo| repo.role_key.is_none())
+                .map(|repo| UnreadableRole {
+                    repo_name: repo.name.clone(),
+                    declared_role: repo.role.clone(),
+                })
+                .collect();
+            if unreadable.is_empty() {
+                RepoReadiness::RoleNotInEcosystem
+            } else {
+                RepoReadiness::RoleUnreadable {
+                    entries: unreadable,
+                }
+            }
+        }
         Some(repo) if !repo.cloned => RepoReadiness::RepoNotCloned {
             name: repo.name.clone(),
             declared_path: repo.declared_path.clone(),
@@ -131,6 +182,13 @@ fn is_complete(status: Option<&NodeStatus>) -> bool {
 /// (Contract Lock trên feature 1 repo). Nó không mở khoá gì cả — nó trong
 /// suốt, nên phải nhìn xuyên qua tới stage nuôi chính nó. Gộp chung vào
 /// `passed_gates` thì stage ⑤ mở ngay cả khi feature mới chỉ có `INPUT.md`.
+// Eight independent facts about the project and the feature, none of which
+// groups naturally with another — bundling them into a struct just to
+// satisfy the lint would hide the signature rather than clarify it. If this
+// grows again, the right move is a `ReadinessInputs` struct built once per
+// feature (`get_slot_readiness` already computes all of them once and loops
+// over slots), as its own refactor rather than inside a bug fix.
+#[allow(clippy::too_many_arguments)]
 pub fn compute_slot_readiness(
     def: &PipelineDef,
     statuses: &BTreeMap<String, NodeStatus>,
@@ -138,6 +196,7 @@ pub fn compute_slot_readiness(
     skipped_gates: &[String],
     agents_found: &[String],
     ecosystem: &[EcosystemRepo],
+    slots_without_work: &[String],
     slot_id: &str,
 ) -> SlotReadiness {
     let Some(stage_idx) = def
@@ -177,14 +236,36 @@ pub fn compute_slot_readiness(
                 role: slot_repo_role(slot_id).unwrap_or(slot_id).to_string(),
             }
         }
+        RepoReadiness::RoleUnreadable { entries } => {
+            return SlotReadiness::RepoRoleUnreadable {
+                role: slot_repo_role(slot_id).unwrap_or(slot_id).to_string(),
+                entries,
+            }
+        }
         RepoReadiness::Ready => {}
+    }
+
+    // Nothing planned for this slot in this feature — like a missing repo,
+    // waiting will never resolve it, so it outranks dependency talk.
+    if slots_without_work.iter().any(|id| id == slot_id) {
+        return SlotReadiness::NoWorkInFeature {
+            role: slot_repo_role(slot_id).unwrap_or(slot_id).to_string(),
+        };
     }
 
     // Intra-stage dependencies first: they're the most specific answer, and
     // the most common one the user will hit (FE/Mobile waiting on backend).
+    //
+    // A dependency with no work in this feature is dropped rather than
+    // waited on: `after_slots` exists so FE/Mobile get the backend's API
+    // contract, and a backend with no task file is never going to produce
+    // one. This is NOT the same as accepting `Skipped` — a manual Skip is
+    // the user overriding a backend that WAS planned, and that still
+    // blocks (see `skipped_backend_still_blocks_frontend`).
     let unmet: Vec<String> = agent_slot
         .after_slots
         .iter()
+        .filter(|dep| !slots_without_work.iter().any(|id| id == dep.as_str()))
         .filter(|dep| !matches!(statuses.get(dep.as_str()), Some(NodeStatus::Done)))
         .cloned()
         .collect();
@@ -254,6 +335,9 @@ mod tests {
             name: name.to_string(),
             declared_path: name.to_string(),
             role: role.to_string(),
+            // Derived exactly as the parser does, so a fixture can never
+            // claim a role the real pipeline wouldn't read off that cell.
+            role_key: crate::agents_reader::canonical_role(role).map(str::to_string),
             stack: String::new(),
             cloned,
         }
@@ -285,6 +369,7 @@ mod tests {
             &[],
             &all_agents(),
             &full_ecosystem(),
+            &[],
             slot_id,
         )
     }
@@ -301,7 +386,6 @@ mod tests {
             readiness(&st, &[], slot::TECHLEAD_TASKS),
             SlotReadiness::Ready
         );
-        assert_eq!(readiness(&st, &[], slot::PM), SlotReadiness::Ready);
     }
 
     /// Ported from `incomplete_stage_spawns_nothing` — and now the UI can
@@ -371,6 +455,93 @@ mod tests {
         ));
     }
 
+    /// The reported bug. A backend with no task file in this feature will
+    /// never produce an API contract, so waiting on it is waiting forever.
+    #[test]
+    fn frontend_does_not_wait_on_a_backend_that_has_no_work_in_this_feature() {
+        let locked = vec![gate::CONTRACT_LOCK.to_string()];
+        let without_work = vec![slot::BACKEND.to_string()];
+        let st = statuses(&[(slot::BACKEND, NodeStatus::Skipped)]);
+
+        assert_eq!(
+            compute_slot_readiness(
+                &PipelineDef::default(),
+                &st,
+                &locked,
+                &[],
+                &all_agents(),
+                &full_ecosystem(),
+                &without_work,
+                slot::FRONTEND,
+            ),
+            SlotReadiness::Ready
+        );
+
+        // And the workless slot itself says so instead of offering a Run
+        // button for an agent with no task to read.
+        assert_eq!(
+            compute_slot_readiness(
+                &PipelineDef::default(),
+                &st,
+                &locked,
+                &[],
+                &all_agents(),
+                &full_ecosystem(),
+                &without_work,
+                slot::BACKEND,
+            ),
+            SlotReadiness::NoWorkInFeature {
+                role: "backend".to_string()
+            }
+        );
+    }
+
+    /// The knock-on effect of leaving workless build slots `Idle`: stage ⑥
+    /// needs every stage ⑤ slot `Done` or `Skipped`, so QA sat blocked on a
+    /// backend and a mobile that were never going to run.
+    #[test]
+    fn qa_opens_once_the_only_build_slot_with_work_is_done() {
+        let st = statuses(&[
+            (slot::BACKEND, NodeStatus::Skipped),
+            (slot::FRONTEND, NodeStatus::Done),
+            (slot::MOBILE, NodeStatus::Skipped),
+        ]);
+        assert_eq!(
+            compute_slot_readiness(
+                &PipelineDef::default(),
+                &st,
+                &[gate::CONTRACT_LOCK.to_string()],
+                &[],
+                &all_agents(),
+                &full_ecosystem(),
+                &[slot::BACKEND.to_string(), slot::MOBILE.to_string()],
+                slot::QA,
+            ),
+            SlotReadiness::Ready
+        );
+    }
+
+    /// The distinction that must survive: "the plan has no backend work" is
+    /// not "the user pressed Skip on backend work that WAS planned". Only
+    /// the first one drops the dependency.
+    #[test]
+    fn a_manual_skip_still_blocks_frontend_when_the_backend_did_have_work() {
+        let st = statuses(&[(slot::BACKEND, NodeStatus::Skipped)]);
+        assert!(matches!(
+            compute_slot_readiness(
+                &PipelineDef::default(),
+                &st,
+                &[gate::CONTRACT_LOCK.to_string()],
+                &[],
+                &all_agents(),
+                &full_ecosystem(),
+                &[], // backend HAS work in this feature
+                slot::FRONTEND,
+            ),
+            SlotReadiness::Waiting { .. }
+        ));
+    }
+
     /// Ported from the gate-stops-the-chain tests: a gate in front blocks
     /// until the human clears it.
     #[test]
@@ -389,12 +560,87 @@ mod tests {
         );
     }
 
+    /// A skipped gate is transparent, not a pass: readiness has to keep
+    /// walking to the stage that FEEDS the gate and judge that. Treating it
+    /// as a pass would open stage ⑤ on a feature whose Planning hasn't run.
+    ///
+    /// Until Contract Lock learned to skip itself for backend-less features
+    /// (AC-E4-11a) this branch was only reachable via the rare single-repo
+    /// case, and nothing here exercised it at all.
+    #[test]
+    fn a_skipped_gate_is_transparent_but_still_defers_to_the_stage_behind_it() {
+        let skipped = vec![gate::CONTRACT_LOCK.to_string()];
+        let passed = vec![gate::TRIGGER.to_string()];
+
+        let planning_unfinished = statuses(&[
+            (slot::BA, NodeStatus::Done),
+            (slot::TECHLEAD_DESIGN, NodeStatus::Done),
+            (slot::DESIGN_ANALYST, NodeStatus::Skipped),
+            (slot::QC_DESIGN, NodeStatus::Done),
+            (slot::TECHLEAD_TASKS, NodeStatus::Idle),
+        ]);
+        let blocked = compute_slot_readiness(
+            &PipelineDef::default(),
+            &planning_unfinished,
+            &passed,
+            &skipped,
+            &all_agents(),
+            &full_ecosystem(),
+            &[],
+            slot::BACKEND,
+        );
+        assert!(
+            !matches!(blocked, SlotReadiness::Ready),
+            "a skipped gate must not paper over unfinished Planning, got {blocked:?}"
+        );
+
+        let mut planning_done = planning_unfinished.clone();
+        planning_done.insert(slot::TECHLEAD_TASKS.to_string(), NodeStatus::Done);
+        assert_eq!(
+            compute_slot_readiness(
+                &PipelineDef::default(),
+                &planning_done,
+                &passed,
+                &skipped,
+                &all_agents(),
+                &full_ecosystem(),
+                &[],
+                slot::BACKEND,
+            ),
+            SlotReadiness::Ready
+        );
+
+        // Same state, gate NOT skipped — must block. This is what proves
+        // the assertion above is about the skip and nothing else.
+        assert!(
+            matches!(
+                compute_slot_readiness(
+                    &PipelineDef::default(),
+                    &planning_done,
+                    &passed,
+                    &[],
+                    &all_agents(),
+                    &full_ecosystem(),
+                    &[],
+                    slot::BACKEND,
+                ),
+                SlotReadiness::GateNotPassed { .. }
+            ),
+            "without the skip the Contract Lock gate must still block"
+        );
+    }
+
     // --- repo readiness (AC-E2-11/12), moved here from `commands::agentrun`
     // so the Run button and the pre-spawn guard can never disagree ---
 
     #[test]
     fn slots_without_a_repo_role_are_always_ready() {
-        for non_repo_slot in [slot::BA, slot::TECHLEAD_DESIGN, slot::PM, slot::QA] {
+        for non_repo_slot in [
+            slot::BA,
+            slot::TECHLEAD_DESIGN,
+            slot::TECHLEAD_TASKS,
+            slot::QA,
+        ] {
             assert!(matches!(
                 resolve_repo_readiness(&[], non_repo_slot),
                 RepoReadiness::Ready
@@ -433,6 +679,44 @@ mod tests {
         ));
     }
 
+    /// "Project không có repo vai trò frontend" is a very wrong thing to
+    /// tell someone whose `repos/frontend` is right there — the real cause
+    /// is a Vai trò cell the app couldn't read. Two different problems, two
+    /// different messages.
+    #[test]
+    fn an_unreadable_role_cell_is_reported_as_such_not_as_a_missing_repo() {
+        let eco = vec![
+            repo("frontend", "frontend — nơi landing page được implement", true),
+            repo("backend", "backend — template residual", true),
+        ];
+        // Both now resolve, which is the whole point of the fix.
+        assert!(matches!(
+            resolve_repo_readiness(&eco, slot::FRONTEND),
+            RepoReadiness::Ready
+        ));
+
+        let broken = vec![repo("frontend", "trang chủ", true)];
+        match resolve_repo_readiness(&broken, slot::FRONTEND) {
+            RepoReadiness::RoleUnreadable { entries } => {
+                assert_eq!(entries.len(), 1);
+                assert_eq!(entries[0].repo_name, "frontend");
+                assert_eq!(entries[0].declared_role, "trang chủ");
+            }
+            other => panic!("expected RoleUnreadable, got {other:?}"),
+        }
+    }
+
+    /// The distinction has to survive: a project that really has no mobile
+    /// repo must keep saying so (AC-E2-12), not get reclassified as a typo.
+    #[test]
+    fn a_genuinely_absent_role_still_reports_role_not_in_ecosystem() {
+        let eco = vec![repo("shop-api", "backend", true)];
+        assert!(matches!(
+            resolve_repo_readiness(&eco, slot::MOBILE),
+            RepoReadiness::RoleNotInEcosystem
+        ));
+    }
+
     #[test]
     fn repo_role_matching_is_case_insensitive() {
         assert!(matches!(
@@ -455,6 +739,7 @@ mod tests {
                 &[],
                 &all_agents(),
                 &[repo("example-api", "backend", false)],
+                &[],
                 slot::BACKEND,
             ),
             SlotReadiness::RepoNotCloned {
@@ -475,6 +760,7 @@ mod tests {
                 &[],
                 &all_agents(),
                 &[repo("api", "backend", true)],
+                &[],
                 slot::MOBILE,
             ),
             SlotReadiness::RepoRoleMissing {
@@ -495,6 +781,7 @@ mod tests {
                 &[],
                 &all_agents(),
                 &[repo("example-api", "backend", false)],
+                &[],
                 slot::BACKEND,
             ),
             SlotReadiness::RepoNotCloned {
@@ -521,6 +808,7 @@ mod tests {
                 &[],
                 &without_analyst,
                 &full_ecosystem(),
+                &[],
                 slot::DESIGN_ANALYST,
             ),
             SlotReadiness::AgentMissing {

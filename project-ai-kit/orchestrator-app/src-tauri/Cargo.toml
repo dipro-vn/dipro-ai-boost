@@ -41,15 +41,6 @@ keyring = { version = "3", features = [
     "windows-native",
     "sync-secret-service",
 ] }
-# Phase E (AC-E5-14..18) — read-only Backlog REST calls. Same version tauri
-# already pulls in, so no duplicate crate. `default-tls` here resolves to
-# rustls + rustls-platform-verifier, which validates against the OS trust
-# store — the app keeps working behind a corporate TLS proxy whose root CA
-# is installed system-wide.
-reqwest = { version = "0.13", default-features = false, features = [
-    "json",
-    "default-tls",
-] }
 include_dir = "0.7.4"
 
 [target."cfg(unix)".dependencies]

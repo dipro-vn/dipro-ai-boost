@@ -176,13 +176,13 @@ ESKITCHEN-WORKSPACE/
 
 ---
 
-### B9 📌 PM nằm ngoài `/create-feature`
+### B9 ✅ PM nằm ngoài `/create-feature` (đã giải quyết triệt để bởi B24)
 
-`.claude/commands/create-feature.md:17` và cả 2 file `bmad-*.js` đều **loại PM ra**. Chạy shortcut sẽ đi ③ (tasks) → ⑤ (build) **không có `PLAN.md`**.
+`.claude/commands/create-feature.md` và cả 2 file `bmad-*.js` đều **loại PM ra**. Chạy shortcut sẽ đi ③ (tasks) → ⑤ (build) **không có `PLAN.md`**.
 
-**Ảnh hưởng:** F4.2 đặt điều kiện mở gate Contract Lock là "**PLAN.md tồn tại** + API Contract table đầy đủ". Nếu team quen dùng `/create-feature`, gate sẽ không bao giờ mở được.
+**Ảnh hưởng (lúc phát hiện):** F4.2 đặt điều kiện mở gate Contract Lock là "**PLAN.md tồn tại** + API Contract table đầy đủ". Nếu team quen dùng `/create-feature`, gate sẽ không bao giờ mở được.
 
-**Đề xuất:** app không lấy `PLAN.md` làm điều kiện cứng duy nhất. Xem `AC-E4-04` — điều kiện mở gate dựa trên **API Contract table**, còn thiếu `PLAN.md` chỉ là cảnh báo.
+**Đã xử lý:** ban đầu app hạ `PLAN.md` xuống mức cảnh báo (`AC-E4-09`), điều kiện mở gate chỉ dựa trên **API Contract table** (`AC-E4-04`). Từ **B24** (25/08/2026), `pm-agent` và `PLAN.md` bị gỡ hẳn khỏi kit — mâu thuẫn này không còn tồn tại, và `AC-E4-09` cũng đã được gỡ.
 
 ---
 
@@ -318,7 +318,9 @@ E5 SPEC có 9 AC cho thông báo Slack (AC-E5-19..27) và AC-E1-19..22 nói tớ
 
 ---
 
-### B21 🔒 Đẩy issue Backlog đi qua `pm-agent` + MCP, không gọi REST — QUYẾT ĐỊNH
+### B21 ⛔ Đẩy issue Backlog đi qua `pm-agent` + MCP, không gọi REST — ĐÃ BỊ THAY THẾ BỞI B24
+
+> **Superseded (25/08/2026):** `pm-agent` đã bị gỡ khỏi kit, kéo theo toàn bộ tính năng Backlog trong app (xem **B24**). Mục này giữ lại làm hồ sơ lịch sử — nó chính là lý do việc gỡ agent PM lại kéo sập cả E5.
 
 SPEC E5 mô tả app tự gọi Backlog API: tự fetch metadata, dựng dropdown, hiện bảng preview trong một modal riêng (`OR_INTG_001`).
 
@@ -378,6 +380,34 @@ Hệ quả dây chuyền: Board không có node Trigger Gate → gate chưa từ
 
 ---
 
+### B24 🔒 Gỡ hẳn `pm-agent`, `PLAN.md` và tính năng Backlog — QUYẾT ĐỊNH (25/08/2026)
+
+**Bối cảnh:** node PM (stage ③) đã bị loại khỏi mọi pipeline tự động từ trước — `/create-feature`, `bmad-plan-phase.js`, `bmad-build-phase.js` đều ghi rõ "không bao gồm PM". Nó chỉ còn tồn tại trên Pipeline Board như một bước phải bấm qua, sinh ra `PLAN.md` chứa timeline/estimate mà thực tế do người thật quyết.
+
+**Quyết định (user):** gỡ **hoàn toàn** `pm-agent` khỏi kit, bỏ luôn khái niệm `PLAN.md`, và gỡ theo cả tính năng Push to Backlog trong app.
+
+**Vì sao Backlog phải đi cùng:** theo **B21**, phần "đẩy issue" được implement bằng cách app spawn chính `pm-agent` (`commands/backlog.rs` chạy "Bước 4" của agent đó). Không còn agent thì không còn gì để spawn. Phần "kéo trạng thái" qua REST cũng mất ý nghĩa vì không còn mapping task ↔ issue để kéo về.
+
+**Đã gỡ:**
+
+| Lớp | Nội dung |
+|---|---|
+| Kit | `.claude/agents/pm-agent.md`, `.claude/commands/create-plan.md`, `.claude/commands/create-backlog.md`, `.claude/skills/project-planning/` |
+| Pipeline | slot `pm` khỏi stage ③ (stage vẫn còn, chỉ còn `techlead-tasks`); `PIPELINE_DEF_VERSION` 3 → 4 |
+| App — Rust | `commands/backlog.rs`, `commands/integrations.rs`, `integrations/`, `domain/integrations.rs`, `store/backlog_map.rs`, `inference/task_meta.rs`, 7 tauri command, field `backlog` trong `config.json`, dependency `reqwest` |
+| App — FE | `screens/backlog/`, `screens/settings/BacklogSettings.tsx`, route + nút Push to Backlog, cảnh báo "Chưa có PLAN.md" ở Contract Lock |
+| Inference | node `pm`, `plan_md_missing` (`AC-E4-09`) |
+| AC không còn implement | `AC-E5-01..18` (Backlog), `AC-E4-09` (cảnh báo PLAN.md). `AC-E5-19..27` (Slack) vốn đã out-of-scope theo **B20** |
+
+**Migration:** `store::legacy_cleanup::purge()` chạy khi mở project — xoá `nodes["pm"]` khỏi `state.json`, `agents["pm-agent"]` + `node_nicknames["pm"]` + block `backlog` khỏi `config.json`, các thư mục `agent-runs/<feature>/{pm,backlog-push}/` và cả cây `.orchestrator/backlog/`, cùng API key Backlog trong OS keychain. Idempotent, chỉ cảnh báo ở đúng lần dọn thật; file JSON hỏng thì để nguyên cho đường recovery sẵn có xử lý. `pipeline.json` tự nâng cấp qua `load_pipeline_def` (backup `pipeline.json.v3.bak`).
+
+**Giữ lại có chủ đích:**
+- Vai trò **người thật "PM"** — bảng RACI trong `POLICIES.md`, 5 ô xác nhận Contract Lock (`ALL_ROLES` vẫn có `"PM"`), quy định assignee trong `backlog-workflow.md`.
+- `.claude/context/backlog-workflow.md` và MCP server `backlog` trong `.claude/settings.json` — `techlead-tasks-agent` vẫn dùng `mcp__backlog__get_categories`, và đây là quy định Backlog cho người thật.
+- `docs/features/orchestrator-integrations/SPEC.md` — giữ làm hồ sơ lịch sử, có banner đánh dấu đã loại khỏi phạm vi.
+
+---
+
 ## Nhóm C — Bảo mật (ngoài phạm vi dự án, xử lý độc lập)
 
 ### C15 ⚠️ `.mcp.json` của ESKITCHEN chứa Backlog API key plaintext
@@ -401,8 +431,9 @@ Hệ quả dây chuyền: Board không có node Trigger Gate → gate chưa từ
 | B18 | Auto-detect MCP Figma theo cấu hình project, luôn cho chọn lại khi mơ hồ | Tech Lead | `AC-E1-25..27`, `AC-E2-33`, `AF-14` |
 | B19 *(17/08/2026)* | Hoãn worktree cho parallel build — chuỗi BE→FE∥Mobile đã giảm nguy cơ ghi chéo; mở lại khi có ≥2 dev agent cùng repo song song | PM | `AC-E2-25`, `AC-E2-26` (deferred) |
 | B20 *(18/08/2026)* | Không làm Slack trong v1 — chỉ tích hợp Backlog | User | `AC-E5-19..27` (out of scope), `AC-E1-19..22` (chỉ phần Backlog) |
-| B21 *(18/08/2026)* | Đẩy issue qua `pm-agent` + MCP (không REST); kéo trạng thái qua REST read-only | User + Tech Lead | `AC-E5-01..18` (lệch 02/04/05/14 — xem mục B21) |
+| B21 *(18/08/2026)* | ~~Đẩy issue qua `pm-agent` + MCP (không REST); kéo trạng thái qua REST read-only~~ — **thay thế bởi B24** | User + Tech Lead | `AC-E5-01..18` (đã gỡ) |
 | B22 *(18/08/2026)* | Bỏ auto-chain — mọi node chạy bằng nút Run, gate chỉ ghi nhận duyệt | User | `AC-E2-01..05`, `AC-E4-07`, `AC-E4-18` |
+| B24 *(25/08/2026)* | Gỡ hẳn `pm-agent` + `PLAN.md` + tính năng Backlog (thay thế B21) | User | `AC-E5-01..18`, `AC-E4-09` (không còn implement) |
 
 ## Bảng tổng hợp — việc còn cần quyết trước khi code
 

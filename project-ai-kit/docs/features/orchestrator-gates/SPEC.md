@@ -63,7 +63,7 @@ Ngoài hai gate cứng còn một gate mềm: Memory Update Gate. Kit yêu cầu
 
 9. Stage ③ xong. App kiểm tra điều kiện mở gate: tìm thấy bảng API Definition trong `DESIGN.md` của repo backend, đủ các cột bắt buộc.
 10. Node stage ④ chuyển `blocked-by-gate`. Pipeline dừng, stage ⑤ chưa được spawn.
-11. PM mở **Gate Review — Contract Lock** (`OR_GATE_002`): bên trái là `PLAN.md` (nếu có), bên phải là bảng API Contract gộp từ mọi `DESIGN.md` — REST endpoints, WebSocket events, Push payload.
+11. PM mở **Gate Review — Contract Lock** (`OR_GATE_002`): bảng API Contract gộp từ mọi `DESIGN.md` — REST endpoints, WebSocket events, Push payload.
 12. App liệt kê **danh sách file sẽ đưa vào khoá** kèm checksum hiện tại của từng file.
 13. PM lần lượt tick 5 vai trò: BE, FE, Mobile, PM, QC. Thiếu một vai trò thì nút **Lock** vẫn mờ.
 14. PM bấm **Lock**. App tính SHA-256 cho từng file trong danh sách và ghi `.orchestrator/contract.lock` gồm: danh sách file, checksum, thời điểm, người duyệt, các vai trò đã xác nhận.
@@ -87,18 +87,19 @@ Ngoài hai gate cứng còn một gate mềm: Memory Update Gate. Kit yêu cầu
 | AF-1 | PM bấm Request changes nhưng để trống nhận xét | Không gửi được — bắt buộc nhập nội dung, vì agent cần biết sửa gì |
 | AF-2 | `ba-agent` đã kết thúc session, không resume được | App báo rõ, cho chọn chạy lại `ba-agent` từ đầu với nhận xét kèm theo |
 | AF-3 | Feature chỉ chạm **1 repo** | Theo `doc-structure.md`, Contract Lock **không bắt buộc**. App hiện gate ở trạng thái `không áp dụng`, cho bỏ qua, và ghi lý do vào `state.json` |
-| AF-4 | Không tìm thấy bảng API Definition trong bất kỳ `DESIGN.md` nào | Gate **không mở được**. App nêu rõ thiếu gì và gợi ý yêu cầu `techlead-design-agent` bổ sung |
+| AF-3a | Feature chạm ≥2 repo nhưng **không repo nào vai trò `backend`** (vd web + mobile), hoặc có backend nhưng **không repo nào tiêu thụ API** | Không có contract 2 chiều để khoá, và `techlead-design-agent` chỉ viết bảng API Definition trong DESIGN.md của repo backend nên bảng đó sẽ không bao giờ xuất hiện. Gate hiện `không áp dụng`, nêu tên repo trong scope |
+| AF-3b | Thư mục con của feature không khớp repo nào trong bảng Ecosystem (`AGENTS.md` chưa điền, hoặc tên repo lạ) | Không suy ra vai trò được → app **giữ nguyên hành vi chặn**, không tự bỏ qua. Ecosystem trống không được phép tắt gate trên toàn project |
+| AF-4 | Không tìm thấy bảng API Definition trong bất kỳ `DESIGN.md` nào | Gate **không mở được** — mặc định vẫn chặn. App nêu rõ thiếu gì và gợi ý yêu cầu `techlead-design-agent` bổ sung. Kèm nút **bỏ qua thủ công** (bắt buộc nhập tên + lý do) cho feature thật sự không thêm endpoint nào; bỏ qua được gỡ lại |
 | AF-5 | Bảng API Definition có nhưng thiếu cột bắt buộc | Gate mở được nhưng hiện cảnh báo liệt kê cột còn thiếu; PM tự quyết có lock hay không |
-| AF-6 | `PLAN.md` chưa tồn tại (chạy qua `/create-feature` vốn không có PM) | Gate **vẫn mở được** — thiếu `PLAN.md` chỉ là **cảnh báo**, không phải điều kiện chặn |
-| AF-7 | Chỉ tick được 4/5 vai trò vì dự án không có mobile | Vai trò không áp dụng được đánh dấu `không áp dụng` và không tính vào điều kiện đủ |
-| AF-8 | File trong `contract.lock` bị **xoá** thay vì sửa | Cũng tính là vi phạm; app nêu rõ file đã biến mất |
-| AF-9 | File bị sửa rồi sửa ngược về đúng nội dung cũ | Checksum khớp lại → trạng thái vi phạm **tự gỡ**, pipeline được giải phóng, sự kiện vẫn được ghi vào lịch sử |
-| AF-10 | Vi phạm xảy ra khi đang có agent stage ⑤ chạy dở | Agent đang chạy **không bị kill**; chỉ chặn agent kế tiếp. Cảnh báo nêu rõ có agent đang chạy trên contract cũ |
-| AF-11 | PM muốn hoàn tác thay đổi thay vì re-lock | App hiện diff và đường dẫn file để người dùng tự hoàn tác bên ngoài; app **không tự sửa file** |
-| AF-12 | `contract.lock` bị sửa tay hoặc hỏng | App coi như không có khoá hợp lệ, chuyển stage ④ về `blocked-by-gate`, yêu cầu lock lại |
-| AF-13 | Đã lock rồi, PM muốn xem lại contract đã khoá | Xem được nội dung tại thời điểm lock và toàn bộ lịch sử các lần lock trước |
-| AF-14 | Repo overview docs không tồn tại (project chưa có thư mục overview) | Memory Update Gate hiện `không áp dụng`, không cảnh báo nhiễu |
-| AF-15 | Người dùng đóng app khi đang ở màn hình gate | Trạng thái gate giữ nguyên; mở lại app vẫn thấy gate đang chờ, chưa duyệt |
+| AF-6 | Chỉ tick được 4/5 vai trò vì dự án không có mobile | Vai trò không áp dụng được đánh dấu `không áp dụng` và không tính vào điều kiện đủ |
+| AF-7 | File trong `contract.lock` bị **xoá** thay vì sửa | Cũng tính là vi phạm; app nêu rõ file đã biến mất |
+| AF-8 | File bị sửa rồi sửa ngược về đúng nội dung cũ | Checksum khớp lại → trạng thái vi phạm **tự gỡ**, pipeline được giải phóng, sự kiện vẫn được ghi vào lịch sử |
+| AF-9 | Vi phạm xảy ra khi đang có agent stage ⑤ chạy dở | Agent đang chạy **không bị kill**; chỉ chặn agent kế tiếp. Cảnh báo nêu rõ có agent đang chạy trên contract cũ |
+| AF-10 | PM muốn hoàn tác thay đổi thay vì re-lock | App hiện diff và đường dẫn file để người dùng tự hoàn tác bên ngoài; app **không tự sửa file** |
+| AF-11 | `contract.lock` bị sửa tay hoặc hỏng | App coi như không có khoá hợp lệ, chuyển stage ④ về `blocked-by-gate`, yêu cầu lock lại |
+| AF-12 | Đã lock rồi, PM muốn xem lại contract đã khoá | Xem được nội dung tại thời điểm lock và toàn bộ lịch sử các lần lock trước |
+| AF-13 | Repo overview docs không tồn tại (project chưa có thư mục overview) | Memory Update Gate hiện `không áp dụng`, không cảnh báo nhiễu |
+| AF-14 | Người dùng đóng app khi đang ở màn hình gate | Trạng thái gate giữ nguyên; mở lại app vẫn thấy gate đang chờ, chưa duyệt |
 
 ## Acceptance Criteria
 
@@ -115,14 +116,18 @@ Ngoài hai gate cứng còn một gate mềm: Memory Update Gate. Kit yêu cầu
 **Điều kiện mở Contract Lock ④**
 
 - **AC-E4-08** — Gate Contract Lock chỉ mở được khi tìm thấy bảng API Definition trong ít nhất một `DESIGN.md`. Không có bảng thì gate không mở được và app nêu rõ đang thiếu gì.
-- **AC-E4-09** — `PLAN.md` chưa tồn tại **không** chặn gate; app chỉ hiển thị cảnh báo.
+- **AC-E4-08a** — Khi gate ở trạng thái `not-ready` (`AC-E4-08`), màn hình liệt kê **đích danh đường dẫn** từng `DESIGN.md` đã kiểm tra và không tìm thấy bảng API Definition, kèm gợi ý hành động: yêu cầu `techlead-design-agent` bổ sung bảng vào các file đó (theo đúng nội dung AF-4).
 - **AC-E4-10** — Bảng API Definition thiếu cột bắt buộc thì gate vẫn mở được nhưng hiển thị cảnh báo liệt kê đích danh các cột còn thiếu.
+- **AC-E4-10a** — Cảnh báo cột thiếu ở `AC-E4-10` kèm gợi ý hành động: bổ sung các cột đó vào bảng API Definition trong `DESIGN.md` tương ứng.
 - **AC-E4-11** — Feature chỉ chạm một repo thì gate hiển thị trạng thái `không áp dụng` và cho bỏ qua; lý do bỏ qua được ghi vào `state.json`.
+- **AC-E4-11a** — Contract Lock chỉ áp dụng khi scope của feature có **ít nhất một repo vai trò `backend` VÀ ít nhất một repo vai trò `frontend`/`mobile`**. Thiếu một trong hai vế thì gate hiển thị `không áp dụng`, nêu đích danh các repo trong scope. Vai trò suy từ tên thư mục con của feature khớp với bảng Ecosystem trong `AGENTS.md`; **nếu còn thư mục con nào không khớp được repo nào thì luật này không áp dụng** và gate giữ nguyên hành vi chặn (AF-3b).
+- **AC-E4-11b** — Ở trạng thái `not-ready` (`AC-E4-08`), PM bỏ qua gate được bằng thao tác thủ công, bắt buộc nhập **tên người bỏ qua** và **lý do**, có xác nhận 2 bước. Bỏ qua được lưu xuống đĩa (sống qua recompute và restart), làm gate chuyển `không áp dụng`, và **gỡ lại được** để gate chặn trở lại. Chỉ bỏ qua được từ `not-ready` — `chờ duyệt` thì hành động đúng là Lock, `đã khoá`/`vi phạm` thì đã có khoá thật phải tôn trọng.
 
 **Xác nhận vai trò**
 
 - **AC-E4-12** — Màn hình gate liệt kê 5 vai trò: BE, FE, Mobile, PM, QC — mỗi vai trò một ô xác nhận riêng.
 - **AC-E4-13** — Nút **Lock** chỉ bật khi mọi vai trò **áp dụng được** đã được xác nhận. Còn một vai trò chưa tick thì nút vẫn mờ.
+- **AC-E4-13a** — Khi nút Lock đang mờ vì thiếu xác nhận vai trò, màn hình hiển thị **đích danh** những vai trò áp dụng được nhưng chưa tick, đặt ngay cạnh nút Lock — không để nút mờ mà không giải thích.
 - **AC-E4-14** — Vai trò tương ứng với repo mà project không có được đánh dấu `không áp dụng` và không tính vào điều kiện đủ.
 - **AC-E4-15** — Màn hình nêu rõ v1 không xác thực danh tính — các ô xác nhận là ghi nhận vai trò, do một người thao tác.
 
@@ -172,6 +177,6 @@ Ngoài hai gate cứng còn một gate mềm: Memory Update Gate. Kit yêu cầu
 | Screen Code | Screen | Actor | App | Screen Type | Mô tả ngắn | Figma Link |
 |---|---|---|---|---|---|---|
 | `OR_GATE_001` | Gate Review — Trigger | PM | E01* | Detail | Xem `SPEC.md` render + checklist 7 section, nút Approve / Request changes kèm ô nhận xét, diff sau mỗi vòng sửa | |
-| `OR_GATE_002` | Gate Review — Contract Lock | PM | E01* | Detail | Side-by-side PLAN.md và bảng API Contract (REST · WebSocket · Push), danh sách file + checksum, 5 ô xác nhận vai trò, nút Lock / Re-lock, diff khi có vi phạm | |
+| `OR_GATE_002` | Gate Review — Contract Lock | PM | E01* | Detail | Bảng API Contract (REST · WebSocket · Push), danh sách file + checksum, 5 ô xác nhận vai trò, nút Lock / Re-lock, diff khi có vi phạm | |
 
 > `*` Cột **App** = Epic code của repo đích. Bảng Ecosystem trong `AGENTS.md` của kit hiện còn placeholder, nên `E01` là giá trị **tạm** cho repo desktop app — cần xác nhận lại khi khởi tạo repo thật.

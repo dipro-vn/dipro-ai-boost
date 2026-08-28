@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
+import { isPreviewableArtifact } from "@/lib/artifact-preview";
 import { slotDisplayName } from "@/lib/slot-label";
 import { statusMeta } from "@/lib/status-meta";
 import {
@@ -19,6 +20,7 @@ import {
 } from "@/lib/tauri-client";
 import { onAgentLogLine, onAgentRunFinished } from "@/lib/events";
 import { estimateThinkingCostUsd } from "@/lib/pricing";
+import { agentDraftKey, useAppStore } from "@/state/app-store";
 import {
   canRetry,
   computeSkipDependents,
@@ -44,6 +46,8 @@ interface AgentStepPanelProps {
   pipelineDef: PipelineDef | null;
   /** B22 — whether this slot may be run yet, and why not if it can't. */
   readiness: SlotReadiness | undefined;
+  /** Project setup is completed through the external `/init-kit` handoff. */
+  projectReady: boolean;
   /** Re-asks the backend, re-reading the Ecosystem from disk on the way. */
   onRecheckReadiness: () => void;
   /** The Board renders live output in AgentConsoleDock. */
@@ -69,6 +73,7 @@ export function AgentStepPanel({
   nodeState,
   pipelineDef,
   readiness,
+  projectReady,
   onRecheckReadiness,
   showConsole = true,
 }: AgentStepPanelProps) {
@@ -76,6 +81,7 @@ export function AgentStepPanel({
   const [liveLines, setLiveLines] = useState<LogLine[]>([]);
   const [confirmRetry, setConfirmRetry] = useState(false);
   const [confirmSkip, setConfirmSkip] = useState(false);
+  const [confirmForceDone, setConfirmForceDone] = useState(false);
   const [startedAt, setStartedAt] = useState(() => Date.now());
   const [now, setNow] = useState(() => Date.now());
   const [actionError, setActionError] = useState<string | null>(null);
@@ -96,8 +102,13 @@ export function AgentStepPanel({
   const [lastSummary, setLastSummary] = useState<RunSummary | null>(null);
   const [sessionModel, setSessionModel] = useState<string | null>(null);
   const [thinkingTokens, setThinkingTokens] = useState(0);
-  /** Only used by the `design-analyst` slot — see the Run block below. */
-  const [figmaUrl, setFigmaUrl] = useState("");
+  /** Only used by the `design-analyst` slot — see the Run block below. Lives
+   * in the global store (not local `useState`) so it survives navigating
+   * away and back before the run is started; cleared once the run starts. */
+  const setAgentDraft = useAppStore((s) => s.setAgentDraft);
+  const clearAgentDraft = useAppStore((s) => s.clearAgentDraft);
+  const figmaUrl =
+    useAppStore((s) => s.agentDrafts[agentDraftKey(feature, agent.id)]?.figmaUrl) ?? "";
   /** Artifact shown in the read-in-place modal; null = closed. */
   const [modalArtifact, setModalArtifact] = useState<string | null>(null);
   // Mirrors `liveActive` synchronously so the listener below can detect the
@@ -149,8 +160,14 @@ export function AgentStepPanel({
         commands
           .getNodeDetail(feature, agent.id)
           .then((detail) => {
-            if (!cancelled && detail.artifacts.length > 0) {
-              setModalArtifact(detail.artifacts[0].path);
+            // Skip binary assets (`design-resources/*.png`): the viewer
+            // reads artifacts as UTF-8, so auto-opening one would greet the
+            // user with an encoding error instead of the doc just written.
+            const previewable = detail.artifacts.find((a) =>
+              isPreviewableArtifact(a.path),
+            );
+            if (!cancelled && previewable) {
+              setModalArtifact(previewable.path);
             }
           })
           .catch(() => {
@@ -199,6 +216,13 @@ export function AgentStepPanel({
 
   const status = nodeState?.status ?? "idle";
 
+  // This component instance is reused across nodes/status changes (see the
+  // note above `handleRun`) — without this, a pending Force Done confirm
+  // could survive into a different slot's render.
+  useEffect(() => {
+    if (status !== "waiting-input") setConfirmForceDone(false);
+  }, [status]);
+
   // Retry-limit + persisted-prompt lookup, needed once the slot has failed
   // (or was interrupted — Re-run replays the same persisted prompt).
   const [attempt, setAttempt] = useState<number | null>(null);
@@ -238,7 +262,9 @@ export function AgentStepPanel({
   }, [feature, agent.id, status, refreshKey]);
 
   const isDesignAnalyst = agent.id === "design-analyst";
-  const blockedReason = readinessReason(readiness);
+  const blockedReason = projectReady
+    ? readinessReason(readiness)
+    : "Project chưa init — chạy /init-kit trong Claude Code rồi kiểm tra lại";
   /** Chỉ lỗi repo mới tự hết sau khi người dùng đi làm việc bên ngoài app
    * (clone repo về) — mọi lý do chặn khác đều tự cập nhật qua state event. */
   const canRecheck = readiness?.kind === "repoNotCloned";
@@ -253,6 +279,7 @@ export function AgentStepPanel({
         agent.id,
         isDesignAnalyst ? figmaUrl.trim() || undefined : undefined,
       );
+      clearAgentDraft(feature, agent.id);
     } catch (err) {
       liveActiveRef.current = false;
       setLiveActive(false);
@@ -323,6 +350,50 @@ export function AgentStepPanel({
     } catch (err) {
       setActionError(extractErrorMessage(err));
     }
+  }
+
+  // Only backend/frontend/mobile ever get stuck `waiting-input` on a
+  // convention mismatch (see `force_done_run`'s doc comment on the Rust
+  // side) — every other slot's Done status comes from the artifact it
+  // produced actually existing on disk, so Force Done would be a no-op
+  // there on the next recompute.
+  const isDevRepoSlot = ["backend", "frontend", "mobile"].includes(agent.id);
+
+  async function handleForceDone() {
+    if (!confirmForceDone) {
+      setConfirmForceDone(true);
+      return;
+    }
+    setConfirmForceDone(false);
+    setActionError(null);
+    try {
+      await commands.forceDoneRun(feature, agent.id);
+    } catch (err) {
+      setActionError(extractErrorMessage(err));
+    }
+  }
+
+  // AC-E2-41/42 — re-runs a `done`/`done-incomplete` node so it picks up
+  // whatever upstream artifacts changed since it last ran. Deliberately
+  // goes through `run_slot` (same as `handleRun`), NOT `start_run`:
+  // `start_run` replays a literal saved prompt and is restricted to the
+  // `ba` slot on the backend (`"start_run chỉ dành cho BA..."`), while
+  // `run_slot` rebuilds the prompt from the CURRENT on-disk state and still
+  // runs the readiness checks — exactly what "pick up the latest input"
+  // needs, for any slot.
+  async function handleReRun() {
+    if (!confirmRetry) {
+      const hasArtifacts = await commands
+        .getNodeDetail(feature, agent.id)
+        .then((d) => d.artifacts.length > 0)
+        .catch(() => false);
+      if (hasArtifacts) {
+        setConfirmRetry(true);
+        return;
+      }
+    }
+    setConfirmRetry(false);
+    await handleRun();
   }
 
   // AC-E6-05 — continue the interrupted run in its original session. A
@@ -397,7 +468,7 @@ export function AgentStepPanel({
                 id="figma-url"
                 value={figmaUrl}
                 placeholder="https://figma.com/design/...?node-id=..."
-                onChange={(e) => setFigmaUrl(e.target.value)}
+                onChange={(e) => setAgentDraft(feature, agent.id, { figmaUrl: e.target.value })}
               />
               <p className="text-xs text-muted-foreground">
                 Chuột phải vào frame trong Figma → Copy link to selection. Bỏ trống thì agent sẽ
@@ -454,7 +525,7 @@ export function AgentStepPanel({
                     id="figma-url-rerun"
                     value={figmaUrl}
                     placeholder="https://figma.com/design/...?node-id=..."
-                    onChange={(e) => setFigmaUrl(e.target.value)}
+                    onChange={(e) => setAgentDraft(feature, agent.id, { figmaUrl: e.target.value })}
                   />
                 </div>
               )}
@@ -468,15 +539,34 @@ export function AgentStepPanel({
       )}
 
       {status === "waiting-input" && (
-        <WaitingInputPanel
-          question={nodeState?.detail}
-          agentLabel={displayName}
-          value={answer}
-          onChange={setAnswer}
-          onSend={handleSendAnswer}
-          autoOpen={!questionAutoOpened}
-          onAutoOpened={() => setQuestionAutoOpened(true)}
-        />
+        <>
+          <WaitingInputPanel
+            question={nodeState?.detail}
+            agentLabel={displayName}
+            value={answer}
+            onChange={setAnswer}
+            onSend={handleSendAnswer}
+            autoOpen={!questionAutoOpened}
+            onAutoOpened={() => setQuestionAutoOpened(true)}
+          />
+          {isDevRepoSlot && (
+            <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
+              <p className="text-xs text-muted-foreground">
+                Việc thực ra đã xong nhưng agent không kết thúc bằng thông báo hoàn thành chuẩn?
+                Đánh dấu Done thủ công — bỏ qua kiểm tra tự động.
+              </p>
+              {confirmForceDone && (
+                <p className="text-xs text-warning">
+                  Sẽ dừng session hiện tại (nếu còn) và đánh dấu {displayName} là Done. Nhấn lần
+                  nữa để xác nhận.
+                </p>
+              )}
+              <Button variant="outline" onClick={handleForceDone}>
+                {confirmForceDone ? "Xác nhận Force Done" : "Force Done"}
+              </Button>
+            </div>
+          )}
+        </>
       )}
 
       {status === "failed" && (
@@ -543,6 +633,49 @@ export function AgentStepPanel({
               Không tìm thấy input ban đầu để Re-run tự động — spawn lại qua gate/stage
               tương ứng.
             </p>
+          )}
+        </div>
+      )}
+
+      {(status === "done" || status === "done-incomplete") && (
+        <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
+          {/* AC-E2-41/42 — a completed node can be re-run when upstream input
+              changed (e.g. `ba-agent` re-ran with a different SPEC). Goes
+              through `run_slot` (`handleReRun` → `handleRun`), which rebuilds
+              the prompt from the CURRENT on-disk state and re-checks
+              readiness — NOT `start_run`, which only ever accepts the `ba`
+              slot. Deliberately does NOT check `canRetry(attempt,
+              maxRetries)` — that limit is for retrying after failure, not
+              for a deliberate re-run of a node that already succeeded. */}
+          {isDesignAnalyst && (
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="figma-url-rerun-done">URL Figma (selection)</Label>
+              <Input
+                id="figma-url-rerun-done"
+                value={figmaUrl}
+                placeholder="https://figma.com/design/...?node-id=..."
+                onChange={(e) => setAgentDraft(feature, agent.id, { figmaUrl: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground">
+                Bỏ trống thì agent sẽ dừng lại hỏi.
+              </p>
+            </div>
+          )}
+          {confirmRetry && (
+            <p className="text-xs text-warning">
+              Slot này đã có artifact — chạy lại sẽ ghi đè. Nhấn lần nữa để xác nhận.
+            </p>
+          )}
+          <Button variant="outline" onClick={handleReRun} disabled={blockedReason !== null}>
+            <RefreshCw />
+            {confirmRetry ? "Xác nhận chạy lại (ghi đè artifact)" : "Re-run"}
+          </Button>
+          {blockedReason && <p className="text-xs text-muted-foreground">{blockedReason}</p>}
+          {canRecheck && (
+            <Button variant="outline" size="sm" onClick={onRecheckReadiness}>
+              <RefreshCw />
+              Kiểm tra lại
+            </Button>
           )}
         </div>
       )}

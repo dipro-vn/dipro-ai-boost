@@ -37,13 +37,18 @@ export interface ProjectPaths {
 export interface EcosystemRepo {
   name: string;
   declaredPath: string;
+  /** The Vai trò cell verbatim, notes and all — shown as-is in the
+   * Ecosystem table. */
   role: string;
+  /** `role` reduced to a role the pipeline can target, or `null` when the
+   * cell couldn't be read. Every role decision uses this, never `role`. */
+  roleKey: string | null;
   stack: string;
   cloned: boolean;
 }
 
 /** Mirrors `store::kit_template::KitGroup` — một nhóm khung kit chưa có
- * trên đĩa. Rỗng nghĩa là project đã đủ để chạy flow. */
+ * trên đĩa. */
 export interface KitGroup {
   id: string;
   label: string;
@@ -52,12 +57,15 @@ export interface KitGroup {
   totalCount: number;
 }
 
-/** Mirrors `store::kit_template::ScaffoldReport`. `skipped` là những file
- * đã có sẵn — scaffold không bao giờ ghi đè. */
+/** Mirrors `store::kit_template::ScaffoldReport`. `updated` chỉ chứa template
+ * nguyên bản được migrate an toàn; file custom luôn nằm trong `skipped`. */
 export interface ScaffoldReport {
   created: string[];
+  updated: string[];
   skipped: string[];
 }
+
+export type ProjectInitStatus = "ready" | "needs-init" | "missing-kit" | "invalid";
 
 export interface ProjectSummary {
   paths: ProjectPaths;
@@ -67,6 +75,8 @@ export interface ProjectSummary {
   agentsFound: string[];
   warnings: string[];
   missingKit: KitGroup[];
+  initStatus: ProjectInitStatus;
+  initReasons: string[];
 }
 
 export interface RecentProjectEntry extends ProjectPaths {
@@ -94,16 +104,6 @@ export interface AgentConfig {
   timeout_minutes: number;
 }
 
-/** Mirrors `domain::integrations::BacklogConfig` — the NON-SECRET half.
- * snake_case because it lives inside `ProjectConfig` (see caveat above).
- * There is deliberately no `api_key` field: the key is in the OS keychain
- * (AC-E1-19) and never crosses IPC after being saved. */
-export interface BacklogConfig {
-  domain: string;
-  project_key: string;
-  credential_ref: string;
-}
-
 /** Mirrors `domain::config_file::ProjectConfig` (same snake_case caveat). */
 export interface ProjectConfig {
   agents: Record<string, AgentConfig>;
@@ -115,7 +115,6 @@ export interface ProjectConfig {
   /** Absolute path to the `claude` binary, for installs auto-detection
    * cannot find. Empty/absent = auto-detect. */
   claude_cli_path?: string | null;
-  backlog?: BacklogConfig | null;
 }
 
 export type ClaudeAuthMode = "cli-default" | "subscription" | "console" | "api-key";
@@ -149,74 +148,6 @@ export interface ClaudeAuthStatus {
   configuredMode: ClaudeAuthMode;
   status: ClaudeAuthStatusKind;
   checkedAt: string;
-}
-
-/** Mirrors `inference::task_meta::TaskMeta`. */
-export interface TaskMeta {
-  relativePath: string;
-  title: string;
-  phase?: number | null;
-  /** AC-E5-12 — absent means the task file has no Estimated Hours, which
-   * Backlog requires; the panel warns on exactly this. */
-  estimate?: string | null;
-}
-
-/** Mirrors `store::backlog_map::BacklogIssueLink`. */
-export interface BacklogIssueLink {
-  taskFile: string;
-  issueKey: string;
-  phase?: number | null;
-}
-
-/** Mirrors `store::backlog_map::BacklogMapping`. */
-export interface BacklogMapping {
-  issues: BacklogIssueLink[];
-  pushedAt?: string | null;
-  parentIssue?: string | null;
-}
-
-/** Mirrors `commands::backlog::BacklogPushView`. */
-export interface BacklogPushView {
-  tasks: TaskMeta[];
-  mapping: BacklogMapping;
-  /** Task files with no issue yet (AC-E5-11). */
-  pending: string[];
-  /** Task files missing Estimated Hours (AC-E5-12). */
-  missingEstimate: string[];
-  warning?: string;
-  running: boolean;
-}
-
-/** Mirrors `domain::integrations::BacklogIssueStatus`. */
-export interface BacklogIssueStatus {
-  issueKey: string;
-  taskFile: string;
-  statusName?: string | null;
-  /** AC-E5-17 — gone from Backlog; the app never recreates it. */
-  notFound: boolean;
-}
-
-/** Mirrors `domain::integrations::BacklogStatusCache`. */
-export interface BacklogStatusCache {
-  /** RFC3339 of the last SUCCESSFUL pull — the "số liệu lúc …" label. */
-  fetchedAt: string;
-  issues: BacklogIssueStatus[];
-  /** `task file → sha256` at that pull, for drift detection (AC-E5-18). */
-  taskHashes: Record<string, string>;
-  /** AC-E5-16 — showing older numbers because the last refresh failed. */
-  stale: boolean;
-  error?: string;
-}
-
-/** Mirrors `domain::integrations::BacklogStatus` (camelCase). */
-export interface BacklogStatus {
-  /** AC-E5-01 — drives whether Push to Backlog is enabled. */
-  configured: boolean;
-  domain: string;
-  projectKey: string;
-  /** AC-E1-22 — false disables the whole Backlog section. */
-  keychainAvailable: boolean;
-  keychainError?: string;
 }
 
 /** Mirrors `domain::run_history::RunHistoryRecord`. */
@@ -334,8 +265,13 @@ export interface ContractLockRecord {
 /** Mirrors `domain::contract_lock::ContractLockState`. */
 export interface ContractLockState {
   status: ContractLockStatus;
+  /** AC-E4-08a — every `<repo>/DESIGN.md` path checked while looking for an
+   * API Definition table; populated only when `status === "not-ready"`. */
+  checkedDesignMdPaths: string[];
   missingColumns: string[];
-  planMdMissing: boolean;
+  /** AC-E4-11b — `true` when `not-applicable` came from the PM clicking skip
+   * rather than from an inferred rule; only that one can be undone. */
+  manuallySkipped: boolean;
   notApplicableReason?: string | null;
   applicableRoles: string[];
   candidateFiles: LockedFileRef[];
@@ -543,6 +479,12 @@ export type SlotReadiness =
   | { kind: "agentMissing"; agentName: string }
   | { kind: "repoNotCloned"; repoName: string; declaredPath: string }
   | { kind: "repoRoleMissing"; role: string }
+  | {
+      kind: "repoRoleUnreadable";
+      role: string;
+      entries: { repoName: string; declaredRole: string }[];
+    }
+  | { kind: "noWorkInFeature"; role: string }
   | { kind: "unknownSlot" };
 
 /** Vietnamese explanation of why a node can't run yet — `null` when it can. */
@@ -561,6 +503,20 @@ export function readinessReason(readiness: SlotReadiness | undefined): string | 
       return `Không tìm thấy repo "${readiness.repoName}" (AGENTS.md khai "${readiness.declaredPath}") — kiểm tra repositoryRoot của project, hoặc clone repo về`;
     case "repoRoleMissing":
       return `Project không có repo vai trò "${readiness.role}" — agent này không áp dụng`;
+    // Tách khỏi `repoRoleMissing`: nói "project không có repo frontend" khi
+    // repo đó đang nằm ngay đó chỉ vì ô Vai trò ghi kèm ghi chú là đổ lỗi
+    // sai chỗ. Trích nguyên văn ô sai để sửa được ngay.
+    case "repoRoleUnreadable": {
+      const listed = readiness.entries
+        .map((e) => `"${e.repoName}" (vai trò: "${e.declaredRole}")`)
+        .join(", ");
+      return `AGENTS.md không khai repo nào vai trò "${readiness.role}" đọc được. Ô "Vai trò" của ${listed} không đọc ra được backend/frontend/mobile — sửa ô đó thành đúng một từ trong bảng Ecosystem`;
+    }
+    // Khác `repoRoleMissing` (project không có repo vai trò đó) và khác Skip
+    // thủ công (người dùng tự quyết): ở đây kế hoạch đơn giản không có việc
+    // cho slot này trong feature này.
+    case "noWorkInFeature":
+      return `Feature này không có task nào cho ${readiness.role} — agent này không áp dụng`;
     case "unknownSlot":
       return "Slot không có trong pipeline";
   }
@@ -573,7 +529,6 @@ export interface FeatureDeletionPreview {
   notableArtifacts: string[];
   runCount: number;
   hasContractLock: boolean;
-  hasBacklogMapping: boolean;
   inputCopyCount: number;
   /** Non-empty blocks deletion — an agent is still running. */
   runningSlots: string[];
@@ -597,8 +552,13 @@ export const commands = {
 
   scaffoldKit: () => invoke<ScaffoldReport>("scaffold_kit"),
 
+  refreshProject: () => invoke<ProjectSummary>("refresh_project"),
+
   openProject: (params: ProjectPaths & { label: string }) =>
     invoke<ProjectSummary>("open_project", { ...params }),
+
+  openExistingProject: (params: ProjectPaths & { label: string }) =>
+    invoke<ProjectSummary>("open_existing_project", { ...params }),
 
   listRecentProjects: () =>
     invoke<RecentProjectEntry[]>("list_recent_projects"),
@@ -658,6 +618,12 @@ export const commands = {
   lockContract: (feature: string, approvedBy: string, confirmedRoles: string[]) =>
     invoke<void>("lock_contract", { feature, approvedBy, confirmedRoles }),
 
+  skipContractLock: (feature: string, skippedBy: string, reason: string) =>
+    invoke<void>("skip_contract_lock", { feature, skippedBy, reason }),
+
+  unskipContractLock: (feature: string) =>
+    invoke<void>("unskip_contract_lock", { feature }),
+
   listContractLocks: (feature: string) =>
     invoke<ContractLockRecord[]>("list_contract_locks", { feature }),
 
@@ -697,6 +663,13 @@ export const commands = {
 
   skipRun: (feature: string, slot: string) => invoke<void>("skip_run", { feature, slot }),
 
+  // Force-marks a backend/frontend/mobile slot done, killing its live
+  // process first if any — the escape hatch when the agent finished the
+  // real work but its last message drifted off the "✅ ..." convention
+  // `classify_outcome` relies on, so the slot got stuck `waiting-input`.
+  forceDoneRun: (feature: string, slot: string) =>
+    invoke<void>("force_done_run", { feature, slot }),
+
   // AC-E6-05 — continue an interrupted run in its original CLI session.
   resumeRun: (feature: string, slot: string) => invoke<void>("resume_run", { feature, slot }),
 
@@ -705,38 +678,6 @@ export const commands = {
 
   resolveOrphan: (feature: string, slot: string, action: "attach" | "kill") =>
     invoke<void>("resolve_orphan", { feature, slot, action }),
-
-  // AC-E1-20 — connection test only; persists nothing either way.
-  testBacklogConnection: (domain: string, apiKey: string) =>
-    invoke<string>("test_backlog_connection", { domain, apiKey }),
-
-  // AC-E1-21 — the backend re-tests before saving; a failed test never
-  // reaches the keychain.
-  saveBacklogCredentials: (domain: string, projectKey: string, apiKey: string) =>
-    invoke<string>("save_backlog_credentials", { domain, projectKey, apiKey }),
-
-  getBacklogStatus: () => invoke<BacklogStatus>("get_backlog_status"),
-
-  clearBacklogCredentials: () => invoke<void>("clear_backlog_credentials"),
-
-  getBacklogPushView: (feature: string) =>
-    invoke<BacklogPushView>("get_backlog_push_view", { feature }),
-
-  /** `answer` starts a push when omitted, or replies into the running
-   * agent's session when given (AC-E5-03/07's question flow). */
-  pushToBacklog: (feature: string, answer?: string) =>
-    invoke<void>("push_to_backlog", { feature, answer: answer ?? null }),
-
-  refreshBacklogStatus: (feature: string) =>
-    invoke<BacklogStatusCache>("refresh_backlog_status", { feature }),
-
-  getBacklogStatusCache: (feature: string) =>
-    invoke<BacklogStatusCache | null>("get_backlog_status_cache", { feature }),
-
-  /** AC-E5-18 — current hash of a task file, to spot drift against the
-   * hash captured when its issue was created. */
-  hashTaskFile: (feature: string, taskFile: string) =>
-    invoke<string | null>("hash_task_file", { feature, taskFile }),
 
   /** AC-E2-24 — creates `<docsRoot>/features/<name>/` and returns the
    * refreshed feature list. Rejects non-kebab-case and existing names. */

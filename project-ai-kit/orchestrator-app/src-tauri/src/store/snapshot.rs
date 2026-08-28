@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use chrono::{DateTime, NaiveDateTime, Utc};
 
 use crate::domain::version_ref::{VersionRef, VersionSource};
-use crate::error::AppResult;
+use crate::error::{AppError, AppResult};
 use crate::store::atomic_write::write_text_atomic;
 use crate::store::orchestrator_dir;
 
@@ -30,6 +30,13 @@ fn parse_snapshot_timestamp(filename: &str) -> Option<DateTime<Utc>> {
     NaiveDateTime::parse_from_str(stem, SNAPSHOT_TIMESTAMP_FORMAT)
         .ok()
         .map(|naive| naive.and_utc())
+}
+
+/// Snapshot ids are generated filenames, never arbitrary paths. Keeping this
+/// check at the store boundary protects every caller from absolute-path and
+/// `..` traversal even if a future command forgets its own validation.
+pub fn is_valid_snapshot_id(id: &str) -> bool {
+    Path::new(id).components().count() == 1 && parse_snapshot_timestamp(id).is_some()
 }
 
 /// Newest first. Filenames themselves encode the snapshot time (not
@@ -59,6 +66,11 @@ pub fn list_snapshot_versions(dir: &Path) -> Vec<VersionRef> {
 }
 
 pub fn read_snapshot(dir: &Path, id: &str) -> AppResult<String> {
+    if !is_valid_snapshot_id(id) {
+        return Err(AppError::Invalid {
+            message: format!("Snapshot ID không hợp lệ: {id}"),
+        });
+    }
     Ok(std::fs::read_to_string(dir.join(id))?)
 }
 
@@ -142,5 +154,20 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let dir = tmp.path().join("does-not-exist");
         assert!(list_snapshot_versions(&dir).is_empty());
+    }
+
+    /// Regression for the traversal hole `is_valid_snapshot_id` closes:
+    /// before it existed, `read_snapshot` joined `id` straight into the
+    /// filesystem path.
+    #[test]
+    fn read_snapshot_rejects_a_path_traversal_id() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("snap");
+        assert!(write_snapshot_if_changed(&dir, "hello").unwrap());
+
+        for id in ["../../etc/passwd", "/etc/passwd", "..", "a/b.md"] {
+            let err = read_snapshot(&dir, id).unwrap_err();
+            assert!(format!("{err:?}").contains("Snapshot ID không hợp lệ"));
+        }
     }
 }

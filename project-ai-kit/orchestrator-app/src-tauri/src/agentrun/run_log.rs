@@ -11,6 +11,7 @@ use std::path::Path;
 use crate::agentrun::runner::RunResult;
 use crate::agentrun::stream_parser::{self, StreamEvent};
 use crate::domain::config_file::PermissionProfile;
+use crate::domain::pipeline_def::slot;
 use crate::domain::run_summary::{RunOutcome, RunSummary};
 use crate::error::AppResult;
 use crate::inference::stage_rules;
@@ -102,15 +103,34 @@ fn classify_outcome(
         return (RunOutcome::Failed, last_assistant_text(&result.events));
     }
 
+    let last_message = last_assistant_text(&result.events);
+
+    // Dev slots (backend/frontend/mobile) edit arbitrary files inside an
+    // external repo — there is no single predictable path
+    // `artifact_paths_for_slot` can check for existence, so it always
+    // returns empty for them (see its own match arm). Use the agent's own
+    // completion signal instead: `.claude/agents/{backend,frontend,mobile}
+    // -agent.md` each mandate `## Output` to start with `✅ task-x-y hoàn
+    // thành` on success — a genuine clarifying question never starts this
+    // way. If that convention changes in those files, this check must
+    // change with it.
+    if matches!(slot_id, s if s == slot::BACKEND || s == slot::FRONTEND || s == slot::MOBILE) {
+        let completed = last_message
+            .as_deref()
+            .is_some_and(|t| t.trim_start().starts_with('✅'));
+        return if completed {
+            (RunOutcome::Done, None)
+        } else {
+            (RunOutcome::WaitingInput, last_message)
+        };
+    }
+
     let produced_artifact =
         !stage_rules::artifact_paths_for_slot(feature_dir, runs_dir, slot_id).is_empty();
     if produced_artifact {
         (RunOutcome::Done, None)
     } else {
-        (
-            RunOutcome::WaitingInput,
-            last_assistant_text(&result.events),
-        )
+        (RunOutcome::WaitingInput, last_message)
     }
 }
 
@@ -260,6 +280,40 @@ fn append_warning(summary: &mut RunSummary, warning: String) {
     });
 }
 
+/// Slots the kit gives no artifact path of its own — AC-E3-05 has the app
+/// define and write one, under `runs_dir`, in the filename
+/// `classify_outcome`'s `stage_rules::artifact_paths_for_slot` call already
+/// expects. Keep this in sync with that function's own `QA`/`QC_TESTING`/
+/// `QC_AUTOMATION` match arms — same filenames on both sides.
+fn runs_dir_report_filename(slot_id: &str) -> Option<&'static str> {
+    match slot_id {
+        s if s == slot::QA => Some("qa-report.md"),
+        s if s == slot::QC_TESTING => Some("qc-checklist.md"),
+        s if s == slot::QC_AUTOMATION => Some("execution-report.md"),
+        _ => None,
+    }
+}
+
+/// Saves the agent's own final report as that slot's AC-E3-05 artifact —
+/// MUST run before `build_run_summary`/`classify_outcome`, which reads it
+/// right back to decide `Done`. Best-effort: a write failure here should
+/// not fail the whole run finalization, only leave the slot `WaitingInput`
+/// (no worse than before this existed) — the same tolerance
+/// `persist_and_notify`'s own best-effort writes already have elsewhere in
+/// this module.
+fn write_runs_dir_report(runs_dir: &Path, feature: &str, slot_id: &str, events: &[StreamEvent]) {
+    let Some(filename) = runs_dir_report_filename(slot_id) else {
+        return;
+    };
+    let Some(report) = last_assistant_text(events) else {
+        return;
+    };
+    let path = runs_dir
+        .join(orchestrator_dir::runs_dir_run_id(feature, slot_id))
+        .join(filename);
+    let _ = write_text_atomic(&path, &report);
+}
+
 /// Ties classification + persistence together — the single call site
 /// `commands::agentrun::run_to_completion` uses once a `RunResult` is in
 /// hand. Increments `attempt` itself (reads whatever was previously on
@@ -275,6 +329,7 @@ pub fn finalize_run(
     extra_warning: Option<String>,
 ) -> AppResult<RunSummary> {
     let attempt = next_attempt(ctx.agents_root, ctx.feature, ctx.slot);
+    write_runs_dir_report(ctx.runs_dir, ctx.feature, ctx.slot, &result.events);
     let mut summary = build_run_summary(
         result,
         ctx.feature_dir,
@@ -558,6 +613,76 @@ mod tests {
     }
 
     #[test]
+    fn dev_slot_success_marker_classifies_as_done_even_with_no_artifact() {
+        let tmp = tempfile::tempdir().unwrap();
+        let feature_dir = tmp.path().join("feature");
+        std::fs::create_dir_all(&feature_dir).unwrap();
+        let runs_dir = tmp.path().join("runs");
+
+        let result = result_with(vec![
+            StreamEvent::AssistantText {
+                message_id: "m1".to_string(),
+                text: "✅ task-2-1 hoàn thành\n\nFiles đã thay đổi:\n  - order.service.ts"
+                    .to_string(),
+            },
+            StreamEvent::RunFinished {
+                is_error: false,
+                total_cost_usd: 0.05,
+                session_id: "s1".to_string(),
+                stop_reason: Some("end_turn".to_string()),
+            },
+        ]);
+
+        let summary = build_run_summary(
+            &result,
+            &feature_dir,
+            &runs_dir,
+            "backend",
+            "t0".to_string(),
+            "t1".to_string(),
+            1,
+        );
+        assert_eq!(summary.outcome, RunOutcome::Done);
+    }
+
+    #[test]
+    fn dev_slot_without_success_marker_classifies_as_waiting_input() {
+        let tmp = tempfile::tempdir().unwrap();
+        let feature_dir = tmp.path().join("feature");
+        std::fs::create_dir_all(&feature_dir).unwrap();
+        let runs_dir = tmp.path().join("runs");
+
+        let result = result_with(vec![
+            StreamEvent::AssistantText {
+                message_id: "m1".to_string(),
+                text: "Task không đủ context — order status enum có thêm giá trị nào ngoài PENDING/PAID/CANCELLED không?".to_string(),
+            },
+            StreamEvent::RunFinished {
+                is_error: false,
+                total_cost_usd: 0.02,
+                session_id: "s1".to_string(),
+                stop_reason: Some("end_turn".to_string()),
+            },
+        ]);
+
+        let summary = build_run_summary(
+            &result,
+            &feature_dir,
+            &runs_dir,
+            "backend",
+            "t0".to_string(),
+            "t1".to_string(),
+            1,
+        );
+        assert_eq!(summary.outcome, RunOutcome::WaitingInput);
+        assert!(summary
+            .last_message
+            .as_deref()
+            .unwrap()
+            .contains("order status enum"));
+    }
+
+    #[test]
     fn next_attempt_is_1_when_nothing_on_disk_and_increments_after_a_write() {
         let tmp = tempfile::tempdir().unwrap();
         let agents_root = tmp.path();
@@ -576,7 +701,7 @@ mod tests {
         write_run_summary(agents_root, "f1", "ba", &summary).unwrap();
         assert_eq!(next_attempt(agents_root, "f1", "ba"), 2);
         // A different feature/slot is unaffected.
-        assert_eq!(next_attempt(agents_root, "f1", "pm"), 1);
+        assert_eq!(next_attempt(agents_root, "f1", "qa"), 1);
         assert_eq!(next_attempt(agents_root, "f2", "ba"), 1);
     }
 
@@ -726,6 +851,113 @@ mod tests {
         )
         .unwrap();
         assert_eq!(retry_summary.attempt, 2);
+    }
+
+    /// AC-E3-05, the actual bug report: QA has no artifact path of its own
+    /// in the kit, so before this the slot stayed `WaitingInput` forever no
+    /// matter what the agent said — nothing ever wrote `qa-report.md`.
+    /// `finalize_run` must now save it itself, in time for the SAME call's
+    /// `classify_outcome` to see it and return `Done`.
+    #[test]
+    fn finalize_run_writes_the_qa_report_and_marks_qa_done() {
+        let tmp = tempfile::tempdir().unwrap();
+        let agents_root = tmp.path().join("agents");
+        let feature_dir = tmp.path().join("docs/features/f1");
+        std::fs::create_dir_all(&feature_dir).unwrap();
+        let runs_dir = tmp.path().join("runs");
+
+        let result = RunResult {
+            events: vec![
+                StreamEvent::AssistantText {
+                    message_id: "m1".to_string(),
+                    text: "## QA Report — task-1-1\n✅ PASS — có thể chuyển sang QC".to_string(),
+                },
+                StreamEvent::RunFinished {
+                    is_error: false,
+                    total_cost_usd: 0.02,
+                    session_id: "s1".to_string(),
+                    stop_reason: Some("end_turn".to_string()),
+                },
+            ],
+            raw_lines: vec![r#"{"type":"result"}"#.to_string()],
+            log_already_on_disk: false,
+            timed_out: false,
+            exit_code: Some(0),
+            stderr: String::new(),
+            stdout_drained: true,
+        };
+
+        let ctx = RunContext {
+            agents_root: &agents_root,
+            feature: "f1",
+            slot: "qa",
+            feature_dir: &feature_dir,
+            runs_dir: &runs_dir,
+            permission: PermissionProfile::WriteScoped,
+        };
+
+        let summary = finalize_run(
+            &ctx,
+            &result,
+            "t0".to_string(),
+            "t1".to_string(),
+            "prompt",
+            None,
+        )
+        .unwrap();
+        assert_eq!(summary.outcome, RunOutcome::Done);
+
+        let report_path = runs_dir.join("f1--qa/qa-report.md");
+        assert_eq!(
+            std::fs::read_to_string(report_path).unwrap(),
+            "## QA Report — task-1-1\n✅ PASS — có thể chuyển sang QC"
+        );
+    }
+
+    /// A slot with no `runs_dir_report_filename` mapping (e.g. `ba`, which
+    /// has its own `SPEC.md`-based artifact path) must never get a stray
+    /// `runs_dir` entry written for it.
+    #[test]
+    fn finalize_run_writes_no_runs_dir_report_for_slots_outside_the_convention() {
+        let tmp = tempfile::tempdir().unwrap();
+        let agents_root = tmp.path().join("agents");
+        let feature_dir = tmp.path().join("docs/features/f1");
+        std::fs::create_dir_all(&feature_dir).unwrap();
+        let runs_dir = tmp.path().join("runs");
+
+        let result = RunResult {
+            events: vec![
+                StreamEvent::AssistantText {
+                    message_id: "m1".to_string(),
+                    text: "✅ task-1-1 hoàn thành".to_string(),
+                },
+                StreamEvent::RunFinished {
+                    is_error: false,
+                    total_cost_usd: 0.02,
+                    session_id: "s1".to_string(),
+                    stop_reason: Some("end_turn".to_string()),
+                },
+            ],
+            raw_lines: vec![r#"{"type":"result"}"#.to_string()],
+            log_already_on_disk: false,
+            timed_out: false,
+            exit_code: Some(0),
+            stderr: String::new(),
+            stdout_drained: true,
+        };
+
+        let ctx = RunContext {
+            agents_root: &agents_root,
+            feature: "f1",
+            slot: "backend",
+            feature_dir: &feature_dir,
+            runs_dir: &runs_dir,
+            permission: PermissionProfile::WriteScoped,
+        };
+
+        finalize_run(&ctx, &result, "t0".to_string(), "t1".to_string(), "prompt", None).unwrap();
+
+        assert!(!runs_dir.exists() || std::fs::read_dir(&runs_dir).unwrap().next().is_none());
     }
 
     #[test]

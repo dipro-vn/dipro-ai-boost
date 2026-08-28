@@ -32,6 +32,8 @@ interface ActionPanelProps {
   nodeNicknames: Record<string, string>;
   /** B22 — per-slot Run-button gating, keyed by slot id. */
   readiness: Record<string, SlotReadiness>;
+  /** Project setup must finish through the external `/init-kit` handoff. */
+  projectReady: boolean;
   /** Re-asks the backend whether this slot may run — the Ecosystem is
    * re-read from disk on the way, so a just-cloned repo unblocks here. */
   onRecheckReadiness: () => void;
@@ -50,6 +52,7 @@ export function ActionPanel({
   pipelineDef,
   nodeNicknames,
   readiness,
+  projectReady,
   onRecheckReadiness,
 }: ActionPanelProps) {
   const isBa = selection?.agent?.id === BA_SLOT;
@@ -101,6 +104,7 @@ export function ActionPanel({
             nickname={nodeNicknames[selection.agent.id]}
             nodeState={featureState?.nodes[selection.agent.id]}
             pipelineDef={pipelineDef}
+            projectReady={projectReady}
             showConsole={false}
           />
         ) : (
@@ -111,6 +115,7 @@ export function ActionPanel({
             nodeState={featureState?.nodes[selection.agent.id]}
             pipelineDef={pipelineDef}
             readiness={readiness[selection.agent.id]}
+            projectReady={projectReady}
             onRecheckReadiness={onRecheckReadiness}
             showConsole={false}
           />

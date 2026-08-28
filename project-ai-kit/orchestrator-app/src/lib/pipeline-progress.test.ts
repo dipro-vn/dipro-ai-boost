@@ -25,8 +25,9 @@ function state(
     gates: { S1b_trigger: { status: trigger, missingSections: [] } },
     contractLock: {
       status: contract,
+      checkedDesignMdPaths: [],
       missingColumns: [],
-      planMdMissing: false,
+      manuallySkipped: false,
       applicableRoles: [],
       candidateFiles: [],
       violatedFiles: [],

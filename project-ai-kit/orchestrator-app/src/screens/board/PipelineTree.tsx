@@ -168,7 +168,14 @@ interface GateNodeProps {
 /** The visual state a gate node shows — derived purely from the gate's
  * own state (already computed server-side), mirroring what the panel
  * beside it says, so the tree and the panel never disagree. */
-type GateVisual = "approved" | "pending" | "locked" | "violated" | "notApplicable" | "neutral";
+type GateVisual =
+  | "approved"
+  | "pending"
+  | "locked"
+  | "violated"
+  | "notApplicable"
+  | "blocked"
+  | "neutral";
 
 function gateVisual(stageId: string, gateState: GateState | undefined, contractLockState: ContractLockState | undefined): GateVisual {
   if (stageId === TRIGGER_GATE_STAGE_ID) {
@@ -186,6 +193,11 @@ function gateVisual(stageId: string, gateState: GateState | undefined, contractL
     // đang chờ được mở, trong khi ở trạng thái này chẳng có gì để mở — nó đã
     // được bỏ qua và stage ⑤ chạy tiếp bình thường.
     if (status === "not-applicable") return "notApplicable";
+    // `not-ready` cũng KHÔNG gộp vào `neutral`, cùng lý do ngược lại: ổ
+    // khoá xám "Chưa mở" trông y hệt node ⑧ Deploy chưa tới lượt, trong khi
+    // gate này đang chặn cứng cả stage ⑤ trở đi và cần người xử lý. Người
+    // dùng không nên phải bấm vào mới biết mình đang bế tắc.
+    if (status === "not-ready") return "blocked";
     return "neutral";
   }
   return "neutral";
@@ -197,6 +209,7 @@ const GATE_VISUAL_META: Record<GateVisual, { icon: LucideIcon; label: string; bo
   pending: { icon: Clock, label: "Chờ duyệt", border: "border-warning", iconBg: "bg-warning/15", iconColor: "text-warning" },
   violated: { icon: ShieldAlert, label: "Vi phạm", border: "border-destructive", iconBg: "bg-destructive/15", iconColor: "text-destructive" },
   notApplicable: { icon: CircleSlash, label: "Không áp dụng", border: "border-border", iconBg: "bg-muted", iconColor: "text-muted-foreground" },
+  blocked: { icon: Lock, label: "Chưa mở được", border: "border-warning", iconBg: "bg-warning/15", iconColor: "text-warning" },
   neutral: { icon: Lock, label: "Chưa mở", border: "border-border", iconBg: "bg-muted", iconColor: "text-muted-foreground" },
 };
 
@@ -229,7 +242,7 @@ const GateNode = forwardRef<HTMLButtonElement, GateNodeProps>(function GateNode(
   );
 });
 
-interface Segment {
+export interface Segment {
   x1: number;
   y1: number;
   x2: number;
@@ -249,7 +262,7 @@ interface Segment {
  * feeds it: the source node for a fan-in, the whole source stage for a
  * fan-out (that bundle is what makes ba-agent visibly feed all three
  * stage-② agents). */
-function edgeState(
+export function edgeState(
   segment: Segment,
   stages: StageDef[],
   featureState: FeatureState | null,
@@ -276,7 +289,24 @@ function edgeState(
         : "idle";
     }
     if (fromStage.id === CONTRACT_LOCK_GATE_STAGE_ID) {
-      return featureState?.contractLock?.status === "locked" ? "done" : "idle";
+      const status = featureState?.contractLock?.status;
+      if (status === "locked") return "done";
+      if (status === "not-applicable") {
+        // Skipped gate is transparent, not an unlock (readiness.rs mirrors
+        // this): look through to the stage feeding Contract Lock (S3_planning)
+        // instead of turning green regardless of its progress.
+        const predecessor = fromStage.dependsOn
+          ? stages.find((s) => s.id === fromStage.dependsOn)
+          : undefined;
+        if (!predecessor || predecessor.agents.length === 0) return "idle";
+        if (predecessor.agents.some((a) => statusOf(a.id) === "running")) return "flowing";
+        const complete = predecessor.agents.every((a) => {
+          const st = statusOf(a.id);
+          return st === "done" || st === "skipped";
+        });
+        return complete ? "done" : "idle";
+      }
+      return "idle";
     }
     // S8_deploy and any future gate without a panel — no approval state
     // to read, stay neutral.

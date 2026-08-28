@@ -109,6 +109,7 @@ Với mỗi dòng trong Non-Regression table của task:
 
 ```
 ## QA Report — task-x-y | [Repo] | [Ngày]
+Scope: Backend only | Toàn bộ (BE + FE + Mobile)
 
 ### Test Results
 - Unit tests:  ✅ X passed / ❌ Y failed

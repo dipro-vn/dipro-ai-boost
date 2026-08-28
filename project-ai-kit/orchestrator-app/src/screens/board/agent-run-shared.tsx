@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import { CircleHelp, Maximize2, Square } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -130,7 +130,7 @@ function AnswerForm({ value, rows, onChange, onSend }: AnswerFormProps) {
 
 /**
  * The "agent is waiting for an answer" block, shared by every panel that
- * can host a run (`AgentStepPanel`, `BaStepPanel`, `BacklogScreen`).
+ * can host a run (`AgentStepPanel`, `BaStepPanel`).
  *
  * Agents ask real questions — the first `user-signup` run came back with
  * headings, a table and four numbered items. That was previously rendered
@@ -292,6 +292,10 @@ interface LiveLogViewProps {
    * `result` line will eventually report. */
   estimatedCostUsd: number | null;
   onKill: () => void;
+  /** Extra control rendered next to Kill (e.g. `BaStepPanel`'s Reset,
+   * which needs to be reachable even while a run is live). `undefined` for
+   * every other caller — this panel is otherwise identical for all slots. */
+  extraAction?: ReactNode;
 }
 
 export function LiveLogView({
@@ -300,6 +304,7 @@ export function LiveLogView({
   elapsedMs,
   estimatedCostUsd,
   onKill,
+  extraAction,
 }: LiveLogViewProps) {
   const virtuosoRef = useRef<VirtuosoHandle>(null);
 
@@ -322,6 +327,7 @@ export function LiveLogView({
           <Square />
           Kill
         </Button>
+        {extraAction}
       </div>
       <TerminalFrame title={title}>
         <div className="h-[28rem]">

@@ -67,8 +67,9 @@ pub struct PipelineDef {
 /// existing projects pick the change up instead of keeping a stale file.
 /// `1` = the pre-gate 8-stage layout (never carried this field, reads as
 /// `0`); `2` = the 9-stage layout with both gates and explicit
-/// `depends_on`; `3` = the same layout plus a per-slot display `label`.
-pub const PIPELINE_DEF_VERSION: u32 = 3;
+/// `depends_on`; `3` = the same layout plus a per-slot display `label`;
+/// `4` = the `pm` slot removed from stage ③ along with `pm-agent`.
+pub const PIPELINE_DEF_VERSION: u32 = 4;
 
 /// Slot ids — the single source of truth `inference::stage_rules` keys its
 /// output by. Stage ④ (Contract Lock) and ⑧ (Deploy) intentionally have no
@@ -80,7 +81,6 @@ pub mod slot {
     pub const DESIGN_ANALYST: &str = "design-analyst";
     pub const QC_DESIGN: &str = "qc-design";
     pub const TECHLEAD_TASKS: &str = "techlead-tasks";
-    pub const PM: &str = "pm";
     pub const BACKEND: &str = "backend";
     pub const FRONTEND: &str = "frontend";
     pub const MOBILE: &str = "mobile";
@@ -149,12 +149,20 @@ impl Default for PipelineDef {
                     id: "S2_design".to_string(),
                     label: "② Design".to_string(),
                     agents: vec![
-                        slot(slot::TECHLEAD_DESIGN, "techlead-design-agent", "Tech Lead · Design"),
+                        slot(
+                            slot::TECHLEAD_DESIGN,
+                            "techlead-design-agent",
+                            "Tech Lead · Design",
+                        ),
                         // Agent file does not exist in the kit yet (B17) —
                         // this slot is declared regardless so the node
                         // shows up as `idle` rather than being silently
                         // absent from the board.
-                        slot(slot::DESIGN_ANALYST, "design-analyst-agent", "Design Analyst"),
+                        slot(
+                            slot::DESIGN_ANALYST,
+                            "design-analyst-agent",
+                            "Design Analyst",
+                        ),
                         slot(slot::QC_DESIGN, "qc-agent", "QC · Test Cases"),
                     ],
                     depends_on: Some(gate::TRIGGER.to_string()),
@@ -162,10 +170,11 @@ impl Default for PipelineDef {
                 StageDef {
                     id: "S3_planning".to_string(),
                     label: "③ Planning".to_string(),
-                    agents: vec![
-                        slot(slot::TECHLEAD_TASKS, "techlead-tasks-agent", "Tech Lead · Tasks"),
-                        slot(slot::PM, "pm-agent", "PM · Plan"),
-                    ],
+                    agents: vec![slot(
+                        slot::TECHLEAD_TASKS,
+                        "techlead-tasks-agent",
+                        "Tech Lead · Tasks",
+                    )],
                     depends_on: Some("S2_design".to_string()),
                 },
                 StageDef {
@@ -179,7 +188,12 @@ impl Default for PipelineDef {
                     label: "⑤ Build".to_string(),
                     agents: vec![
                         slot(slot::BACKEND, "backend-agent", "Backend"),
-                        slot_after(slot::FRONTEND, "frontend-agent", "Frontend", &[slot::BACKEND]),
+                        slot_after(
+                            slot::FRONTEND,
+                            "frontend-agent",
+                            "Frontend",
+                            &[slot::BACKEND],
+                        ),
                         slot_after(slot::MOBILE, "mobile-agent", "Mobile", &[slot::BACKEND]),
                     ],
                     depends_on: Some(gate::CONTRACT_LOCK.to_string()),
@@ -195,7 +209,11 @@ impl Default for PipelineDef {
                     label: "⑦ Testing".to_string(),
                     agents: vec![
                         slot(slot::QC_TESTING, "qc-agent", "QC · Execution"),
-                        slot(slot::QC_AUTOMATION, "qc-automation-agent", "QC · Automation"),
+                        slot(
+                            slot::QC_AUTOMATION,
+                            "qc-automation-agent",
+                            "QC · Automation",
+                        ),
                     ],
                     depends_on: Some("S6_verify".to_string()),
                 },

@@ -56,7 +56,7 @@ Ngoài quan sát, E3 còn phải trả lời được câu hỏi "artifact này 
 | ② Design — Tech Lead | Có ít nhất một `<feature>/<repo>/DESIGN.md` |
 | ② Design — Design-Analyst | `<feature>/design-analysis.md` tồn tại |
 | ② Design — QC | `<feature>/test-cases/<module>/test-cases.md` tồn tại |
-| ③ Planning | Có ít nhất một `<feature>/<repo>/tasks/task-*.md`; `PLAN.md` tồn tại là tín hiệu bổ sung |
+| ③ Planning | Có ít nhất một `<feature>/<repo>/tasks/task-*.md` |
 | ④ Contract Lock | `.orchestrator/contract.lock` tồn tại và hợp lệ (chi tiết ở E4) |
 | ⑤ Build | Trạng thái lấy từ `state.json` của run — không suy từ source code |
 | ⑥ Verify | QA Report tồn tại tại path do app quy định |
@@ -85,10 +85,11 @@ Ngoài quan sát, E3 còn phải trả lời được câu hỏi "artifact này 
 
 **File watcher**
 
-- **AC-E3-01** — App theo dõi liên tục các artifact trong `<DOCS_ROOT>/features/<feature>/`: `SPEC.md`, `PLAN.md`, `design-analysis.md`, `<repo>/DESIGN.md`, `<repo>/tasks/`, `test-cases/`, cùng với `.orchestrator/contract.lock`.
+- **AC-E3-01** — App theo dõi liên tục các artifact trong `<DOCS_ROOT>/features/<feature>/`: `SPEC.md`, `design-analysis.md`, `design-resources/`, `<repo>/DESIGN.md`, `<repo>/tasks/`, `test-cases/`, cùng với `.orchestrator/contract.lock`.
 - **AC-E3-02** — Thay đổi trên file system được phản ánh lên Pipeline Board **trong vòng 2 giây** mà người dùng không phải refresh thủ công.
 - **AC-E3-03** — Nhiều thay đổi liên tiếp trong khoảng dưới 500ms chỉ tạo ra **một** lần cập nhật trạng thái (debounce) — UI không nhấp nháy.
 - **AC-E3-04** — Trạng thái nhánh Design-Analyst của stage ② được xác định bằng **sự tồn tại của `design-analysis.md`** trong folder feature.
+- **AC-E3-04a** — `design-resources/` là artifact phụ trợ, chỉ được theo dõi và hiển thị (đường dẫn, danh sách file) — **không** phải điều kiện để nhánh Design-Analyst đạt `done` (điều kiện `done` giữ nguyên như `AC-E3-04`).
 - **AC-E3-05** — Với các artifact mà kit không quy định đường dẫn (QA Report, QC execution checklist), app ghi chúng vào vị trí do app tự định nghĩa trong `.orchestrator/runs/<run-id>/` và theo dõi tại đó.
 - **AC-E3-06** — Artifact bị xoá sau khi đã ghi nhận `done` khiến trạng thái stage quay về `idle` kèm cảnh báo nêu tên file đã biến mất.
 - **AC-E3-07** — Thư mục theo dõi tạm thời không truy cập được thì app hiện cảnh báo và giữ nguyên trạng thái cuối cùng, tự động theo dõi lại khi thư mục khả dụng trở lại — app không crash.
@@ -106,7 +107,7 @@ Ngoài quan sát, E3 còn phải trả lời được câu hỏi "artifact này 
 
 **Artifact Viewer**
 
-- **AC-E3-16** — Artifact Viewer render markdown của `SPEC.md`, `DESIGN.md`, `PLAN.md`, task file và test case với định dạng đọc được (heading, bảng, danh sách, khối code).
+- **AC-E3-16** — Artifact Viewer render markdown của `SPEC.md`, `DESIGN.md`, task file và test case với định dạng đọc được (heading, bảng, danh sách, khối code).
 - **AC-E3-17** — Khối mermaid trong artifact được vẽ thành sơ đồ.
 - **AC-E3-18** — Mermaid sai cú pháp được hiện dưới dạng khối code nguyên văn kèm thông báo lỗi; phần còn lại của tài liệu vẫn render bình thường.
 - **AC-E3-19** — Artifact từ 2.000 dòng trở lên vẫn cuộn mượt, không đóng băng UI.

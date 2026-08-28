@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 4,
   "stages": [
     {
       "id": "S1_input",
@@ -8,6 +8,7 @@
         {
           "id": "ba",
           "agentName": "ba-agent",
+          "label": "BA · SPEC",
           "afterSlots": []
         }
       ]
@@ -25,16 +26,19 @@
         {
           "id": "techlead-design",
           "agentName": "techlead-design-agent",
+          "label": "Tech Lead · Design",
           "afterSlots": []
         },
         {
           "id": "design-analyst",
           "agentName": "design-analyst-agent",
+          "label": "Design Analyst",
           "afterSlots": []
         },
         {
           "id": "qc-design",
           "agentName": "qc-agent",
+          "label": "QC · Test Cases",
           "afterSlots": []
         }
       ],
@@ -47,11 +51,7 @@
         {
           "id": "techlead-tasks",
           "agentName": "techlead-tasks-agent",
-          "afterSlots": []
-        },
-        {
-          "id": "pm",
-          "agentName": "pm-agent",
+          "label": "Tech Lead · Tasks",
           "afterSlots": []
         }
       ],
@@ -70,11 +70,13 @@
         {
           "id": "backend",
           "agentName": "backend-agent",
+          "label": "Backend",
           "afterSlots": []
         },
         {
           "id": "frontend",
           "agentName": "frontend-agent",
+          "label": "Frontend",
           "afterSlots": [
             "backend"
           ]
@@ -82,6 +84,7 @@
         {
           "id": "mobile",
           "agentName": "mobile-agent",
+          "label": "Mobile",
           "afterSlots": [
             "backend"
           ]
@@ -96,6 +99,7 @@
         {
           "id": "qa",
           "agentName": "qa-agent",
+          "label": "QA · Verify",
           "afterSlots": []
         }
       ],
@@ -108,11 +112,13 @@
         {
           "id": "qc-testing",
           "agentName": "qc-agent",
+          "label": "QC · Execution",
           "afterSlots": []
         },
         {
           "id": "qc-automation",
           "agentName": "qc-automation-agent",
+          "label": "QC · Automation",
           "afterSlots": []
         }
       ],

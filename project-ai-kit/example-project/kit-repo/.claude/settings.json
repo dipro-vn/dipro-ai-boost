@@ -1,0 +1,54 @@
+{
+  "mcpServers": {
+    "tilth": {
+      "command": "tilth",
+      "args": ["--mcp"]
+    },
+    "figma": {
+      "type": "http",
+      "url": "http://127.0.0.1:3845/mcp"
+    },
+    "backlog": {
+      "command": "npx",
+      "args": ["-y", "@nulab/backlog-mcp-server"],
+      "env": {
+        "BACKLOG_DOMAIN": "",
+        "BACKLOG_API_KEY": ""
+      }
+    }
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/block-secret-read.js",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/guard-bash.js",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/detect-hardcoded-secret.js",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

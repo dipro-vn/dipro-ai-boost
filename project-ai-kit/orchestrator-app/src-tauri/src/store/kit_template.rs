@@ -59,8 +59,6 @@ static SKILL_NESTJS_BEST_PRACTICES: Dir<'_> =
     include_dir!("$CARGO_MANIFEST_DIR/../../.claude/skills/nestjs-best-practices");
 static SKILL_POSTGRESQL: Dir<'_> =
     include_dir!("$CARGO_MANIFEST_DIR/../../.claude/skills/postgresql");
-static SKILL_PROJECT_PLANNING: Dir<'_> =
-    include_dir!("$CARGO_MANIFEST_DIR/../../.claude/skills/project-planning");
 static SKILL_RBT_MANUAL_TESTING: Dir<'_> =
     include_dir!("$CARGO_MANIFEST_DIR/../../.claude/skills/rbt_manual_testing");
 static SKILL_REACT_EXPERT: Dir<'_> =
@@ -94,6 +92,10 @@ static SKILLS_README: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../../.claude/skills/README.md"
 ));
+
+const CURRENT_AGENTS_INIT_NOTICE: &str = "> **Chưa init?** App chỉ tạo khung kit. Mở Claude Code tại `agentsRoot`, nhập `/init-kit` để điền Ecosystem/Actors. Đây là slash command trong Claude Code, không phải lệnh shell. Setup A→Z ở `README.md`.";
+const LEGACY_AGENTS_INIT_NOTICE: &str =
+    "> **Chưa init?** Chạy `/init-kit` để điền Ecosystem/Actors. Setup A→Z ở `README.md`.";
 
 /// Root nào của project chứa nhóm này. `agentsRoot`/`docsRoot` là hai cây
 /// độc lập (có project chúng còn không phải anh em), nên không suy ra được.
@@ -268,10 +270,6 @@ static GROUPS: &[GroupDef] = &[
                 dir: &SKILL_POSTGRESQL,
             },
             Source::Tree {
-                prefix: ".claude/skills/project-planning",
-                dir: &SKILL_PROJECT_PLANNING,
-            },
-            Source::Tree {
                 prefix: ".claude/skills/rbt_manual_testing",
                 dir: &SKILL_RBT_MANUAL_TESTING,
             },
@@ -336,6 +334,9 @@ pub struct KitGroup {
 #[serde(rename_all = "camelCase")]
 pub struct ScaffoldReport {
     pub created: Vec<String>,
+    /// Existing files that were still the original kit template and were
+    /// safely updated with the current project name.
+    pub updated: Vec<String>,
     /// File đã có sẵn — bỏ qua, KHÔNG ghi đè.
     pub skipped: Vec<String>,
 }
@@ -411,7 +412,58 @@ pub fn missing_groups(agents_root: &Path, docs_root: &Path) -> Vec<KitGroup> {
 /// Đường dẫn đích luôn là root + hằng số lấy từ `include_dir` (cố định lúc
 /// compile, không thể chứa `..`), không có input nào từ frontend — nếu sau
 /// này thêm input thì phải qua `orchestrator_dir::assert_within`.
+#[allow(dead_code)]
 pub fn materialize(agents_root: &Path, docs_root: &Path) -> AppResult<ScaffoldReport> {
+    materialize_for_project(agents_root, docs_root, None)
+}
+
+fn render_project_name(relative: &Path, bytes: &[u8], project_name: Option<&str>) -> Vec<u8> {
+    let Some(project_name) = project_name else {
+        return bytes.to_vec();
+    };
+
+    let renderable = matches!(
+        relative.to_str(),
+        Some("AGENTS.md")
+            | Some(".claude/context/specification.md")
+            | Some(".claude/context/technical.md")
+            | Some(".claude/context/designer-context.md")
+            | Some(".claude/templates/docs-index.md")
+    );
+    if !renderable {
+        return bytes.to_vec();
+    }
+
+    let safe_name = project_name.replace(['\r', '\n'], " ").trim().to_string();
+    String::from_utf8_lossy(bytes)
+        .replace("\\<PROJECT_NAME\\>", &safe_name)
+        .replace("<PROJECT_NAME>", &safe_name)
+        .replace("<TEN_DU_AN>", &safe_name)
+        .into_bytes()
+}
+
+fn matches_original_template(relative: &Path, existing: &[u8], template: &[u8]) -> bool {
+    if existing == template {
+        return true;
+    }
+    if relative != Path::new("AGENTS.md") {
+        return false;
+    }
+
+    String::from_utf8_lossy(existing)
+        .replace(LEGACY_AGENTS_INIT_NOTICE, CURRENT_AGENTS_INIT_NOTICE)
+        .as_bytes()
+        == template
+}
+
+/// Ghi ra đĩa phần kit còn thiếu và render project name vào các template
+/// project-facing. File custom không bao giờ bị ghi đè; chỉ template nguyên
+/// bản của kit mới được migrate an toàn.
+pub fn materialize_for_project(
+    agents_root: &Path,
+    docs_root: &Path,
+    project_name: Option<&str>,
+) -> AppResult<ScaffoldReport> {
     let mut report = ScaffoldReport::default();
 
     for group in GROUPS {
@@ -430,14 +482,24 @@ pub fn materialize(agents_root: &Path, docs_root: &Path) -> AppResult<ScaffoldRe
                     }
                 }
                 Some(bytes) => {
+                    let rendered = render_project_name(&relative, bytes, project_name);
                     if target.is_file() {
-                        report.skipped.push(label);
+                        if rendered != bytes
+                            && std::fs::read(&target).ok().is_some_and(|existing| {
+                                matches_original_template(&relative, &existing, bytes)
+                            })
+                        {
+                            std::fs::write(&target, &rendered)?;
+                            report.updated.push(label);
+                        } else {
+                            report.skipped.push(label);
+                        }
                         continue;
                     }
                     if let Some(parent) = target.parent() {
                         std::fs::create_dir_all(parent)?;
                     }
-                    std::fs::write(&target, bytes)?;
+                    std::fs::write(&target, rendered)?;
                     report.created.push(label);
                 }
             }
@@ -641,6 +703,59 @@ mod tests {
             "skill bị loại trừ không được xuất hiện trong project"
         );
         assert!(docs_root.join("features").is_dir());
+    }
+
+    #[test]
+    fn materialize_renders_project_name_in_project_facing_templates() {
+        let (_tmp, agents_root, docs_root) = probe();
+
+        let report = materialize_for_project(&agents_root, &docs_root, Some("Shop Admin")).unwrap();
+
+        assert!(!report.created.is_empty());
+        assert!(std::fs::read_to_string(agents_root.join("AGENTS.md"))
+            .unwrap()
+            .contains("# Shop Admin — Project Rules for AI Agents"));
+        assert!(
+            std::fs::read_to_string(agents_root.join(".claude/context/specification.md"))
+                .unwrap()
+                .contains("# Shop Admin — Business Specification Memory")
+        );
+        assert!(
+            std::fs::read_to_string(agents_root.join(".claude/agents/init-agent.md"))
+                .unwrap()
+                .contains("<PROJECT_NAME>")
+        );
+        let agents_content = std::fs::read_to_string(agents_root.join("AGENTS.md")).unwrap();
+        let (status, _) = crate::agents_reader::assess_init_status(Some(&agents_content), true);
+        assert_eq!(status, crate::domain::project::ProjectInitStatus::NeedsInit);
+    }
+
+    #[test]
+    fn materialize_updates_only_an_untouched_old_template() {
+        let (_tmp, agents_root, docs_root) = probe();
+        materialize(&agents_root, &docs_root).unwrap();
+
+        let report = materialize_for_project(&agents_root, &docs_root, Some("Shop")).unwrap();
+
+        assert!(report.updated.iter().any(|path| path == "AGENTS.md"));
+        assert!(std::fs::read_to_string(agents_root.join("AGENTS.md"))
+            .unwrap()
+            .contains("# Shop — Project Rules for AI Agents"));
+    }
+
+    #[test]
+    fn materialize_migrates_the_previous_agents_notice_without_overwriting_custom_text() {
+        let (_tmp, agents_root, docs_root) = probe();
+        let legacy = String::from_utf8_lossy(AGENTS_MD.as_bytes())
+            .replace(CURRENT_AGENTS_INIT_NOTICE, LEGACY_AGENTS_INIT_NOTICE);
+        std::fs::write(agents_root.join("AGENTS.md"), legacy).unwrap();
+
+        let report = materialize_for_project(&agents_root, &docs_root, Some("Shop")).unwrap();
+
+        assert!(report.updated.iter().any(|path| path == "AGENTS.md"));
+        assert!(std::fs::read_to_string(agents_root.join("AGENTS.md"))
+            .unwrap()
+            .contains("# Shop — Project Rules for AI Agents"));
     }
 
     /// Người dùng có thể đã sửa `AGENTS.md` hoặc thêm agent riêng — mất thứ

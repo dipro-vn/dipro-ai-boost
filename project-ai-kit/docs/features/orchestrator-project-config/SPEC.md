@@ -29,7 +29,7 @@ Ngoài ba thứ trên, E1 còn giữ **thiết lập giao diện** — cụ th�
 
 - App đã được cài trên máy người dùng (macOS hoặc Windows).
 - Trên máy đã có Claude Code CLI đăng nhập sẵn — app không xử lý đăng nhập Anthropic.
-- Người dùng có sẵn ít nhất một project folder đã được setup kit (đã chạy `/init-kit`, có `AGENTS.md` điền xong).
+- Người dùng có thể bắt đầu từ project folder rỗng hoặc folder đã setup kit. Nếu chưa init, app sẽ scaffold khung kit và hướng dẫn chạy `/init-kit` bên ngoài app.
 - Với integration: người dùng có sẵn Backlog API key và/hoặc Slack bot token.
 
 ## Happy Path
@@ -40,12 +40,14 @@ Ngoài ba thứ trên, E1 còn giữ **thiết lập giao diện** — cụ th�
    - **Agents root** — thư mục chứa `.claude/agents/`
    - **DOCS_ROOT** — thư mục chứa `features/`
    - **Repository root** — thư mục chứa các repo source
-4. App validate 3 đường dẫn, đọc `AGENTS.md` để lấy bảng Ecosystem (danh sách repo + Epic code + vai trò), và đọc cấu hình MCP server của project để biết Figma được kết nối qua đâu.
+4. App scaffold khung kit nếu còn thiếu, điền tên project vào các template project-facing, rồi đọc `AGENTS.md` để lấy bảng Ecosystem (danh sách repo + Epic code + vai trò), và đọc cấu hình MCP server của project để biết Figma được kết nối qua đâu.
 5. App tạo `.orchestrator/` trong project folder, sinh `config.json` với **model mặc định theo bảng đề xuất** và permission profile mặc định cho từng agent tìm thấy trong `.claude/agents/`.
-6. App mở **Pipeline Board** (`OR_MONI_001`, thuộc E3) — project đã sẵn sàng.
-7. PM vào **Settings** (`OR_CONF_002`) → tab "Agents": bảng mỗi agent một dòng (Agent · Model · Max turns · Permission profile). PM đổi model của `qc-agent` từ sonnet sang haiku → app lưu ngay vào `config.json`.
-8. PM sang tab "Integrations": nhập Backlog space + API key + project ID, nhập Slack bot token + channel. Bấm "Kiểm tra kết nối" → app gọi thử, hiện ✅ cho từng integration.
-9. App lưu credentials vào **OS keychain**; `config.json` chỉ giữ tham chiếu (tên key), không giữ giá trị.
+6. Nếu `AGENTS.md` còn placeholder, app hiển thị trạng thái **chưa init**, hướng dẫn PM mở Claude Code tại `agentsRoot` và nhập `/init-kit`. App không tự chạy slash command.
+7. PM chạy `/init-kit` bên ngoài app, quay lại bấm **Đã chạy init, kiểm tra lại**. Khi `AGENTS.md` hợp lệ, app chuyển project sang trạng thái sẵn sàng và cho phép chạy agent.
+8. App mở **Pipeline Board** (`OR_MONI_001`, thuộc E3).
+9. PM vào **Settings** (`OR_CONF_002`) → tab "Agents": bảng mỗi agent một dòng (Agent · Model · Max turns · Permission profile). PM đổi model của `qc-agent` từ sonnet sang haiku → app lưu ngay vào `config.json`.
+10. PM sang tab "Integrations": nhập Backlog space + API key + project ID, nhập Slack bot token + channel. Bấm "Kiểm tra kết nối" → app gọi thử, hiện ✅ cho từng integration.
+11. App lưu credentials vào **OS keychain**; `config.json` chỉ giữ tham chiếu (tên key), không giữ giá trị.
 10. PM sang tab "Giao diện", bật theme **dark**. Toàn bộ app đổi màu ngay, agent đang chạy không bị ảnh hưởng.
 11. Lần mở app tiếp theo, app vẫn ở theme dark, và project xuất hiện trong danh sách recent — PM bấm 1 lần là vào thẳng Pipeline Board.
 
@@ -55,7 +57,6 @@ Ngoài ba thứ trên, E1 còn giữ **thiết lập giao diện** — cụ th�
 |---|---|---|
 | `ba-agent` | opus | Chất lượng SPEC quyết định toàn pipeline |
 | `techlead-design-agent` · `techlead-tasks-agent` | opus | Quyết định kiến trúc |
-| `pm-agent` | sonnet | Tổng hợp plan từ tasks có sẵn |
 | `design-analyst-agent`* | sonnet | Đọc Figma qua MCP, sinh file phân tích |
 | `qc-agent` | sonnet | Khối lượng lớn, format ổn định |
 | `backend-agent` · `frontend-agent` · `mobile-agent` | sonnet | Codegen theo contract đã lock |
@@ -79,7 +80,7 @@ Ngoài ba thứ trên, E1 còn giữ **thiết lập giao diện** — cụ th�
 |---|---|---|
 | AF-1 | Thư mục chọn không có `.claude/agents/` ở bất kỳ cấp nào | App cảnh báo, cho mở ở **chế độ read-only** (xem artifact được, không chạy được agent) |
 | AF-2 | Cấu trúc lồng — `.claude/agents/` nằm sâu trong subfolder (trường hợp ESKITCHEN) | App dò được vẫn điền sẵn; dò không được thì để trống cho PM tự chỉ. **Không tự đoán** |
-| AF-3 | `AGENTS.md` còn nguyên placeholder (chưa chạy `/init-kit`) | App cảnh báo "project chưa init", cho mở read-only, gợi ý chạy `/init-kit` |
+| AF-3 | `AGENTS.md` còn nguyên placeholder (chưa chạy `/init-kit`) | App hiển thị trạng thái "project chưa init", handoff gồm `cd agentsRoot` → `claude` → `/init-kit`, cho xem project nhưng chặn spawn agent; sau đó có nút kiểm tra lại |
 | AF-4 | Repo khai trong Ecosystem nhưng chưa clone về máy | Đánh dấu repo đó `chưa clone` — trạng thái riêng, **không** coi là lỗi. Agent nhắm vào repo đó bị chặn từ trước khi spawn |
 | AF-5 | Project folder bị đổi tên / xoá sau khi đã lưu vào recent | Bấm vào recent → báo "không tìm thấy", cho xoá khỏi danh sách hoặc chỉ lại đường dẫn |
 | AF-6 | `.orchestrator/config.json` bị hỏng (JSON không parse được) | App không crash — backup file hỏng thành `config.json.bak`, sinh lại config mặc định, báo PM |
@@ -102,9 +103,16 @@ Ngoài ba thứ trên, E1 còn giữ **thiết lập giao diện** — cụ th�
 - **AC-E1-02** — Khi PM chọn một thư mục, app hỏi **3 đường dẫn riêng** (agents root · DOCS_ROOT · repository root) và điền sẵn giá trị dò được. App **không** yêu cầu 3 thứ này phải nằm theo một cấu trúc thư mục cố định.
 - **AC-E1-03** — Nếu app không dò ra được đường dẫn nào, ô đó để trống cho PM tự chỉ; app không điền giá trị đoán.
 - **AC-E1-04** — Sau khi đọc `AGENTS.md`, app hiển thị danh sách repo từ bảng Ecosystem, mỗi repo kèm trạng thái `đã clone` hoặc `chưa clone` (dựa trên thư mục có tồn tại tại đường dẫn khai báo hay không).
+- **AC-E1-04a** — App chuẩn hoá ô bảng Ecosystem trước khi dùng: ô **Repo**/**Đường dẫn** được bóc trang trí markdown (backtick, bold, italic) rồi mới đối chiếu với đĩa; ô **Vai trò** được đọc thành vai trò chuẩn bằng cách bóc trang trí rồi lấy phần trước dấu phân cách đầu tiên, nên `frontend — ghi chú thêm` vẫn hiểu là `frontend`. Ô liệt kê từ 2 vai trò trở lên (ô mẫu `backend / frontend / mobile / other`) coi như **chưa điền**, app không lấy vai trò đầu tiên.
+- **AC-E1-04b** — Repo có ô Vai trò không đọc ra được vẫn hiển thị trong bảng Ecosystem với nội dung nguyên văn. App cảnh báo lúc mở project, và node agent tương ứng nêu **đích danh** repo + ô vai trò sai kèm cách sửa — không báo "project không có repo vai trò đó" (thông báo đó chỉ dành cho project thật sự không khai repo vai trò ấy).
+- **AC-E1-04c** — Bảng `## Repos` parse được nhưng không dòng repo nào đã điền thì app cảnh báo và hướng dẫn chạy `/init-kit`, không im lặng trả về danh sách rỗng.
 - **AC-E1-05** — Nếu không tìm thấy `.claude/agents/` tại đường dẫn PM chỉ, app vẫn cho mở project ở chế độ read-only và hiển thị nhãn "read-only" cố định trên UI.
 - **AC-E1-06** — Sau khi mở project thành công, thư mục `.orchestrator/` tồn tại trong project folder và chứa `config.json`.
-- **AC-E1-07** — Project đã mở thành công xuất hiện trong danh sách recent ở lần mở app kế tiếp; bấm vào đó vào thẳng Pipeline Board mà không hỏi lại 3 đường dẫn.
+- **AC-E1-07** — Project đã mở thành công xuất hiện trong danh sách recent ở lần mở app kế tiếp; project đã `ready` vào thẳng Pipeline Board mà không hỏi lại 3 đường dẫn, còn project `needs-init` mở lại Summary để tiếp tục handoff.
+- **AC-E1-34** — Khi scaffold file project-facing mới, app thay placeholder project name bằng tên PM nhập ở Launcher; file custom đã tồn tại không bị ghi đè.
+- **AC-E1-35** — Khi `AGENTS.md` chưa init, app trả trạng thái `needs-init`, hiển thị hướng dẫn chạy `/init-kit` trong Claude Code tại `agentsRoot`, và không tự khởi chạy Claude CLI.
+- **AC-E1-36** — App có thể refresh trạng thái sau khi PM chạy `/init-kit` bên ngoài; Ecosystem và trạng thái project được đọc lại từ file trên đĩa.
+- **AC-E1-37** — Backend từ chối mọi lệnh spawn agent khi project chưa ở trạng thái `ready`, kể cả khi gọi trực tiếp qua IPC; lỗi hướng dẫn PM chạy `/init-kit`.
 
 **Cấu hình agent ↔ model**
 

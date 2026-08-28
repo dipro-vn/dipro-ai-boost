@@ -4,7 +4,6 @@ pub mod contract_lock;
 pub mod explorer;
 pub mod gate_state;
 pub mod import;
-pub mod integrations;
 pub mod node_detail;
 pub mod node_status;
 pub mod pipeline_def;

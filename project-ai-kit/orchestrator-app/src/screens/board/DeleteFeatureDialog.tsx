@@ -116,7 +116,6 @@ export function DeleteFeatureDialog({
                   <li>{preview.inputCopyCount} bản copy input đã import</li>
                 )}
                 {preview.hasContractLock && <li>Lịch sử Contract Lock</li>}
-                {preview.hasBacklogMapping && <li>Mapping task ↔ issue Backlog</li>}
               </ul>
 
               {preview.notableArtifacts.length > 0 && (

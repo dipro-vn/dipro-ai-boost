@@ -47,7 +47,7 @@ pub fn memory_update_warning(
 
     let stale_dirs: Vec<String> = ecosystem
         .iter()
-        .filter(|repo| repo.role.eq_ignore_ascii_case(slot_role))
+        .filter(|repo| repo.role_key.as_deref() == Some(slot_role))
         .filter_map(|repo| {
             let overview_dir = docs_root.join(slot_role).join(&repo.name).join("overview");
             if !overview_dir.is_dir() {
@@ -80,6 +80,9 @@ mod tests {
             name: name.to_string(),
             declared_path: format!("repos/{name}"),
             role: role.to_string(),
+            // Derived exactly as the parser does, so a fixture can never
+            // claim a role the real pipeline wouldn't read off that cell.
+            role_key: crate::agents_reader::canonical_role(role).map(str::to_string),
             stack: "x".to_string(),
             cloned: true,
         }

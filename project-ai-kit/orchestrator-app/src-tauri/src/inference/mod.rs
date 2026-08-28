@@ -4,4 +4,3 @@ pub mod gate_rules;
 pub mod memory_gate;
 pub mod spec_sections;
 pub mod stage_rules;
-pub mod task_meta;

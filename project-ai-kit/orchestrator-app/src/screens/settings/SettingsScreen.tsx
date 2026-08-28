@@ -20,7 +20,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
-import { BacklogSettings } from "@/screens/settings/BacklogSettings";
 import { AuthenticationSettings } from "@/screens/settings/AuthenticationSettings";
 import { McpStatusPanel } from "@/screens/settings/McpStatusPanel";
 import { cn } from "@/lib/utils";
@@ -241,7 +240,6 @@ export function SettingsScreen() {
 
       {tab === "Integrations" && (
         <div className="flex flex-col gap-6">
-          <BacklogSettings />
           <Separator />
           <div className="flex flex-col gap-1">
             <h3 className="text-sm font-semibold">Slack</h3>

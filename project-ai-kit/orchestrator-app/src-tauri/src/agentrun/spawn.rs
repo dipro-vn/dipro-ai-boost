@@ -1,11 +1,9 @@
 //! Builds the `claude` CLI invocation for one agent run.
 //!
-//! Headless spawn has no TTY — nobody is present to click "allow" on a
-//! permission prompt, so any interactive `--permission-mode` would hang the
-//! process forever waiting for input that can never arrive. This always
-//! uses `bypassPermissions` and expresses `PermissionProfile` through
-//! `--tools` instead (verified for real, not assumed — see
-//! `ASSUMPTIONS-GAPS.md` A5's permission-mode spike).
+//! Headless spawn has no TTY. Use non-interactive permission modes that keep
+//! the CLI from waiting for a prompt: `plan` for read-only agents and
+//! `acceptEdits` for write-scoped agents. Only the explicitly full profile
+//! uses `bypassPermissions`.
 //!
 //! `claude --help` (v2.1.232) has no `--max-turns` flag — `AgentConfig`'s
 //! `max_turns` field cannot be passed to the CLI (see `ASSUMPTIONS-GAPS.md`
@@ -25,11 +23,47 @@ fn model_flag(model: Model) -> &'static str {
     }
 }
 
+/// `--tools` narrows the **built-in set only** (`claude --help`: "Specify the
+/// list of available tools from the built-in set"). It is NOT the per-agent
+/// permission layer — that one is the `tools:` allowlist in each
+/// `.claude/agents/<name>.md`, which the CLI enforces via `--agent`.
+///
+/// Because of that, `Bash` was being stripped from every `write-scoped`
+/// agent even when the agent's own file declared it: `qc-automation-agent`
+/// (whose entire job is running Playwright), `qc-agent`, and
+/// `design-analyst-agent` (needs `base64 -d` to write exported PNGs to
+/// disk — `mcp-figma-bridge`'s `export_node` only ever returns base64).
+/// Granting it here is safe for the agents that do NOT declare it
+/// (`ba-agent`, `techlead-*`, `init-agent`): their frontmatter
+/// allowlist still blocks the call.
+///
+/// Pipeline runs spawn with `cwd = feature_dir` (under `docsRoot`, see
+/// `commands::agentrun::run_to_completion`), which can be unrelated to
+/// `agentsRoot` (A1) — so the kit's `.claude/settings.json` is not
+/// reliably discovered from there, and with it the `guard-bash.js`
+/// PreToolUse hook (H02/H03/H04). `SpawnParams::settings_file` now names
+/// that file explicitly via `--settings`.
+///
+/// STILL UNVERIFIED, and it matters most for exactly the agents that have
+/// `Bash`: Anthropic's docs do not state whether PreToolUse hooks run at
+/// all under `-p` headless, nor whether `--permission-mode
+/// bypassPermissions` (what the `full` profile passes) skips them. Passing
+/// `--settings` is necessary but may not be sufficient. Do not describe
+/// these runs as hook-guarded until someone has actually watched
+/// `guard-bash.js` block a command in this exact configuration.
 fn tools_flag(permission: PermissionProfile) -> &'static str {
     match permission {
         PermissionProfile::ReadOnly => "Read Grep Glob",
-        PermissionProfile::WriteScoped => "Read Grep Glob Write Edit",
+        PermissionProfile::WriteScoped => "Read Grep Glob Write Edit Bash",
         PermissionProfile::Full => "default",
+    }
+}
+
+fn permission_mode(permission: PermissionProfile) -> &'static str {
+    match permission {
+        PermissionProfile::ReadOnly => "plan",
+        PermissionProfile::WriteScoped => "acceptEdits",
+        PermissionProfile::Full => "bypassPermissions",
     }
 }
 
@@ -56,6 +90,16 @@ pub struct SpawnParams<'a> {
     /// still needs to read task files under `docsRoot` (A1: the roots can
     /// be three unrelated directories).
     pub add_dirs: &'a [PathBuf],
+    /// The kit's `<agentsRoot>/.claude/settings.json`, passed as
+    /// `--settings` when it exists.
+    ///
+    /// Not cosmetic: pipeline runs have `cwd = feature_dir` under
+    /// `docsRoot`, which can be a directory entirely unrelated to
+    /// `agentsRoot` (A1), so the kit's settings — and with them the
+    /// `guard-bash.js` PreToolUse hook — are not necessarily discovered on
+    /// their own. Naming the file explicitly makes that deterministic
+    /// instead of depending on how the roots happen to nest.
+    pub settings_file: Option<&'a Path>,
     /// Authentication environment for this child only. The app never mutates
     /// its own process environment and never puts a secret in CLI arguments.
     pub auth: SpawnAuth<'a>,
@@ -98,9 +142,13 @@ pub fn build_command(params: &SpawnParams) -> Command {
         .arg("--model")
         .arg(model_flag(params.config.model))
         .arg("--permission-mode")
-        .arg("bypassPermissions")
+        .arg(permission_mode(params.config.permission))
         .arg("--tools")
         .arg(tools_flag(params.config.permission));
+
+    if let Some(settings) = params.settings_file {
+        cmd.arg("--settings").arg(settings);
+    }
 
     for dir in params.add_dirs {
         cmd.arg("--add-dir").arg(dir);
@@ -183,11 +231,11 @@ mod tests {
     }
 
     #[test]
-    fn always_uses_bypass_permissions_regardless_of_profile() {
-        for profile in [
-            PermissionProfile::ReadOnly,
-            PermissionProfile::WriteScoped,
-            PermissionProfile::Full,
+    fn permission_mode_matches_profile() {
+        for (profile, expected_mode) in [
+            (PermissionProfile::ReadOnly, "plan"),
+            (PermissionProfile::WriteScoped, "acceptEdits"),
+            (PermissionProfile::Full, "bypassPermissions"),
         ] {
             let cfg = config(Model::Sonnet, profile);
             let cmd = build_command(&SpawnParams {
@@ -196,17 +244,22 @@ mod tests {
                 cwd: Path::new("."),
                 config: &cfg,
                 resume_session_id: None,
+            settings_file: None,
                 add_dirs: &[],
                 auth: SpawnAuth::CliDefault,
             });
             let args = args_of(&cmd);
             let idx = args.iter().position(|a| a == "--permission-mode").unwrap();
-            assert_eq!(args[idx + 1], "bypassPermissions");
+            assert_eq!(args[idx + 1], expected_mode);
         }
     }
 
+    /// The built-in set handed to `write-scoped` agents must include `Bash`:
+    /// `qc-automation-agent` runs Playwright with it and
+    /// `design-analyst-agent` decodes exported PNGs with it. Per-agent
+    /// restriction is the `tools:` frontmatter allowlist, not this flag.
     #[test]
-    fn write_scoped_excludes_bash_from_tools() {
+    fn write_scoped_grants_bash_and_write_tools() {
         let cfg = config(Model::Sonnet, PermissionProfile::WriteScoped);
         let cmd = build_command(&SpawnParams {
             agent_name: "ba-agent",
@@ -214,13 +267,35 @@ mod tests {
             cwd: Path::new("."),
             config: &cfg,
             resume_session_id: None,
+            settings_file: None,
+            add_dirs: &[],
+            auth: SpawnAuth::CliDefault,
+        });
+        let args = args_of(&cmd);
+        let idx = args.iter().position(|a| a == "--tools").unwrap();
+        assert!(args[idx + 1].contains("Bash"));
+        assert!(args[idx + 1].contains("Write"));
+        assert!(args[idx + 1].contains("Edit"));
+    }
+
+    /// Read-only stays read-only — no `Bash`, no `Write`.
+    #[test]
+    fn read_only_grants_neither_bash_nor_write() {
+        let cfg = config(Model::Sonnet, PermissionProfile::ReadOnly);
+        let cmd = build_command(&SpawnParams {
+            agent_name: "ba-agent",
+            prompt: "hi",
+            cwd: Path::new("."),
+            config: &cfg,
+            resume_session_id: None,
+            settings_file: None,
             add_dirs: &[],
             auth: SpawnAuth::CliDefault,
         });
         let args = args_of(&cmd);
         let idx = args.iter().position(|a| a == "--tools").unwrap();
         assert!(!args[idx + 1].contains("Bash"));
-        assert!(args[idx + 1].contains("Write"));
+        assert!(!args[idx + 1].contains("Write"));
     }
 
     #[test]
@@ -232,6 +307,7 @@ mod tests {
             cwd: Path::new("."),
             config: &cfg,
             resume_session_id: None,
+            settings_file: None,
             add_dirs: &[],
             auth: SpawnAuth::CliDefault,
         });
@@ -249,6 +325,7 @@ mod tests {
             cwd: Path::new("."),
             config: &cfg,
             resume_session_id: None,
+            settings_file: None,
             add_dirs: &[],
             auth: SpawnAuth::ApiKey("secret-value"),
         });
@@ -268,12 +345,57 @@ mod tests {
             cwd: Path::new("."),
             config: &cfg,
             resume_session_id: Some("abc-123"),
+            settings_file: None,
             add_dirs: &[],
             auth: SpawnAuth::CliDefault,
         });
         let args = args_of(&cmd);
         let idx = args.iter().position(|a| a == "--resume").unwrap();
         assert_eq!(args[idx + 1], "abc-123");
+    }
+
+    /// The kit's `guard-bash.js` hook only applies if the CLI actually loads
+    /// `<agentsRoot>/.claude/settings.json`, and pipeline runs have their cwd
+    /// under `docsRoot` — which A1 allows to be an unrelated directory. Naming
+    /// the file removes that dependency on how the roots happen to nest.
+    #[test]
+    fn the_kit_settings_file_is_passed_when_it_exists() {
+        let cfg = config(Model::Haiku, PermissionProfile::Full);
+        let settings = Path::new("/kit/.claude/settings.json");
+        let cmd = build_command(&SpawnParams {
+            agent_name: "frontend-agent",
+            prompt: "go",
+            cwd: Path::new("."),
+            config: &cfg,
+            resume_session_id: None,
+            settings_file: Some(settings),
+            add_dirs: &[],
+            auth: SpawnAuth::CliDefault,
+        });
+        let args = args_of(&cmd);
+        let idx = args
+            .iter()
+            .position(|a| a == "--settings")
+            .expect("--settings must be passed when the kit has a settings file");
+        assert_eq!(args[idx + 1], settings.to_string_lossy());
+    }
+
+    /// A project that never scaffolded the kit has no such file — handing the
+    /// CLI a path to nothing would fail the run over a file that is optional.
+    #[test]
+    fn no_settings_flag_when_the_project_has_no_kit_settings() {
+        let cfg = config(Model::Haiku, PermissionProfile::Full);
+        let cmd = build_command(&SpawnParams {
+            agent_name: "frontend-agent",
+            prompt: "go",
+            cwd: Path::new("."),
+            config: &cfg,
+            resume_session_id: None,
+            settings_file: None,
+            add_dirs: &[],
+            auth: SpawnAuth::CliDefault,
+        });
+        assert!(!args_of(&cmd).iter().any(|a| a == "--settings"));
     }
 
     #[test]
@@ -287,19 +409,18 @@ mod tests {
             cwd: Path::new("."),
             config: &cfg,
             resume_session_id: None,
+            settings_file: None,
             add_dirs: &[],
             auth: SpawnAuth::CliDefault,
         });
         assert!(!args_of(&cmd).iter().any(|a| a.contains("max-turns")));
     }
 
-    /// The load-bearing assumption behind `build_command`, verified with a
-    /// real call rather than trusted from documentation (same principle as
-    /// `ASSUMPTIONS-GAPS.md` A5): a `WriteScoped` agent asked to write a
-    /// file under `bypassPermissions` must actually be able to, and the
-    /// process must exit on its own — not hang waiting for an interactive
-    /// permission prompt that headless spawn can never answer.
+    /// The in-cwd write smoke test is intentionally opt-in because it spends
+    /// Claude API quota. The deterministic command test above is the default
+    /// enforcement check.
     #[test]
+    #[ignore = "requires a live Claude CLI and API quota"]
     fn bypass_permissions_does_not_hang_when_agent_needs_a_write_tool() {
         if !is_claude_cli_available() {
             eprintln!("skipping live spike: `claude` CLI not usable in this environment");
@@ -324,6 +445,7 @@ mod tests {
             cwd: tmp.path(),
             config: &cfg,
             resume_session_id: None,
+            settings_file: None,
             add_dirs: &[],
             auth: SpawnAuth::CliDefault,
         });
@@ -393,6 +515,7 @@ mod tests {
     /// tempdir — not a subdirectory of `cwd`, not passed via `--add-dir`,
     /// nothing linking the two except this test.
     #[test]
+    #[ignore = "requires a live Claude CLI and API quota"]
     fn bypass_permissions_allows_writes_entirely_outside_cwd() {
         if !is_claude_cli_available() {
             eprintln!("skipping live spike: `claude` CLI not usable in this environment");
@@ -414,6 +537,7 @@ mod tests {
             cwd: cwd_tmp.path(),
             config: &cfg,
             resume_session_id: None,
+            settings_file: None,
             add_dirs: &[],
             auth: SpawnAuth::CliDefault,
         });

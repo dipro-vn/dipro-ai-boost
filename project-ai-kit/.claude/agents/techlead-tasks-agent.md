@@ -442,5 +442,5 @@ Open → In-Progress → Done → Reviewing → Testing → Close
 Thứ tự: task-1-1 → task-2-1,2-2 (song song) → task-3-1,3-2 (song song) → task-4-1
 
 Bước tiếp theo:
-→ "Hãy là PM, làm PLAN.md cho feature: <đường dẫn feature folder>"
+→ Contract Lock (BE+FE+Mobile+QC confirm API/WS/Push) trước khi Dev bắt đầu Phase 3.
 ```
