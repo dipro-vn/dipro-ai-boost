@@ -283,12 +283,10 @@ fn append_warning(summary: &mut RunSummary, warning: String) {
 /// Slots the kit gives no artifact path of its own — AC-E3-05 has the app
 /// define and write one, under `runs_dir`, in the filename
 /// `classify_outcome`'s `stage_rules::artifact_paths_for_slot` call already
-/// expects. Keep this in sync with that function's own `QA`/`QC_TESTING`/
-/// `QC_AUTOMATION` match arms — same filenames on both sides.
+/// expects. Keep this in sync with that function's own `QC_AUTOMATION`
+/// match arm — same filename on both sides.
 fn runs_dir_report_filename(slot_id: &str) -> Option<&'static str> {
     match slot_id {
-        s if s == slot::QA => Some("qa-report.md"),
-        s if s == slot::QC_TESTING => Some("qc-checklist.md"),
         s if s == slot::QC_AUTOMATION => Some("execution-report.md"),
         _ => None,
     }
@@ -701,7 +699,7 @@ mod tests {
         write_run_summary(agents_root, "f1", "ba", &summary).unwrap();
         assert_eq!(next_attempt(agents_root, "f1", "ba"), 2);
         // A different feature/slot is unaffected.
-        assert_eq!(next_attempt(agents_root, "f1", "qa"), 1);
+        assert_eq!(next_attempt(agents_root, "f1", "qc-automation"), 1);
         assert_eq!(next_attempt(agents_root, "f2", "ba"), 1);
     }
 
@@ -853,13 +851,14 @@ mod tests {
         assert_eq!(retry_summary.attempt, 2);
     }
 
-    /// AC-E3-05, the actual bug report: QA has no artifact path of its own
-    /// in the kit, so before this the slot stayed `WaitingInput` forever no
-    /// matter what the agent said — nothing ever wrote `qa-report.md`.
-    /// `finalize_run` must now save it itself, in time for the SAME call's
-    /// `classify_outcome` to see it and return `Done`.
+    /// AC-E3-05, the actual bug report: `qc-automation` has no artifact path
+    /// of its own in the kit, so before this the slot stayed `WaitingInput`
+    /// forever no matter what the agent said — nothing ever wrote
+    /// `execution-report.md`. `finalize_run` must now save it itself, in
+    /// time for the SAME call's `classify_outcome` to see it and return
+    /// `Done`.
     #[test]
-    fn finalize_run_writes_the_qa_report_and_marks_qa_done() {
+    fn finalize_run_writes_the_execution_report_and_marks_the_slot_done() {
         let tmp = tempfile::tempdir().unwrap();
         let agents_root = tmp.path().join("agents");
         let feature_dir = tmp.path().join("docs/features/f1");
@@ -870,7 +869,7 @@ mod tests {
             events: vec![
                 StreamEvent::AssistantText {
                     message_id: "m1".to_string(),
-                    text: "## QA Report — task-1-1\n✅ PASS — có thể chuyển sang QC".to_string(),
+                    text: "## Execution Report — f1\n✅ PASS — E2E suite xanh".to_string(),
                 },
                 StreamEvent::RunFinished {
                     is_error: false,
@@ -890,7 +889,7 @@ mod tests {
         let ctx = RunContext {
             agents_root: &agents_root,
             feature: "f1",
-            slot: "qa",
+            slot: "qc-automation",
             feature_dir: &feature_dir,
             runs_dir: &runs_dir,
             permission: PermissionProfile::WriteScoped,
@@ -907,10 +906,10 @@ mod tests {
         .unwrap();
         assert_eq!(summary.outcome, RunOutcome::Done);
 
-        let report_path = runs_dir.join("f1--qa/qa-report.md");
+        let report_path = runs_dir.join("f1--qc-automation/execution-report.md");
         assert_eq!(
             std::fs::read_to_string(report_path).unwrap(),
-            "## QA Report — task-1-1\n✅ PASS — có thể chuyển sang QC"
+            "## Execution Report — f1\n✅ PASS — E2E suite xanh"
         );
     }
 

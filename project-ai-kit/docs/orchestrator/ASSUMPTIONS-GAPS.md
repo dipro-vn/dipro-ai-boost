@@ -196,9 +196,9 @@ ESKITCHEN-WORKSPACE/
 
 ---
 
-### B11 📌 QA Report và QC checklist không có path quy định
+### B11 📌 E2E execution report không có path quy định
 
-`ai-agents-workflow.md` §3.10 — QA Report trả về dạng **message/output**, không quy định path file. QC execution checklist (`checklist_release.md`) cũng không có path rõ.
+`ai-agents-workflow.md` §3.9 — execution report trả về dạng **message/output**, không quy định path file. (Lịch sử: QA Report và QC execution checklist cũng vậy, trước khi 2 slot đó bị bỏ khỏi pipeline.)
 
 **Ảnh hưởng:** F3.1 liệt kê `reports/` trong danh sách watch, nhưng kit không quy định artifact nào rơi vào đó → stage ⑥ và ⑦ không có tín hiệu hoàn thành đáng tin.
 

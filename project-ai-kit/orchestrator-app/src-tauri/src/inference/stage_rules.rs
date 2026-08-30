@@ -22,13 +22,20 @@ const MIN_DESIGN_ANALYSIS_CHARS: usize = 50;
 ///
 /// Every entry here is a folder the kit itself writes under a feature:
 /// `test-cases/` and `bug-reports/` come from `qc-agent`
-/// (`.claude/agents/qc-agent.md` § Output), `design-resources/` from
-/// `design-analyst-agent`. Missing one is not cosmetic — an unlisted folder
-/// counts as an undeclared repo, which is enough on its own to switch off
-/// both the Contract Lock scope rule and the stage ⑤ "has work" rule for
-/// the whole feature, since neither will draw a conclusion from an
-/// Ecosystem it cannot fully resolve.
-const NON_REPO_SUBDIRS: &[&str] = &["test-cases", "design-resources", "bug-reports"];
+/// (`.claude/agents/qc-agent.md` § Output), `design-resources/` and
+/// `screenshot-design/` from `design-analyst-agent` (its own file names
+/// exactly three write locations — keep this list matching that one).
+/// Missing one is not cosmetic — an unlisted folder counts as an undeclared
+/// repo, which is enough on its own to switch off both the Contract Lock
+/// scope rule and the stage ⑤ "has work" rule for the whole feature, since
+/// neither will draw a conclusion from an Ecosystem it cannot fully
+/// resolve.
+const NON_REPO_SUBDIRS: &[&str] = &[
+    "test-cases",
+    "design-resources",
+    "screenshot-design",
+    "bug-reports",
+];
 
 /// `pub(crate)` — also reused by `inference::contract_lock_rules` (AC-E4-11:
 /// a feature touching only one repo doesn't need Contract Lock).
@@ -129,8 +136,9 @@ pub(crate) fn feature_scope_roles(
 ///    (`agentrun::readiness::RepoReadiness::RoleNotInEcosystem`) — e.g. a
 ///    web-only project has no `mobile` repo, ever, in any feature. This
 ///    doesn't need a single task file to exist and isn't affected by any
-///    OTHER subfolder's name — a stage ⑥ (`qa`) that waits for stage ⑤ to
-///    finish must not stay blocked on a slot that can never run here.
+///    OTHER subfolder's name — a stage ⑥ (`qc-automation`) that waits for
+///    stage ⑤ to finish must not stay blocked on a slot that can never run
+///    here.
 ///    Deliberately excludes `RoleUnreadable`: that means some OTHER repo's
 ///    Vai trò cell couldn't be parsed, not that this role is absent —
 ///    concluding "no work" there would hide a real config typo instead of
@@ -244,11 +252,25 @@ fn any_test_cases_file(feature_dir: &Path) -> bool {
 /// of the Design-Analyst node, never consulted by `infer_design_analyst`,
 /// so a feature with no assets is still `done`.
 ///
-/// Flat (non-recursive) and sorted: the agent writes straight into this
-/// folder, and a stable order keeps the node detail panel from reshuffling
+/// `pub(crate)` — `commands::agentrun` also asks whether the folder has
+/// anything in it before naming it to `frontend-agent`/`mobile-agent`.
+pub(crate) fn design_resources_files(feature_dir: &Path) -> Vec<PathBuf> {
+    files_directly_in(feature_dir, "design-resources")
+}
+
+/// The full-frame reference screenshots `design-analyst-agent` writes for
+/// `frontend-agent`/`mobile-agent` to compare their UI against. Sibling of
+/// `design_resources_files` and deliberately separate: these are NOT assets
+/// to embed in code, so nothing may copy them into a repo's asset folder.
+pub(crate) fn screenshot_design_files(feature_dir: &Path) -> Vec<PathBuf> {
+    files_directly_in(feature_dir, "screenshot-design")
+}
+
+/// Flat (non-recursive) and sorted: the agent writes straight into these
+/// folders, and a stable order keeps the node detail panel from reshuffling
 /// between polls.
-fn design_resources_files(feature_dir: &Path) -> Vec<PathBuf> {
-    let mut files: Vec<PathBuf> = std::fs::read_dir(feature_dir.join("design-resources"))
+fn files_directly_in(feature_dir: &Path, subdir: &str) -> Vec<PathBuf> {
+    let mut files: Vec<PathBuf> = std::fs::read_dir(feature_dir.join(subdir))
         .into_iter()
         .flatten()
         .filter_map(|entry| entry.ok())
@@ -410,24 +432,6 @@ pub fn infer_feature_state(
     let feature = feature_slug(feature_dir);
 
     nodes.insert(
-        slot::QA.to_string(),
-        if any_run_has_file(runs_dir, feature, "qa-report.md") {
-            NodeState::done()
-        } else {
-            NodeState::idle()
-        },
-    );
-
-    nodes.insert(
-        slot::QC_TESTING.to_string(),
-        if any_run_has_file(runs_dir, feature, "qc-checklist.md") {
-            NodeState::done()
-        } else {
-            NodeState::idle()
-        },
-    );
-
-    nodes.insert(
         slot::QC_AUTOMATION.to_string(),
         if any_run_has_file(runs_dir, feature, "execution-report.md") {
             NodeState::done()
@@ -469,13 +473,12 @@ pub fn artifact_paths_for_slot(feature_dir: &Path, runs_dir: &Path, slot_id: &st
                 paths.push(analysis);
             }
             paths.extend(design_resources_files(feature_dir));
+            paths.extend(screenshot_design_files(feature_dir));
             paths
         }
         s if s == slot::QC_DESIGN => test_cases_files(feature_dir),
         s if s == slot::TECHLEAD_TASKS => task_files_in_repos(feature_dir),
         s if s == slot::BACKEND || s == slot::FRONTEND || s == slot::MOBILE => vec![],
-        s if s == slot::QA => run_files(runs_dir, feature, "qa-report.md"),
-        s if s == slot::QC_TESTING => run_files(runs_dir, feature, "qc-checklist.md"),
         s if s == slot::QC_AUTOMATION => run_files(runs_dir, feature, "execution-report.md"),
         _ => vec![],
     }
@@ -627,6 +630,10 @@ mod tests {
     /// non-empty, and the safety chock below then (correctly) refused to
     /// conclude anything. Same omission also kept Contract Lock's
     /// single-repo rule from firing.
+    ///
+    /// `screenshot-design/` was the same omission a second time — it is the
+    /// third write location `design-analyst-agent.md` declares, and it went
+    /// unlisted here until stage ⑤ started reading it.
     #[test]
     fn kit_written_artifact_folders_are_not_mistaken_for_repos() {
         let tmp = tempfile::tempdir().unwrap();
@@ -634,6 +641,7 @@ mod tests {
         touch(&feature_dir.join("frontend/tasks/task-3-1.md"));
         touch(&feature_dir.join("test-cases/landing-page/test-cases.md"));
         touch(&feature_dir.join("design-resources/hero.png"));
+        touch(&feature_dir.join("screenshot-design/WB_AUTH_001.png"));
         std::fs::create_dir_all(feature_dir.join("bug-reports")).unwrap();
 
         assert_eq!(repo_subdirs(&feature_dir).len(), 1);
@@ -784,7 +792,7 @@ mod tests {
         std::fs::create_dir_all(&runs_dir).unwrap();
 
         let nodes = infer_feature_state(&feature_dir, &runs_dir, &[]);
-        assert_eq!(nodes.len(), 11); // 11 agent slots total across the 8 stages
+        assert_eq!(nodes.len(), 9); // 9 agent slots total across the 8 stages
         assert!(nodes.values().all(|n| n.status == NodeStatus::Idle));
     }
 
@@ -918,6 +926,10 @@ mod tests {
         );
         // A nested directory is not an asset file.
         std::fs::create_dir_all(feature_dir.join("design-resources/nested")).unwrap();
+        write(
+            &feature_dir.join("screenshot-design/WB_AUTH_001.png"),
+            "PNG",
+        );
         write(&feature_dir.join("design-analysis.md"), "x");
 
         let paths = artifact_paths_for_slot(&feature_dir, &runs_dir, slot::DESIGN_ANALYST);
@@ -927,7 +939,12 @@ mod tests {
             .collect();
         assert_eq!(
             names,
-            vec!["design-analysis.md", "icon-home.svg", "logo-header.png"]
+            vec![
+                "design-analysis.md",
+                "icon-home.svg",
+                "logo-header.png",
+                "WB_AUTH_001.png"
+            ]
         );
     }
 
@@ -1009,23 +1026,24 @@ mod tests {
     }
 
     #[test]
-    fn qa_qc_testing_qc_automation_read_from_runs_dir() {
+    fn qc_automation_reads_from_runs_dir() {
         let tmp = tempfile::tempdir().unwrap();
         let feature_dir = tmp.path().join("feature");
         std::fs::create_dir_all(&feature_dir).unwrap();
         let runs_dir = tmp.path().join("runs");
-        write(&runs_dir.join("feature--qa/qa-report.md"), "x");
-        write(&runs_dir.join("feature--qc-automation/execution-report.md"), "x");
+        write(
+            &runs_dir.join("feature--qc-automation/execution-report.md"),
+            "x",
+        );
 
         let nodes = infer_feature_state(&feature_dir, &runs_dir, &[]);
-        assert_eq!(nodes[slot::QA].status, NodeStatus::Done);
         assert_eq!(nodes[slot::QC_AUTOMATION].status, NodeStatus::Done);
-        assert_eq!(nodes[slot::QC_TESTING].status, NodeStatus::Idle);
+        assert_eq!(nodes[slot::QC_DESIGN].status, NodeStatus::Idle);
     }
 
-    /// The scoping this whole convention exists for: a QA report belonging
-    /// to a DIFFERENT feature must never make this feature's QA node read
-    /// as `Done` — see `store::orchestrator_dir::runs_dir_run_id`'s doc
+    /// The scoping this whole convention exists for: an execution report
+    /// belonging to a DIFFERENT feature must never make this feature's node
+    /// read as `Done` — see `store::orchestrator_dir::runs_dir_run_id`'s doc
     /// comment for why `runs_dir` can't just be globbed unscoped.
     #[test]
     fn a_report_from_another_feature_never_counts_as_this_features_work() {
@@ -1033,10 +1051,13 @@ mod tests {
         let feature_dir = tmp.path().join("feature");
         std::fs::create_dir_all(&feature_dir).unwrap();
         let runs_dir = tmp.path().join("runs");
-        write(&runs_dir.join("other-feature--qa/qa-report.md"), "x");
+        write(
+            &runs_dir.join("other-feature--qc-automation/execution-report.md"),
+            "x",
+        );
 
         let nodes = infer_feature_state(&feature_dir, &runs_dir, &[]);
-        assert_eq!(nodes[slot::QA].status, NodeStatus::Idle);
+        assert_eq!(nodes[slot::QC_AUTOMATION].status, NodeStatus::Idle);
     }
 
     #[test]
@@ -1047,7 +1068,7 @@ mod tests {
         let nonexistent_runs_dir = tmp.path().join("does-not-exist");
 
         let nodes = infer_feature_state(&feature_dir, &nonexistent_runs_dir, &[]);
-        assert_eq!(nodes[slot::QA].status, NodeStatus::Idle);
+        assert_eq!(nodes[slot::QC_AUTOMATION].status, NodeStatus::Idle);
     }
 
     #[test]
@@ -1058,7 +1079,10 @@ mod tests {
         write(&feature_dir.join("backend-repo/DESIGN.md"), "x");
         write(&feature_dir.join("backend-repo/tasks/task-1-1.md"), "x");
         let runs_dir = tmp.path().join("runs");
-        write(&runs_dir.join("feature--qa/qa-report.md"), "x");
+        write(
+            &runs_dir.join("feature--qc-automation/execution-report.md"),
+            "x",
+        );
 
         let ba_paths = artifact_paths_for_slot(&feature_dir, &runs_dir, slot::BA);
         assert_eq!(ba_paths, vec![feature_dir.join("SPEC.md")]);
@@ -1069,8 +1093,12 @@ mod tests {
             vec![feature_dir.join("backend-repo/DESIGN.md")]
         );
 
-        let qa_paths = artifact_paths_for_slot(&feature_dir, &runs_dir, slot::QA);
-        assert_eq!(qa_paths, vec![runs_dir.join("feature--qa/qa-report.md")]);
+        let automation_paths =
+            artifact_paths_for_slot(&feature_dir, &runs_dir, slot::QC_AUTOMATION);
+        assert_eq!(
+            automation_paths,
+            vec![runs_dir.join("feature--qc-automation/execution-report.md")]
+        );
     }
 
     #[test]
@@ -1094,13 +1122,16 @@ mod tests {
         write(&feature_dir.join("backend-repo/DESIGN.md"), "x");
         write(&feature_dir.join("backend-repo/tasks/task-1-1.md"), "x");
         let runs_dir = tmp.path().join("runs");
-        write(&runs_dir.join("feature--qa/qa-report.md"), "x");
+        write(
+            &runs_dir.join("feature--qc-automation/execution-report.md"),
+            "x",
+        );
 
         let paths = all_artifact_paths(&feature_dir, &runs_dir);
         assert!(paths.contains(&feature_dir.join("SPEC.md")));
         assert!(paths.contains(&feature_dir.join("backend-repo/DESIGN.md")));
         assert!(paths.contains(&feature_dir.join("backend-repo/tasks/task-1-1.md")));
-        assert!(paths.contains(&runs_dir.join("feature--qa/qa-report.md")));
+        assert!(paths.contains(&runs_dir.join("feature--qc-automation/execution-report.md")));
 
         let mut sorted = paths.clone();
         sorted.sort();

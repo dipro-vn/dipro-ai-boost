@@ -64,11 +64,12 @@ function slotStageLabel(def: PipelineDef | null, slot: string): string {
   return slot;
 }
 
-/** Groups costs by what the node is CALLED, not by its agent file — two
- * slots share `qc-agent`, so keying on the file name collapsed stage ②'s
- * and stage ⑦'s QC spend into one indistinguishable row. Nicknames aren't
- * available here (this screen loads the pipeline definition only, not the
- * project config), so the kit label does the disambiguating. */
+/** Groups costs by what the node is CALLED, not by its agent file — when
+ * two slots share one agent file, keying on the file name collapses their
+ * spend into one indistinguishable row (that was stage ② vs stage ⑦ QC
+ * before `qc-testing` was dropped). Nicknames aren't available here (this
+ * screen loads the pipeline definition only, not the project config), so the
+ * kit label does the disambiguating. */
 function slotDisplayLabel(def: PipelineDef | null, slot: string): string {
   if (!def) return slot;
   for (const stage of def.stages) {

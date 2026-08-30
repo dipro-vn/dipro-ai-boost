@@ -1,5 +1,6 @@
 pub mod atomic_write;
 pub mod contract_lock;
+pub mod design_ref;
 pub mod keychain;
 pub mod kit_template;
 pub mod legacy_cleanup;

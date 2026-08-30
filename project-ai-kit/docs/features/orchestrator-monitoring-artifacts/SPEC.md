@@ -12,7 +12,7 @@ E3 giữ nguyên nguyên tắc đó nhưng tự động hoá việc quan sát: m
 
 Việc suy ra trạng thái không đơn giản như "file tồn tại = stage xong". Hai chỗ đặc biệt:
 
-- QA Report và QC execution checklist **không có path quy định** trong kit — không có gì để watch. App tự định nghĩa vị trí cho chúng trong `.orchestrator/runs/`.
+- E2E execution report **không có path quy định** trong kit — không có gì để watch. App tự định nghĩa vị trí cho nó trong `.orchestrator/runs/`.
 - Nhánh Design-Analyst trong luồng của orchestrator (`design-analyst-agent`, agent mới — xem E2 và `ASSUMPTIONS-GAPS.md` B17) sinh ra `design-analysis.md`, **khác** với `designer-agent` gốc của kit vốn không tạo file `.md` nào. Nhờ vậy watcher có file thật để theo dõi.
 
 Ngoài quan sát, E3 còn phải trả lời được câu hỏi "artifact này thay đổi gì so với lần trước" — nền tảng cho phần diff của gate ở E4.
@@ -59,7 +59,7 @@ Ngoài quan sát, E3 còn phải trả lời được câu hỏi "artifact này 
 | ③ Planning | Có ít nhất một `<feature>/<repo>/tasks/task-*.md` |
 | ④ Contract Lock | `.orchestrator/contract.lock` tồn tại và hợp lệ (chi tiết ở E4) |
 | ⑤ Build | Trạng thái lấy từ `state.json` của run — không suy từ source code |
-| ⑥ Verify | QA Report tồn tại tại path do app quy định |
+| ⑥ Testing | `execution-report.md` tồn tại tại path do app quy định |
 | ⑦ Testing | QC checklist và/hoặc `execution-report.md` tồn tại |
 | ⑧ Deploy | Không tự suy — người dùng tự tick checklist |
 
@@ -90,7 +90,7 @@ Ngoài quan sát, E3 còn phải trả lời được câu hỏi "artifact này 
 - **AC-E3-03** — Nhiều thay đổi liên tiếp trong khoảng dưới 500ms chỉ tạo ra **một** lần cập nhật trạng thái (debounce) — UI không nhấp nháy.
 - **AC-E3-04** — Trạng thái nhánh Design-Analyst của stage ② được xác định bằng **sự tồn tại của `design-analysis.md`** trong folder feature.
 - **AC-E3-04a** — `design-resources/` là artifact phụ trợ, chỉ được theo dõi và hiển thị (đường dẫn, danh sách file) — **không** phải điều kiện để nhánh Design-Analyst đạt `done` (điều kiện `done` giữ nguyên như `AC-E3-04`).
-- **AC-E3-05** — Với các artifact mà kit không quy định đường dẫn (QA Report, QC execution checklist), app ghi chúng vào vị trí do app tự định nghĩa trong `.orchestrator/runs/<run-id>/` và theo dõi tại đó.
+- **AC-E3-05** — Với các artifact mà kit không quy định đường dẫn (E2E execution report), app ghi chúng vào vị trí do app tự định nghĩa trong `.orchestrator/runs/<run-id>/` và theo dõi tại đó.
 - **AC-E3-06** — Artifact bị xoá sau khi đã ghi nhận `done` khiến trạng thái stage quay về `idle` kèm cảnh báo nêu tên file đã biến mất.
 - **AC-E3-07** — Thư mục theo dõi tạm thời không truy cập được thì app hiện cảnh báo và giữ nguyên trạng thái cuối cùng, tự động theo dõi lại khi thư mục khả dụng trở lại — app không crash.
 

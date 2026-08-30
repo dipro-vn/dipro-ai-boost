@@ -211,7 +211,21 @@ pub fn contract_lock_violations_dir(project_root: &Path, feature: &str) -> PathB
     contract_lock_dir(project_root, feature).join("violations")
 }
 
-/// Per-feature Backlog integration state (AC-E5-09/16): the
+/// One JSON file per feature holding the Figma selection URL last given to
+/// `design-analyst` — see `store::design_ref`. A flat file rather than a
+/// directory: there is exactly one current URL per feature, no history.
+/// Not created by `ensure_skeleton`, same reasoning as `contract_lock_dir`:
+/// it only comes into existence the first time a URL is actually given.
+pub fn design_refs_dir(project_root: &Path) -> PathBuf {
+    orchestrator_dir(project_root).join("design-refs")
+}
+
+/// `<design_refs_dir>/<feature>.json`. Callers must have run
+/// `validate_feature_id` first — same contract as `contract_lock_dir`.
+pub fn design_ref_path(project_root: &Path, feature: &str) -> PathBuf {
+    design_refs_dir(project_root).join(format!("{feature}.json"))
+}
+
 /// One immutable timestamped JSON file per agent run, cross-feature
 /// (AC-E6-12..18) — see `store::run_history`. Separate from `agent-runs/`
 /// (latest-run bookkeeping) so deleting logs there never touches cost

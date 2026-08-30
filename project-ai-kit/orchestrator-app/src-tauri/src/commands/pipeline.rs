@@ -283,6 +283,7 @@ pub fn delete_feature(
     // already gone would leave the user with no way to finish the job.
     let _ = std::fs::remove_dir_all(orchestrator_dir::agent_runs_dir(&agents_root).join(&name));
     let _ = std::fs::remove_dir_all(orchestrator_dir::contract_lock_dir(&agents_root, &name));
+    let _ = std::fs::remove_file(orchestrator_dir::design_ref_path(&agents_root, &name));
     for input_dir in input_copy_dirs(&agents_root, &name) {
         let _ = std::fs::remove_dir_all(input_dir);
     }
@@ -772,17 +773,17 @@ mod tests {
             .to_string_lossy()
             .ends_with("pipeline.json.v2.bak"));
 
-        // The two slots that share `qc-agent` now render distinguishably.
+        // Every slot now carries the display label v2 files never had.
         let labels: Vec<String> = load
             .def
             .stages
             .iter()
             .flat_map(|s| &s.agents)
-            .filter(|a| a.agent_name == "qc-agent")
-            .map(|a| a.label.clone().expect("both qc slots are labelled"))
+            .map(|a| a.label.clone().expect("every slot is labelled"))
             .collect();
-        assert_eq!(labels.len(), 2);
-        assert_ne!(labels[0], labels[1]);
+        assert!(!labels.is_empty());
+        let unique: std::collections::BTreeSet<&String> = labels.iter().collect();
+        assert_eq!(unique.len(), labels.len(), "labels must stay distinct");
     }
 
     /// The path every project on the previous build takes now: a v3 file
@@ -828,6 +829,70 @@ mod tests {
                 .flat_map(|s| &s.agents)
                 .any(|a| a.id == "pm" || a.agent_name == "pm-agent"),
             "the pm slot must be gone after migration"
+        );
+    }
+
+    /// The path every project on the previous build takes now: a v4 file is
+    /// structurally current but still declares stage ⑥ Verify (slot `qa`)
+    /// and the `qc-testing` slot, both dropped from the pipeline.
+    #[test]
+    fn a_v4_pipeline_json_is_migrated_so_the_qa_and_qc_testing_slots_disappear() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = orchestrator_dir::pipeline_json_path(tmp.path());
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        // A real v4 file: serialize the current template, stamp it back to
+        // version 4, and splice the removed stage/slot back in.
+        let mut v4 = serde_json::to_value(PipelineDef::default()).unwrap();
+        v4["version"] = serde_json::json!(4);
+        for stage in v4["stages"].as_array_mut().unwrap() {
+            if stage["id"] == "S6_testing" {
+                stage["agents"].as_array_mut().unwrap().insert(
+                    0,
+                    serde_json::json!({
+                        "id": "qc-testing",
+                        "agentName": "qc-agent",
+                        "label": "QC · Execution",
+                        "afterSlots": [],
+                    }),
+                );
+            }
+        }
+        v4["stages"].as_array_mut().unwrap().insert(
+            6,
+            serde_json::json!({
+                "id": "S6_verify",
+                "label": "⑥ Verify",
+                "agents": [{
+                    "id": "qa",
+                    "agentName": "qa-agent",
+                    "label": "QA · Verify",
+                    "afterSlots": [],
+                }],
+                "dependsOn": "S5_build",
+            }),
+        );
+        std::fs::write(&path, serde_json::to_string(&v4).unwrap()).unwrap();
+
+        let load = load_pipeline_def(tmp.path()).unwrap();
+
+        assert_eq!(load.def.version, PIPELINE_DEF_VERSION);
+        assert!(load
+            .migrated_backup
+            .expect("a migration must report its backup")
+            .to_string_lossy()
+            .ends_with("pipeline.json.v4.bak"));
+        assert!(
+            !load.def.stages.iter().any(|s| s.id == "S6_verify"),
+            "the Verify stage must be gone after migration"
+        );
+        assert!(
+            !load
+                .def
+                .stages
+                .iter()
+                .flat_map(|s| &s.agents)
+                .any(|a| a.id == "qa" || a.id == "qc-testing"),
+            "both dropped slots must be gone after migration"
         );
     }
 

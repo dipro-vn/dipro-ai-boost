@@ -156,7 +156,7 @@ mod tests {
         let csv = build_csv(
             &[
                 record("feat-a", "ba", Some(0.05)),
-                record("feat-a", "qa", None),
+                record("feat-a", "qc-automation", None),
             ],
             &def,
         );
@@ -166,7 +166,7 @@ mod tests {
         assert!(lines[1].contains("ba-agent"));
         assert!(lines[1].contains("0.05"));
         // AC-E6-13 — missing cost is an EMPTY field (",," around it), not 0.
-        assert!(lines[2].contains("qa-agent"));
+        assert!(lines[2].contains("qc-automation-agent"));
         assert!(lines[2].contains(",done,,"));
     }
 

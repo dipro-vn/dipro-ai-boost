@@ -15,6 +15,7 @@ use crate::app_state::AppState;
 use crate::auth;
 use crate::domain::config_file::{self, AgentConfig, ProjectConfig};
 use crate::domain::contract_lock::{ContractLockRecord, ContractLockStatus, LockedFile};
+use crate::domain::design_ref::DesignRef;
 use crate::domain::gate_state::{GateState, GateStatus};
 use crate::domain::pipeline_def::{gate, slot, AgentSlot};
 use crate::domain::project::{EcosystemRepo, ProjectInitStatus, ProjectPaths};
@@ -108,25 +109,75 @@ fn load_agent_config(agents_root: &Path, agent_name: &str) -> AgentConfig {
     })
 }
 
-/// Whether a slot is ready to spawn, given the project's current Ecosystem —
-/// AC-E2-33's config half: a Figma server auto-detected in the project's
-/// own files (name/command/url containing "figma" — see
-/// `store::mcp_config`, which walks up from `agentsRoot`), or an explicit
-/// `ProjectConfig.figma_mcp_server` choice that still exists. Read fresh
-/// per spawn, same as everything else. Deterministic and unit-tested.
-fn figma_in_project_config(agents_root: &Path) -> bool {
+/// WHICH MCP server serves Figma for this project — the name, not just a
+/// yes/no. Precedence:
+///
+/// 1. The explicit `ProjectConfig.figma_mcp_server` choice (Settings → MCP),
+///    but only while that server still exists — a choice left pointing at a
+///    server the user has since removed must not win over a real one.
+/// 2. Otherwise the first auto-detected candidate, in `read_mcp_servers`
+///    order: nearest config file first (the same precedence the CLI
+///    applies), and within one file alphabetically — `serde_json::Map` is a
+///    `BTreeMap` here, so JSON key order is not preserved. Deterministic,
+///    but arbitrary between two candidates in the SAME file: that is
+///    exactly when the Settings radio appears and rule 1 should decide.
+/// 3. `None` — no Figma server in the project's OWN files.
+///
+/// `None` does not mean "no Figma": the `claude.ai Figma` connector lives in
+/// Claude's user-level configuration and appears in no project file at all
+/// (see `store::mcp_status`). It means the app cannot name a server, so
+/// callers must degrade to letting the agent work it out rather than
+/// asserting something wrong.
+///
+/// Read fresh per spawn, same as everything else. Deterministic and
+/// unit-tested — the slow `claude mcp list` half lives in
+/// `figma_mcp_available` below.
+fn resolved_figma_server(agents_root: &Path) -> Option<String> {
     let servers = crate::store::mcp_config::read_mcp_servers(agents_root);
-    if servers.iter().any(|s| s.figma_candidate) {
-        return true;
-    }
     let chosen = std::fs::read_to_string(orchestrator_dir::config_json_path(agents_root))
         .ok()
         .and_then(|raw| serde_json::from_str::<ProjectConfig>(&raw).ok())
         .and_then(|cfg| cfg.figma_mcp_server);
-    match chosen {
-        Some(name) => servers.iter().any(|s| s.name == name),
-        None => false,
+
+    if let Some(name) = chosen {
+        if servers.iter().any(|s| s.name == name) {
+            return Some(name);
+        }
     }
+    servers
+        .into_iter()
+        .find(|s| s.figma_candidate)
+        .map(|s| s.name)
+}
+
+/// The Figma MCP server a given slot's agent may actually call: the
+/// project's resolved server, narrowed to one that agent's `tools:`
+/// allowlist declares.
+///
+/// The narrowing is the point. `tools:` is an inventory — a server absent
+/// from it has every tool refused — so naming an undeclared server in the
+/// prompt would send the agent at a wall. `None` here means "do not tell
+/// this agent to call Figma MCP", which for `frontend`/`mobile` is a
+/// degraded but working run off `design-analysis.md`, and for
+/// `design-analyst` is caught earlier as a hard block.
+///
+/// An agent with no `tools:` key at all is unrestricted, so the resolved
+/// server passes through untouched.
+fn figma_server_for_slot(agents_root: &Path, slot: &str) -> Option<String> {
+    let server = resolved_figma_server(agents_root)?;
+    let agent_name = resolve_agent_name(agents_root, slot);
+    match agents_reader::declared_mcp_servers(agents_root, &agent_name) {
+        Some(declared) => declared
+            .contains(&crate::store::mcp_config::mcp_tool_prefix(&server))
+            .then_some(server),
+        None => Some(server),
+    }
+}
+
+/// AC-E2-33's config half — the yes/no the spawn gate asks. See
+/// `resolved_figma_server` for the precedence.
+fn figma_in_project_config(agents_root: &Path) -> bool {
+    resolved_figma_server(agents_root).is_some()
 }
 
 fn figma_mcp_available(agents_root: &Path) -> bool {
@@ -457,6 +508,35 @@ fn run_to_completion(
         return;
     }
 
+    // Having a Figma server the agent cannot call is worse than having
+    // none: `tools:` is an inventory, so every call is refused and the run
+    // burns its turns producing nothing, with no error naming the cause.
+    // Only `design-analyst` blocks on this — reading Figma is its entire
+    // job. `frontend`/`mobile` fall back to `design-analysis.md` instead
+    // (see `figma_server_for_slot`), because a task that never touches UI
+    // must not be stopped by an MCP name mismatch.
+    if slot == slot::DESIGN_ANALYST {
+        if let Some(server) = resolved_figma_server(&agents_root) {
+            let prefix = crate::store::mcp_config::mcp_tool_prefix(&server);
+            let undeclared = agents_reader::declared_mcp_servers(&agents_root, &agent_name)
+                .is_some_and(|declared| !declared.contains(&prefix));
+            if undeclared {
+                record_pre_spawn_outcome(
+                    &app,
+                    &agents_root,
+                    &feature,
+                    &slot,
+                    RunOutcome::Blocked,
+                    format!(
+                        "Project dùng MCP Figma \"{server}\", nhưng .claude/agents/{agent_name}.md chưa khai tool \"mcp__{prefix}__*\" trong `tools:` — agent sẽ không gọi được server này. Thêm các tool ĐỌC của nó vào `tools:`, hoặc chọn MCP Figma khác trong Settings → MCP, rồi chạy lại."
+                    ),
+                );
+                recompute_and_emit(&app, &agents_root, &docs_root, &feature);
+                return;
+            }
+        }
+    }
+
     // AC-E4-23 — a slot that targets a repo (backend/frontend/mobile,
     // stage ⑤+) never spawns while the contract is `Violated`. An
     // already-running process for this `(feature, slot)` is untouched (no
@@ -770,11 +850,109 @@ fn statuses_and_passed_gates(
 /// and everything else start from `SPEC.md` (same wording
 /// `approve_trigger_gate` already uses for stage ②).
 ///
+/// Names the MCP server the agent should call for Figma, so it stops
+/// deducing one from `.mcp.json` on its own — the project already answered
+/// that question in Settings, and the agent guessing differently is how a
+/// run ends up calling a server whose tools it has no permission for.
+///
+/// `None` means the app cannot name one (the `claude.ai Figma` connector is
+/// configured at the user level, in no project file), so the prompt says
+/// nothing and the agent's own fallback stands.
+fn figma_server_note(figma_server: Option<&str>) -> String {
+    match figma_server {
+        Some(name) => format!(
+            "\n\nMCP Figma của project: `{name}` — gọi tool `mcp__{prefix}__*` của đúng server này, KHÔNG đi dò .mcp.json để tự chọn server khác.",
+            prefix = crate::store::mcp_config::mcp_tool_prefix(name)
+        ),
+        None => String::new(),
+    }
+}
+
+/// What stage ⑤ needs to know about stage ②c's output, appended to the
+/// `frontend`/`mobile` prompt.
+///
+/// Their kit files (`frontend-agent.md` § Bước 3/3.5/3.6) already know how
+/// to use all of this — a Figma URL, `design-analysis.md`, the exported
+/// assets, the reference screenshots — but list three ways of FINDING the
+/// URL that the app populates none of, and expect a `<feature-folder>` the
+/// task-file list never mentions. So the agents were re-deriving the design
+/// from SPEC text while the analysis sat unread next to it.
+///
+/// Only names what actually exists: an absent line is unambiguous, whereas
+/// a path to a missing file invites the agent to go looking for it.
+///
+/// `figma_server` is `Some` only when the agent about to run actually
+/// declares that server's tools — see `figma_server_for_slot`. When it is
+/// `None` but a URL exists, the note says plainly not to call Figma MCP,
+/// because the alternative is an agent burning its turns on tool calls that
+/// are all going to be refused.
+fn build_design_context_note(
+    feature_dir: &Path,
+    design_ref: Option<&str>,
+    figma_server: Option<&str>,
+) -> String {
+    let mut lines = vec![format!(
+        "\n\n--- Ngữ cảnh design (stage ②c Design Analyst để lại) ---\nFeature folder: {}",
+        feature_dir.display()
+    )];
+
+    let analysis = feature_dir.join("design-analysis.md");
+    if analysis.is_file() {
+        lines.push(format!(
+            "Phân tích design (đọc trước khi code UI): {}",
+            analysis.display()
+        ));
+    }
+    if !stage_rules::design_resources_files(feature_dir).is_empty() {
+        lines.push(format!(
+            "Asset đã export sẵn — copy bằng `cp`, KHÔNG Read→Write: {}",
+            feature_dir.join("design-resources").display()
+        ));
+    }
+    if !stage_rules::screenshot_design_files(feature_dir).is_empty() {
+        lines.push(format!(
+            "Screenshot tham chiếu để đối chiếu UI (không phải asset để nhúng): {}",
+            feature_dir.join("screenshot-design").display()
+        ));
+    }
+    if let Some(url) = design_ref.map(str::trim).filter(|url| !url.is_empty()) {
+        match figma_server {
+            Some(name) => lines.push(format!(
+                "URL Figma (selection) người dùng đã cung cấp cho Design Analyst — đọc lại design tại URL này qua MCP `{name}` (tool `mcp__{prefix}__*`) trước khi code UI, KHÔNG tự đoán màu/spacing:\n{url}",
+                prefix = crate::store::mcp_config::mcp_tool_prefix(name)
+            )),
+            None => lines.push(format!(
+                "URL Figma (selection) người dùng đã cung cấp cho Design Analyst (để đối chiếu, KHÔNG gọi Figma MCP — agent này chưa khai tool của MCP Figma mà project đang dùng):\n{url}\nDựa vào design-analysis.md và screenshot-design/ ở trên, không tự đoán màu/spacing."
+            )),
+        }
+    }
+
+    // Nothing but the feature folder line: still worth sending, since the
+    // task-file list alone never tells the agent where the feature lives.
+    lines.join("\n")
+}
+
 /// `extra_input` is optional slot-specific text the user typed before
 /// clicking Run — today only `design-analyst` reads it (the Figma
 /// selection URL), which lets that agent finish in ONE run instead of
 /// stopping to ask and needing a second resumed run.
-fn build_slot_prompt(slot_id: &str, feature_dir: &Path, extra_input: Option<&str>) -> String {
+///
+/// `design_ref` is the URL a PREVIOUS design-analyst run was given, read
+/// back from `store::design_ref` by the caller. Two slots consume it:
+/// `design-analyst` falls back to it so a re-run needs no retyping, and
+/// `frontend`/`mobile` get it because their own kit files list three ways
+/// to find a Figma URL and the app populates none of them. Passed in
+/// rather than read here so this function stays a pure string builder.
+///
+/// `figma_server` is the MCP server this slot's agent should use for Figma,
+/// already narrowed to one it declares tools for (`figma_server_for_slot`).
+fn build_slot_prompt(
+    slot_id: &str,
+    feature_dir: &Path,
+    extra_input: Option<&str>,
+    design_ref: Option<&str>,
+    figma_server: Option<&str>,
+) -> String {
     let spec_path = feature_dir.join("SPEC.md");
     // AC-E2-39 — stage ③ (techlead-tasks) gets the design analysis in
     // its context when stage ②c actually produced one. Appended, never
@@ -793,12 +971,14 @@ fn build_slot_prompt(slot_id: &str, feature_dir: &Path, extra_input: Option<&str
             "Feature folder tại đường dẫn tuyệt đối sau:\n{}\nĐọc các DESIGN.md trong đó và thực hiện đúng quy trình của bạn.{design_analysis_note}",
             feature_dir.display()
         ),
-        s if s == slot::FRONTEND || s == slot::MOBILE || s == slot::QA => {
+        s if s == slot::FRONTEND || s == slot::MOBILE => {
             let mut task_files = stage_rules::task_files_in_repos(feature_dir);
             task_files.sort();
+            let design_context =
+                build_design_context_note(feature_dir, design_ref, figma_server);
             if task_files.is_empty() {
                 format!(
-                    "Feature folder tại đường dẫn tuyệt đối sau:\n{}\nThực hiện đúng quy trình của bạn. (Không tìm thấy task-*.md nào trong repo — có thể Tech Lead Tasks chưa chạy cho feature này.)",
+                    "Feature folder tại đường dẫn tuyệt đối sau:\n{}\nThực hiện đúng quy trình của bạn. (Không tìm thấy task-*.md nào trong repo — có thể Tech Lead Tasks chưa chạy cho feature này.){design_context}",
                     feature_dir.display()
                 )
             } else {
@@ -808,12 +988,21 @@ fn build_slot_prompt(slot_id: &str, feature_dir: &Path, extra_input: Option<&str
                     .collect::<Vec<_>>()
                     .join("\n");
                 format!(
-                    "Đọc và thực hiện lần lượt các task thuộc phạm vi của bạn trong danh sách sau, theo đúng quy trình của bạn:\n{task_paths}"
+                    "Đọc và thực hiện lần lượt các task thuộc phạm vi của bạn trong danh sách sau, theo đúng quy trình của bạn:\n{task_paths}{design_context}"
                 )
             }
         }
         s if s == slot::DESIGN_ANALYST => {
-            let figma_url = extra_input.map(str::trim).filter(|url| !url.is_empty());
+            // Typed-now wins over stored; stored means a re-run of this node
+            // does not make the user find the link again. Each candidate is
+            // trimmed and emptiness-checked on its own — a box submitted
+            // with only whitespace must fall through to the stored URL, not
+            // shadow it.
+            let non_blank = |value: &&str| !value.trim().is_empty();
+            let figma_url = extra_input
+                .filter(non_blank)
+                .or(design_ref.filter(non_blank))
+                .map(str::trim);
             // AC-E2-37a — the agent file makes exporting a mandatory step,
             // but that step was silently skipped often enough to be worth
             // naming in the prompt too, with the absolute target path so
@@ -822,16 +1011,17 @@ fn build_slot_prompt(slot_id: &str, feature_dir: &Path, extra_input: Option<&str
                 "\n\nExport icon/ảnh đọc được từ Figma vào thư mục: {}\nrồi liệt kê ở mục 6 của design-analysis.md. Không export được thì ghi rõ lý do ở mục 6 — đừng dừng lại để hỏi, đừng chặn nhánh.",
                 feature_dir.join("design-resources").display()
             );
+            let server_note = figma_server_note(figma_server);
             match figma_url {
                 Some(url) => format!(
-                    "Đọc SPEC.md tại đường dẫn tuyệt đối sau và thực hiện đúng quy trình của bạn:\n{}\n(Feature folder: {})\n\nURL Figma (selection) người dùng đã cung cấp — dùng URL này, KHÔNG hỏi lại:\n{url}{export_note}",
+                    "Đọc SPEC.md tại đường dẫn tuyệt đối sau và thực hiện đúng quy trình của bạn:\n{}\n(Feature folder: {})\n\nURL Figma (selection) người dùng đã cung cấp — dùng URL này, KHÔNG hỏi lại:\n{url}{server_note}{export_note}",
                     spec_path.display(),
                     feature_dir.display()
                 ),
                 // No URL typed: the agent's own Bước 2 takes over and stops
                 // to ask, landing the slot in `waiting-input` as before.
                 None => format!(
-                    "Đọc SPEC.md tại đường dẫn tuyệt đối sau và thực hiện đúng quy trình của bạn:\n{}\n(Feature folder: {}){export_note}",
+                    "Đọc SPEC.md tại đường dẫn tuyệt đối sau và thực hiện đúng quy trình của bạn:\n{}\n(Feature folder: {}){server_note}{export_note}",
                     spec_path.display(),
                     feature_dir.display()
                 ),
@@ -1089,6 +1279,19 @@ pub fn run_slot(
     }
 
     let feature_dir = docs_root.join("features").join(&feature);
+
+    // Persist the Figma URL BEFORE building the prompt, so the record is
+    // already current if this run is the one that writes `design-analysis.md`.
+    // Best-effort: a failed write must not stop a run the user asked for —
+    // it only costs stage ⑤ its design context.
+    if slot == slot::DESIGN_ANALYST {
+        if let Some(url) = extra_input.as_deref() {
+            let _ = crate::store::design_ref::write(&agents_root, &feature, url, &slot);
+        }
+    }
+    let design_ref = crate::store::design_ref::read(&agents_root, &feature).map(|r| r.url);
+    let figma_server = figma_server_for_slot(&agents_root, &slot);
+
     let prompt = if slot == slot::BACKEND {
         // Backend reads the task files the Contract Lock froze, exactly as
         // `lock_contract` used to hand it over.
@@ -1105,7 +1308,13 @@ pub fn run_slot(
         .unwrap_or_default();
         build_backend_agent_prompt(&feature_dir, &locked_designs)
     } else {
-        build_slot_prompt(&slot, &feature_dir, extra_input.as_deref())
+        build_slot_prompt(
+            &slot,
+            &feature_dir,
+            extra_input.as_deref(),
+            design_ref.as_deref(),
+            figma_server.as_deref(),
+        )
     };
 
     let spawn_epoch = reserve_spawn(
@@ -1128,6 +1337,76 @@ pub fn run_slot(
         );
     });
     Ok(())
+}
+
+/// What Settings → MCP needs to show about Figma: which server this project
+/// actually resolves to, and which of the agents that read Figma cannot
+/// call it.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FigmaMcpReadiness {
+    /// `None` when no Figma server appears in the project's own config
+    /// files — which is not the same as "no Figma": the `claude.ai Figma`
+    /// connector is configured at the user level. See
+    /// `resolved_figma_server`.
+    pub resolved_server: Option<String>,
+    /// The tool-id prefix for `resolved_server`, so the UI can name the
+    /// exact string a user has to add to an agent's `tools:` list.
+    pub tool_prefix: Option<String>,
+    /// Agent file names (not slot ids) whose `tools:` allowlist omits that
+    /// server. Empty when everything lines up, or when nothing resolved.
+    pub agents_missing_tools: Vec<String>,
+}
+
+/// The three agents that read Figma. Slot ids, resolved to real agent names
+/// through `pipeline.json` so a project that renamed one is still checked.
+const FIGMA_READING_SLOTS: &[&str] = &[slot::DESIGN_ANALYST, slot::FRONTEND, slot::MOBILE];
+
+#[tauri::command]
+pub fn get_figma_mcp_readiness(state: State<AppState>) -> AppResult<FigmaMcpReadiness> {
+    let project = current_project(&state)?;
+    let agents_root = Path::new(&project.agents_root);
+
+    let Some(server) = resolved_figma_server(agents_root) else {
+        return Ok(FigmaMcpReadiness {
+            resolved_server: None,
+            tool_prefix: None,
+            agents_missing_tools: Vec::new(),
+        });
+    };
+    let prefix = crate::store::mcp_config::mcp_tool_prefix(&server);
+
+    let mut agents_missing_tools: Vec<String> = FIGMA_READING_SLOTS
+        .iter()
+        .map(|slot| resolve_agent_name(agents_root, slot))
+        .filter(|agent_name| {
+            // `None` = no `tools:` allowlist = unrestricted, so not missing.
+            agents_reader::declared_mcp_servers(agents_root, agent_name)
+                .is_some_and(|declared| !declared.contains(&prefix))
+        })
+        .collect();
+    agents_missing_tools.sort();
+    agents_missing_tools.dedup();
+
+    Ok(FigmaMcpReadiness {
+        resolved_server: Some(server),
+        tool_prefix: Some(prefix),
+        agents_missing_tools,
+    })
+}
+
+/// The Figma selection URL stored for this feature, so the Design Analyst
+/// panel can show the user what stage ⑤ will be handed — and so re-running
+/// the node does not start from an empty box. `None` when nothing has been
+/// given yet.
+#[tauri::command]
+pub fn get_design_ref(state: State<AppState>, feature: String) -> AppResult<Option<DesignRef>> {
+    orchestrator_dir::validate_feature_id(&feature)?;
+    let project = current_project(&state)?;
+    Ok(crate::store::design_ref::read(
+        Path::new(&project.agents_root),
+        &feature,
+    ))
 }
 
 /// AC-E2-17 — delivers the user's answer into the SAME session as the run
@@ -1159,6 +1438,16 @@ pub fn send_clarification_answer(
         .ok_or_else(|| AppError::Invalid {
             message: "Không tìm thấy session trước đó để trả lời tiếp".to_string(),
         })?;
+
+    // AC-E2-35 — the other way a Figma URL arrives: the agent stopped to
+    // ask and the user pasted the link into the answer box, usually with a
+    // sentence around it. Capture it here too, or stage ⑤ would only ever
+    // see URLs that happened to be typed into the dedicated field.
+    if slot == slot::DESIGN_ANALYST {
+        if let Some(url) = crate::store::design_ref::extract_figma_url(&answer) {
+            let _ = crate::store::design_ref::write(&agents_root, &feature, url, &slot);
+        }
+    }
 
     let spawn_epoch = reserve_spawn(
         &state,
@@ -2176,11 +2465,11 @@ mod tests {
         std::fs::create_dir_all(&feature_dir).unwrap();
 
         // Stage ③ is a single slot since `pm-agent` was removed.
-        let without = build_slot_prompt(slot::TECHLEAD_TASKS, &feature_dir, None);
+        let without = build_slot_prompt(slot::TECHLEAD_TASKS, &feature_dir, None, None, None);
         assert!(!without.contains("design-analysis.md"));
 
         std::fs::write(feature_dir.join("design-analysis.md"), "# analysis").unwrap();
-        let with = build_slot_prompt(slot::TECHLEAD_TASKS, &feature_dir, None);
+        let with = build_slot_prompt(slot::TECHLEAD_TASKS, &feature_dir, None, None, None);
         assert!(with.contains("design-analysis.md")); // AC-E2-39
     }
 
@@ -2227,6 +2516,64 @@ mod tests {
         assert!(figma_in_project_config(tmp.path()));
     }
 
+    /// The gate only needs a yes/no; naming the server is what lets the
+    /// prompt tell the agent which MCP to call, so the precedence has to be
+    /// pinned down on its own.
+    #[test]
+    fn resolved_figma_server_prefers_the_explicit_choice_that_still_exists() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(tmp.path().join(".claude")).unwrap();
+        let config_path = orchestrator_dir::config_json_path(tmp.path());
+        std::fs::create_dir_all(config_path.parent().unwrap()).unwrap();
+
+        // Nothing declared at all.
+        assert_eq!(resolved_figma_server(tmp.path()), None);
+
+        // A single auto-detected candidate needs no explicit choice — the
+        // Settings radio does not even appear in that case.
+        std::fs::write(
+            tmp.path().join(".claude/settings.json"),
+            r#"{"mcpServers":{"tilth":{"command":"tilth"},"figma-bridge":{"command":"npx","args":["-y","mcp-figma-bridge"]}}}"#,
+        )
+        .unwrap();
+        assert_eq!(
+            resolved_figma_server(tmp.path()).as_deref(),
+            Some("figma-bridge")
+        );
+
+        // Two candidates + an explicit choice → the choice wins, including
+        // when it is NOT the one auto-detection would have picked.
+        std::fs::write(
+            tmp.path().join(".claude/settings.json"),
+            r#"{"mcpServers":{"figma-bridge":{"command":"npx","args":["-y","mcp-figma-bridge"]},"figma":{"type":"http","url":"http://127.0.0.1:3845/mcp"}}}"#,
+        )
+        .unwrap();
+        std::fs::write(
+            &config_path,
+            r#"{"agents":{},"max_retries":2,"figma_mcp_server":"figma-bridge"}"#,
+        )
+        .unwrap();
+        assert_eq!(
+            resolved_figma_server(tmp.path()).as_deref(),
+            Some("figma-bridge")
+        );
+
+        // A choice left pointing at a server the user has since removed must
+        // not win over one that really is there. Falls back to the same
+        // auto-detected pick as with no choice at all — alphabetical within
+        // one file, hence `figma` before `figma-bridge`.
+        std::fs::write(
+            &config_path,
+            r#"{"agents":{},"max_retries":2,"figma_mcp_server":"gone"}"#,
+        )
+        .unwrap();
+        assert_eq!(
+            resolved_figma_server(tmp.path()).as_deref(),
+            Some("figma"),
+            "a stale choice falls back to auto-detection"
+        );
+    }
+
     /// G4/B22 — the Figma URL typed in the UI must reach the agent, so it
     /// can finish in one run instead of stopping to ask and needing a
     /// second resumed run.
@@ -2240,6 +2587,8 @@ mod tests {
             slot::DESIGN_ANALYST,
             &feature_dir,
             Some("https://figma.com/design/abc?node-id=1-2"),
+            None,
+            None,
         );
         assert!(with_url.contains("https://figma.com/design/abc?node-id=1-2"));
         assert!(with_url.contains("KHÔNG hỏi lại"));
@@ -2251,7 +2600,7 @@ mod tests {
         // Blank or absent input must not fabricate a URL — the agent's own
         // Bước 2 takes over and asks.
         for empty in [None, Some(""), Some("   ")] {
-            let without = build_slot_prompt(slot::DESIGN_ANALYST, &feature_dir, empty);
+            let without = build_slot_prompt(slot::DESIGN_ANALYST, &feature_dir, empty, None, None);
             assert!(
                 !without.contains("KHÔNG hỏi lại"),
                 "empty input leaked a URL branch"
@@ -2259,5 +2608,157 @@ mod tests {
             assert!(without.contains("SPEC.md"));
             assert!(without.contains(&feature_dir.join("design-resources").display().to_string()));
         }
+    }
+
+    /// Re-running the node must not make the user find the link again: an
+    /// empty box falls through to whatever URL a previous run stored.
+    #[test]
+    fn design_analyst_falls_back_to_the_stored_url_when_the_box_is_empty() {
+        let tmp = tempfile::tempdir().unwrap();
+        let feature_dir = tmp.path().join("feature");
+        std::fs::create_dir_all(&feature_dir).unwrap();
+        let stored = "https://figma.com/design/stored?node-id=9-9";
+
+        for empty in [None, Some(""), Some("   ")] {
+            let prompt = build_slot_prompt(
+                slot::DESIGN_ANALYST,
+                &feature_dir,
+                empty,
+                Some(stored),
+                None,
+            );
+            assert!(
+                prompt.contains(stored),
+                "stored URL must be used for {empty:?}"
+            );
+            assert!(prompt.contains("KHÔNG hỏi lại"));
+        }
+
+        // What the user just typed still wins over the stored value.
+        let typed = "https://figma.com/design/typed?node-id=1-1";
+        let prompt = build_slot_prompt(
+            slot::DESIGN_ANALYST,
+            &feature_dir,
+            Some(typed),
+            Some(stored),
+            None,
+        );
+        assert!(prompt.contains(typed));
+        assert!(!prompt.contains(stored));
+    }
+
+    /// The gap this whole feature closes: stage ⑤ used to receive a bare
+    /// list of task paths and nothing about the design those tasks are for
+    /// — not even the feature folder its own kit file's Bước 3.5/3.6 need.
+    #[test]
+    fn frontend_and_mobile_prompts_carry_the_design_context_that_exists() {
+        let tmp = tempfile::tempdir().unwrap();
+        let feature_dir = tmp.path().join("feature");
+        std::fs::create_dir_all(feature_dir.join("web-repo/tasks")).unwrap();
+        std::fs::write(feature_dir.join("web-repo/tasks/task-3-1.md"), "x").unwrap();
+        let url = "https://figma.com/design/abc?node-id=1-2";
+
+        for build_slot in [slot::FRONTEND, slot::MOBILE] {
+            // Nothing produced yet: the feature folder is still named (the
+            // task list alone never says where the feature lives), but
+            // nothing else is invented.
+            let bare = build_slot_prompt(build_slot, &feature_dir, None, None, None);
+            assert!(bare.contains(&feature_dir.display().to_string()));
+            assert!(bare.contains("task-3-1.md"));
+            assert!(!bare.contains("design-analysis.md"));
+            assert!(!bare.contains("design-resources"));
+            assert!(!bare.contains("screenshot-design"));
+            assert!(!bare.contains("figma.com"));
+        }
+
+        std::fs::write(feature_dir.join("design-analysis.md"), "phân tích").unwrap();
+        std::fs::create_dir_all(feature_dir.join("design-resources")).unwrap();
+        std::fs::write(feature_dir.join("design-resources/icon.svg"), "<svg/>").unwrap();
+        std::fs::create_dir_all(feature_dir.join("screenshot-design")).unwrap();
+        std::fs::write(feature_dir.join("screenshot-design/WB_AUTH_001.png"), "x").unwrap();
+
+        for build_slot in [slot::FRONTEND, slot::MOBILE] {
+            let full = build_slot_prompt(build_slot, &feature_dir, None, Some(url), None);
+            assert!(full.contains("task-3-1.md"), "the task list must survive");
+            assert!(full.contains(&feature_dir.join("design-analysis.md").display().to_string()));
+            assert!(full.contains(&feature_dir.join("design-resources").display().to_string()));
+            assert!(full.contains(&feature_dir.join("screenshot-design").display().to_string()));
+            assert!(full.contains(url));
+        }
+    }
+
+    /// The agent must be TOLD which Figma MCP to call. Left to work it out
+    /// from `.mcp.json` it can pick a different server than the one Settings
+    /// chose — and then every tool call is refused, because `tools:` only
+    /// declares the other one.
+    #[test]
+    fn the_prompt_names_the_projects_figma_server_when_there_is_one() {
+        let tmp = tempfile::tempdir().unwrap();
+        let feature_dir = tmp.path().join("feature");
+        std::fs::create_dir_all(&feature_dir).unwrap();
+        let url = "https://figma.com/design/abc?node-id=1-2";
+
+        let named = build_slot_prompt(
+            slot::DESIGN_ANALYST,
+            &feature_dir,
+            Some(url),
+            None,
+            Some("claude.ai Figma"),
+        );
+        assert!(named.contains("claude.ai Figma"));
+        // Named as the tool prefix too, since that is what the agent types.
+        assert!(named.contains("mcp__claude_ai_Figma__*"));
+
+        // No server resolved (the connector lives in Claude's user-level
+        // config, in no project file) → say nothing and let the agent's own
+        // fallback stand, rather than asserting something wrong.
+        let silent = build_slot_prompt(slot::DESIGN_ANALYST, &feature_dir, Some(url), None, None);
+        assert!(!silent.contains("MCP Figma của project"));
+        assert!(silent.contains(url), "the URL still gets through");
+    }
+
+    /// `frontend`/`mobile` are not blocked when they cannot reach Figma —
+    /// they still have `design-analysis.md`. But the prompt must say so
+    /// outright, or the agent spends its turns on calls that all get
+    /// refused.
+    #[test]
+    fn build_agents_are_told_not_to_call_figma_when_no_server_is_available() {
+        let tmp = tempfile::tempdir().unwrap();
+        let feature_dir = tmp.path().join("feature");
+        std::fs::create_dir_all(&feature_dir).unwrap();
+        std::fs::write(feature_dir.join("design-analysis.md"), "phân tích").unwrap();
+        let url = "https://figma.com/design/abc?node-id=1-2";
+
+        for build_slot in [slot::FRONTEND, slot::MOBILE] {
+            let with_server = build_slot_prompt(
+                build_slot,
+                &feature_dir,
+                None,
+                Some(url),
+                Some("figma-bridge"),
+            );
+            assert!(with_server.contains("mcp__figma-bridge__*"));
+            assert!(!with_server.contains("KHÔNG gọi Figma MCP"));
+
+            let without = build_slot_prompt(build_slot, &feature_dir, None, Some(url), None);
+            assert!(without.contains("KHÔNG gọi Figma MCP"));
+            assert!(without.contains("design-analysis.md"));
+            // The URL is still there to compare against, just not to fetch.
+            assert!(without.contains(url));
+        }
+    }
+
+    /// A feature with no task files at all still gets the design context —
+    /// that branch takes a different `format!` and used to be easy to miss.
+    #[test]
+    fn the_design_context_survives_a_feature_with_no_task_files() {
+        let tmp = tempfile::tempdir().unwrap();
+        let feature_dir = tmp.path().join("feature");
+        std::fs::create_dir_all(&feature_dir).unwrap();
+        let url = "https://figma.com/design/abc?node-id=1-2";
+
+        let prompt = build_slot_prompt(slot::FRONTEND, &feature_dir, None, Some(url), None);
+        assert!(prompt.contains("Không tìm thấy task-*.md"));
+        assert!(prompt.contains(url));
     }
 }

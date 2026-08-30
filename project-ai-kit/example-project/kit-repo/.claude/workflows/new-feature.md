@@ -28,7 +28,9 @@ tasks/task-*.md  ←── /create-tasks <feature-folder/>
   task-1-x (DB migration)
   task-2-x (API endpoint) → output: API Definition table
       │
-      ▼ copy API Definition vào task-3-x.md
+      ▼ lint + test + coverage của task-2-x xanh
+      │
+      ▼ copy API Definition vào task-3-x.md + trỏ design-analysis.md
       │
       ┌─────────────────┬──────────────────┐
       │                 │                  │
@@ -42,12 +44,15 @@ tasks/task-*.md  ←── /create-tasks <feature-folder/>
       │
       ▼ Integration check (localhost BE + FE = data thật)
       │
-      ▼ [qa-agent]
-  QA Report  ←── verify AC + non-regression
+      ▼ [qc-automation-agent]
+  E2E automation (Playwright headed) → execution-report.md
       │
       ▼
   Deploy STG → PROD
 ```
+
+> Chuỗi Build → QC Automation ở trên là logic thật của `.claude/workflows/bmad-build-phase.js`
+> (chạy qua `/create-feature <feature> build`) — không phải bước thủ công.
 
 ---
 
@@ -135,39 +140,47 @@ Phải confirm đầy đủ trước khi FE/Mobile bắt đầu implement:
 task-1-x (BE — DB migration)
     ↓
 task-2-x (BE — API endpoint)
-    ↓ [BE output API Definition → copy vào task-3-x trước khi FE bắt đầu]
+    ↓ [lint + test + coverage của task-2-x phải xanh trước khi đi tiếp]
+    ↓ [output API Definition → copy vào task-3-x trước khi FE bắt đầu]
 task-3-x (FE + Mobile, song song):
     Step 1 — Tạo service file  (gọi đúng endpoint trong API Definition)
     Step 2 — Tạo TanStack Query hooks
-    Step 3 — Implement UI, wire hooks vào giao diện
+    Step 3 — Implement UI, wire hooks vào giao diện — đọc design-analysis.md (nếu có) làm nguồn design chính
     ↓ [Integration check: FE-localhost + BE-localhost = data thật trên màn hình]
 task-4-x (Integration test)
 ```
 
-**Sau khi BE xong task-2-x:**
+**Sau khi BE xong task-2-x (lint + test + coverage của task đó xanh):**
 1. Copy bảng `## API Definition` từ BE output vào section tương ứng trong `task-3-x.md`
 2. FE/Mobile task có gọi API → không bắt đầu implement trước khi có API Definition. FE task thuần UI (component, layout, không gọi API) không bị ràng buộc này.
+3. Nếu feature có design-analysis.md (output `design-analyst-agent`) → FE/Mobile đọc trước khi implement UI.
+
+> Backend không tự chuyển sang FE/Mobile khi test suite của task-2-x còn đỏ — API Contract chưa ổn định thì FE/Mobile code lại từ đầu.
 
 **Sau mỗi task:** Chạy Memory Update Gate (xem `AGENTS.md`).
 
 ---
 
-## Bước 5 — QA Verification
+## Bước 5 — QC Automation
 
-**Agent:** `qa-agent`
+**Agent:** `qc-automation-agent`
 
-Với mỗi task đã implement:
-1. Chạy test suite (`npm run test`, `flutter test`)
-2. Validate từng AC trong SPEC.md
-3. Verify Non-Regression table trong task file
+Chạy sau khi Build (Bước 4) xong toàn bộ feature: `qc-automation-agent` chạy Playwright
+E2E headed mode nếu có repo E2E testing và website DEV đang chạy.
+
+**Output:** E2E automation report (`execution-report.md`)
 
 **Status workflow:**
 ```
 Dev: Open → In Progress → Request Review
 Leader: In Review → Testing Request
-QA: Testing Request → Resolved (hoặc Reopen nếu fail)
+QC: Testing Request → Resolved (hoặc Reopen nếu fail)
 PM/Leader: Resolved → Closed
 ```
+
+> On-demand (không thuộc pipeline): `/test/generate_test_execution_checklist` sinh
+> checklist thủ công trước release, `/test/generate_regression_suite` sinh regression
+> suite sau code change — gọi khi cần, không chạy tự động.
 
 ---
 
@@ -184,7 +197,8 @@ PM/Leader: Resolved → Closed
 ## Checklist trước khi đóng feature
 
 - [ ] Tất cả tasks status = Resolved/Closed
-- [ ] QA sign-off
+- [ ] Test suite + coverage target của mọi task đều xanh
+- [ ] E2E automation report đã có (Bước 5)
 - [ ] Memory Update Gate đã chạy (api-catalog, erd cập nhật nếu cần)
 - [ ] PR approved và merged
 - [ ] STG deploy pass

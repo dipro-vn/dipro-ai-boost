@@ -262,6 +262,31 @@ export function AgentStepPanel({
   }, [feature, agent.id, status, refreshKey]);
 
   const isDesignAnalyst = agent.id === "design-analyst";
+
+  // The URL the user gave last time, read back from `.orchestrator/`. The
+  // draft it fills is what stage ⑤ ultimately gets, so showing it beats an
+  // empty box: the user sees what Frontend/Mobile will be handed, and a
+  // re-run does not mean hunting the link down in Figma again. Only fills a
+  // draft that is still empty — anything half-typed belongs to the user.
+  useEffect(() => {
+    if (!isDesignAnalyst) return;
+    let cancelled = false;
+    commands
+      .getDesignRef(feature)
+      .then((ref) => {
+        if (cancelled || !ref?.url) return;
+        const { agentDrafts } = useAppStore.getState();
+        if (agentDrafts[agentDraftKey(feature, agent.id)]?.figmaUrl) return;
+        setAgentDraft(feature, agent.id, { figmaUrl: ref.url });
+      })
+      .catch(() => {
+        // Nothing stored, or no project open — the empty box is correct.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [feature, agent.id, isDesignAnalyst, setAgentDraft, refreshKey]);
+
   const blockedReason = projectReady
     ? readinessReason(readiness)
     : "Project chưa init — chạy /init-kit trong Claude Code rồi kiểm tra lại";

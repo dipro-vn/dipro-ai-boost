@@ -11,9 +11,10 @@ pub struct AgentSlot {
     /// The `.claude/agents/<agent_name>.md` this slot corresponds to.
     pub agent_name: String,
     /// Display name on the Board. Deliberately separate from `agent_name`:
-    /// two slots can share one agent file (`qc-design`/`qc-testing` both
-    /// map to `qc-agent`), and the board then renders two nodes with the
-    /// same visible name and no way to tell what either one does.
+    /// two slots may share one agent file, and the board then renders two
+    /// nodes with the same visible name and no way to tell what either one
+    /// does — that really happened while `qc-design` and `qc-testing` both
+    /// mapped to `qc-agent`.
     /// Presentation-only — never used for readiness or spawning. `None`
     /// falls back to `agent_name`, so a `pipeline.json` written before this
     /// field existed still renders exactly as it did.
@@ -68,11 +69,13 @@ pub struct PipelineDef {
 /// `1` = the pre-gate 8-stage layout (never carried this field, reads as
 /// `0`); `2` = the 9-stage layout with both gates and explicit
 /// `depends_on`; `3` = the same layout plus a per-slot display `label`;
-/// `4` = the `pm` slot removed from stage ③ along with `pm-agent`.
-pub const PIPELINE_DEF_VERSION: u32 = 4;
+/// `4` = the `pm` slot removed from stage ③ along with `pm-agent`;
+/// `5` = stage ⑥ Verify (slot `qa`) and the `qc-testing` slot removed, with
+/// ⑦ Testing / ⑧ Deploy renumbered to ⑥ / ⑦.
+pub const PIPELINE_DEF_VERSION: u32 = 5;
 
 /// Slot ids — the single source of truth `inference::stage_rules` keys its
-/// output by. Stage ④ (Contract Lock) and ⑧ (Deploy) intentionally have no
+/// output by. Stage ④ (Contract Lock) and ⑦ (Deploy) intentionally have no
 /// slots: they're gates/manual checklists, not agents (AC-E4/§Deploy —
 /// "không tự suy, không hiện badge").
 pub mod slot {
@@ -84,8 +87,6 @@ pub mod slot {
     pub const BACKEND: &str = "backend";
     pub const FRONTEND: &str = "frontend";
     pub const MOBILE: &str = "mobile";
-    pub const QA: &str = "qa";
-    pub const QC_TESTING: &str = "qc-testing";
     pub const QC_AUTOMATION: &str = "qc-automation";
 }
 
@@ -93,7 +94,7 @@ pub mod slot {
 /// `FeatureState.contract_lock` keys and for identifying which `StageDef`
 /// a gate-specific frontend panel (e.g. `TriggerGatePanel`,
 /// `ContractLockPanel`) applies to. Only the gates the app actually
-/// implements get a constant here; `S8_deploy` stays purely structural
+/// implements get a constant here; `S7_deploy` stays purely structural
 /// (empty `agents`) until MVP4 builds it.
 pub mod gate {
     pub const TRIGGER: &str = "S1b_trigger";
@@ -199,29 +200,20 @@ impl Default for PipelineDef {
                     depends_on: Some(gate::CONTRACT_LOCK.to_string()),
                 },
                 StageDef {
-                    id: "S6_verify".to_string(),
-                    label: "⑥ Verify".to_string(),
-                    agents: vec![slot(slot::QA, "qa-agent", "QA · Verify")],
+                    id: "S6_testing".to_string(),
+                    label: "⑥ Testing".to_string(),
+                    agents: vec![slot(
+                        slot::QC_AUTOMATION,
+                        "qc-automation-agent",
+                        "QC · Automation",
+                    )],
                     depends_on: Some("S5_build".to_string()),
                 },
                 StageDef {
-                    id: "S7_testing".to_string(),
-                    label: "⑦ Testing".to_string(),
-                    agents: vec![
-                        slot(slot::QC_TESTING, "qc-agent", "QC · Execution"),
-                        slot(
-                            slot::QC_AUTOMATION,
-                            "qc-automation-agent",
-                            "QC · Automation",
-                        ),
-                    ],
-                    depends_on: Some("S6_verify".to_string()),
-                },
-                StageDef {
-                    id: "S8_deploy".to_string(),
-                    label: "⑧ Deploy".to_string(),
+                    id: "S7_deploy".to_string(),
+                    label: "⑦ Deploy".to_string(),
                     agents: vec![],
-                    depends_on: Some("S7_testing".to_string()),
+                    depends_on: Some("S6_testing".to_string()),
                 },
             ],
         }
@@ -285,10 +277,11 @@ mod tests {
         }
     }
 
-    /// The reason `label` exists: `qc-design` and `qc-testing` both spawn
+    /// The reason `label` exists: `qc-design` and `qc-testing` both spawned
     /// `qc-agent`, so before this the board drew two nodes reading
-    /// `qc-agent` with nothing to tell them apart. Guards the next slot
-    /// that reuses an agent file and forgets to name itself.
+    /// `qc-agent` with nothing to tell them apart. `qc-testing` is gone now,
+    /// but the guard stays for the next slot that reuses an agent file and
+    /// forgets to name itself.
     #[test]
     fn slot_labels_are_unique_across_the_template() {
         let mut seen = std::collections::BTreeSet::new();

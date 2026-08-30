@@ -33,6 +33,29 @@ pub struct McpServer {
     pub figma_candidate: bool,
 }
 
+/// An MCP server's name as it appears inside a tool id
+/// (`mcp__<prefix>__<tool>`), which is what an agent file's `tools:`
+/// allowlist has to spell out.
+///
+/// The rule is the CLI's own: every character outside `A-Za-z0-9_-` becomes
+/// `_`. So `claude.ai Figma` → `claude_ai_Figma` while `figma-bridge` is
+/// already its own prefix. Exists because the app has to compare the
+/// server a project actually configured against the literal names the kit's
+/// agent files declare — a mismatch there blocks every tool call of that
+/// server, silently.
+pub fn mcp_tool_prefix(server_name: &str) -> String {
+    server_name
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '_' || c == '-' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect()
+}
+
 fn parse_servers(raw: &str) -> Vec<McpServer> {
     let Ok(value) = serde_json::from_str::<serde_json::Value>(raw) else {
         return Vec::new();
@@ -133,6 +156,22 @@ pub fn read_mcp_servers(agents_root: &Path) -> Vec<McpServer> {
 
 #[cfg(test)]
 mod tests {
+    /// The exact normalization the CLI documents for `mcp__<server>__<tool>`
+    /// ids. Getting this wrong means comparing a project's server against an
+    /// agent's `tools:` list and silently concluding "not declared".
+    #[test]
+    fn mcp_tool_prefix_matches_the_documented_normalization() {
+        use super::mcp_tool_prefix;
+        // Dots and spaces become `_`; the connector's real name.
+        assert_eq!(mcp_tool_prefix("claude.ai Figma"), "claude_ai_Figma");
+        // Hyphens and underscores survive — already valid in a tool id.
+        assert_eq!(mcp_tool_prefix("figma-bridge"), "figma-bridge");
+        assert_eq!(mcp_tool_prefix("figma_bridge"), "figma_bridge");
+        assert_eq!(mcp_tool_prefix("figma"), "figma");
+        // Case is preserved, only invalid characters are replaced.
+        assert_eq!(mcp_tool_prefix("Figma/Dev Mode"), "Figma_Dev_Mode");
+    }
+
     use super::*;
 
     /// Mirrors the kit's real `.claude/settings.json` shape (stdio with

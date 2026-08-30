@@ -28,9 +28,9 @@ tasks/task-*.md  ←── /create-tasks <feature-folder/>
   task-1-x (DB migration)
   task-2-x (API endpoint) → output: API Definition table
       │
-      ▼ [qa-agent] verify CHỈ Backend ──── FAIL ──▶ back về [backend-agent] fix (loop, tối đa 3 lần)
+      ▼ lint + test + coverage của task-2-x xanh
       │
-      ▼ PASS — copy API Definition vào task-3-x.md + trỏ design-analysis.md
+      ▼ copy API Definition vào task-3-x.md + trỏ design-analysis.md
       │
       ┌─────────────────┬──────────────────┐
       │                 │                  │
@@ -44,20 +44,15 @@ tasks/task-*.md  ←── /create-tasks <feature-folder/>
       │
       ▼ Integration check (localhost BE + FE = data thật)
       │
-      ▼ [qa-agent] verify toàn bộ ──── FAIL ──▶ back về [frontend-agent]/[mobile-agent] fix (loop, tối đa 3 lần)
-      │
-      ▼ PASS
-      │
-      ▼ [qc-agent + qc-automation-agent song song]
-  Execution checklist + E2E automation
+      ▼ [qc-automation-agent]
+  E2E automation (Playwright headed) → execution-report.md
       │
       ▼
   Deploy STG → PROD
 ```
 
-> Loop BE↔QA và FE/Mobile↔QA ở trên là logic thật của `.claude/workflows/bmad-build-phase.js`
-> (chạy qua `/create-feature <feature> build`) — không phải bước thủ công, agent tự lặp tới khi
-> QA sạch bug hoặc chạm max iteration (3 lần) thì dừng lại hỏi user.
+> Chuỗi Build → QC Automation ở trên là logic thật của `.claude/workflows/bmad-build-phase.js`
+> (chạy qua `/create-feature <feature> build`) — không phải bước thủ công.
 
 ---
 
@@ -145,8 +140,8 @@ Phải confirm đầy đủ trước khi FE/Mobile bắt đầu implement:
 task-1-x (BE — DB migration)
     ↓
 task-2-x (BE — API endpoint)
-    ↓ [qa-agent verify CHỈ Backend — FAIL thì back về backend-agent fix, loop tối đa 3 lần]
-    ↓ [PASS — output API Definition → copy vào task-3-x trước khi FE bắt đầu]
+    ↓ [lint + test + coverage của task-2-x phải xanh trước khi đi tiếp]
+    ↓ [output API Definition → copy vào task-3-x trước khi FE bắt đầu]
 task-3-x (FE + Mobile, song song):
     Step 1 — Tạo service file  (gọi đúng endpoint trong API Definition)
     Step 2 — Tạo TanStack Query hooks
@@ -155,49 +150,37 @@ task-3-x (FE + Mobile, song song):
 task-4-x (Integration test)
 ```
 
-**Sau khi BE xong task-2-x và QA đã PASS scope Backend:**
+**Sau khi BE xong task-2-x (lint + test + coverage của task đó xanh):**
 1. Copy bảng `## API Definition` từ BE output vào section tương ứng trong `task-3-x.md`
 2. FE/Mobile task có gọi API → không bắt đầu implement trước khi có API Definition. FE task thuần UI (component, layout, không gọi API) không bị ràng buộc này.
 3. Nếu feature có design-analysis.md (output `design-analyst-agent`) → FE/Mobile đọc trước khi implement UI.
 
-> Backend không tự chuyển sang FE/Mobile khi QA còn FAIL — xem loop BE↔QA ở sơ đồ pipeline phía trên.
+> Backend không tự chuyển sang FE/Mobile khi test suite của task-2-x còn đỏ — API Contract chưa ổn định thì FE/Mobile code lại từ đầu.
 
 **Sau mỗi task:** Chạy Memory Update Gate (xem `AGENTS.md`).
 
 ---
 
-## Bước 5 — QA Verification
+## Bước 5 — QC Automation
 
-**Agent:** `qa-agent`
+**Agent:** `qc-automation-agent`
 
-Với mỗi task đã implement:
-1. Chạy test suite (`npm run test`, `flutter test`)
-2. Validate từng AC trong SPEC.md
-3. Verify Non-Regression table trong task file
+Chạy sau khi Build (Bước 4) xong toàn bộ feature: `qc-automation-agent` chạy Playwright
+E2E headed mode nếu có repo E2E testing và website DEV đang chạy.
+
+**Output:** E2E automation report (`execution-report.md`)
 
 **Status workflow:**
 ```
 Dev: Open → In Progress → Request Review
 Leader: In Review → Testing Request
-QA: Testing Request → Resolved (hoặc Reopen nếu fail)
+QC: Testing Request → Resolved (hoặc Reopen nếu fail)
 PM/Leader: Resolved → Closed
 ```
 
-> Trong `bmad-build-phase.js`, "Reopen nếu fail" được tự động hóa: QA FAIL → agent
-> tương ứng (backend-agent hoặc frontend-agent/mobile-agent) fix lại → QA verify lại,
-> lặp tối đa 3 lần trước khi dừng hỏi user.
-
----
-
-## Bước 5b — QC (Checklist + Automation)
-
-**Agent:** `qc-agent` + `qc-automation-agent` (song song)
-
-Chạy sau khi QA đã PASS toàn bộ feature (Bước 5):
-1. `qc-agent` sinh test execution checklist trước release (`/test/generate_test_execution_checklist`)
-2. `qc-automation-agent` chạy Playwright E2E headed mode nếu có repo E2E testing và website DEV đang chạy
-
-**Output:** Execution checklist + E2E automation report
+> On-demand (không thuộc pipeline): `/test/generate_test_execution_checklist` sinh
+> checklist thủ công trước release, `/test/generate_regression_suite` sinh regression
+> suite sau code change — gọi khi cần, không chạy tự động.
 
 ---
 
@@ -214,8 +197,8 @@ Chạy sau khi QA đã PASS toàn bộ feature (Bước 5):
 ## Checklist trước khi đóng feature
 
 - [ ] Tất cả tasks status = Resolved/Closed
-- [ ] QA sign-off
-- [ ] QC execution checklist + automation report đã có (Bước 5b)
+- [ ] Test suite + coverage target của mọi task đều xanh
+- [ ] E2E automation report đã có (Bước 5)
 - [ ] Memory Update Gate đã chạy (api-catalog, erd cập nhật nếu cần)
 - [ ] PR approved và merged
 - [ ] STG deploy pass

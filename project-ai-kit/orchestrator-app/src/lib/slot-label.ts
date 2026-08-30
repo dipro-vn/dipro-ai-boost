@@ -6,8 +6,9 @@ import type { AgentSlot } from "@/lib/tauri-client";
  *
  *   nickname (user-set, per project) → label (kit default) → agentName
  *
- * `agentName` alone is not enough on its own: `qc-design` and `qc-testing`
- * both spawn `qc-agent`, so two nodes used to render identically. */
+ * `agentName` alone is not enough on its own: two slots may spawn the same
+ * agent file (`qc-design` and `qc-testing` both spawned `qc-agent`), and the
+ * board then renders both nodes identically. */
 export function slotDisplayName(agent: AgentSlot, nickname?: string): string {
   const trimmed = nickname?.trim();
   if (trimmed) return trimmed;

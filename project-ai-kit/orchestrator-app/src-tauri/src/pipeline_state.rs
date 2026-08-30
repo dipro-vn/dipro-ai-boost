@@ -440,14 +440,7 @@ mod tests {
                 "slot {done_slot} should be Done for user-login"
             );
         }
-        for idle_slot in [
-            "backend",
-            "frontend",
-            "mobile",
-            "qa",
-            "qc-testing",
-            "qc-automation",
-        ] {
+        for idle_slot in ["backend", "frontend", "mobile", "qc-automation"] {
             assert_eq!(
                 user_login.nodes[idle_slot].status,
                 crate::domain::node_status::NodeStatus::Idle,

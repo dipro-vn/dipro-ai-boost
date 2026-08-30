@@ -22,7 +22,7 @@ Bug report (Backlog issue)
   Non-regression verify
         │
         ▼
-  QA sign-off → Resolved
+  Self-verify + test pass → Resolved
 ```
 
 ---
@@ -143,19 +143,19 @@ Không có gì thay đổi ở trên?
 
 ---
 
-## Bước 8 — QA Verify
+## Bước 8 — Self-verify trước khi báo done
 
-**Agent:** `qa-agent`
+Dev agent tự chạy lại, không bàn giao cho agent khác:
 
 - Chạy lại steps to reproduce → confirm đã fix
-- Chạy test suite → confirm test pass
-- Verify non-regression
+- Chạy test suite → confirm test pass (test ở Bước 5 phải fail-trước, pass-sau)
+- Verify non-regression theo danh sách caller ở Bước 6
 
 **Status update:**
 ```
 Dev: Request Review
 Leader: In Review → Testing Request
-QA: Testing Request → Resolved
+QC: Testing Request → Resolved
 PM/Leader: Resolved → Closed
 ```
 

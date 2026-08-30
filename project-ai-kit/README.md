@@ -1,6 +1,6 @@
 # project-ai-kit — Template BMAD Agent Kit
 
-> Bộ khung multi-agent AI (BA → Tech Lead → Dev → QC → QA → Designer) theo mô hình BMAD. Pull kit này vào 1 dự án mới, bỏ repo source code vào đúng chỗ, chạy 1 lệnh setup, là có ngay bộ agent/command/skill hoạt động cho toàn bộ vòng đời feature (SPEC → DESIGN → task → implement → QA → deploy).
+> Bộ khung multi-agent AI (BA → Tech Lead → Designer → QC → Dev → QC Automation) theo mô hình BMAD. Pull kit này vào 1 dự án mới, bỏ repo source code vào đúng chỗ, chạy 1 lệnh setup, là có ngay bộ agent/command/skill hoạt động cho toàn bộ vòng đời feature (SPEC → DESIGN → task → implement → E2E test → deploy).
 
 ---
 
@@ -169,17 +169,17 @@ mkdocs serve   # mở http://localhost:8000
 /test/analyze-req → /test/plan-tcs → /test/gen-tcs (QC)         ┘  → analysis/plan/test-cases.md per module
 /create-tasks        (Tech Lead)  → tasks/task-*.md
 "Hãy là Backend/Frontend/Mobile Developer, implement task: <task-x-y.md>"
-"Hãy là QA, verify task: <task-x-y.md>"
+"Hãy là QC Automation, test feature: <feature>"                 → Playwright E2E + execution-report.md
 /test/review-tcs (QC, khi có ≥2 QC review chéo)                 → review_report.md
 /test/export-xlsx <test-cases.md> web|app (bàn giao Excel)      → test-cases.xlsx
-/test/generate_test_execution_checklist (QC)                    → trước khi deploy
+/test/generate_test_execution_checklist (QC, on-demand)         → checklist trước khi deploy
 ```
 
 
 **Shortcut chạy cả pipeline 1 lệnh:**
 ```
 /create-feature <feature> [mô tả]     # Planning: BA → Design → Tasks, dừng ở gate để review
-/create-feature <feature> build       # Build: Dev → QA → QC, chạy sau khi đã duyệt Planning
+/create-feature <feature> build       # Build: Dev → QC Automation, chạy sau khi đã duyệt Planning
 ```
 
 Dùng khi muốn chạy nhanh cả pipeline mà không gõ từng lệnh.
@@ -300,54 +300,29 @@ flowchart TB
 
     %% ===== STAGE 6 =====
 
-    subgraph S6["⑥ VERIFY (QA per task)"]
+    subgraph S6["⑥ TESTING"]
 
-        QA["🟪 QA Agent"]
+        AUTO["🟪 QC Automation
+        Playwright E2E"]
 
-        REPORT["📊 QA Report
-        PASS / FAIL"]
+        E2E["📊 E2E Report"]
 
-        CODE --> QA
+        CODE --> AUTO
 
-        TC -.-> QA
+        TC -.-> AUTO
 
-        QA --> REPORT
+        AUTO --> E2E
 
     end
 
     %% ===== STAGE 7 =====
 
-    subgraph S7["⑦ TESTING (song song)"]
-
-        MANUAL["🟪 QC Manual — lần 2
-        execution checklist + gen-bug-report"]
-
-        AUTO["🟪 QC Automation
-        Playwright E2E"]
-
-        BUG["📊 Bug Reports"]
-
-        E2E["📊 E2E Report"]
-
-        REPORT --> MANUAL
-        REPORT --> AUTO
-
-        TC -.-> MANUAL
-
-        MANUAL --> BUG
-        AUTO --> E2E
-
-    end
-
-    %% ===== STAGE 8 =====
-
-    subgraph S8["⑧ DEPLOY"]
+    subgraph S7["⑦ DEPLOY"]
 
         DEPLOY["🚀 STG → PROD"]
 
     end
 
-    BUG --> DEPLOY
     E2E --> DEPLOY
 
 
@@ -362,10 +337,10 @@ flowchart TB
 
     class BA,TLD,TASK ba
     class BE,FE,MOB dev
-    class QCPIPE,QA,MANUAL,AUTO qa
+    class QCPIPE,AUTO qa
     class DES design
 
-    class SPEC,DESIGN,FIGMA,TC,TASKDOC,CODE,REPORT,BUG,E2E artifact
+    class SPEC,DESIGN,FIGMA,TC,TASKDOC,CODE,E2E artifact
 
     class TRIGGER,LOCK gate
 ```

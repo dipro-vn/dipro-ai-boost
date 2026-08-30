@@ -117,7 +117,7 @@ Files còn thiếu coverage:
 → User chọn hướng xử lý trước khi tiếp tục
 ```
 
-❌ Không tự ý hạ target · Không fake coverage · Không bỏ qua và tiếp tục handover QA
+❌ Không tự ý hạ target · Không fake coverage · Không bỏ qua và tiếp tục sang task kế
 
 ## Self-review Checklist
 
@@ -176,11 +176,10 @@ API Contract (handoff to FE/Mobile):
   Error format: { statusCode, message, error }
 
 Bước tiếp theo (tham khảo — KHÔNG tự hỏi lại user để xác nhận bước này):
-→ Handoff: QA verify task này: <đường dẫn task-x-y.md>
-→ Sau QA PASS: copy bảng API Contract vào FE/Mobile task-3-X trước khi FE bắt đầu code
+→ Copy bảng API Contract vào FE/Mobile task-3-X trước khi FE bắt đầu code
 ```
 
 ⚠️ Sau khi in Output ở trên, **DỪNG LẠI**. Không hỏi thêm câu hỏi xác nhận kiểu
-"bạn có muốn tôi tiếp tục sang QA không?" — đó là quyết định của user/orchestrator,
+"bạn có muốn tôi tiếp tục sang task kế không?" — đó là quyết định của user/orchestrator,
 không phải của backend-agent. Chỉ hỏi lại nếu thực sự thiếu thông tin để hoàn
 thành task hiện tại (xem `RELIABILITY.md` §5 Escalation Path).

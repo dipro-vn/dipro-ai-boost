@@ -22,16 +22,10 @@
         "mobile": {
           "status": "idle"
         },
-        "qa": {
-          "status": "idle"
-        },
         "qc-automation": {
           "status": "idle"
         },
         "qc-design": {
-          "status": "idle"
-        },
-        "qc-testing": {
           "status": "idle"
         },
         "techlead-design": {
@@ -90,16 +84,10 @@
         "mobile": {
           "status": "idle"
         },
-        "qa": {
-          "status": "idle"
-        },
         "qc-automation": {
           "status": "idle"
         },
         "qc-design": {
-          "status": "idle"
-        },
-        "qc-testing": {
           "status": "idle"
         },
         "techlead-design": {
@@ -167,9 +155,6 @@
         "mobile": {
           "status": "idle"
         },
-        "qa": {
-          "status": "idle"
-        },
         "qc-automation": {
           "status": "idle"
         },
@@ -179,9 +164,6 @@
           "costUsd": 0.4758758,
           "startedAt": "2026-08-19T02:30:07.155890+00:00",
           "endedAt": "2026-08-19T02:39:53.752888+00:00"
-        },
-        "qc-testing": {
-          "status": "idle"
         },
         "techlead-design": {
           "status": "done",

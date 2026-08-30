@@ -45,6 +45,8 @@ pub fn run() {
             commands::agentrun::kill_run,
             commands::agentrun::start_run,
             commands::agentrun::send_clarification_answer,
+            commands::agentrun::get_design_ref,
+            commands::agentrun::get_figma_mcp_readiness,
             commands::agentrun::get_run_summary,
             commands::agentrun::read_run_log,
             commands::agentrun::approve_trigger_gate,

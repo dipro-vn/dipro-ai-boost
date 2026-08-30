@@ -55,11 +55,13 @@ _(Điền qua `/init-kit` — feature nào đụng ≥ 2 repo. Ví dụ: Payment
 
 **Agent vs Command:** Agent (`.claude/agents/*.md`) = canonical workflow (single source of truth). Command (`.claude/commands/*.md`) = thin entry point 5–8 dòng, trỏ về agent. Sửa quy trình → chỉ sửa file agent. User trigger 2 cách: slash command (`/create-spec login`) hoặc natural language ("hãy là BA, làm SPEC cho login") — cùng load agent.
 
-**Bước 2 song song 3 agent** — 2a Tech Lead Design · 2b QC (pipeline 3 bước) · 2c Designer. **QC chạy 3 lần** — lần 1 sau SPEC (sinh TC), lần 2 sau dev (execute + bug report), lần 3 song song 6a (Playwright E2E qua `qc-automation-agent`).
+**Bước 2 song song 3 agent** — 2a Tech Lead Design · 2b QC (pipeline 3 bước) · 2c Designer. **QC chạy 1 lần trong pipeline** — sau SPEC, sinh bộ test case (`qc-agent`). Bước test sau Build do `qc-automation-agent` đảm nhiệm (Playwright E2E).
 
-**QC vs QA vs QC-Automation:** qc-agent = manual TC (artifact `.md`); qa-agent = post-dev verify unit test + coverage (QA Report/task); qc-automation-agent = E2E browser (`.spec.ts` + execution report). Bổ sung nhau, không thay thế.
+**QC vs QC-Automation:** qc-agent = manual TC (artifact `.md`, bước 2b); qc-automation-agent = E2E browser (`.spec.ts` + execution report, bước 5). Bổ sung nhau, không thay thế.
 
-> **12 sub-agents đầy đủ** (vai trò + slash command mapping) → `.claude/commands/README.md` (command → agent) hoặc `ai-agents-workflow.md` §1 (phase-gate table). Skills → `.claude/skills/README.md`. Context/Workflows → `.claude/context/README.md`.
+> `qa-agent` và bước "QC execution checklist" **không còn nằm trong pipeline** — file agent vẫn giữ trong `.claude/agents/`, chỉ chạy thủ công khi user gọi trực tiếp.
+
+> **Danh sách sub-agents đầy đủ** (vai trò + slash command mapping) → `.claude/commands/README.md` (command → agent) hoặc `ai-agents-workflow.md` §1 (phase-gate table). Skills → `.claude/skills/README.md`. Context/Workflows → `.claude/context/README.md`.
 
 </agent_architecture>
 
@@ -76,12 +78,11 @@ _(Điền qua `/init-kit` — feature nào đụng ≥ 2 repo. Ví dụ: Payment
 | 2 Design (parallel) | `techlead-design-agent` · `qc-agent` · `designer-agent` | `/create-design` · `/test/analyze-req`→`plan-tcs`→`gen-tcs` · `/create-ui-design` | `DESIGN.md` · TC files · Figma URL |
 | 3 Planning | `techlead-tasks-agent` | `/create-tasks` | `tasks/task-*.md` |
 | 4 Build | `backend-agent` → `frontend-agent` ‖ `mobile-agent` | BE Phase 1→2 (migration + API + Contract) → copy Contract → FE/Mobile Phase 3 (song song, 3 sub-steps) → Phase 4 integration | Code + API Contract table |
-| 5 Verify | `qa-agent` | `"Hãy là QA, verify task: <path>"` | QA Report |
-| 6 Test (parallel) | `qc-agent` · `qc-automation-agent` | `/test/generate_test_execution_checklist` (+ `/test/generate_regression_suite`) · `"Hãy là QC Automation…"` | Execution checklist · Playwright `.spec.ts` |
+| 5 Test | `qc-automation-agent` | `"Hãy là QC Automation…"` | Playwright `.spec.ts` + execution report |
 
 **Contract Lock** trước Phase 3 (Build FE/Mobile): REST + WebSocket + Push — confirm bởi BE+FE+Mobile+PM+QC.
 
-Chi tiết đầy đủ (per-step context, handover, on-demand commands `/test/review-tcs` · `/test/export-xlsx` · `/test/gen-bug-report`) → `.claude/workflows/new-feature.md`. Bảng agent audit + flowchart per agent → `ai-agents-workflow.md`. Danh sách command đầy đủ → `.claude/commands/README.md`.
+Chi tiết đầy đủ (per-step context, handover, on-demand commands `/test/review-tcs` · `/test/export-xlsx` · `/test/gen-bug-report` · `/test/generate_test_execution_checklist` · `/test/generate_regression_suite`) → `.claude/workflows/new-feature.md`. Bảng agent audit + flowchart per agent → `ai-agents-workflow.md`. Danh sách command đầy đủ → `.claude/commands/README.md`.
 
 </bmad_workflow>
 
@@ -91,6 +92,6 @@ Chi tiết đầy đủ (per-step context, handover, on-demand commands `/test/r
 
 ## Memory Update Gate — sau mỗi Dev task
 
-> Dev agent BẮT BUỘC cập nhật overview docs của repo (`<DOCS_ROOT>/<layer>/<repo>/overview/`) khi task thay đổi endpoint/entity/pattern/structure. Bảng mapping chi tiết per-layer → section "Memory Update Gate" trong `.claude/agents/{backend,frontend,mobile}-agent.md`. Sau Dev xong → handover `qa-agent`; PASS → task kế, FAIL → dev fix loop.
+> Dev agent BẮT BUỘC cập nhật overview docs của repo (`<DOCS_ROOT>/<layer>/<repo>/overview/`) khi task thay đổi endpoint/entity/pattern/structure. Bảng mapping chi tiết per-layer → section "Memory Update Gate" trong `.claude/agents/{backend,frontend,mobile}-agent.md`. Sau Dev xong (test + coverage của chính task đó phải xanh) → chuyển task kế.
 
 </memory_update_gate>

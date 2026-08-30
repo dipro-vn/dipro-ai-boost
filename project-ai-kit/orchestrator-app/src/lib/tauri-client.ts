@@ -165,6 +165,18 @@ export interface RunHistoryRecord {
   attempt: number;
 }
 
+/** Mirrors `commands::agentrun::FigmaMcpReadiness` — which Figma MCP this
+ * project resolves to, and which agents cannot call it because their
+ * `tools:` allowlist doesn't name it. `resolvedServer: null` means no Figma
+ * server appears in the project's own config files, which is NOT the same
+ * as "no Figma" (the `claude.ai Figma` connector lives in Claude's
+ * user-level config). */
+export interface FigmaMcpReadiness {
+  resolvedServer: string | null;
+  toolPrefix: string | null;
+  agentsMissingTools: string[];
+}
+
 /** Mirrors `store::mcp_config::McpServer`. */
 export interface McpServer {
   name: string;
@@ -291,11 +303,20 @@ export interface FeatureState {
   updatedAt: string;
 }
 
+/** Mirrors `domain::design_ref::DesignRef` — the Figma selection URL the
+ * user gave `design-analyst` for one feature, kept so stage ⑤ can reach the
+ * same design. One current value, no history: a newer URL replaces it. */
+export interface DesignRef {
+  url: string;
+  updatedAt: string;
+  sourceSlot: string;
+}
+
 export interface AgentSlot {
   id: string;
   agentName: string;
   /** Display name for this slot — separate from `agentName` because two
-   * slots can share one agent file (`qc-design`/`qc-testing` → `qc-agent`).
+   * slots may share one agent file, which would render both nodes alike.
    * Absent on a `pipeline.json` written before labels existed; read it
    * through `slotDisplayName` in `@/lib/slot-label`, never directly. */
   label?: string | null;
@@ -724,6 +745,14 @@ export const commands = {
    * (today: the Figma selection URL for `design-analyst`). */
   runSlot: (feature: string, slot: string, extraInput?: string) =>
     invoke<void>("run_slot", { feature, slot, extraInput: extraInput ?? null }),
+  /** The Figma selection URL stored for this feature (from whatever the
+   * user last gave `design-analyst`), so the panel can show it back instead
+   * of an empty box. `null` when nothing has been given yet. */
+  getDesignRef: (feature: string) => invoke<DesignRef | null>("get_design_ref", { feature }),
+  /** Which Figma MCP the project resolves to, and whether the agents that
+   * read Figma actually declare its tools. Cheap — config files only, no
+   * health check. */
+  getFigmaMcpReadiness: () => invoke<FigmaMcpReadiness>("get_figma_mcp_readiness"),
 
   /** What deleting would destroy — shown before the user confirms. */
   previewDeleteFeature: (name: string) =>

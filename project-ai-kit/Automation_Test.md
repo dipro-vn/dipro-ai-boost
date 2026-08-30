@@ -2,13 +2,14 @@
 
 > Hướng dẫn **setup 1 lần** + **chạy hàng ngày** cho E2E automation test của dự án. Agent thực thi việc này là `qc-automation-agent` (xem `.claude/agents/qc-automation-agent.md` để biết chi tiết quy trình 7 bước AI tự làm) — file này là hướng dẫn cho **người** setup môi trường và trigger đúng cách.
 
-## Phân biệt 3 loại test trong kit
+## Phân biệt 2 loại test trong pipeline
 
 | Agent | Output | Khi nào chạy | Ai/cái gì thực thi |
 |---|---|---|---|
-| `qc-agent` | Manual test case `.md` | Trước/trong khi test | Người đọc, thực hiện tay |
-| `qa-agent` | QA Report (unit test + coverage) | Sau khi dev xong 1 task | `npm run test` / `flutter test` — không cần browser |
+| `qc-agent` | Manual test case `.md` | Bước 2b — sau SPEC | Người đọc, thực hiện tay |
 | `qc-automation-agent` (file này) | `.spec.ts` + `execution-report.md` | Sau khi **website DEV đang chạy** + có SPEC.md | Playwright, browser thật (headed mode) |
+
+> Unit test / coverage là trách nhiệm của chính Dev agent trong mỗi task (xem "Unit Tests (BẮT BUỘC)" trong task file) — không còn bước QA riêng trong pipeline.
 
 ---
 

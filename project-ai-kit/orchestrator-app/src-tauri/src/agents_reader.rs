@@ -8,6 +8,7 @@
 //! observed byte-for-byte — only the kit's own template
 //! (`project-ai-kit/AGENTS.md`) has. See `docs/orchestrator/ASSUMPTIONS-GAPS.md`.
 
+use std::collections::BTreeSet;
 use std::path::Path;
 
 use crate::domain::project::{EcosystemRepo, ProjectInitStatus};
@@ -35,6 +36,80 @@ pub fn discover_agents(agents_root: &Path) -> Option<Vec<String>> {
         .collect();
     names.sort();
     Some(names)
+}
+
+/// The MCP servers an agent file's `tools:` allowlist actually names, as
+/// `mcp__<prefix>__…` prefixes (`figma-bridge`, `claude_ai_Figma`, …).
+///
+/// This matters because `tools:` is an inventory, not a hint: a tool absent
+/// from it cannot be called even when its MCP server is connected and
+/// healthy (the kit says so itself, in `design-analyst-agent.md`'s "LƯU Ý
+/// KHI THÊM MCP FIGMA MỚI" note). So a project configured with a Figma
+/// server whose name no agent file spells out gets a spawned agent whose
+/// every Figma call fails, with nothing to explain why. Comparing this
+/// against `commands::agentrun::resolved_figma_server` turns that into a
+/// named reason before the agent is ever started.
+///
+/// Deliberately a line scan, not a YAML parse — the crate has no YAML
+/// dependency and the shape needed is one flat list of scalars. Comment
+/// lines are skipped: the kit's agent files carry more comment than list
+/// inside `tools:`.
+///
+/// `None` when there is no `tools:` key to read — a missing file, no
+/// frontmatter, or an agent that simply doesn't restrict its tools. That is
+/// NOT the same as an empty set: an agent with no `tools:` allowlist is
+/// unrestricted and can call any connected server, so callers must not
+/// treat it as "declares nothing" and block it.
+pub fn declared_mcp_servers(agents_root: &Path, agent_name: &str) -> Option<BTreeSet<String>> {
+    let path = agents_root
+        .join(".claude")
+        .join("agents")
+        .join(format!("{agent_name}.md"));
+    let raw = std::fs::read_to_string(&path).ok()?;
+    mcp_servers_in_tools_block(&raw)
+}
+
+/// The `declared_mcp_servers` body, split out so it can be tested against
+/// the kit's real agent files via `include_str!` rather than a fixture that
+/// might drift from them.
+fn mcp_servers_in_tools_block(raw: &str) -> Option<BTreeSet<String>> {
+    let mut servers = BTreeSet::new();
+    let mut in_frontmatter = false;
+    let mut in_tools = false;
+    let mut saw_tools_key = false;
+
+    for line in raw.lines() {
+        let trimmed = line.trim();
+        if trimmed == "---" {
+            // Opening fence, then the closing one — nothing past the
+            // frontmatter can declare tools.
+            if in_frontmatter {
+                break;
+            }
+            in_frontmatter = true;
+            continue;
+        }
+        if !in_frontmatter || trimmed.is_empty() || trimmed.starts_with('#') {
+            continue;
+        }
+
+        if let Some(item) = trimmed.strip_prefix("- ") {
+            if in_tools {
+                if let Some(rest) = item.trim().strip_prefix("mcp__") {
+                    if let Some((server, _tool)) = rest.split_once("__") {
+                        servers.insert(server.to_string());
+                    }
+                }
+            }
+            continue;
+        }
+        // Any other non-indented key ends the `tools:` list (`skills:`,
+        // `model:`, …).
+        in_tools = trimmed == "tools:";
+        saw_tools_key |= in_tools;
+    }
+
+    saw_tools_key.then_some(servers)
 }
 
 pub fn has_claude_agents_dir(agents_root: &Path) -> bool {
@@ -648,6 +723,74 @@ Mỗi repo có 1 **Epic code** ngắn tham chiếu xuyên suốt SPEC/DESIGN/tas
 
     /// Reproduces the real flow: app scaffolds the kit (with the project
     /// name rendered in), a human runs `/init-kit`, then the app re-checks.
+    /// Parsed against the kit's REAL agent files, not a fixture: the whole
+    /// point is to know what those files actually declare, and a fixture
+    /// would drift from them the first time someone adds a tool.
+    #[test]
+    fn declared_mcp_servers_reads_the_kits_own_agent_files() {
+        let design_analyst = mcp_servers_in_tools_block(include_str!(
+            "../../../.claude/agents/design-analyst-agent.md"
+        ))
+        .expect("the kit's agents all declare a tools: allowlist");
+        assert!(design_analyst.contains("figma-bridge"));
+        assert!(design_analyst.contains("claude_ai_Figma"));
+
+        // The two build agents must be able to reach Figma too — stage ⑤
+        // re-reads the design the analyst wrote about.
+        for (agent, raw) in [
+            (
+                "frontend-agent",
+                include_str!("../../../.claude/agents/frontend-agent.md"),
+            ),
+            (
+                "mobile-agent",
+                include_str!("../../../.claude/agents/mobile-agent.md"),
+            ),
+        ] {
+            let declared = mcp_servers_in_tools_block(raw).expect("{agent} declares tools:");
+            assert!(
+                declared.contains("figma-bridge") && declared.contains("claude_ai_Figma"),
+                "{agent} must declare both Figma servers the kit ships"
+            );
+            assert!(declared.contains("tilth"), "{agent} keeps its tilth tools");
+        }
+
+        // The case the spawn check exists for: an agent that declares SOME
+        // Figma tools but not the other server's. `qa-agent` has the
+        // connector and not the bridge, so "declares MCP tools" can never be
+        // read as "can reach any Figma server".
+        let qa = mcp_servers_in_tools_block(include_str!("../../../.claude/agents/qa-agent.md"))
+            .expect("qa-agent declares tools:");
+        assert!(qa.contains("claude_ai_Figma"));
+        assert!(!qa.contains("figma-bridge"));
+    }
+
+    #[test]
+    fn mcp_servers_in_tools_block_ignores_comments_and_stops_at_the_next_key() {
+        let raw = "---\nname: x\ntools:\n  # - mcp__commented__out\n  - Read\n  - mcp__figma-bridge__get_colors\nskills:\n  - mcp__not-a-tool__nope\n---\n\n- mcp__body__ignored\n";
+        let servers = mcp_servers_in_tools_block(raw).expect("has a tools: key");
+
+        assert_eq!(servers.len(), 1);
+        assert!(servers.contains("figma-bridge"));
+    }
+
+    /// "No `tools:` key" and "a `tools:` key naming no MCP server" must stay
+    /// distinguishable: the first means the agent is unrestricted and can
+    /// call any connected server, the second means it genuinely cannot.
+    /// Collapsing them would block agents that were never restricted.
+    #[test]
+    fn a_missing_tools_key_is_none_while_an_mcp_less_list_is_an_empty_set() {
+        assert_eq!(mcp_servers_in_tools_block("no frontmatter here"), None);
+        assert_eq!(
+            mcp_servers_in_tools_block("---\nname: x\nmodel: y\n---\n"),
+            None
+        );
+        assert_eq!(
+            mcp_servers_in_tools_block("---\nname: x\ntools:\n  - Read\n  - Bash\n---\n"),
+            Some(BTreeSet::new())
+        );
+    }
+
     /// The checked-in `example-project` is a REAL inited project. If the
     /// app cannot see it as ready, no user's project can be either.
     #[test]

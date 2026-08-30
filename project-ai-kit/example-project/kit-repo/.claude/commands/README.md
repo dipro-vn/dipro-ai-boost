@@ -7,7 +7,7 @@
 | Command | Chức năng | Agent |
 |---|---|---|
 | `/init-kit` | Setup kit cho dự án mới (chạy 1 lần) | `init-agent.md` |
-| `/create-feature <feature> [mô tả]` \| `/create-feature <feature> build` | **Standalone** — chạy toàn bộ BMAD pipeline: Planning (BA→Design→Tasks) dừng ở gate, sau đó `build` chạy Dev→QA→QC | `bmad-plan-phase` / `bmad-build-phase` workflow |
+| `/create-feature <feature> [mô tả]` \| `/create-feature <feature> build` | **Standalone** — chạy toàn bộ BMAD pipeline: Planning (BA→Design→Tasks) dừng ở gate, sau đó `build` chạy Dev→QC Automation | `bmad-plan-phase` / `bmad-build-phase` workflow |
 | `/create-spec <feature>` | Tạo SPEC.md | `ba-agent.md` |
 | `/create-design <SPEC.md>` | Tạo DESIGN.md per repo | `techlead-design-agent.md` |
 | `/create-ui-design <SPEC.md>` | Tạo Figma screens + URL vào SPEC.md ## Screens | `designer-agent.md` |
@@ -46,8 +46,8 @@
 |---|---|---|
 | `/test/gen-automation <feature> [module]` | Sinh Playwright script từ `test-cases.md` — Playwright MCP recon DOM thật, auto-heal khi FAIL | `automation_engineer` |
 | `/test/gen-bug-report` | Chuẩn hóa bug report cho Backlog (severity/priority/repro) | `bug_reporter` |
-| `/test/generate_regression_suite` | Chọn TC chạy lại sau code change | `rbt_manual_testing` |
-| `/test/generate_test_execution_checklist` | Checklist ưu tiên trước release | `rbt_manual_testing` |
+| `/test/generate_regression_suite` | Chọn TC chạy lại sau code change — **on-demand**, không thuộc phase-gate | `rbt_manual_testing` |
+| `/test/generate_test_execution_checklist` | Checklist ưu tiên trước release — **on-demand**, không thuộc phase-gate | `rbt_manual_testing` |
 
 > **thin entry** = command chỉ load agent, không chứa workflow. **standalone** = command có workflow riêng.
 >

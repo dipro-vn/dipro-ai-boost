@@ -250,7 +250,7 @@ figma/
 ├── mobile-agent.md            ← Mobile Developer (repo vai trò `mobile`)
 ├── designer-agent.md          ← UI Designer: Figma frames + URL vào SPEC.md
 ├── qc-agent.md                ← QC Manual Tester: test cases + bug report
-├── qa-agent.md                ← QA Engineer: verify AC + non-regression
+├── qa-agent.md                ← QA Engineer: verify AC + non-regression (ngoài pipeline, gọi thủ công)
 └── qc-automation-agent.md     ← QC Automation: Playwright E2E
 ```
 
@@ -434,9 +434,7 @@ Phase 3 [song song]:
     Step 2  tạo Riverpod provider
     Step 3  wire screen + integration check localhost
 ↓
-Phase 4: qa-agent  →  QA Report (unit test + AC validation + non-regression)
-↓
-qc-agent  →  execute manual TC + bug report
+Phase 4: qc-automation-agent  →  Playwright E2E + execution-report.md
 ↓
 Deploy STG → PROD
 ```

@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "stages": [
     {
       "id": "S1_input",
@@ -93,28 +93,9 @@
       "dependsOn": "S4_contract_lock"
     },
     {
-      "id": "S6_verify",
-      "label": "⑥ Verify",
+      "id": "S6_testing",
+      "label": "⑥ Testing",
       "agents": [
-        {
-          "id": "qa",
-          "agentName": "qa-agent",
-          "label": "QA · Verify",
-          "afterSlots": []
-        }
-      ],
-      "dependsOn": "S5_build"
-    },
-    {
-      "id": "S7_testing",
-      "label": "⑦ Testing",
-      "agents": [
-        {
-          "id": "qc-testing",
-          "agentName": "qc-agent",
-          "label": "QC · Execution",
-          "afterSlots": []
-        },
         {
           "id": "qc-automation",
           "agentName": "qc-automation-agent",
@@ -122,13 +103,13 @@
           "afterSlots": []
         }
       ],
-      "dependsOn": "S6_verify"
+      "dependsOn": "S5_build"
     },
     {
-      "id": "S8_deploy",
-      "label": "⑧ Deploy",
+      "id": "S7_deploy",
+      "label": "⑦ Deploy",
       "agents": [],
-      "dependsOn": "S7_testing"
+      "dependsOn": "S6_testing"
     }
   ]
 }

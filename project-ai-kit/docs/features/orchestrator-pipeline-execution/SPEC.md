@@ -63,7 +63,7 @@ Pipeline này **không** bắt đầu từ trang giấy trắng. Cả hai đầu
 16. Cả 3 nhánh xong → app spawn `techlead-tasks-agent` (stage ③). Agent này dùng `design-analysis.md` làm đầu vào cùng với `DESIGN.md`.
 17. Stage ④ Contract Lock (E4) chặn lại. Sau khi lock, app spawn `backend-agent`.
 18. `backend-agent` xong → app spawn `frontend-agent` và `mobile-agent` **song song**, mỗi agent chạy trong **git worktree riêng** của repo tương ứng.
-19. Stage ⑥ `qa-agent`, stage ⑦ `qc-agent` ∥ `qc-automation-agent` song song.
+19. Stage ⑥ `qc-automation-agent`.
 20. Pipeline hoàn tất → Pipeline Board hiện toàn bộ 8 stage `done`, tổng cost hiển thị ở footer.
 
 ### Định nghĩa pipeline
@@ -77,9 +77,8 @@ Pipeline khai báo dạng DAG trong `.orchestrator/pipeline.json`. v1 dùng temp
 | ③ Planning | `techlead-tasks-agent` | Tuần tự |
 | ④ Contract Lock | — (gate, thuộc E4) | Chặn |
 | ⑤ Build | `backend-agent` → (`frontend-agent` ∥ `mobile-agent`) → integration | BE xong mới tới FE/Mobile |
-| ⑥ Verify | `qa-agent` | Tuần tự, per task |
-| ⑦ Testing | `qc-agent` ∥ `qc-automation-agent` | Song song, sau khi QA PASS |
-| ⑧ Deploy | — | Chỉ hiển thị checklist |
+| ⑥ Testing | `qc-automation-agent` | Tuần tự, sau khi Build xong |
+| ⑦ Deploy | — | Chỉ hiển thị checklist |
 
 `pipeline.json` khai báo **tường minh** agent nào thuộc stage nào — app không suy diễn từ tên file agent. Lý do: kit đang có 3 hệ đánh số stage khác nhau, mapping không 1-1 (xem `ASSUMPTIONS-GAPS.md` B8).
 

@@ -1,6 +1,6 @@
 # AI Agents Workflow — Đọc gì · Thực thi gì · Output gì
 
-> **Mục đích:** tài liệu tra cứu nhanh **cho user/PM (human)** audit từng agent làm gì trong pipeline BMAD. Nội dung tổng hợp từ 12 file trong `.claude/agents/`. Khi sửa workflow của agent nào → **sửa file agent tương ứng, không sửa file này** (sync lại sau).
+> **Mục đích:** tài liệu tra cứu nhanh **cho user/PM (human)** audit từng agent làm gì trong pipeline BMAD. Nội dung tổng hợp từ các file trong `.claude/agents/`. Khi sửa workflow của agent nào → **sửa file agent tương ứng, không sửa file này** (sync lại sau).
 >
 > **Không phải canonical** — canonical là `.claude/agents/<agent>.md`. File này chỉ là bản tổng hợp.
 >
@@ -23,12 +23,11 @@
 | 4c | Build | `frontend-agent` | Implement task Phase 3 | 4d |
 | 4d | Build | `mobile-agent` | Implement task Phase 3 | 4c |
 | 4e | Integration | BE + FE + Mobile | task-4-x integration test | — |
-| 5 | Verify | `qa-agent` | `"Hãy là QA, verify task: <path>"` | — |
-| 6a | Test | `qc-agent` (execution lần 2) | `/test/generate_test_execution_checklist` | 6c |
-| 6b | Test | `qc-agent` (regression optional) | `/test/generate_regression_suite` | — |
-| 6c | Test | `qc-automation-agent` | `"Hãy là QC Automation, test feature: ..."` | 6a |
+| 5 | Test | `qc-automation-agent` | `"Hãy là QC Automation, test feature: ..."` | — |
 
-> **On-demand (không thuộc phase-gate):** `/test/review-tcs` (deep review khi ≥2 QC) · `/test/export-xlsx <path> web\|app` (Excel bàn giao) · `/test/gen-bug-report` (bug template).
+> **On-demand (không thuộc phase-gate):** `/test/review-tcs` (deep review khi ≥2 QC) · `/test/export-xlsx <path> web\|app` (Excel bàn giao) · `/test/gen-bug-report` (bug template) · `/test/generate_test_execution_checklist` (checklist trước release) · `/test/generate_regression_suite` (regression suite).
+>
+> **Đã bỏ khỏi phase-gate:** `qa-agent` (bước Verify) và `qc-agent` execution checklist. File agent vẫn nằm trong `.claude/agents/`, chỉ chạy khi user gọi trực tiếp.
 
 **Handover chain:** natural language (copy-paste vào turn kế tiếp) hoặc slash command — cả hai cùng load file agent.
 
@@ -39,7 +38,7 @@
 | Rule | Áp dụng cho |
 |---|---|
 | Bước 1 = đọc context + skill trước khi hành động | Mọi agent |
-| Chỉ tạo/sửa `.md` (trừ Dev) | BA, Tech Lead, QC, QA, Designer, QC-Auto |
+| Chỉ tạo/sửa `.md` (trừ Dev) | BA, Tech Lead, QC, Designer, QC-Auto |
 | `tilth_deps` blast radius BẮT BUỘC trước khi đổi public interface | Tech Lead Design, Tech Lead Tasks, Backend, Frontend, Mobile |
 | Không tự đoán khi thiếu context — phải hỏi user | Mọi agent |
 | Handover message = natural language + slash command song song | Mọi agent |
@@ -119,13 +118,11 @@ flowchart TD
 
 ### 3.3 `qc-agent` — QC Manual Tester
 
-> **Chạy 3 lần trong pipeline:** lần 1 = sinh TC sau SPEC (2b — pipeline 3 bước) · lần 2 = execution checklist trước release (6a) · lần 3 song song với 6c (QC Automation).
+> **Chạy 1 lần trong pipeline:** sinh TC sau SPEC (2b — pipeline 3 bước). Các command còn lại (`generate_test_execution_checklist`, `generate_regression_suite`…) là on-demand, không thuộc phase-gate.
 
 ```mermaid
 flowchart TD
-    A[QC được gọi] --> B{Lần thứ mấy?}
-
-    B -- "Lần 1: sau SPEC (2b)" --> C[Đọc SPEC.md +<br/>skill rbt_manual_testing]
+    A["QC được gọi (2b — sau SPEC)"] --> C[Đọc SPEC.md +<br/>skill rbt_manual_testing]
     C --> C1["/test/analyze-req<br/>Q&amp;A + AC + Screen Inventory"]
     C1 --> C2{User confirm?}
     C2 -- Chưa --> C1
@@ -135,19 +132,15 @@ flowchart TD
     C4 -- OK --> C5["/test/gen-tcs<br/>TC chi tiết + Visual states +<br/>Traceability ID → AC-XX"]
     C5 --> C6["Output: test-cases/&lt;module&gt;/<br/>{analysis, plan-tcs, test-cases}.md"]
 
-    B -- "Lần 2: pre-release (6a)" --> D["/test/generate_test_execution_checklist"]
-    D --> D1[Output: checklist_release.md]
-
-    B -- "Lần 3: song song 6c" --> E[Cross-check với E2E<br/>của qc-automation-agent]
-
     C6 --> F{On-demand?}
     F -- ≥2 QC review chéo --> F1["/test/review-tcs (8 tiêu chí)"]
     F -- Bàn giao Excel --> F2["/test/export-xlsx &lt;path&gt; web|app"]
-    F -- Sau code change --> F3["/test/generate_regression_suite"]
-    F -- Có bug --> F4["/test/gen-bug-report"]
+    F -- Trước release --> F3["/test/generate_test_execution_checklist"]
+    F -- Sau code change --> F4["/test/generate_regression_suite"]
+    F -- Có bug --> F5["/test/gen-bug-report"]
 ```
 
-**❌ Không:** sinh TC khi chưa đọc SPEC · test data placeholder · gộp validation nhiều field · auto-submit bug lên Backlog · lẫn vai trò với `qa-agent` (không chạy test suite) · gọi thẳng `/gen-tcs` khi chưa có `plan-tcs.md` · skip user confirm giữa các bước pipeline.
+**❌ Không:** sinh TC khi chưa đọc SPEC · test data placeholder · gộp validation nhiều field · auto-submit bug lên Backlog · chạy test suite (không phải việc của QC) · gọi thẳng `/gen-tcs` khi chưa có `plan-tcs.md` · skip user confirm giữa các bước pipeline.
 
 ---
 
@@ -215,10 +208,7 @@ flowchart TD
     H -- Không --> F
     H -- OK --> I[Self-review checklist:<br/>snake_case column ·<br/>migration up+down ·<br/>không N+1 · Redis TTL ·<br/>không hard-code secret]
     I --> J["Output: Code +<br/>API Contract table (handoff) +<br/>Memory Update Gate:<br/>api-catalog.md / erd.md / patterns.md"]
-    J --> K[Bàn giao QA verify]
-    K --> L{QA PASS?}
-    L -- FAIL --> F
-    L -- PASS --> M[Copy API Contract<br/>vào task-3-x FE/Mobile]
+    J --> M[Copy API Contract<br/>vào task-3-x FE/Mobile]
     M --> Z[STOP — dừng session,<br/>không tự hỏi thêm xác nhận<br/>trừ khi thiếu thông tin thật]
 ```
 
@@ -244,7 +234,7 @@ flowchart TD
     K -- Không --> G
     K -- OK --> L[Integration check localhost<br/>BE + FE]
     L --> M[Memory Update Gate:<br/>patterns.md per repo]
-    M --> N[Bàn giao QA verify]
+    M --> N[STOP — báo Output,<br/>chuyển task kế]
 ```
 
 **❌ Không:** hard-code URL (dùng `import.meta.env.VITE_API_URL`) · tự đoán endpoint · mock data trong production code · lẫn domain giữa 2 repo frontend · `useHistory` (dùng `useNavigate`) · Redux cho server state.
@@ -266,36 +256,14 @@ flowchart TD
     H -- Không --> F
     H -- OK --> I["Self-review:<br/>chỉ Riverpod (không Provider/BLoC/GetX) ·<br/>không Dio trực tiếp (chỉ qua Retrofit) ·<br/>socket off() trong dispose ·<br/>flutter_screenutil .w/.h/.sp"]
     I --> J[Memory Update Gate:<br/>structure.md · patterns.md]
-    J --> K[Bàn giao QA verify]
+    J --> K[STOP — báo Output,<br/>chuyển task kế]
 ```
 
 **❌ Không:** Provider/BLoC/GetX · hard-code pixel/hex · sửa `.g.dart`/`.freezed.dart` thủ công · đảo version convention (DEV `0.0.x` · STG `0.1.x` · PROD `1.0.x`) · `Navigator.push` trực tiếp.
 
 ---
 
-### 3.9 `qa-agent` — QA Engineer
-
-```mermaid
-flowchart TD
-    A["Hãy là QA verify task: &lt;path&gt;"] --> B["Đọc task-x-y.md (coverage target + Non-Regression) +<br/>SPEC AC + ## Screens +<br/>skill requirements_analyzer"]
-    B --> C{Verify UI?}
-    C -- Có --> D[get_screenshot + get_design_context<br/>đối chiếu code thực]
-    C -- Không --> E["Chạy per repo:<br/>NestJS: npm run test:cov<br/>React: type-check + build + test<br/>Flutter: flutter analyze + test"]
-    D --> E
-    E --> F[Validate từng AC:<br/>happy + edge + boundary<br/>đối chiếu AC ID cụ thể từ SPEC]
-    F --> G[Check Non-Regression table<br/>từ task-x-y.md]
-    G --> H["Viết QA Report:<br/>Test Results (unit/coverage/lint/build) ·<br/>AC table (pass/fail per AC + lý do) ·<br/>Non-Regression table · Kết luận"]
-    H --> I{Kết luận?}
-    I -- FAIL --> J[Issue list file:line +<br/>đề xuất fix →<br/>quay lại Dev]
-    J --> E
-    I -- PASS --> K[Status Testing Request →<br/>QC execution checklist 6a]
-```
-
-**❌ Không:** sửa source code · sinh manual TC (qc-agent việc) · so với assumption thay vì SPEC · thay đổi test cases đã approve.
-
----
-
-### 3.10 `qc-automation-agent` — QC Automation Tester
+### 3.9 `qc-automation-agent` — QC Automation Tester
 
 ```mermaid
 flowchart TD
@@ -328,13 +296,12 @@ flowchart TD
 | 3 | Task có Unit Test không? | Mỗi task-x-y.md phải có section "Unit Tests (BẮT BUỘC)" với coverage target |
 | 4 | FE có tự đoán endpoint không? | task-3-x.md ## API Contract phải copy từ BE task-2-X, không tự viết |
 | 5 | Designer có vẽ wireframe hay không? | Verify: mỗi frame Figma phải dùng component instance, không rectangle + text |
-| 6 | QA có so với SPEC.md AC hay assumption? | QA Report phải trích AC ID cụ thể từ SPEC, không mô tả chung |
-| 7 | QC Automation có headed mode không? | `execution-report.md` phải có screenshot; command có `--headed` |
-| 8 | Memory Update Gate có bị skip không? | Sau mỗi dev task, output phải liệt kê `api-catalog.md` / `erd.md` / `patterns.md` — updated hay skipped |
-| 9 | Handover message có natural language không? | Output cuối mỗi agent phải có `"Hãy là <role>, ..."` để user copy-paste |
-| 10 | Agent có commit tự động không? | KHÔNG được — chỉ commit khi user yêu cầu rõ ràng |
-| 11 | QC có chạy `/plan-tcs` trước `/gen-tcs` không? | `/gen-tcs` sẽ tự dừng nếu module chưa có `plan-tcs.md` — verify không skip bằng cách gọi thẳng `/gen-tcs` |
-| 12 | QC có handle TBD ACs đúng không? | `/gen-tcs` phải hỏi user chọn A/B/C khi phát hiện TBD AC, không tự đoán |
+| 6 | QC Automation có headed mode không? | `execution-report.md` phải có screenshot; command có `--headed` |
+| 7 | Memory Update Gate có bị skip không? | Sau mỗi dev task, output phải liệt kê `api-catalog.md` / `erd.md` / `patterns.md` — updated hay skipped |
+| 8 | Handover message có natural language không? | Output cuối mỗi agent phải có `"Hãy là <role>, ..."` để user copy-paste |
+| 9 | Agent có commit tự động không? | KHÔNG được — chỉ commit khi user yêu cầu rõ ràng |
+| 10 | QC có chạy `/plan-tcs` trước `/gen-tcs` không? | `/gen-tcs` sẽ tự dừng nếu module chưa có `plan-tcs.md` — verify không skip bằng cách gọi thẳng `/gen-tcs` |
+| 11 | QC có handle TBD ACs đúng không? | `/gen-tcs` phải hỏi user chọn A/B/C khi phát hiện TBD AC, không tự đoán |
 
 ---
 
@@ -346,7 +313,6 @@ flowchart TD
 | Tech Lead design conflict với code hiện có | Không chạy `tilth_deps` | Rule cứng trong POLICIES.md — vi phạm phải rollback |
 | FE code với endpoint không tồn tại | Không đọc BE task-2-X ## API Contract | Frontend Agent Bước 2 BẮT BUỘC đọc BE task |
 | QC Automation sinh selector CSS class | Không đọc Figma labels | qc-automation-agent Bước 3 đọc Figma trước khi viết spec |
-| QA PASS nhưng vẫn miss AC | So với assumption thay vì SPEC | qa-agent Bước 3 đối chiếu AC ID từ SPEC.md |
 | Task quá lớn, dev không xong trong session | techlead-tasks-agent ước lượng sai | Enforce 4-8h/task, chia nhỏ nếu > 8h |
 | QC gọi thẳng `/gen-tcs` khi chưa có `plan-tcs.md` | Skip pipeline steps | Command tự dừng + hướng dẫn quay lại `/plan-tcs` |
 | Test data placeholder ("email hợp lệ") lọt vào TC | `/gen-tcs` self-check yếu | Self-check tự grep placeholder, tự fix trước khi lưu |

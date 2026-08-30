@@ -12,7 +12,6 @@ import {
   Palette,
   Rocket,
   ShieldAlert,
-  ShieldCheck,
   Trash2,
   type LucideIcon,
 } from "lucide-react";
@@ -66,9 +65,8 @@ const STAGE_ICON: Record<string, LucideIcon> = {
   S2_design: Palette,
   S3_planning: ListChecks,
   S5_build: Code,
-  S6_verify: ShieldCheck,
-  S7_testing: FlaskConical,
-  S8_deploy: Rocket,
+  S6_testing: FlaskConical,
+  S7_deploy: Rocket,
 };
 
 function stageIcon(stage: StageDef): LucideIcon | null {
@@ -89,7 +87,7 @@ const PHASE_META: Record<string, PhaseMeta> = {
   design: { id: "design", label: "Design", accent: "border-primary/40 text-primary" },
   planning: { id: "planning", label: "Planning & Contract", accent: "border-warning/50 text-warning" },
   build: { id: "build", label: "Build", accent: "border-success/50 text-success" },
-  verify: { id: "verify", label: "Verify & Test", accent: "border-info/40 text-info" },
+  verify: { id: "verify", label: "Test", accent: "border-info/40 text-info" },
   release: { id: "release", label: "Release", accent: "border-border text-muted-foreground" },
 };
 
@@ -98,7 +96,7 @@ function phaseForStage(stage: StageDef): PhaseMeta {
   if (stage.id === "S2_design") return PHASE_META.design;
   if (stage.id === "S3_planning" || stage.id === CONTRACT_LOCK_GATE_STAGE_ID) return PHASE_META.planning;
   if (stage.id === "S5_build") return PHASE_META.build;
-  if (stage.id === "S6_verify" || stage.id === "S7_testing") return PHASE_META.verify;
+  if (stage.id === "S6_testing") return PHASE_META.verify;
   return PHASE_META.release;
 }
 
@@ -159,7 +157,7 @@ const TreeNode = forwardRef<HTMLButtonElement, TreeNodeProps>(function TreeNode(
 interface GateNodeProps {
   selected: boolean;
   onClick: () => void;
-  /** `null` for a gate with no approval concept (S8_deploy). */
+  /** `null` for a gate with no approval concept (S7_deploy). */
   gateState: GateState | undefined;
   contractLockState: ContractLockState | undefined;
   stageId: string;
@@ -308,7 +306,7 @@ export function edgeState(
       }
       return "idle";
     }
-    // S8_deploy and any future gate without a panel — no approval state
+    // S7_deploy and any future gate without a panel — no approval state
     // to read, stay neutral.
     return "idle";
   }

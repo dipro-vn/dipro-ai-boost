@@ -497,10 +497,10 @@ mod tests {
     }
 
     /// The knock-on effect of leaving workless build slots `Idle`: stage ⑥
-    /// needs every stage ⑤ slot `Done` or `Skipped`, so QA sat blocked on a
-    /// backend and a mobile that were never going to run.
+    /// needs every stage ⑤ slot `Done` or `Skipped`, so Testing sat blocked
+    /// on a backend and a mobile that were never going to run.
     #[test]
-    fn qa_opens_once_the_only_build_slot_with_work_is_done() {
+    fn testing_opens_once_the_only_build_slot_with_work_is_done() {
         let st = statuses(&[
             (slot::BACKEND, NodeStatus::Skipped),
             (slot::FRONTEND, NodeStatus::Done),
@@ -515,7 +515,7 @@ mod tests {
                 &all_agents(),
                 &full_ecosystem(),
                 &[slot::BACKEND.to_string(), slot::MOBILE.to_string()],
-                slot::QA,
+                slot::QC_AUTOMATION,
             ),
             SlotReadiness::Ready
         );
@@ -639,7 +639,7 @@ mod tests {
             slot::BA,
             slot::TECHLEAD_DESIGN,
             slot::TECHLEAD_TASKS,
-            slot::QA,
+            slot::QC_AUTOMATION,
         ] {
             assert!(matches!(
                 resolve_repo_readiness(&[], non_repo_slot),

@@ -29,6 +29,7 @@ import {
   type AgentConfig,
   type AgentModel,
   type AgentPermissionProfile,
+  type FigmaMcpReadiness,
   type McpServer,
   type ProjectConfig,
 } from "@/lib/tauri-client";
@@ -58,16 +59,22 @@ export function SettingsScreen() {
   const [tab, setTab] = useState<Tab>("Agents");
   const [config, setConfig] = useState<ProjectConfig | null>(null);
   const [mcpServers, setMcpServers] = useState<McpServer[] | null>(null);
+  const [figmaReadiness, setFigmaReadiness] = useState<FigmaMcpReadiness | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([commands.getConfig(), commands.getMcpServers()])
-      .then(([cfg, servers]) => {
+    Promise.all([
+      commands.getConfig(),
+      commands.getMcpServers(),
+      commands.getFigmaMcpReadiness(),
+    ])
+      .then(([cfg, servers, readiness]) => {
         if (cancelled) return;
         setConfig(cfg);
         setMcpServers(servers);
+        setFigmaReadiness(readiness);
       })
       .catch((err) => {
         if (!cancelled) setLoadError(extractErrorMessage(err));
@@ -81,7 +88,14 @@ export function SettingsScreen() {
   function persist(next: ProjectConfig) {
     setConfig(next);
     setSaveError(null);
-    commands.setConfig(next).catch((err) => setSaveError(extractErrorMessage(err)));
+    commands
+      .setConfig(next)
+      // Choosing a different Figma server changes which agents can reach
+      // it, so the warning below has to be recomputed — it is derived from
+      // the choice that was just saved.
+      .then(() => commands.getFigmaMcpReadiness())
+      .then(setFigmaReadiness)
+      .catch((err) => setSaveError(extractErrorMessage(err)));
   }
 
   function updateAgent(name: string, patch: Partial<AgentConfig>) {
@@ -333,6 +347,44 @@ export function SettingsScreen() {
                   bên phải.
                 </p>
               )}
+              {/* Shown even with a single candidate, when no radio appears:
+                  which server the agents get told to call is not otherwise
+                  visible anywhere. */}
+              {figmaReadiness?.resolvedServer && (
+                <p className="text-xs text-muted-foreground">
+                  Stage Design và Build sẽ dùng MCP{" "}
+                  <code className="font-mono">{figmaReadiness.resolvedServer}</code>.
+                </p>
+              )}
+              {figmaReadiness?.resolvedServer &&
+                figmaReadiness.agentsMissingTools.length > 0 && (
+                  <Alert variant="destructive">
+                    <AlertTitle>
+                      Agent chưa khai tool của MCP{" "}
+                      <code className="font-mono">{figmaReadiness.resolvedServer}</code>
+                    </AlertTitle>
+                    <AlertDescription>
+                      <p>
+                        <code className="font-mono">tools:</code> trong file agent là allowlist —
+                        tool không có trong đó thì agent KHÔNG gọi được, dù MCP đã kết nối. Các
+                        agent sau chưa khai{" "}
+                        <code className="font-mono">mcp__{figmaReadiness.toolPrefix}__*</code>:
+                      </p>
+                      <ul className="mt-1 list-disc pl-4 font-mono text-xs">
+                        {figmaReadiness.agentsMissingTools.map((agent) => (
+                          <li key={agent}>.claude/agents/{agent}.md</li>
+                        ))}
+                      </ul>
+                      <p className="mt-1">
+                        Thêm các tool <strong>ĐỌC</strong> của server này vào{" "}
+                        <code className="font-mono">tools:</code> của từng file, hoặc chọn MCP
+                        Figma khác ở trên. Design Analyst sẽ bị chặn (không spawn) cho tới khi
+                        xử lý; Frontend/Mobile vẫn chạy nhưng chỉ dựa vào{" "}
+                        <code className="font-mono">design-analysis.md</code>.
+                      </p>
+                    </AlertDescription>
+                  </Alert>
+                )}
             </>
           )}
         </div>

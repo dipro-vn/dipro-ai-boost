@@ -1,6 +1,7 @@
 pub mod artifact;
 pub mod config_file;
 pub mod contract_lock;
+pub mod design_ref;
 pub mod explorer;
 pub mod gate_state;
 pub mod import;
