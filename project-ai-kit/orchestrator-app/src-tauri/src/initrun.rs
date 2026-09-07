@@ -8,6 +8,7 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 use portable_pty::{native_pty_system, Child, ChildKiller, CommandBuilder, MasterPty, PtySize};
 use tauri::{AppHandle, Emitter, Manager, State};
@@ -65,6 +66,11 @@ pub struct InitKitSession {
     child: Mutex<Box<dyn Child + Send + Sync>>,
     killer: Mutex<Box<dyn ChildKiller + Send + Sync>>,
     stopped: AtomicBool,
+    /// When the PTY last produced output, and whether it ever has. Together
+    /// they say "Claude has drawn a screen and stopped drawing" — the only
+    /// moment it is safe to type into the TUI. See `send_command_when_ready`.
+    saw_output: AtomicBool,
+    last_output_at: Mutex<Instant>,
 }
 
 struct InitStartingGuard<'a>(&'a AtomicBool);
@@ -132,6 +138,8 @@ fn start_reader(app: &AppHandle, session: Arc<InitKitSession>, mut reader: Box<d
             match reader.read(&mut buffer) {
                 Ok(0) => break,
                 Ok(count) => {
+                    session.saw_output.store(true, Ordering::SeqCst);
+                    *session.last_output_at.lock().unwrap() = Instant::now();
                     let _ = app.emit(
                         EVENT_OUTPUT,
                         InitKitOutputPayload {
@@ -169,6 +177,100 @@ fn start_reader(app: &AppHandle, session: Arc<InitKitSession>, mut reader: Box<d
         {
             current.take();
         }
+    });
+}
+
+/// Whether Claude has already been told this folder is trusted.
+///
+/// Claude records the answer to its "Quick safety check" prompt as
+/// `projects.<cwd>.hasTrustDialogAccepted` in `~/.claude.json`, and writes it
+/// the moment the user answers. Reading it is how we know the prompt is no
+/// longer sitting in front of the TUI. Anything we cannot read or parse counts
+/// as not trusted: waiting costs the user a hint after the deadline, whereas
+/// guessing "trusted" types into the prompt and kills the session.
+fn folder_trusted(agents_root: &Path) -> bool {
+    let Some(home) = cli_path::home_dir() else {
+        return false;
+    };
+    let Ok(raw) = std::fs::read_to_string(home.join(".claude.json")) else {
+        return false;
+    };
+    let Ok(config) = serde_json::from_str::<serde_json::Value>(&raw) else {
+        return false;
+    };
+    let Some(projects) = config.get("projects").and_then(|value| value.as_object()) else {
+        return false;
+    };
+    let canonical = std::fs::canonicalize(agents_root).ok();
+    projects.iter().any(|(key, entry)| {
+        let key_path = Path::new(key);
+        let same_folder = key_path == agents_root
+            || canonical.as_deref() == Some(key_path)
+            || (canonical.is_some() && std::fs::canonicalize(key_path).ok() == canonical);
+        same_folder
+            && entry
+                .get("hasTrustDialogAccepted")
+                .and_then(serde_json::Value::as_bool)
+                .unwrap_or(false)
+    })
+}
+
+/// Types `/init-kit` into the TUI once Claude is actually ready to receive it.
+///
+/// Writing it straight after spawn is what broke this flow: in a folder Claude
+/// has not been trusted with — which a freshly created project always is — the
+/// first screen is the trust prompt, whose highlighted default is "No, exit".
+/// The `\r` ending the command confirms that default, so Claude exits before
+/// the user can type anything and every later keystroke fails with "phiên
+/// init-kit không còn hoạt động".
+///
+/// So wait for two things: the folder is trusted (the prompt has been answered,
+/// or never appeared), and the PTY has drawn something and then gone quiet for
+/// `SETTLE` (the TUI has finished painting its input box). If neither happens
+/// before `DEADLINE`, say so in the terminal and let the user type the command
+/// themselves rather than firing it blindly.
+fn send_command_when_ready(
+    app: &AppHandle,
+    session: Arc<InitKitSession>,
+    agents_root: PathBuf,
+    command: String,
+) {
+    const DEADLINE: Duration = Duration::from_secs(120);
+    const SETTLE: Duration = Duration::from_millis(1200);
+    const POLL: Duration = Duration::from_millis(200);
+
+    let app = app.clone();
+    std::thread::spawn(move || {
+        let started = Instant::now();
+        loop {
+            if session.stopped.load(Ordering::SeqCst) {
+                return;
+            }
+            let settled = session.saw_output.load(Ordering::SeqCst)
+                && session.last_output_at.lock().unwrap().elapsed() >= SETTLE;
+            if settled && folder_trusted(&agents_root) {
+                break;
+            }
+            if started.elapsed() >= DEADLINE {
+                let _ = app.emit(
+                    EVENT_OUTPUT,
+                    InitKitOutputPayload {
+                        session_id: session.id.clone(),
+                        data: "\r\n\x1b[33m[app] Chưa gửi được /init-kit tự động \
+                               (Claude chưa sẵn sàng hoặc thư mục chưa được trust). \
+                               Bạn hãy tự gõ lệnh /init-kit trong terminal này.\x1b[0m\r\n"
+                            .to_string(),
+                    },
+                );
+                return;
+            }
+            std::thread::sleep(POLL);
+        }
+
+        let mut writer = session.writer.lock().unwrap();
+        let _ = writer
+            .write_all(command.as_bytes())
+            .and_then(|_| writer.flush());
     });
 }
 
@@ -279,6 +381,8 @@ pub fn start_init_kit(
         child: Mutex::new(child),
         killer: Mutex::new(killer),
         stopped: AtomicBool::new(false),
+        saw_output: AtomicBool::new(false),
+        last_output_at: Mutex::new(Instant::now()),
     });
 
     let admitted = {
@@ -297,20 +401,12 @@ pub fn start_init_kit(
         });
     }
     start_reader(&app, session.clone(), reader);
-
-    let command = format!("/init-kit Tên dự án: {}\r", project_name);
-    let write_result = {
-        let mut writer = session.writer.lock().unwrap();
-        writer
-            .write_all(command.as_bytes())
-            .and_then(|_| writer.flush())
-    };
-    if let Err(err) = write_result {
-        stop_session(&state.init_session);
-        return Err(AppError::Invalid {
-            message: format!("Không gửi được lệnh /init-kit vào terminal: {err}"),
-        });
-    }
+    send_command_when_ready(
+        &app,
+        session.clone(),
+        agents_root,
+        format!("/init-kit Tên dự án: {project_name}\r"),
+    );
 
     Ok(InitKitSessionInfo {
         session_id: session.id.clone(),

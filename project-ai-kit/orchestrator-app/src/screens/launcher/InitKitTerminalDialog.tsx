@@ -71,8 +71,17 @@ export function InitKitTerminalDialog({
       fitAddon.fit();
       void commands.resizeInitKit(sessionId, terminal.cols, terminal.rows);
     };
+    // Một phím không tới được PTY nghĩa là phiên đã chết (Claude thoát, hoặc
+    // session bị thay) — im lặng ở đây thì terminal trông y hệt lúc bình thường
+    // và người dùng chỉ thấy "gõ không ăn", nên báo thẳng vào terminal.
+    let inputFailed = false;
     const dataSubscription = terminal.onData((data) => {
-      void commands.sendInitKitInput(sessionId, data);
+      commands.sendInitKitInput(sessionId, data).catch((err) => {
+        if (inputFailed) return;
+        inputFailed = true;
+        const message = err instanceof Error ? err.message : String(err);
+        terminal.write(`\r\n\x1b[31m[app] Không gửi được phím: ${message}\x1b[0m\r\n`);
+      });
     });
     resizeObserverRef.current = new ResizeObserver(fitAndResize);
     resizeObserverRef.current.observe(terminalContainerRef.current);
