@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use crate::agentrun::cli_path;
 use crate::agentrun::process_registry::{ProcessRegistry, RunKey};
@@ -64,6 +64,13 @@ pub struct AppState {
     /// `open_project`/`open_existing_project` calls could both pass the
     /// "nothing open yet" check before either sets `current_project`.
     pub opening_claim: AtomicBool,
+    /// The interactive Claude session used by the in-app `/init-kit` flow.
+    /// It is separate from pipeline agent runs because it must work before
+    /// project initialization is complete.
+    pub init_session: Mutex<Option<Arc<crate::initrun::InitKitSession>>>,
+    /// Prevents two concurrent init commands from both passing the session
+    /// uniqueness check while either one is still opening its PTY.
+    pub init_starting: AtomicBool,
 }
 
 impl AppState {
@@ -98,15 +105,20 @@ impl AppState {
     /// spawn can land in `agent_runs` after this method returns.
     pub fn close(&self, force: bool) -> AppResult<()> {
         let running = self.agent_runs.keys();
-        if !running.is_empty() && !force {
-            let names: Vec<String> = running
+        let init_running = self.init_session.lock().unwrap().is_some()
+            || self.init_starting.load(Ordering::SeqCst);
+        if (!running.is_empty() || init_running) && !force {
+            let mut names: Vec<String> = running
                 .iter()
                 .map(|key| format!("{}/{}", key.feature, key.slot))
                 .collect();
+            if init_running {
+                names.push("init-kit".to_string());
+            }
             return Err(AppError::Invalid {
                 message: format!(
-                    "Đang có {} agent chạy ({}) — dừng (Kill) trước, hoặc xác nhận đóng để kill hết",
-                    running.len(),
+                    "Đang có {} tiến trình chạy ({}) — dừng (Kill) trước, hoặc xác nhận đóng để kill hết",
+                    names.len(),
                     names.join(", ")
                 ),
             });
@@ -115,6 +127,7 @@ impl AppState {
         {
             *self.spawn_admission.lock().unwrap() += 1;
         }
+        crate::initrun::stop_session(&self.init_session);
         self.agent_runs.kill_all();
 
         // Same order `stop_watching` uses: bump the generation first so an

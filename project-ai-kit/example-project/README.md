@@ -1,6 +1,6 @@
-# example-project — fixture để test Agent Pipeline Orchestrator
+# example-project — fixture để test Dipro AI Boost
 
-**Đây là dữ liệu tổng hợp, KHÔNG phải dự án thật** — dựng ra chỉ để mở thử trong `orchestrator-app` (Project Launcher → Pipeline Board).
+**Đây là dữ liệu tổng hợp, KHÔNG phải dự án thật** — dựng ra chỉ để mở thử trong Dipro AI Boost (Project Launcher → Pipeline Board).
 
 ## Cấu trúc
 

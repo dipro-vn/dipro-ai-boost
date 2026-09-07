@@ -1,6 +1,6 @@
 # SPEC: Orchestrator — Pipeline Execution
 
-> EPIC **E2** của sản phẩm Agent Pipeline Orchestrator. Bối cảnh sản phẩm, data model `.orchestrator/`, non-functional dùng chung → `docs/orchestrator/OVERVIEW.md`. Giả định chưa giải quyết → `docs/orchestrator/ASSUMPTIONS-GAPS.md`.
+> EPIC **E2** của sản phẩm Dipro AI Boost. Bối cảnh sản phẩm, data model `.orchestrator/`, non-functional dùng chung → `docs/orchestrator/OVERVIEW.md`. Giả định chưa giải quyết → `docs/orchestrator/ASSUMPTIONS-GAPS.md`.
 >
 > Nguồn: `SPEC-pipeline-orchestrator.md` v0.1 §F2.1–F2.4.
 

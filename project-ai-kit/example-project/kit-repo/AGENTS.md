@@ -1,6 +1,6 @@
 # example-project — Project Rules for AI Agents
 
-> Đây là dữ liệu **tổng hợp, dùng để test** Agent Pipeline Orchestrator (MVP1) — không phải dữ liệu dự án thật.
+> Đây là dữ liệu **tổng hợp, dùng để test** Dipro AI Boost (MVP1) — không phải dữ liệu dự án thật.
 
 <ecosystem>
 
@@ -12,7 +12,7 @@
 | example-web | example-web | frontend | React |
 | example-mobile | example-mobile | mobile | Flutter |
 
-- **Domain:** Dự án demo cho việc test Agent Pipeline Orchestrator.
+- **Domain:** Dự án demo cho việc test Dipro AI Boost.
 - **`<DOCS_ROOT>`:** `docs/`
 
 </ecosystem>

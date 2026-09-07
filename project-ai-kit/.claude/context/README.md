@@ -20,4 +20,4 @@
 |---|---|---|
 | `new-feature.md` | BMAD pipeline end-to-end | Human reference — đọc khi cần tra cứu thứ tự pipeline |
 | `bug-fix.md` | Quy trình điều tra và fix bug | `backend-agent` / `frontend-agent` / `mobile-agent` |
-| `bmad-plan-phase.js` / `bmad-build-phase.js` | Orchestrator scripts | `/create-feature` command |
+| `bmad-plan-phase.js` / `bmad-build-phase.js` | BMAD workflow scripts | `/create-feature` command |

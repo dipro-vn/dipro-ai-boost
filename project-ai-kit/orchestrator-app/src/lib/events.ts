@@ -35,6 +35,17 @@ export interface RunFinishedPayload {
   summary: RunSummary;
 }
 
+export interface InitKitOutputPayload {
+  sessionId: string;
+  data: string;
+}
+
+export interface InitKitFinishedPayload {
+  sessionId: string;
+  exitCode: number | null;
+  stopped: boolean;
+}
+
 export function onPipelineStateChanged(
   handler: (payload: StateChangedPayload) => void,
 ): Promise<UnlistenFn> {
@@ -63,6 +74,22 @@ export function onAgentRunFinished(
   handler: (payload: RunFinishedPayload) => void,
 ): Promise<UnlistenFn> {
   return listen<RunFinishedPayload>(EVENT_RUN_FINISHED, (event) =>
+    handler(event.payload),
+  );
+}
+
+export function onInitKitOutput(
+  handler: (payload: InitKitOutputPayload) => void,
+): Promise<UnlistenFn> {
+  return listen<InitKitOutputPayload>("init-kit://output", (event) =>
+    handler(event.payload),
+  );
+}
+
+export function onInitKitFinished(
+  handler: (payload: InitKitFinishedPayload) => void,
+): Promise<UnlistenFn> {
+  return listen<InitKitFinishedPayload>("init-kit://finished", (event) =>
     handler(event.payload),
   );
 }

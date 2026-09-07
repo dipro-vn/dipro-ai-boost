@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "figma-bridge": {
+      "command": "npx",
+      "args": ["-y", "mcp-figma-bridge"],
+      "env": {
+        "BRIDGE_PORT": "3765",
+        "BRIDGE_HOST": "127.0.0.1"
+      }
+    },
+    "codegraph": {
+      "type": "stdio",
+      "command": "codegraph",
+      "args": ["serve", "--mcp"]
+    }
+  }
+}

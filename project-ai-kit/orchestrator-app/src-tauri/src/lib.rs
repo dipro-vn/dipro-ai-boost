@@ -9,10 +9,12 @@ mod fs_detect;
 mod fswatch;
 mod gitutil;
 mod inference;
+mod initrun;
 mod pipeline_state;
 mod store;
 
 use app_state::AppState;
+use tauri::{Manager, WindowEvent};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -21,14 +23,22 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .manage(AppState::default())
+        .setup(|app| {
+            if let Err(error) = store::app_settings::migrate(app.handle()) {
+                eprintln!("Dipro AI Boost settings migration skipped: {error}");
+            }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             commands::theme::get_theme,
             commands::theme::set_theme,
             commands::project::detect_project_paths,
+            commands::project::create_project,
             commands::project::open_project,
             commands::project::open_existing_project,
             commands::project::scaffold_kit,
             commands::project::refresh_project,
+            commands::project::has_open_project,
             commands::project::list_recent_projects,
             commands::project::remove_recent_project,
             commands::pipeline::list_features,
@@ -62,6 +72,11 @@ pub fn run() {
             commands::agentrun::resolve_orphan,
             commands::project::list_running_slots,
             commands::project::close_project,
+            initrun::init_kit_status,
+            initrun::start_init_kit,
+            initrun::send_init_kit_input,
+            initrun::resize_init_kit,
+            initrun::stop_init_kit,
             commands::explorer::get_explorer_roots,
             commands::explorer::list_directory,
             commands::explorer::create_explorer_file,
@@ -87,6 +102,11 @@ pub fn run() {
             commands::reports::export_cost_csv,
             commands::reports::clear_run_logs,
         ])
+        .on_window_event(|window, event| {
+            if matches!(event, WindowEvent::CloseRequested { .. }) {
+                let _ = window.state::<AppState>().close(true);
+            }
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

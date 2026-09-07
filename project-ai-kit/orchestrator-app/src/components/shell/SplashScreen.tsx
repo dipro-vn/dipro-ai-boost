@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Workflow } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const VISIBLE_MS = 1400; // thời gian hiện rõ trước khi bắt đầu tắt
@@ -38,11 +37,15 @@ export function SplashScreen({ onDone }: SplashScreenProps) {
           : "animate-in fade-in-0 zoom-in-95 duration-500",
       )}
     >
-      <span className="flex size-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
-        <Workflow className="size-7" aria-hidden="true" />
+      <span className="flex max-w-[78vw] items-center rounded-2xl bg-[#013a63] px-6 py-5">
+        <img
+          src="/logo_dipro.png"
+          alt="Dipro AI Boost"
+          className="h-auto w-72 max-w-full"
+        />
       </span>
       <p className="text-lg font-semibold text-foreground">
-        Chào mừng đến với Agent Pipeline Orchestrator
+        Chào mừng đến với Dipro AI Boost
       </p>
     </div>
   );

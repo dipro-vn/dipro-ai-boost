@@ -233,6 +233,105 @@
   }
 }
 
+/* Decorative launcher planet. It stays behind the content and uses the same
+   deep blue palette as the Dipro logo, so the launcher has atmosphere without
+   competing with the project forms. */
+@keyframes launcher-planet-float {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-8deg); }
+  50% { transform: translate3d(0, -12px, 0) rotate(-4deg); }
+}
+
+@keyframes launcher-orbit-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.space-planet {
+  position: absolute;
+  top: 18%;
+  left: 18%;
+  width: 58%;
+  aspect-ratio: 1;
+  border-radius: 9999px;
+  background:
+    radial-gradient(circle at 32% 28%, rgba(186, 230, 253, 0.9) 0 2%, transparent 3%),
+    radial-gradient(circle at 68% 58%, rgba(125, 211, 252, 0.28) 0 7%, transparent 8%),
+    radial-gradient(circle at 42% 72%, rgba(186, 230, 253, 0.22) 0 10%, transparent 11%),
+    radial-gradient(circle at 35% 30%, #4db6e6 0, #0b6e99 38%, #013a63 72%, #021f36 100%);
+  box-shadow:
+    inset -28px -22px 42px rgba(0, 16, 32, 0.55),
+    inset 14px 12px 24px rgba(186, 230, 253, 0.28),
+    0 0 0 1px rgba(125, 211, 252, 0.28),
+    0 0 70px rgba(14, 116, 144, 0.32);
+  animation: launcher-planet-float 8s ease-in-out infinite;
+}
+
+.space-planet::before {
+  position: absolute;
+  inset: -5%;
+  border: 1px solid rgba(186, 230, 253, 0.38);
+  border-radius: inherit;
+  content: "";
+}
+
+.space-orbit {
+  position: absolute;
+  left: -8%;
+  width: 116%;
+  height: 42%;
+  border: 1px solid rgba(1, 58, 99, 0.28);
+  border-radius: 50%;
+  transform: rotate(-24deg);
+  animation: launcher-orbit-spin 28s linear infinite;
+}
+
+.dark .space-orbit {
+  border-color: rgba(186, 230, 253, 0.32);
+}
+
+.space-orbit-one {
+  top: 38%;
+}
+
+.space-orbit-two {
+  top: 43%;
+  transform: rotate(34deg);
+  animation-direction: reverse;
+  animation-duration: 36s;
+}
+
+.space-orbit::after {
+  position: absolute;
+  top: 50%;
+  right: 4%;
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: #7dd3fc;
+  box-shadow: 0 0 14px rgba(125, 211, 252, 0.9);
+  content: "";
+}
+
+.space-moon {
+  position: absolute;
+  top: 14%;
+  right: 9%;
+  width: 5%;
+  aspect-ratio: 1;
+  border-radius: 9999px;
+  background: #bae6fd;
+  box-shadow: 0 0 18px rgba(186, 230, 253, 0.85);
+  animation: launcher-planet-float 6s ease-in-out -2s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .space-planet,
+  .space-orbit,
+  .space-moon {
+    animation: none;
+  }
+}
+
 /* Skeleton shimmer for loading placeholders, replacing plain
    "Đang tải..." text with a structural placeholder. */
 @keyframes skeleton-shimmer {

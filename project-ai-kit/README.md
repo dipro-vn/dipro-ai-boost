@@ -108,7 +108,10 @@ Mở Claude Code tại thư mục chứa `AGENTS.md` và `.claude/` (`agentsRoot
 
 (hoặc nói tự nhiên: "hãy chạy init kit cho dự án này")
 
-`/init-kit` là slash command của Claude Code, không phải command chạy trực tiếp trong terminal. Nếu project được tạo bằng Agent Pipeline Orchestrator, app đã tạo scaffold và hiển thị sẵn handoff:
+`/init-kit` là slash command của Claude Code, không phải command shell. Với
+project được tạo bằng Dipro AI Boost, app tự mở terminal Claude
+trong modal và gửi lệnh này; người dùng trả lời các câu hỏi ngay trong app.
+Project có sẵn vẫn có thể dùng handoff:
 
 ```bash
 cd "<agentsRoot>"
@@ -137,7 +140,7 @@ Sau khi Claude Code mở, nhập `/init-kit` hoặc dùng tên project làm ng�
 
 Mở `AGENTS.md` → xác nhận bảng Ecosystem/Actors đã điền đúng đường dẫn repo thật (Bước 3). Sai chỗ nào thì sửa tay hoặc chạy lại `/init-kit` để bổ sung.
 
-Nếu dùng Orchestrator, quay lại app và bấm **Đã chạy init, kiểm tra lại**. App chỉ cho chạy agent sau khi nhận diện `AGENTS.md` đã được init.
+Nếu dùng Dipro AI Boost, quay lại app và bấm **Đã chạy init, kiểm tra lại**. App chỉ cho chạy agent sau khi nhận diện `AGENTS.md` đã được init.
 
 ### Bước 5b — (optional) Setup MkDocs site để duyệt docs
 

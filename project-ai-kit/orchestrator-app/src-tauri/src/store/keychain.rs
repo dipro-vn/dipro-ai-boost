@@ -10,12 +10,21 @@ use crate::error::{AppError, AppResult};
 /// Service the removed Backlog integration saved its API key under. Kept
 /// solely so `store::legacy_cleanup` can reclaim those orphaned entries.
 const LEGACY_BACKLOG_SERVICE: &str = "vn.dipro.orchestrator-app.backlog";
-const CLAUDE_SERVICE: &str = "vn.dipro.orchestrator-app.claude";
+const CLAUDE_SERVICE: &str = "vn.dipro.dipro-ai-boost.claude";
+const LEGACY_CLAUDE_SERVICE: &str = "vn.dipro.orchestrator-app.claude";
 
-fn claude_entry(account: &str) -> AppResult<keyring::Entry> {
-    keyring::Entry::new(CLAUDE_SERVICE, account).map_err(|err| AppError::Invalid {
+fn service_entry(service: &str, account: &str) -> AppResult<keyring::Entry> {
+    keyring::Entry::new(service, account).map_err(|err| AppError::Invalid {
         message: format!("Không mở được OS keychain cho Claude: {err}"),
     })
+}
+
+fn claude_entry(account: &str) -> AppResult<keyring::Entry> {
+    service_entry(CLAUDE_SERVICE, account)
+}
+
+fn legacy_claude_entry(account: &str) -> AppResult<keyring::Entry> {
+    service_entry(LEGACY_CLAUDE_SERVICE, account)
 }
 
 pub fn save_claude_api_key(account: &str, api_key: &str) -> AppResult<()> {
@@ -29,7 +38,25 @@ pub fn save_claude_api_key(account: &str, api_key: &str) -> AppResult<()> {
 pub fn read_claude_api_key(account: &str) -> AppResult<Option<String>> {
     match claude_entry(account)?.get_password() {
         Ok(key) => Ok(Some(key)),
-        Err(keyring::Error::NoEntry) => Ok(None),
+        Err(keyring::Error::NoEntry) => match legacy_claude_entry(account)?.get_password() {
+            Ok(key) => {
+                // Migrate only after the new service accepts the value. Keep
+                // the old entry if the cleanup fails; the fallback remains safe.
+                claude_entry(account)?
+                    .set_password(&key)
+                    .map_err(|err| AppError::Invalid {
+                        message: format!(
+                            "Không chuyển được Claude API key sang service mới: {err}"
+                        ),
+                    })?;
+                let _ = legacy_claude_entry(account)?.delete_credential();
+                Ok(Some(key))
+            }
+            Err(keyring::Error::NoEntry) => Ok(None),
+            Err(err) => Err(AppError::Invalid {
+                message: format!("Không đọc được Claude API key từ OS keychain: {err}"),
+            }),
+        },
         Err(err) => Err(AppError::Invalid {
             message: format!("Không đọc được Claude API key từ OS keychain: {err}"),
         }),
@@ -37,12 +64,17 @@ pub fn read_claude_api_key(account: &str) -> AppResult<Option<String>> {
 }
 
 pub fn delete_claude_api_key(account: &str) -> AppResult<()> {
-    match claude_entry(account)?.delete_credential() {
-        Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
-        Err(err) => Err(AppError::Invalid {
-            message: format!("Không xoá được Claude API key khỏi OS keychain: {err}"),
-        }),
+    for entry in [claude_entry(account)?, legacy_claude_entry(account)?] {
+        match entry.delete_credential() {
+            Ok(()) | Err(keyring::Error::NoEntry) => {}
+            Err(err) => {
+                return Err(AppError::Invalid {
+                    message: format!("Không xoá được Claude API key khỏi OS keychain: {err}"),
+                })
+            }
+        }
     }
+    Ok(())
 }
 
 /// Removes the API key the removed Backlog integration left in the OS

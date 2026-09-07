@@ -84,6 +84,17 @@ export interface RecentProjectEntry extends ProjectPaths {
   lastOpenedAt: string;
 }
 
+export interface InitKitSessionInfo {
+  sessionId: string;
+  projectName: string;
+}
+
+export interface InitKitStatus {
+  running: boolean;
+  sessionId: string | null;
+  projectName: string | null;
+}
+
 /** Mirrors `domain::config_file::Model` (`#[serde(rename_all = "lowercase")]`). */
 export type AgentModel = "opus" | "sonnet" | "haiku";
 
@@ -571,9 +582,14 @@ export const commands = {
   detectProjectPaths: (rootHint: string) =>
     invoke<DetectedPaths>("detect_project_paths", { rootHint }),
 
+  createProject: (parentPath: string, name: string) =>
+    invoke<ProjectSummary>("create_project", { parentPath, name }),
+
   scaffoldKit: () => invoke<ScaffoldReport>("scaffold_kit"),
 
   refreshProject: () => invoke<ProjectSummary>("refresh_project"),
+
+  hasOpenProject: () => invoke<boolean>("has_open_project"),
 
   openProject: (params: ProjectPaths & { label: string }) =>
     invoke<ProjectSummary>("open_project", { ...params }),
@@ -712,6 +728,20 @@ export const commands = {
    * agent runs unless `force` (which kills them first) — `RunKey` has no
    * project id, so a run left tracked would look like the next project's. */
   closeProject: (force: boolean) => invoke<void>("close_project", { force }),
+
+  initKitStatus: () => invoke<InitKitStatus>("init_kit_status"),
+
+  startInitKit: (projectName: string) =>
+    invoke<InitKitSessionInfo>("start_init_kit", { projectName }),
+
+  sendInitKitInput: (sessionId: string, data: string) =>
+    invoke<void>("send_init_kit_input", { sessionId, data }),
+
+  resizeInitKit: (sessionId: string, cols: number, rows: number) =>
+    invoke<void>("resize_init_kit", { sessionId, cols, rows }),
+
+  stopInitKit: (sessionId: string) =>
+    invoke<void>("stop_init_kit", { sessionId }),
 
   /** The folder explorer's browsable root(s) — usually one entry, "the
    * whole project folder" (the common ancestor of all 3 project roots),

@@ -1,6 +1,6 @@
-# Agent Pipeline Orchestrator — Product Overview
+# Dipro AI Boost — Product Overview
 
-> Tài liệu **cross-feature** cho sản phẩm Agent Pipeline Orchestrator (desktop app).
+> Tài liệu **cross-feature** cho sản phẩm Dipro AI Boost (desktop app).
 > Nguồn gốc: `SPEC-pipeline-orchestrator.md` v0.1 (14/08/2026, Tran Duc Long — PM/BA) ở root kit.
 > Phiên bản này: v0.2 — 14/08/2026, tái cấu trúc theo convention BMAD của kit.
 >
@@ -24,7 +24,7 @@
 | Cost / ROI | Không có | — |
 | Hook cứng | 3 hook trong `.claude/settings.json` | Chỉ cho security, không cho pipeline |
 
-Orchestrator **kéo control plane ra khỏi session LLM** thành process bên ngoài: file system làm source of truth, gate thành UI có checksum, agent chạy headless.
+Dipro AI Boost **kéo control plane ra khỏi session LLM** thành process bên ngoài: file system làm source of truth, gate thành UI có checksum, agent chạy headless.
 
 **Giá trị theo thứ tự ưu tiên:**
 
@@ -71,11 +71,11 @@ E1 Project & Config ──► E2 Pipeline Execution ◄──► E4 Gates
 | Integration | Backlog (Nulab) + Slack nằm trong v1 |
 | Tech stack | Tauri 2.x + React (TypeScript) · Rust backend |
 | UI layer | **shadcn/ui + TailwindCSS** |
-| Agent runtime | Claude Code CLI headless — `claude -p "<prompt>" --output-format stream-json --model <model>` |
+| Agent runtime | Pipeline agents dùng Claude Code CLI headless — `claude -p "<prompt>" --output-format stream-json --model <model>`; project setup dùng Claude interactive trong PTY |
 | Input stage ① | **Import một folder** chứa tài liệu dự án / mô tả feature — agent phân tích folder đó để sinh SPEC |
 | Nguồn design | **Figma có sẵn** — `design-analyst-agent` (agent mới) hỏi URL selection rồi đọc qua Figma MCP, sinh file phân tích design |
 
-> **Lưu ý về UI layer:** `.claude/rules/stack-constraints.md` của kit quy định web dùng **Ant Design v6**. Orchestrator là sản phẩm desktop riêng, không phải web app của dự án khách hàng, nên dùng shadcn/ui + Tailwind. Ghi nhận là **sai lệch có chủ đích** → `ASSUMPTIONS-GAPS.md` B16.
+> **Lưu ý về UI layer:** `.claude/rules/stack-constraints.md` của kit quy định web dùng **Ant Design v6**. Dipro AI Boost là sản phẩm desktop riêng, không phải web app của dự án khách hàng, nên dùng shadcn/ui + Tailwind. Ghi nhận là **sai lệch có chủ đích** → `ASSUMPTIONS-GAPS.md` B16.
 >
 > shadcn/ui và Tailwind là **quyết định kỹ thuật**, nên chỉ nằm ở tài liệu product-level này. Sáu file `SPEC.md` không nhắc tới chúng — `ba-agent` quy định rõ "không đưa ra giải pháp kỹ thuật trong SPEC".
 
@@ -91,7 +91,7 @@ E1 Project & Config ──► E2 Pipeline Execution ◄──► E4 Gates
 
 ## 4. Bản đồ màn hình
 
-Screen Code theo `<Module(2)>_<Feature(4)>_<Seq(3)>` (`.claude/agents/ba-agent.md`). Module `OR` = Orchestrator. Unique toàn dự án.
+Screen Code theo `<Module(2)>_<Feature(4)>_<Seq(3)>` (`.claude/agents/ba-agent.md`). Module `OR` = Dipro AI Boost. Unique toàn dự án.
 
 | Screen Code | Screen | EPIC | Screen Type | Actor chính |
 |---|---|---|---|---|

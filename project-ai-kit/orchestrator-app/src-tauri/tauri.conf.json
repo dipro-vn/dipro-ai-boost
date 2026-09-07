@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "orchestrator-app",
+  "productName": "Dipro AI Boost",
   "version": "0.1.0",
-  "identifier": "com.dipro.orchestrator-app",
+  "identifier": "com.dipro.dipro-ai-boost",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "orchestrator-app",
+        "title": "Dipro AI Boost",
         "width": 1280,
         "height": 800,
         "maximized": true

@@ -48,17 +48,21 @@ export function ProjectInitHandoff({
     <Alert className="border-warning/50">
       <Terminal className="size-4" />
       <AlertTitle>
-        {status === "needs-init" ? "Project chưa init" : "Cấu hình project cần kiểm tra"}
+        {status === "needs-init"
+          ? "Project chưa init"
+          : "Cấu hình project cần kiểm tra"}
       </AlertTitle>
       <AlertDescription>
         <div className="flex flex-col gap-3">
           <p>
-            App đã tạo khung kit nhưng không tự chạy <code>/init-kit</code>. Hãy chạy lệnh này
-            trong Claude Code tại <code>agentsRoot</code>:
+            App đã tạo khung kit nhưng không tự chạy <code>/init-kit</code>. Hãy
+            chạy lệnh này trong Claude Code tại <code>agentsRoot</code>:
           </p>
           {reasons.length > 0 && (
             <ul className="list-inside list-disc text-xs">
-              {reasons.map((reason) => <li key={reason}>{reason}</li>)}
+              {reasons.map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
             </ul>
           )}
           <div className="flex flex-col gap-1">
@@ -96,7 +100,13 @@ export function ProjectInitHandoff({
             </div>
           </div>
           {copyError && <p className="text-xs text-destructive">{copyError}</p>}
-          <Button type="button" variant="outline" size="sm" onClick={onRefresh} disabled={refreshing}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onRefresh}
+            disabled={refreshing}
+          >
             <RefreshCw className={refreshing ? "animate-spin" : undefined} />
             {refreshing ? "Đang kiểm tra..." : "Đã chạy init, kiểm tra lại"}
           </Button>

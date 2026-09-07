@@ -1,4 +1,5 @@
 pub mod atomic_write;
+pub mod app_settings;
 pub mod contract_lock;
 pub mod design_ref;
 pub mod keychain;

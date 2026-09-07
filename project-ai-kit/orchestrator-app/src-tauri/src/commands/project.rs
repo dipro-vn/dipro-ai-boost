@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 use tauri::{AppHandle, State};
 use tauri_plugin_store::StoreExt;
@@ -23,6 +23,47 @@ const AGENTS_MD_FILENAME: &str = "AGENTS.md";
 
 fn path_to_string(path: &Path) -> String {
     path.display().to_string()
+}
+
+fn validate_new_project_name(value: &str) -> AppResult<String> {
+    let name = value.trim();
+    let component_count = Path::new(name).components().count();
+    let is_reserved_windows_name = {
+        let stem = name.split('.').next().unwrap_or(name).to_ascii_uppercase();
+        matches!(stem.as_str(), "CON" | "PRN" | "AUX" | "NUL")
+            || (stem.len() == 4
+                && (stem.starts_with("COM") || stem.starts_with("LPT"))
+                && stem.as_bytes()[3].is_ascii_digit())
+    };
+
+    if name.is_empty()
+        || name.len() > 100
+        || component_count != 1
+        || !matches!(
+            Path::new(name).components().next(),
+            Some(Component::Normal(_))
+        )
+        || name.chars().any(|character| {
+            character.is_control() || character == '/' || character == '\\' || character == ':'
+        })
+        || name.ends_with('.')
+        || name.ends_with(' ')
+        || is_reserved_windows_name
+    {
+        return Err(AppError::Invalid {
+            message: "Tên project phải là một tên thư mục hợp lệ, không chứa dấu phân cách hoặc ký tự đặc biệt".to_string(),
+        });
+    }
+
+    Ok(name.to_string())
+}
+
+fn new_project_paths(destination: &Path) -> ProjectPaths {
+    ProjectPaths {
+        agents_root: path_to_string(destination),
+        docs_root: path_to_string(&destination.join("docs")),
+        repository_root: path_to_string(&destination.join("repos")),
+    }
 }
 
 #[tauri::command]
@@ -58,6 +99,47 @@ pub fn detect_project_paths(root_hint: String) -> DetectedPaths {
         agents_root: agents_root.as_deref().map(path_to_string),
         docs_root: docs_root.as_deref().map(path_to_string),
     }
+}
+
+/// Creates a project in the selected parent directory using the standard
+/// layout, then opens it through the same scaffold path as an existing project.
+#[tauri::command]
+pub fn create_project(
+    app: AppHandle,
+    state: State<AppState>,
+    parent_path: String,
+    name: String,
+) -> AppResult<ProjectSummary> {
+    let name = validate_new_project_name(&name)?;
+    let parent = PathBuf::from(parent_path.trim());
+    if !parent.is_dir() {
+        return Err(AppError::Invalid {
+            message: format!("Thư mục lưu project không tồn tại: {}", parent.display()),
+        });
+    }
+    let parent = dunce::canonicalize(&parent).map_err(|err| AppError::Invalid {
+        message: format!("Không đọc được thư mục lưu project: {err}"),
+    })?;
+    let destination = parent.join(&name);
+    if destination.exists() {
+        return Err(AppError::Invalid {
+            message: format!(
+                "Project đã tồn tại tại {} — chọn tên hoặc thư mục khác",
+                destination.display()
+            ),
+        });
+    }
+
+    let paths = new_project_paths(&destination);
+    open_project_internal(
+        app,
+        state,
+        paths.agents_root,
+        paths.docs_root,
+        paths.repository_root,
+        name,
+        true,
+    )
 }
 
 /// Tries `AGENTS.md` at each root and its immediate parent — the file's
@@ -541,6 +623,14 @@ pub fn refresh_project(state: State<AppState>) -> AppResult<ProjectSummary> {
     })
 }
 
+/// Lets the frontend reconcile its in-memory screen after a webview reload.
+/// The backend project state intentionally lives longer than React state, so
+/// the launcher must not offer a second open while one is already active.
+#[tauri::command]
+pub fn has_open_project(state: State<AppState>) -> bool {
+    state.current_project.lock().unwrap().is_some()
+}
+
 /// Tính lại bảng Ecosystem từ `AGENTS.md` + tình trạng thật trên đĩa, rồi
 /// cập nhật bản cache trong `AppState`.
 ///
@@ -828,6 +918,33 @@ mod tests {
         let agents = agents_reader::discover_agents(&root.join("kit-repo")).expect("dir exists");
         assert_eq!(agents.len(), 12);
         assert!(agents.iter().any(|a| a == "design-analyst-agent"));
+    }
+
+    #[test]
+    fn new_project_name_accepts_normal_folder_names() {
+        for name in ["shop-admin", "Project 2026", "dự án mới"] {
+            assert_eq!(validate_new_project_name(name).unwrap(), name);
+        }
+    }
+
+    #[test]
+    fn new_project_name_rejects_path_traversal_and_invalid_components() {
+        for name in ["", ".", "..", "nested/project", "nested\\project", "CON"] {
+            assert!(
+                validate_new_project_name(name).is_err(),
+                "name should be rejected: {name:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn new_project_paths_use_the_standard_layout() {
+        let destination = Path::new("/tmp/shop-admin");
+        let paths = new_project_paths(destination);
+
+        assert_eq!(paths.agents_root, "/tmp/shop-admin");
+        assert_eq!(paths.docs_root, "/tmp/shop-admin/docs");
+        assert_eq!(paths.repository_root, "/tmp/shop-admin/repos");
     }
 }
 

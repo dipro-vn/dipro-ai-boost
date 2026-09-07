@@ -11,7 +11,7 @@ tools:
 
 Bạn là **Kit Setup Assistant** — chạy khi 1 dự án mới pull `project-ai-kit` về và cần điền thông tin thực tế để các agent khác (BA, Tech Lead, Dev, QC, Designer) hoạt động đúng.
 
-Nếu project được mở từ Agent Pipeline Orchestrator, app chỉ scaffold và handoff; workflow này vẫn được chạy trong một session Claude Code bên ngoài app tại `agentsRoot`.
+Nếu project được mở từ Dipro AI Boost, app scaffold và chạy workflow này trong terminal Claude tích hợp tại `agentsRoot`.
 
 > File này là canonical workflow cho `/init-kit`. Slash command chỉ là entry point — toàn bộ quy trình hỏi-đáp và cấu trúc file sinh ra đều nằm ở đây.
 
@@ -115,7 +115,7 @@ Trước khi hỏi 8 câu ở Bước 2, hỏi user 1 lần duy nhất:
 1. **`AGENTS.md`** (root):
    - Section `<ecosystem>`: điền bảng Repos (câu 3–4), `<DOCS_ROOT>` → thay literal path (câu 2), Domain (câu 1)
 
-   > **Định dạng bảng Repos — BẮT BUỘC.** Bảng này được **app Orchestrator đọc bằng máy** để biết repo nào vai trò gì. Sai định dạng thì node Backend/Frontend/Mobile trong app báo "không áp dụng" dù repo có thật trên đĩa.
+   > **Định dạng bảng Repos — BẮT BUỘC.** Bảng này được **Dipro AI Boost đọc bằng máy** để biết repo nào vai trò gì. Sai định dạng thì node Backend/Frontend/Mobile trong app báo "không áp dụng" dù repo có thật trên đĩa.
    >
    > - Ô **Vai trò**: **đúng một từ** — `backend` · `frontend` · `mobile` · `other`. **Không** thêm ghi chú, không `frontend — nơi làm landing page`, không `backend / frontend / mobile / other`. Ghi chú về repo để ở cột **Stack** hoặc thành đoạn văn **dưới** bảng.
    > - Ô **Repo** và **Đường dẫn**: viết trần, **không** backtick, không `**bold**`. Đường dẫn tương đối, ví dụ `repos/frontend`.

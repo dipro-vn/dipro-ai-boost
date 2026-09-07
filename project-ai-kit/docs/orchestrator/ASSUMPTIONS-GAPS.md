@@ -1,4 +1,4 @@
-# Sổ giả định & điểm lệch — Agent Pipeline Orchestrator
+# Sổ giả định & điểm lệch — Dipro AI Boost
 
 > **Mục đích:** ghi nhận mọi giả định trong `SPEC-pipeline-orchestrator.md` v0.1 đã được đối chiếu với source thật, cộng các điểm lệch nội tại của kit ảnh hưởng tới orchestrator.
 >
@@ -238,7 +238,7 @@ Kit **đã có** orchestrator chạy trong CLI (`bmad-plan-phase.js`, `bmad-buil
 
 **Quyết định:** orchestrator dùng **shadcn/ui + TailwindCSS**.
 
-**Lý do chấp nhận sai lệch:** `stack-constraints.md` là ràng buộc cho **dự án khách hàng xây bằng kit**, không phải cho công cụ nội bộ. Orchestrator là ứng dụng desktop Tauri, không phải web app trong bảng Ecosystem của bất kỳ dự án nào. TailwindCSS v4 vốn đã nằm trong stack kit; chỉ có component library là khác.
+**Lý do chấp nhận sai lệch:** `stack-constraints.md` là ràng buộc cho **dự án khách hàng xây bằng kit**, không phải cho công cụ nội bộ. Dipro AI Boost là ứng dụng desktop Tauri, không phải web app trong bảng Ecosystem của bất kỳ dự án nào. TailwindCSS v4 vốn đã nằm trong stack kit; chỉ có component library là khác.
 
 **Ảnh hưởng:** không có với dự án khách hàng. Nhưng vì SPEC đang nằm trong repo kit, người đọc dễ nhầm đây là thay đổi stack của kit — **không phải**.
 
@@ -252,12 +252,12 @@ Kit **đã có** orchestrator chạy trong CLI (`bmad-plan-phase.js`, `bmad-buil
 - `designer-agent` đọc `SPEC.md` §Screens → **tạo** Figma frames → điền URL ngược vào cột `Figma Link`.
 - `doc-structure.md:23` và `ai-agents-workflow.md:174` **cấm** Designer tạo bất kỳ file `.md` nào.
 
-**Orchestrator cần (Figma → phân tích):**
+**Dipro AI Boost cần (Figma → phân tích):**
 - Agent **hỏi người dùng URL selection** của design có sẵn (một page hoặc một feature).
 - Đọc design qua **Figma MCP được cấu hình trong repo dự án**.
 - **Sinh ra một file phân tích design** để các stage sau dùng.
 
-**Đây là đảo chiều, không phải điều chỉnh nhỏ.** Kit giả định greenfield (chưa có design, agent vẽ ra). Orchestrator giả định brownfield (design đã có sẵn trong Figma, agent đọc và diễn giải). Cùng với việc stage ① nhận **folder tài liệu có sẵn** thay vì mô tả tự do, cả pipeline chuyển từ *sinh mới* sang *diễn giải cái đã có*.
+**Đây là đảo chiều, không phải điều chỉnh nhỏ.** Kit giả định greenfield (chưa có design, agent vẽ ra). Dipro AI Boost giả định brownfield (design đã có sẵn trong Figma, agent đọc và diễn giải). Cùng với việc stage ① nhận **folder tài liệu có sẵn** thay vì mô tả tự do, cả pipeline chuyển từ *sinh mới* sang *diễn giải cái đã có*.
 
 **Quyết định (14/08/2026, PM + Tech Lead):** thêm **agent mới** vào kit, `design-analyst-agent`, chuyên trách chiều Figma → phân tích. `designer-agent` gốc **giữ nguyên không sửa** — vẫn phục vụ use case greenfield ở các dự án khác dùng kit.
 
@@ -441,5 +441,5 @@ Hệ quả dây chuyền: Board không có node Trigger Gate → gate chưa từ
 
 | # | Việc cần quyết | Người quyết | Chặn |
 |---|---|---|---|
-| **B17 (phần thực thi)** | **Viết `.claude/agents/design-analyst-agent.md`** — quyết định *cách làm* đã chốt ở trên, nhưng file agent thật vẫn chưa tồn tại. Đây là việc bổ sung vào kit, ngoài phạm vi bộ SPEC orchestrator này. *(17/08/2026: PM đã đồng ý cho orchestrator-app team soạn file này — dự kiến trong Phase C của roadmap hoàn thiện app, PM review trước khi dùng thật.)* | Tech Lead của kit | **MVP 3 (stage ②c)** — spawn sẽ fail nếu chưa có file này |
+| **B17 (phần thực thi)** | **Viết `.claude/agents/design-analyst-agent.md`** — quyết định *cách làm* đã chốt ở trên, nhưng file agent thật vẫn chưa tồn tại. Đây là việc bổ sung vào kit, ngoài phạm vi bộ SPEC orchestrator này. *(17/08/2026: PM đã đồng ý cho đội Dipro AI Boost soạn file này — dự kiến trong Phase C của roadmap hoàn thiện app, PM review trước khi dùng thật.)* | Tech Lead của kit | **MVP 3 (stage ②c)** — spawn sẽ fail nếu chưa có file này |
 | C15 | Rotate Backlog API key | Bất kỳ ai có quyền — **ngay** | — |

@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    orchestrator_app_lib::run()
+    dipro_ai_boost_lib::run()
 }

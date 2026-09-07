@@ -43,7 +43,7 @@ tools:
 
 <!-- LƯU Ý KHI THÊM MCP FIGMA MỚI: `tools:` là allowlist — tool không có
      trong danh sách này thì agent KHÔNG gọi được, dù MCP server đã kết nối.
-     orchestrator-app kiểm tra đúng điều đó trước khi chạy: project cấu hình
+      Dipro AI Boost kiểm tra đúng điều đó trước khi chạy: project cấu hình
      một MCP Figma mà file này chưa khai tool thì node Design Analyst bị
      CHẶN (không spawn) kèm lý do đích danh, và Settings → MCP hiện cảnh báo
      — thay vì spawn rồi để mọi lời gọi Figma bị từ chối âm thầm.
@@ -90,7 +90,7 @@ Nắm section `## Screens` — danh sách Screen Code + mô tả — để Bư�
 
 ## Bước 2 — Lấy design cần phân tích
 
-**Chọn nhánh theo prompt, không tự dò.** orchestrator-app đã resolve MCP Figma của project
+**Chọn nhánh theo prompt, không tự dò.** Dipro AI Boost đã resolve MCP Figma của project
 (Settings → MCP) và ghi ra dòng `MCP Figma của project: \`<tên>\`` trong prompt — đó là server
 duy nhất được phép gọi. Tên `figma-bridge` → nhánh 3a; `claude.ai Figma` → nhánh 3b; tên khác →
 dùng bộ tool của server đó (đã phải khai trong `tools:`, xem ghi chú cuối frontmatter). Prompt
@@ -100,7 +100,7 @@ không có dòng đó nghĩa là app không xác định được server nào t�
 **Nếu project có `figma-bridge`**: không cần URL — sang thẳng Bước 3a và đọc selection hiện tại
 trong Figma desktop. Chỉ hỏi lại khi bridge báo chưa có gì được chọn.
 
-**Nếu prompt đã cung cấp URL Figma** (orchestrator-app có ô nhập URL ngay trên node, người dùng
+**Nếu prompt đã cung cấp URL Figma** (Dipro AI Boost có ô nhập URL ngay trên node, người dùng
 điền trước khi bấm Run): dùng đúng URL đó, **không hỏi lại**, sang thẳng Bước 3b.
 
 > URL này — dù đến từ ô nhập hay từ câu trả lời của bạn ở nhánh dưới — được app

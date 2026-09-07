@@ -59,7 +59,7 @@ skills:
 
 <!-- LƯU Ý KHI THÊM MCP FIGMA MỚI: `tools:` là allowlist — tool không có
      trong danh sách này thì agent KHÔNG gọi được, dù MCP server đã kết nối
-     và khoẻ. orchestrator-app đối chiếu chính xác điều đó trước khi chạy:
+      và khoẻ. Dipro AI Boost đối chiếu chính xác điều đó trước khi chạy:
      project cấu hình một MCP Figma mà file này chưa khai tool thì app bỏ
      dòng "MCP Figma của project" khỏi prompt (agent chuyển sang chỉ dùng
      `design-analysis.md`), và Settings → MCP hiện cảnh báo nêu đích danh
@@ -174,7 +174,7 @@ socket.disconnect();
 
 3. **Figma input (Nguồn 2 — ưu tiên cao cho UI screen mobile):**
    - Lấy `<path_figma>` theo thứ tự:
-     1. **URL Figma orchestrator-app truyền sẵn trong prompt** — dòng "URL Figma
+      1. **URL Figma Dipro AI Boost truyền sẵn trong prompt** — dòng "URL Figma
         (selection) người dùng đã cung cấp cho Design Analyst" trong khối
         "Ngữ cảnh design" ở cuối prompt. App lưu URL này per-feature từ node
         Design Analyst, nên đây là đúng design mà `design-analysis.md` bên
@@ -184,7 +184,7 @@ socket.disconnect();
      4. `SPEC.md ## Screens` → tìm row theo Screen Code → cột "Figma Link"
 
    - **CÓ Figma URL** → đọc design qua **đúng MCP server mà prompt chỉ định**
-     TRƯỚC khi code. Orchestrator đã resolve giúp bạn: dòng
+     TRƯỚC khi code. Dipro AI Boost đã resolve giúp bạn: dòng
      `MCP Figma của project: \`<tên>\`` trong khối "Ngữ cảnh design" ở cuối
      prompt là server duy nhất được phép gọi (app đã đối chiếu với `tools:` của
      chính file này trước khi ghi dòng đó ra).
@@ -230,7 +230,7 @@ socket.disconnect();
 
 3.4. **Phân tích design đã có (`design-analyst-agent` để lại, nếu có):**
 
-   Orchestrator truyền đường dẫn trong khối "Ngữ cảnh design" ở cuối prompt;
+   Dipro AI Boost truyền đường dẫn trong khối "Ngữ cảnh design" ở cuối prompt;
    chạy tay thì tìm tại `<feature-folder>/design-analysis.md`.
 
    > `<feature-folder>` dùng ở Bước 3.4–3.6 chính là dòng `Feature folder:`

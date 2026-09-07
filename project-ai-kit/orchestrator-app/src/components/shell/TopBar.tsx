@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChartColumn, FolderSync, Settings, Workflow } from "lucide-react";
+import { ChartColumn, FolderSync, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -19,10 +19,13 @@ export function TopBar() {
   return (
     <header className="flex h-14 shrink-0 items-center justify-between border-b border-border px-4">
       <div className="flex min-w-0 items-center gap-2.5">
-        <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-          <Workflow className="size-4" aria-hidden="true" />
+        <span className="flex h-8 shrink-0 items-center rounded-lg bg-[#013a63] px-2 py-1">
+          <img
+            src="/logo_dipro.png"
+            alt="Dipro AI Boost"
+            className="h-full w-auto"
+          />
         </span>
-        <span className="shrink-0 text-sm font-semibold">Agent Pipeline Orchestrator</span>
         {/* Which project is open was previously nowhere on screen — with
             switching, knowing it becomes essential. */}
         {inProject && projectLabel && (

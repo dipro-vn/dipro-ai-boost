@@ -1,0 +1,18 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "codegraph": {
+      "type": "local",
+      "enabled": true,
+      "command": ["codegraph", "serve", "--mcp"]
+    },
+    "figma-bridge": {
+      "type": "local",
+      "command": ["npx", "-y", "mcp-figma-bridge"],
+      "enviroment": {
+        "BRIDGE_PORT": "3765",
+        "BRIDGE_HOST": "127.0.0.1"
+      }
+    }
+  }
+}

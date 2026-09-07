@@ -89,7 +89,7 @@ Nắm section `## Screens` — danh sách Screen Code + mô tả — để Bư�
 **Nếu project có `figma-bridge`**: không cần URL — sang thẳng Bước 3a và đọc selection hiện tại
 trong Figma desktop. Chỉ hỏi lại khi bridge báo chưa có gì được chọn.
 
-**Nếu prompt đã cung cấp URL Figma** (orchestrator-app có ô nhập URL ngay trên node, người dùng
+**Nếu prompt đã cung cấp URL Figma** (Dipro AI Boost có ô nhập URL ngay trên node, người dùng
 điền trước khi bấm Run): dùng đúng URL đó, **không hỏi lại**, sang thẳng Bước 3b.
 
 **Nếu không có bridge và prompt cũng chưa có URL** (chạy bằng `/create-ui-design` hoặc gọi tay):

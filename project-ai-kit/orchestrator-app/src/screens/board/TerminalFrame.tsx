@@ -21,14 +21,14 @@ interface TerminalFrameProps {
  */
 export function TerminalFrame({ title, children, className }: TerminalFrameProps) {
   return (
-    <div className={cn("overflow-hidden rounded-lg border border-border", className)}>
+    <div className={cn("flex flex-col overflow-hidden rounded-lg border border-border", className)}>
       <div className="flex items-center gap-1.5 border-b border-zinc-800 bg-zinc-900 px-3 py-1.5">
         <span className="size-2.5 rounded-full bg-red-500/70" aria-hidden="true" />
         <span className="size-2.5 rounded-full bg-yellow-500/70" aria-hidden="true" />
         <span className="size-2.5 rounded-full bg-green-500/70" aria-hidden="true" />
         <span className="ml-2 truncate font-mono text-[11px] text-zinc-400">{title}</span>
       </div>
-      <div className="bg-zinc-950">{children}</div>
+      <div className="min-h-0 flex-1 bg-zinc-950">{children}</div>
     </div>
   );
 }

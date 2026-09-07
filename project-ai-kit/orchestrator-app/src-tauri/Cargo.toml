@@ -1,5 +1,5 @@
 [package]
-name = "orchestrator-app"
+name = "dipro-ai-boost"
 version = "0.1.0"
 description = "A Tauri App"
 authors = ["you"]
@@ -11,7 +11,7 @@ edition = "2021"
 # The `_lib` suffix may seem redundant but it is necessary
 # to make the lib name unique and wouldn't conflict with the bin name.
 # This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
-name = "orchestrator_app_lib"
+name = "dipro_ai_boost_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
@@ -42,7 +42,7 @@ keyring = { version = "3", features = [
     "sync-secret-service",
 ] }
 include_dir = "0.7.4"
+portable-pty = "0.9.0"
 
 [target."cfg(unix)".dependencies]
 libc = "0.2.189"
-

@@ -26,7 +26,7 @@ pub(crate) mod test_support {
         std::fs::write(
             &agent_path,
             format!(
-                "---\nname: {name}\ndescription: Test fixture agent for orchestrator-app's own tests — not a copy of the kit's real agents.\nmodel: claude-haiku-4-5\ntools:\n  - Read\n  - Write\n---\n\nYou are a minimal test agent. When asked to do something simple and concrete, just do it directly and briefly — no explanation.\n"
+                "---\nname: {name}\ndescription: Test fixture agent for Dipro AI Boost's own tests — not a copy of the kit's real agents.\nmodel: claude-haiku-4-5\ntools:\n  - Read\n  - Write\n---\n\nYou are a minimal test agent. When asked to do something simple and concrete, just do it directly and briefly — no explanation.\n"
             ),
         )
         .unwrap();

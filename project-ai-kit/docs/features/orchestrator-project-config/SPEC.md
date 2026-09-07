@@ -1,6 +1,6 @@
 # SPEC: Orchestrator — Project & Config
 
-> EPIC **E1** của sản phẩm Agent Pipeline Orchestrator. Bối cảnh sản phẩm, data model `.orchestrator/`, non-functional dùng chung → `docs/orchestrator/OVERVIEW.md`. Giả định chưa giải quyết → `docs/orchestrator/ASSUMPTIONS-GAPS.md`.
+> EPIC **E1** của sản phẩm Dipro AI Boost. Bối cảnh sản phẩm, data model `.orchestrator/`, non-functional dùng chung → `docs/orchestrator/OVERVIEW.md`. Giả định chưa giải quyết → `docs/orchestrator/ASSUMPTIONS-GAPS.md`.
 >
 > Nguồn: `SPEC-pipeline-orchestrator.md` v0.1 §F1.1–F1.4.
 
@@ -29,7 +29,7 @@ Ngoài ba thứ trên, E1 còn giữ **thiết lập giao diện** — cụ th�
 
 - App đã được cài trên máy người dùng (macOS hoặc Windows).
 - Trên máy đã có Claude Code CLI đăng nhập sẵn — app không xử lý đăng nhập Anthropic.
-- Người dùng có thể bắt đầu từ project folder rỗng hoặc folder đã setup kit. Nếu chưa init, app sẽ scaffold khung kit và hướng dẫn chạy `/init-kit` bên ngoài app.
+- Người dùng có thể mở project đã có hoặc tạo project mới từ tên + thư mục cha. Với project mới, app scaffold khung kit và chạy interactive `/init-kit` trong terminal modal của app; project có sẵn chưa init vẫn hỗ trợ handoff bên ngoài.
 - Với integration: người dùng có sẵn Backlog API key và/hoặc Slack bot token.
 
 ## Happy Path
@@ -42,8 +42,8 @@ Ngoài ba thứ trên, E1 còn giữ **thiết lập giao diện** — cụ th�
    - **Repository root** — thư mục chứa các repo source
 4. App scaffold khung kit nếu còn thiếu, điền tên project vào các template project-facing, rồi đọc `AGENTS.md` để lấy bảng Ecosystem (danh sách repo + Epic code + vai trò), và đọc cấu hình MCP server của project để biết Figma được kết nối qua đâu.
 5. App tạo `.orchestrator/` trong project folder, sinh `config.json` với **model mặc định theo bảng đề xuất** và permission profile mặc định cho từng agent tìm thấy trong `.claude/agents/`.
-6. Nếu `AGENTS.md` còn placeholder, app hiển thị trạng thái **chưa init**, hướng dẫn PM mở Claude Code tại `agentsRoot` và nhập `/init-kit`. App không tự chạy slash command.
-7. PM chạy `/init-kit` bên ngoài app, quay lại bấm **Đã chạy init, kiểm tra lại**. Khi `AGENTS.md` hợp lệ, app chuyển project sang trạng thái sẵn sàng và cho phép chạy agent.
+6. Nếu là project mới và `AGENTS.md` còn placeholder, app mở terminal Claude tại `agentsRoot` và tự gửi `/init-kit Tên dự án: <tên>`. PM trả lời trong modal.
+7. Khi init kết thúc, app đọc lại `AGENTS.md`. Project có sẵn chưa init vẫn có thể chạy `/init-kit` bên ngoài rồi bấm **Đã chạy init, kiểm tra lại**. Khi `AGENTS.md` hợp lệ, app chuyển project sang trạng thái sẵn sàng và cho phép chạy agent.
 8. App mở **Pipeline Board** (`OR_MONI_001`, thuộc E3).
 9. PM vào **Settings** (`OR_CONF_002`) → tab "Agents": bảng mỗi agent một dòng (Agent · Model · Max turns · Permission profile). PM đổi model của `qc-agent` từ sonnet sang haiku → app lưu ngay vào `config.json`.
 10. PM sang tab "Integrations": nhập Backlog space + API key + project ID, nhập Slack bot token + channel. Bấm "Kiểm tra kết nối" → app gọi thử, hiện ✅ cho từng integration.
@@ -110,7 +110,7 @@ Ngoài ba thứ trên, E1 còn giữ **thiết lập giao diện** — cụ th�
 - **AC-E1-06** — Sau khi mở project thành công, thư mục `.orchestrator/` tồn tại trong project folder và chứa `config.json`.
 - **AC-E1-07** — Project đã mở thành công xuất hiện trong danh sách recent ở lần mở app kế tiếp; project đã `ready` vào thẳng Pipeline Board mà không hỏi lại 3 đường dẫn, còn project `needs-init` mở lại Summary để tiếp tục handoff.
 - **AC-E1-34** — Khi scaffold file project-facing mới, app thay placeholder project name bằng tên PM nhập ở Launcher; file custom đã tồn tại không bị ghi đè.
-- **AC-E1-35** — Khi `AGENTS.md` chưa init, app trả trạng thái `needs-init`, hiển thị hướng dẫn chạy `/init-kit` trong Claude Code tại `agentsRoot`, và không tự khởi chạy Claude CLI.
+- **AC-E1-35** — Project mới được tạo trong app tự khởi chạy Claude CLI interactive tại `agentsRoot`, gửi `/init-kit` và hiển thị terminal trong modal; project có sẵn chưa init trả trạng thái `needs-init` và giữ handoff bên ngoài.
 - **AC-E1-36** — App có thể refresh trạng thái sau khi PM chạy `/init-kit` bên ngoài; Ecosystem và trạng thái project được đọc lại từ file trên đĩa.
 - **AC-E1-37** — Backend từ chối mọi lệnh spawn agent khi project chưa ở trạng thái `ready`, kể cả khi gọi trực tiếp qua IPC; lỗi hướng dẫn PM chạy `/init-kit`.
 
@@ -164,7 +164,7 @@ Ngoài ba thứ trên, E1 còn giữ **thiết lập giao diện** — cụ th�
 - **Sửa nội dung agent / command / rule từ trong app** — app chỉ đọc `.claude/`. Muốn đổi quy trình thì dùng editor ngoài.
 - **Multi-project song song** — v1 chỉ 1 project tại một thời điểm.
 - **Multi-user / phân quyền team** — mọi cấu hình là của người đang mở app.
-- **Chạy `/init-kit` từ trong app** — project chưa init thì app chỉ cảnh báo và gợi ý, không tự chạy.
+- **Chạy `/init-kit` từ trong app cho project mới** — app tự chạy phiên interactive trong terminal modal. Project có sẵn chưa init vẫn có thể dùng handoff bên ngoài.
 - **Đồng bộ config giữa nhiều máy** — `.orchestrator/` là local, gitignore-able.
 - **Tự động clone repo còn thiếu** — app chỉ báo trạng thái `chưa clone`.
 - **Cấu hình hoặc cài đặt MCP server** — app chỉ đọc cấu hình MCP có sẵn của project. Thêm/sửa MCP thì dùng editor ngoài.

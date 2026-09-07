@@ -1,4 +1,4 @@
-# Orchestrator App
+# Dipro AI Boost
 
 > Desktop app (Tauri + React) chạy pipeline BMAD của `project-ai-kit` bằng UI thay vì gõ tay từng slash command trong Claude Code CLI — Pipeline Board hiển thị 8 stage / 9 agent, bấm Run/Skip/Kill/Retry cho từng agent, theo dõi log theo thời gian thực.
 
@@ -25,18 +25,21 @@
 ```mermaid
 flowchart TD
     A["① Tạo thư mục project<br/>docs/ · inputs/ · repos/ · .mcp.json"] --> B["② pnpm tauri dev<br/>mở app"]
-    B --> C["③ Mở project mới<br/>chọn thư mục ở bước ①"]
-    C --> D["App tự dựng khung kit<br/>.claude/ · AGENTS.md · .orchestrator/"]
+    B --> C{"③ Mở hoặc tạo project"}
+    C -- "Mở project có sẵn" --> C1["Chọn thư mục ở bước ①"]
+    C -- "Tạo project mới" --> C2["Nhập tên + chọn thư mục cha"]
+    C1 --> D["App tự dựng khung kit<br/>.claude/ · AGENTS.md · .orchestrator/"]
+    C2 --> D
     D --> E{"AGENTS.md<br/>đã init chưa?"}
-    E -- "Chưa (placeholder)" --> F["④ Chạy /init-kit<br/>trong Claude Code CLI"]
-    F --> G["⑤ Bấm 'Đã chạy init, kiểm tra lại'"]
+    E -- "Chưa (placeholder)" --> F["④ App mở terminal Claude<br/>và chạy /init-kit"]
+    F --> G["⑤ App kiểm tra lại trạng thái init"]
     E -- "Rồi" --> G
     G --> H["⑥ Settings → MCP<br/>chọn MCP Figma"]
     H --> I["⑦ Tạo feature<br/>chạy pipeline trên Board"]
 
     classDef user fill:#DBEAFE,stroke:#2563EB,color:#1E3A8A
     classDef app fill:#DCFCE7,stroke:#16A34A,color:#14532D
-    class A,C,F,G,H,I user
+    class A,C1,C2,G,H,I user
     class B,D app
 ```
 
@@ -126,7 +129,10 @@ Mở app lần đầu, chưa có project nào:
 
 ![Launcher khi chưa có project nào](public/readme/start-app.png)
 
-Bấm **Mở project mới**.
+    Có hai lựa chọn:
+
+    - **Mở project mới** — chọn một thư mục project có sẵn, sau đó xác nhận 3 root độc lập.
+    - **Tạo project mới** — nhập tên project và chọn thư mục cha; app tự tạo layout chuẩn rồi mở terminal init-kit trong app.
 
 ### 4.2. Chọn thư mục gốc
 
@@ -151,6 +157,18 @@ Ngay khi mở, app tự động:
 - **Copy toàn bộ khung kit** vào `agentsRoot`/`docsRoot`: `.claude/` (agents · commands · skills · rules · workflows · hooks), `CLAUDE.md`, `POLICIES.md`, `AGENTS.md` (bản placeholder), skeleton `docs/features/`.
 - Tạo `.orchestrator/` — state nội bộ của app (xem [mục 9](#9-ghi-chú-vận-hành)).
 
+### 4.4. Tạo project mới hoàn toàn trong app
+
+Từ Launcher, bấm **Tạo project mới**, nhập tên và chọn thư mục cha. App tạo
+`<thu-muc-cha>/<ten-project>/` với `docs/features/`, `repos/`, `.claude/` và
+`.orchestrator/`, sau đó mở một terminal Claude ngay trong app và tự gửi
+`/init-kit Tên dự án: <ten-project>`.
+
+Terminal là interactive: các câu hỏi về domain, repo, actor và stack của
+`init-agent` vẫn cần người dùng trả lời, nhưng không cần mở terminal bên ngoài
+hoặc gõ lệnh init-kit thủ công. Có thể ẩn terminal và mở lại trong lúc session
+đang chạy; nút **Dừng init-kit** kết thúc session.
+
 Không cần `cp -r` tay như luồng CLI thuần ở [`../README.md`](../README.md) Bước 2 nữa.
 
 So sánh thư mục **trước** ([ảnh mục 3](#3-chuẩn-bị-thư-mục-project)) và **sau** khi mở trong app — `.claude/`, `.orchestrator/`, `AGENTS.md`, `CLAUDE.md`, `POLICIES.md` là do app tạo:
@@ -171,7 +189,9 @@ Trong app, bạn vào thẳng Pipeline Board — cột **Workflow** còn trống
 
 ## 5. Chạy `/init-kit`
 
-`AGENTS.md` app vừa tạo còn là **placeholder** — chưa biết tên repo thật, vai trò, stack, actor nghiệp vụ. App phát hiện và chặn lại ở màn hình này:
+Với project đã có sẵn được mở từ Launcher, `AGENTS.md` có thể vẫn là
+**placeholder** — chưa biết tên repo thật, vai trò, stack, actor nghiệp vụ.
+App phát hiện và chặn lại ở màn hình này:
 
 ![Màn hình Project chưa init](public/readme/guide-init-kit-of-app.png)
 
@@ -188,7 +208,8 @@ claude
 /init-kit Tên dự án: project-example
 ```
 
-`init-agent` chạy và hỏi bạn:
+`init-agent` chạy và hỏi bạn (project mới sẽ hỏi trong terminal modal của app;
+project có sẵn vẫn có thể dùng handoff bên ngoài):
 
 ![init-agent chạy trong Claude Code CLI](public/readme/claude-cli-to-init-kit-of-project.png)
 
