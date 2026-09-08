@@ -128,6 +128,52 @@ Nắm:
 - **KHÔNG có Figma URL** → sinh TC dựa trên SPEC.md AC + Happy Path + Edge Cases, ghi note "TC base only — refine sau khi Designer xong".
 - Dùng Screen Code làm reference trong TC title + precondition (vd `TC-<ScreenCode>-001`)
 
+### Bước 1.5 — Flow Detection & Multi-flow handling (BẮT BUỘC)
+
+Sau khi đọc `## BA Deliverables` + `## Flow Tổng Quan` trong SPEC.md, count **N = số business flows**.
+
+| Case | Detection | Test Cases output structure |
+|---|---|---|
+| **Single-flow (N = 1)** | SPEC `## Flow Tổng Quan` chỉ có 1 flow — feature là 1 chức năng đơn (VD Login, Export report) | Chạy pipeline 3 bước sinh **1 bộ test-cases.md** cho toàn feature |
+| **Multi-flow (N > 1)** | SPEC có N flows (VD medical-platform: Application / Scout / Contract / Admin / LINE) | Sinh test cases **CHIA THEO GROUP FLOW**: 1 file test-cases.md có **N sections `## Flow <N> — Test Cases`** HOẶC N files riêng `test-cases-flow-<N>-<slug>.md` |
+
+**Multi-flow rule (khi N > 1):**
+- **Approach mặc định — 1 file / N sections** (recommended cho feature ≤ 5 flows):
+  - Tổ chức test-cases.md theo N sections top-level: `## Flow 1 — <Tên> Test Cases`, `## Flow 2 — <Tên> Test Cases`, ...
+  - Trong mỗi flow section: bảng TCs với TC ID gắn prefix flow (VD `TC-F1-001` cho Flow 1)
+- **Approach N files** (khi feature > 5 flows hoặc mỗi flow > 30 TCs):
+  - `test-cases-flow-1-application.md`, `test-cases-flow-2-scout.md`, ...
+  - Kèm 1 file `test-cases-index.md` list tất cả files + TC count per flow
+- Thứ tự flows **PHẢI khớp** thứ tự flows trong SPEC `## Flow Tổng Quan`
+- Traceability Matrix: mỗi TC map về AC cụ thể của flow đó (không cross-flow)
+- Cross-verification: N flows SPEC = N groups QC test-cases (khớp Output 1/2/3 BA)
+
+**Regression suite** (sinh song song):
+- Multi-flow → chia regression theo flow, mỗi flow có mức priority riêng
+- Khi có code change → xác định flow bị impact → chạy regression chỉ trong flow đó (giảm thời gian test)
+
+**Ví dụ multi-flow test-cases.md cho medical-platform (5 flows):**
+
+```markdown
+# Test Cases — medical-platform
+
+## Flow 1 — Application Test Cases
+
+| TC ID | Screen | Scenario | Steps | Expected | Type |
+|---|---|---|---|---|---|
+| TC-F1-001 | DR_JOB_001 | Doctor tìm Job — filter điều kiện | ... | ... | Happy |
+| TC-F1-002 | DR_JOB_001 | Doctor filter không có kết quả | ... | ... | Empty state |
+...
+
+## Flow 2 — Scout Test Cases
+...
+
+## Flow 3 — Contract Test Cases
+...
+```
+
+**Áp dụng test dimensions** (từ skill `testing_dimensions`) per flow — mobile flows (DR_*) áp mobile dimensions, web flows (HO_*, AD_*) áp web dimensions.
+
 ### Bước 2 — Chạy pipeline 3 bước (bắt buộc theo thứ tự)
 
 Skill `rbt_manual_testing` được tổ chức thành **4 sections** tương ứng pipeline (1 section context + 3 sections command):
