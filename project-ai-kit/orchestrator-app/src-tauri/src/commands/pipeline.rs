@@ -6,7 +6,8 @@ use crate::app_state::AppState;
 use crate::domain::contract_lock::{ContractLockRecord, ContractLockStatus};
 use crate::domain::node_detail::{ArtifactRef, NodeDetail};
 use crate::domain::pipeline_def::{slot, PipelineDef, PIPELINE_DEF_VERSION};
-use crate::domain::project::ProjectPaths;
+use crate::domain::pipeline_expand;
+use crate::domain::project::{EcosystemRepo, ProjectPaths};
 use crate::domain::state_file::{FeatureState, StateFile};
 use crate::error::{AppError, AppResult};
 use crate::fswatch::watcher;
@@ -205,7 +206,8 @@ pub fn preview_delete_feature(
     let agents_root = PathBuf::from(&project.agents_root);
     let docs_root = PathBuf::from(&project.docs_root);
 
-    let def = read_or_init_pipeline_def(&agents_root)?;
+    let ecosystem = state.ecosystem.lock().unwrap().clone();
+    let def = pipeline_def_for(&agents_root, &ecosystem)?;
     let running_slots: Vec<String> = def
         .stages
         .iter()
@@ -311,8 +313,26 @@ pub fn delete_feature(
 /// below is the IPC entry point; `commands::agentrun` also needs this to
 /// resolve a slot's real `agent_name` (e.g. `qc-design` -> `qc-agent`, not
 /// the naming-convention guess `qc-design-agent`) before spawning.
-pub(crate) fn read_or_init_pipeline_def(agents_root: &Path) -> AppResult<PipelineDef> {
+pub(crate) fn read_pipeline_template(agents_root: &Path) -> AppResult<PipelineDef> {
     Ok(load_pipeline_def(agents_root)?.def)
+}
+
+/// The template with ⑤ Build expanded to one slot per Ecosystem repo.
+///
+/// Every consumer that iterates slots must go through this, never
+/// `read_pipeline_template`: the template still carries the three static
+/// role slots, and acting on those is exactly the bug where four web repos
+/// shared one Frontend node. The expansion is deliberately NOT written back
+/// to `pipeline.json` — see `domain::pipeline_expand`.
+pub(crate) fn pipeline_def_for(
+    agents_root: &Path,
+    ecosystem: &[EcosystemRepo],
+) -> AppResult<PipelineDef> {
+    let (def, _warnings) = pipeline_expand::expand_build_stage(
+        read_pipeline_template(agents_root)?,
+        ecosystem,
+    );
+    Ok(def)
 }
 
 /// Outcome of loading `pipeline.json`, so `open_project` can tell the user
@@ -370,7 +390,8 @@ pub(crate) fn load_pipeline_def(agents_root: &Path) -> AppResult<PipelineDefLoad
 #[tauri::command]
 pub fn get_pipeline_definition(state: State<AppState>) -> AppResult<PipelineDef> {
     let project = current_project(&state)?;
-    read_or_init_pipeline_def(Path::new(&project.agents_root))
+    let ecosystem = state.ecosystem.lock().unwrap().clone();
+    pipeline_def_for(Path::new(&project.agents_root), &ecosystem)
 }
 
 /// Wraps `FeatureState` with the same non-fatal `warnings` shape

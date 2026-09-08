@@ -8,6 +8,7 @@ pub mod import;
 pub mod node_detail;
 pub mod node_status;
 pub mod pipeline_def;
+pub mod pipeline_expand;
 pub mod project;
 pub mod run_history;
 pub mod run_summary;

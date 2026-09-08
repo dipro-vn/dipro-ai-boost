@@ -17,7 +17,8 @@ use crate::domain::config_file::{self, AgentConfig, ProjectConfig};
 use crate::domain::contract_lock::{ContractLockRecord, ContractLockStatus, LockedFile};
 use crate::domain::design_ref::DesignRef;
 use crate::domain::gate_state::{GateState, GateStatus};
-use crate::domain::pipeline_def::{gate, slot, AgentSlot};
+use crate::domain::pipeline_def::{AgentSlot, PipelineDef, gate, slot};
+use crate::domain::pipeline_expand;
 use crate::domain::project::{EcosystemRepo, ProjectInitStatus, ProjectPaths};
 use crate::domain::run_summary::{RunOutcome, RunSummary};
 use crate::domain::state_file::StateFile;
@@ -163,9 +164,13 @@ fn resolved_figma_server(agents_root: &Path) -> Option<String> {
 ///
 /// An agent with no `tools:` key at all is unrestricted, so the resolved
 /// server passes through untouched.
-fn figma_server_for_slot(agents_root: &Path, slot: &str) -> Option<String> {
+fn figma_server_for_slot(
+    agents_root: &Path,
+    ecosystem: &[EcosystemRepo],
+    slot: &str,
+) -> Option<String> {
     let server = resolved_figma_server(agents_root)?;
-    let agent_name = resolve_agent_name(agents_root, slot);
+    let agent_name = resolve_agent_name(agents_root, ecosystem, slot);
     match agents_reader::declared_mcp_servers(agents_root, &agent_name) {
         Some(declared) => declared
             .contains(&crate::store::mcp_config::mcp_tool_prefix(&server))
@@ -350,8 +355,8 @@ fn record_post_spawn_failure(
 /// string is wrong for it. Reading the real `PipelineDef` is the only way
 /// to get this right for every slot without hardcoding a second copy of
 /// the slot->agent-name table here.
-fn resolve_agent_name(agents_root: &Path, slot: &str) -> String {
-    crate::commands::pipeline::read_or_init_pipeline_def(agents_root)
+fn resolve_agent_name(agents_root: &Path, ecosystem: &[EcosystemRepo], slot: &str) -> String {
+    crate::commands::pipeline::pipeline_def_for(agents_root, ecosystem)
         .ok()
         .and_then(|def| {
             def.stages
@@ -397,6 +402,11 @@ fn run_to_completion(
     slot: String,
     prompt: String,
     resume_session_id: Option<String>,
+    // Same capture-synchronously discipline as `spawn_epoch` below: the
+    // Ecosystem decides which repo a `build-*` slot targets, and re-reading
+    // it from `AppState` in here would let a project switch mid-run change
+    // the answer.
+    ecosystem: Vec<EcosystemRepo>,
     // Captured synchronously by the caller (before this thread started, and
     // before any pre-spawn I/O) — must NOT be re-read from `AppState` in
     // here, or a close-then-reopen-a-different-project sequence in between
@@ -422,7 +432,7 @@ fn run_to_completion(
         recompute_and_emit(&app, &agents_root, &docs_root, &feature);
         return;
     }
-    let agent_name = resolve_agent_name(&agents_root, &slot);
+    let agent_name = resolve_agent_name(&agents_root, &ecosystem, &slot);
     let config = load_agent_config(&agents_root, &agent_name);
     let resolved_auth = match auth::resolve_for_spawn(&agents_root) {
         Ok(auth) => auth,
@@ -1064,6 +1074,9 @@ pub fn start_run(
     ensure_project_ready(&agents_root)?;
     auth::resolve_for_spawn(&agents_root)?;
 
+    // Snapshot ngay tại đây, cùng kỷ luật với `spawn_epoch`: slot
+    // `build-*` phân giải ra repo nào là do bảng Ecosystem quyết định.
+    let ecosystem = state.ecosystem.lock().unwrap().clone();
     let spawn_epoch = reserve_spawn(
         &state,
         RunKey {
@@ -1080,6 +1093,7 @@ pub fn start_run(
             slot,
             prompt,
             None,
+            ecosystem,
             spawn_epoch,
         );
     });
@@ -1105,7 +1119,7 @@ pub fn get_slot_readiness(
 
     let (feature_state, _) = compute_and_persist(&agents_root, &docs_root, &feature, &ecosystem)?;
     let (statuses, passed_gates, skipped_gates) = statuses_and_passed_gates(&feature_state);
-    let def = crate::commands::pipeline::read_or_init_pipeline_def(&agents_root)?;
+    let def = crate::commands::pipeline::pipeline_def_for(&agents_root, &ecosystem)?;
     let agents_found = agents_reader::discover_agents(&agents_root).unwrap_or_default();
     let slots_without_work = stage_rules::slots_without_work_in_feature(
         &docs_root.join("features").join(&feature),
@@ -1172,7 +1186,7 @@ pub fn run_slot(
 
     let (feature_state, _) = compute_and_persist(&agents_root, &docs_root, &feature, &ecosystem)?;
     let (statuses, passed_gates, skipped_gates) = statuses_and_passed_gates(&feature_state);
-    let def = crate::commands::pipeline::read_or_init_pipeline_def(&agents_root)?;
+    let def = crate::commands::pipeline::pipeline_def_for(&agents_root, &ecosystem)?;
     let agents_found = agents_reader::discover_agents(&agents_root).unwrap_or_default();
     let slots_without_work = stage_rules::slots_without_work_in_feature(
         &docs_root.join("features").join(&feature),
@@ -1290,7 +1304,7 @@ pub fn run_slot(
         }
     }
     let design_ref = crate::store::design_ref::read(&agents_root, &feature).map(|r| r.url);
-    let figma_server = figma_server_for_slot(&agents_root, &slot);
+    let figma_server = figma_server_for_slot(&agents_root, &ecosystem, &slot);
 
     let prompt = if slot == slot::BACKEND {
         // Backend reads the task files the Contract Lock froze, exactly as
@@ -1317,6 +1331,9 @@ pub fn run_slot(
         )
     };
 
+    // Snapshot ngay tại đây, cùng kỷ luật với `spawn_epoch`: slot
+    // `build-*` phân giải ra repo nào là do bảng Ecosystem quyết định.
+    let ecosystem = state.ecosystem.lock().unwrap().clone();
     let spawn_epoch = reserve_spawn(
         &state,
         RunKey {
@@ -1333,6 +1350,7 @@ pub fn run_slot(
             slot,
             prompt,
             None,
+            ecosystem,
             spawn_epoch,
         );
     });
@@ -1358,9 +1376,27 @@ pub struct FigmaMcpReadiness {
     pub agents_missing_tools: Vec<String>,
 }
 
-/// The three agents that read Figma. Slot ids, resolved to real agent names
-/// through `pipeline.json` so a project that renamed one is still checked.
-const FIGMA_READING_SLOTS: &[&str] = &[slot::DESIGN_ANALYST, slot::FRONTEND, slot::MOBILE];
+/// The slots whose agents read Figma: the Design Analyst, plus every
+/// per-repo build slot for a frontend or mobile repo.
+///
+/// No longer a fixed three — a project with four web repos has four
+/// frontend build slots, and checking only a hardcoded `frontend` id would
+/// report nothing for any of them. They collapse to the same handful of
+/// agent names downstream, which is why the caller dedups.
+fn figma_reading_slots(def: &PipelineDef, ecosystem: &[EcosystemRepo]) -> Vec<String> {
+    let mut slots = vec![slot::DESIGN_ANALYST.to_string()];
+    for stage in &def.stages {
+        for agent in &stage.agents {
+            let targets_design_repo = pipeline_expand::slot_repo(ecosystem, &agent.id)
+                .and_then(|repo| repo.role_key.as_deref())
+                .is_some_and(|role| role == "frontend" || role == "mobile");
+            if targets_design_repo {
+                slots.push(agent.id.clone());
+            }
+        }
+    }
+    slots
+}
 
 #[tauri::command]
 pub fn get_figma_mcp_readiness(state: State<AppState>) -> AppResult<FigmaMcpReadiness> {
@@ -1376,9 +1412,11 @@ pub fn get_figma_mcp_readiness(state: State<AppState>) -> AppResult<FigmaMcpRead
     };
     let prefix = crate::store::mcp_config::mcp_tool_prefix(&server);
 
-    let mut agents_missing_tools: Vec<String> = FIGMA_READING_SLOTS
+    let ecosystem = state.ecosystem.lock().unwrap().clone();
+    let def = crate::commands::pipeline::pipeline_def_for(agents_root, &ecosystem)?;
+    let mut agents_missing_tools: Vec<String> = figma_reading_slots(&def, &ecosystem)
         .iter()
-        .map(|slot| resolve_agent_name(agents_root, slot))
+        .map(|slot| resolve_agent_name(agents_root, &ecosystem, slot))
         .filter(|agent_name| {
             // `None` = no `tools:` allowlist = unrestricted, so not missing.
             agents_reader::declared_mcp_servers(agents_root, agent_name)
@@ -1449,6 +1487,9 @@ pub fn send_clarification_answer(
         }
     }
 
+    // Snapshot ngay tại đây, cùng kỷ luật với `spawn_epoch`: slot
+    // `build-*` phân giải ra repo nào là do bảng Ecosystem quyết định.
+    let ecosystem = state.ecosystem.lock().unwrap().clone();
     let spawn_epoch = reserve_spawn(
         &state,
         RunKey {
@@ -1465,6 +1506,7 @@ pub fn send_clarification_answer(
             slot,
             answer,
             Some(session_id),
+            ecosystem,
             spawn_epoch,
         );
     });
@@ -1656,6 +1698,9 @@ pub fn resume_run(
     }
 
     let session_id = summary.session_id;
+    // Snapshot ngay tại đây, cùng kỷ luật với `spawn_epoch`: slot
+    // `build-*` phân giải ra repo nào là do bảng Ecosystem quyết định.
+    let ecosystem = state.ecosystem.lock().unwrap().clone();
     let spawn_epoch = reserve_spawn(
         &state,
         RunKey {
@@ -1672,6 +1717,7 @@ pub fn resume_run(
             slot,
             "Phiên trước bị gián đoạn giữa chừng. Kiểm tra công việc còn dang dở và hoàn tất nốt theo đúng quy trình của bạn.".to_string(),
             Some(session_id),
+            ecosystem,
             spawn_epoch,
         );
     });
@@ -1791,7 +1837,7 @@ fn partition_stage_slots_by_agent_availability(
 }
 
 fn stage_two_agent_slots(agents_root: &Path) -> Vec<AgentSlot> {
-    crate::commands::pipeline::read_or_init_pipeline_def(agents_root)
+    crate::commands::pipeline::read_pipeline_template(agents_root)
         .ok()
         .and_then(|def| {
             def.stages
@@ -2332,15 +2378,15 @@ mod tests {
         // qc-design's real agent_name is "qc-agent" — the naming-convention
         // guess `format!("{slot}-agent")` would wrongly produce
         // "qc-design-agent", which doesn't exist in the kit.
-        assert_eq!(resolve_agent_name(tmp.path(), slot::QC_DESIGN), "qc-agent");
-        assert_eq!(resolve_agent_name(tmp.path(), slot::BA), "ba-agent");
+        assert_eq!(resolve_agent_name(tmp.path(), &[], slot::QC_DESIGN), "qc-agent");
+        assert_eq!(resolve_agent_name(tmp.path(), &[], slot::BA), "ba-agent");
     }
 
     #[test]
     fn resolve_agent_name_falls_back_to_convention_for_a_slot_not_in_pipeline_def() {
         let tmp = tempfile::tempdir().unwrap();
         assert_eq!(
-            resolve_agent_name(tmp.path(), "made-up-slot"),
+            resolve_agent_name(tmp.path(), &[], "made-up-slot"),
             "made-up-slot-agent"
         );
     }

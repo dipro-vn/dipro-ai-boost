@@ -44,12 +44,27 @@ fn csv_field(value: &str) -> String {
 /// `pipeline.json` — a slot no longer declared there falls back to its raw
 /// id rather than being dropped from the export.
 fn slot_lookup(def: &PipelineDef, slot_id: &str) -> (String, String) {
-    for stage in &def.stages {
-        if let Some(agent) = stage.agents.iter().find(|a| a.id == slot_id) {
-            return (stage.label.clone(), agent.agent_name.clone());
-        }
+    if let Some(found) = lookup_in(def, slot_id) {
+        return found;
+    }
+    // ⑤ Build's slots are now per repo, so history written before that
+    // change carries `backend`/`frontend`/`mobile`. `run-history/` is
+    // immutable by design (AC-E6-28), so those rows are read back through
+    // the static template instead of being exported with no stage at all.
+    if let Some(found) = lookup_in(&PipelineDef::default(), slot_id) {
+        return found;
     }
     (String::new(), slot_id.to_string())
+}
+
+fn lookup_in(def: &PipelineDef, slot_id: &str) -> Option<(String, String)> {
+    def.stages.iter().find_map(|stage| {
+        stage
+            .agents
+            .iter()
+            .find(|a| a.id == slot_id)
+            .map(|agent| (stage.label.clone(), agent.agent_name.clone()))
+    })
 }
 
 pub(crate) fn build_csv(records: &[RunHistoryRecord], def: &PipelineDef) -> String {
@@ -99,7 +114,8 @@ pub fn export_cost_csv(state: State<AppState>, path: String) -> AppResult<()> {
         });
     }
 
-    let def = crate::commands::pipeline::read_or_init_pipeline_def(agents_root)?;
+    let ecosystem = state.ecosystem.lock().unwrap().clone();
+    let def = crate::commands::pipeline::pipeline_def_for(agents_root, &ecosystem)?;
     let csv = build_csv(&records, &def);
     crate::store::atomic_write::write_text_atomic(Path::new(&path), &csv)
 }

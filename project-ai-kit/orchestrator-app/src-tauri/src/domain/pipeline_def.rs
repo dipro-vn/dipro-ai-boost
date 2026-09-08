@@ -126,7 +126,7 @@ fn slot(id: &str, agent_name: &str, label: &str) -> AgentSlot {
     }
 }
 
-fn slot_after(id: &str, agent_name: &str, label: &str, after: &[&str]) -> AgentSlot {
+pub(crate) fn slot_after(id: &str, agent_name: &str, label: &str, after: &[&str]) -> AgentSlot {
     AgentSlot {
         id: id.to_string(),
         agent_name: agent_name.to_string(),
