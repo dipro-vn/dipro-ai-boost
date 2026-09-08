@@ -103,7 +103,7 @@ Trước khi hỏi 8 câu ở Bước 2, hỏi user 1 lần duy nhất:
 
 1. Tên dự án là gì? Mô tả domain nghiệp vụ trong 1-2 câu (dự án làm gì, cho ai)?
 2. Docs root — thư mục nào sẽ chứa SPEC/DESIGN/tasks? (ví dụ: `<project>-docs/docs` là repo docs riêng, hoặc `docs/` ngay trong repo hiện tại)
-3. Liệt kê từng repo trong dự án — với mỗi repo: tên, đường dẫn tương đối, vai trò (**đúng một** trong `backend`/`frontend`/`mobile`/`other` — xem ràng buộc định dạng ở Bước 3), stack (Enter để dùng mặc định kit: NestJS+PostgreSQL cho backend / React 19+Vite+Redux Toolkit v2+TanStack Query v5 cho frontend / Flutter+Riverpod cho mobile)
+3. Liệt kê **từng** repo trong dự án (bao nhiêu repo cũng được — nhiều repo trùng vai trò là bình thường) — với mỗi repo: tên, đường dẫn tương đối so với Repository root, vai trò (**đúng một** trong `backend`/`frontend`/`mobile`/`other` — xem ràng buộc định dạng ở Bước 3), stack (Enter để dùng mặc định kit: NestJS+PostgreSQL cho backend / React 19+Vite+Redux Toolkit v2+TanStack Query v5 cho frontend / Flutter+Riverpod cho mobile)
 4. Mỗi repo tự đặt 1 Epic code ngắn (ví dụ `E01`, `E02`...) hay để tôi tự đánh số thứ tự theo thứ tự liệt kê?
 5. Liệt kê các actor/persona nghiệp vụ sẽ dùng hệ thống (ví dụ: End User, Company Admin, System Admin...) — actor nào dùng repo nào?
 6. Payment/integration đặc thù nếu có (mặc định kit dùng ví dụ elepay/Alipay/WeChat Pay trong `POLICIES.md`/`stack-constraints.md` — thay bằng gateway/integration thật của dự án, hoặc để trống nếu không có)
@@ -118,18 +118,23 @@ Trước khi hỏi 8 câu ở Bước 2, hỏi user 1 lần duy nhất:
    > **Định dạng bảng Repos — BẮT BUỘC.** Bảng này được **Dipro AI Boost đọc bằng máy** để biết repo nào vai trò gì. Sai định dạng thì node Backend/Frontend/Mobile trong app báo "không áp dụng" dù repo có thật trên đĩa.
    >
    > - Ô **Vai trò**: **đúng một từ** — `backend` · `frontend` · `mobile` · `other`. **Không** thêm ghi chú, không `frontend — nơi làm landing page`, không `backend / frontend / mobile / other`. Ghi chú về repo để ở cột **Stack** hoặc thành đoạn văn **dưới** bảng.
-   > - Ô **Repo** và **Đường dẫn**: viết trần, **không** backtick, không `**bold**`. Đường dẫn tương đối, ví dụ `repos/frontend`.
+   > - Ô **Repo** và **Đường dẫn**: viết trần, **không** backtick, không `**bold**`.
+   > - Ô **Đường dẫn**: tương đối so với **Repository root** — ô thứ 3 người dùng khai khi mở project, tức thư mục *chứa* các repo. Với project do app tạo thì Repository root là `<project>/repos/`, nên repo nằm ở `<project>/repos/shop-api` ghi là `shop-api`.
+   > - **Mỗi repo một dòng.** Nhiều repo trùng vai trò là bình thường (2 web admin, 3 web cho 3 nhóm người dùng…) — app sinh **một node Build riêng cho từng dòng**, không gộp theo vai trò. Đừng nhồi nhiều repo vào một dòng.
    > - Giữ nguyên 4 cột và tên cột: `| Repo | Đường dẫn | Vai trò | Stack |`.
    >
-   > Mẫu một bảng đã điền đúng:
+   > Mẫu một bảng đã điền đúng (Repository root = `shop/repos/`):
    >
    > ```markdown
    > | Repo | Đường dẫn | Vai trò | Stack |
    > |---|---|---|---|
-   > | shop-api | repos/shop-api | backend | NestJS 11 · PostgreSQL · TypeORM |
-   > | shop-web | repos/shop-web | frontend | React 19 · Vite · TanStack Query v5 |
-   > | shop-app | repos/shop-app | mobile | Flutter · Riverpod |
+   > | shop-api | shop-api | backend | NestJS 11 · PostgreSQL · TypeORM |
+   > | shop-web-user | shop-web-user | frontend | React 19 · Vite · TanStack Query v5 |
+   > | shop-web-admin | shop-web-admin | frontend | React 19 · Vite · TanStack Query v5 |
+   > | shop-app | shop-app | mobile | Flutter · Riverpod |
    > ```
+   >
+   > `shop-web-user` và `shop-web-admin` cùng vai trò `frontend` — app vẫn dựng 2 node Build tách biệt, chạy và theo dõi độc lập.
    - Section `<core_rules>` mục 1: điền các gotcha từ câu 7 (nếu không có, giữ nguyên placeholder ghi chú "chưa có — bổ sung khi phát hiện")
    - Section `<red_line_rules>`: điền bảng cross-repo nếu có (câu 8), giữ nguyên placeholder nếu bỏ qua
    - Section `<memory_update_gate>`: thay `<DOCS_ROOT>` bằng path thật (câu 2), `<backend-repo>` bằng tên repo backend thật (câu 3)

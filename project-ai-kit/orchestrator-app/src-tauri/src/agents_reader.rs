@@ -504,6 +504,47 @@ Mỗi repo có 1 **Epic code** ngắn tham chiếu xuyên suốt SPEC/DESIGN/tas
 ## Actors
 "#;
 
+    /// The ESKITCHEN table after its Vai trò cells were reduced to one word
+    /// each. Five repos share the role `frontend` — the shape every
+    /// role-keyed lookup used to collapse into a single one, and the reason
+    /// ⑤ Build now gets one slot per repo instead of one per role.
+    const SEVEN_REPOS_FIVE_FRONTEND: &str = r#"
+## Repos
+
+| Repo | Đường dẫn | Vai trò | Stack |
+|---|---|---|---|
+| es-kitchen-api | es-kitchen-repository/es-kitchen-api | backend | NestJS · TypeScript · PostgreSQL — Core API, Business Logic, Domain Gatekeeper |
+| es-kitchen-payment-app | es-kitchen-repository/es-kitchen-payment-app | mobile | Flutter 3.x · Dart · Riverpod — User Mobile App (E01), iOS + Android |
+| es-kitchen-web-company | es-kitchen-repository/es-kitchen-web-company | frontend | React 19 · Vite 7 · Redux Toolkit — Company Admin Web (E02), 58 functions |
+| es-kitchen-web-admin | es-kitchen-repository/es-kitchen-web-admin | frontend | React 19 · Vite 7 · Redux Toolkit — System Admin Web (E03), 160 functions |
+| es-kitchen-web-supplier | es-kitchen-repository/es-kitchen-web-supplier | frontend | React 19 · Vite 7 · Redux Toolkit — Supplier Web (E04), quản lý menu, nhận đơn |
+| es-kitchen-web-outsource-web-private | es-kitchen-repository/es-kitchen-web-outsource-web-private | frontend | React 19 · Vite 8 · Redux Toolkit — Outsource / Internal Private Admin Web (E05), operation tool quản lý account & sales |
+| es-kitchen-webapp-driver | es-kitchen-repository/es-kitchen-webapp-driver | frontend | React 19 · Vite 7 · Ant Design — Driver Web App (E06), nhận order, cập nhật trạng thái giao hàng |
+"#;
+
+    #[test]
+    fn five_repos_can_share_the_frontend_role() {
+        let repos = build_ecosystem(SEVEN_REPOS_FIVE_FRONTEND, &[Path::new("/nonexistent")])
+            .unwrap()
+            .expect("table shape recognized");
+
+        assert_eq!(repos.len(), 7);
+        // Every cell must read — a repo the app can't classify gets no
+        // Build slot at all, which is how ESKITCHEN ended up with the whole
+        // stage blocked.
+        assert!(repos.iter().all(|repo| repo.role_key.is_some()));
+        assert_eq!(
+            repos
+                .iter()
+                .filter(|repo| repo.role_key.as_deref() == Some("frontend"))
+                .count(),
+            5
+        );
+        // The description moved to Stack, so it must survive there — losing
+        // the Epic codes is what makes E02 and E03 indistinguishable.
+        assert!(repos[3].stack.contains("E03"));
+    }
+
     #[test]
     fn unfilled_template_yields_no_rows_not_none() {
         // Table shape is valid (headers match), but every row is a
@@ -824,8 +865,8 @@ Mỗi repo có 1 **Epic code** ngắn tham chiếu xuyên suốt SPEC/DESIGN/tas
         // Now apply exactly what `init-agent.md` Bước 3.1 instructs.
         let inited = scaffolded
             .replace(
-                "| _(tên repo)_ | _(đường dẫn tương đối)_ | backend / frontend / mobile / other | _(NestJS / React / Flutter / ...)_ |",
-                "| shop-api | ./repos/shop-api | backend | NestJS |",
+                "| _(tên repo)_ | _(đường dẫn tương đối so với Repository root)_ | backend / frontend / mobile / other | _(NestJS / React / Flutter / ...)_ |",
+                "| shop-api | shop-api | backend | NestJS |\n| shop-web-admin | shop-web-admin | frontend | React 19 |",
             )
             .replace(
                 "- **Domain:** _(1-2 câu, điền qua `/init-kit`)_",

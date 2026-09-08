@@ -8,9 +8,11 @@
 
 | Repo | Đường dẫn | Vai trò | Stack |
 |---|---|---|---|
-| _(tên repo)_ | _(đường dẫn tương đối)_ | backend / frontend / mobile / other | _(NestJS / React / Flutter / ...)_ |
+| _(tên repo)_ | _(đường dẫn tương đối so với Repository root)_ | backend / frontend / mobile / other | _(NestJS / React / Flutter / ...)_ |
 
 Mỗi repo có 1 **Epic code** ngắn (`E01`, `E02`...) tham chiếu xuyên suốt SPEC/DESIGN/task/Screen Code.
+
+Liệt kê **mỗi repo một dòng**, kể cả nhiều repo cùng vai trò — Dipro AI Boost dựng một node Build riêng cho từng dòng, nên gộp lại là mất khả năng chạy/theo dõi riêng.
 
 - **Domain:** _(1-2 câu, điền qua `/init-kit`)_
 - **`<DOCS_ROOT>`:** single long-memory chứa SPEC/DESIGN/tasks/test-cases cho mọi feature (ví dụ `<project>-docs/docs/features/`).

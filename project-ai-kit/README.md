@@ -128,7 +128,8 @@ Sau khi Claude Code mở, nhập `/init-kit` hoặc dùng tên project làm ng�
 
 1. Tên dự án + mô tả domain nghiệp vụ 1-2 câu
 2. Docs root — path thật tới nơi chứa SPEC/DESIGN/tasks (ví dụ `<ten-du-an>-docs/docs` nếu dùng Cách A, hoặc `docs` nếu dùng Cách B)
-3. Danh sách repo: tên, **đường dẫn tương đối thật** (ví dụ `<ten-du-an>-repository/<backend-repo>`), vai trò (`backend`/`frontend`/`mobile`/`other`), stack (Enter để dùng mặc định kit)
+3. Danh sách repo: tên, **đường dẫn tương đối so với Repository root** (ô thứ 3 khai khi mở project — thư mục *chứa* các repo; Cách A thì đó là `<ten-du-an>-repository/`, nên repo ghi là `<backend-repo>`), vai trò — **đúng một từ** `backend`/`frontend`/`mobile`/`other`, stack (Enter để dùng mặc định kit).
+   Liệt kê **mọi** repo, kể cả nhiều repo cùng vai trò (vd 3 web cho 3 nhóm người dùng) — app dựng một node Build riêng cho từng repo.
 4. Epic code cho mỗi repo (tự đặt hoặc để agent tự đánh số)
 5. Danh sách actor/persona nghiệp vụ (ai dùng hệ thống, dùng repo nào)
 6. Payment/integration đặc thù (nếu có)
