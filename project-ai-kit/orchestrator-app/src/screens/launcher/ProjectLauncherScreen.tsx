@@ -76,6 +76,12 @@ export function ProjectLauncherScreen() {
   const [leavingProject, setLeavingProject] = useState(false);
   const initSessionRef = useRef<string | null>(null);
   const initLaunchingRef = useRef(false);
+  /** Lần cuối PTY xuất ra byte nào — tín hiệu duy nhất cho "Claude đã ngừng
+   * nói", dùng để không cắt ngang init-agent khi nó còn đang ghi file. */
+  const initLastOutputAtRef = useRef(Date.now());
+  /** Chặn `completeInitKit` chạy hai lần: tick polling kế tiếp có thể nổ
+   * trước khi `initPhase` kịp đổi và gỡ effect. */
+  const initCompletingRef = useRef(false);
   const initNeedsCompletion = createdProject && summary?.initStatus !== "ready";
 
   /** Dựng phần khung kit còn thiếu rồi mở lại chính project đó — mở lại là
@@ -159,6 +165,7 @@ export function ProjectLauncherScreen() {
         return;
       }
       if (!initSessionRef.current) initSessionRef.current = payload.sessionId;
+      initLastOutputAtRef.current = Date.now();
       setInitOutput((current) => [...current, payload.data].slice(-10_000));
     });
     const unlistenFinished = onInitKitFinished((payload) => {
@@ -235,6 +242,8 @@ export function ProjectLauncherScreen() {
   async function startInitKit(projectName: string) {
     initLaunchingRef.current = true;
     initSessionRef.current = null;
+    initCompletingRef.current = false;
+    initLastOutputAtRef.current = Date.now();
     setInitProjectName(projectName);
     setInitSessionId(null);
     setInitOutput([]);
@@ -254,6 +263,61 @@ export function ProjectLauncherScreen() {
       setInitError(extractErrorMessage(err));
     }
   }
+
+  /** Đóng lại phiên init-kit khi project đã thực sự `ready`: dừng Claude, ẩn
+   * terminal, và để lộ thẻ summary với nút "Vào Pipeline Board" đã mở khoá.
+   * `refreshed` là kết quả `refreshProject` vừa dùng để phát hiện `ready`, nên
+   * không gọi lại lần nữa. */
+  async function completeInitKit(refreshed: ProjectSummary, sessionId: string) {
+    initCompletingRef.current = true;
+    setSummary(refreshed);
+    setProjectLabel(refreshed.label);
+    setProjectInit(
+      refreshed.initStatus,
+      refreshed.initReasons,
+      refreshed.paths.agentsRoot,
+    );
+    setInitPhase("finished");
+    setInitDialogOpen(false);
+    try {
+      await commands.stopInitKit(sessionId);
+    } catch {
+      // Phiên có thể đã tự chết trước khi ta kịp dừng — project vẫn `ready`
+      // nên không có gì để báo, và `init-kit://finished` sẽ dọn nốt state.
+    }
+  }
+
+  /** `init-kit://finished` chỉ bắn khi tiến trình `claude` thoát hẳn (vòng đọc
+   * PTY trong `initrun.rs` thoát ở EOF), mà Claude Code interactive quay về
+   * prompt chứ không thoát sau khi chạy xong một slash command. Nên hoàn tất
+   * init-kit phải tự phát hiện: đọc lại `AGENTS.md` qua `refreshProject` mỗi
+   * `POLL_MS`, và chỉ tin kết quả khi terminal đã im `IDLE_MS` — trong lúc
+   * init-agent còn ghi file thì output không im lâu tới vậy, còn khi Claude
+   * kết thúc lượt thì nó im vĩnh viễn. */
+  useEffect(() => {
+    const POLL_MS = 3_000;
+    const IDLE_MS = 10_000;
+    if (initPhase !== "running" || !initSessionId) return;
+
+    const timer = window.setInterval(() => {
+      if (initCompletingRef.current) return;
+      if (Date.now() - initLastOutputAtRef.current < IDLE_MS) return;
+      void commands
+        .refreshProject()
+        .then((result) => {
+          if (initCompletingRef.current) return;
+          if (result.initStatus !== "ready") return;
+          void completeInitKit(result, initSessionId);
+        })
+        .catch(() => {
+          // Terminal vẫn mở và nút "Vào Pipeline Board" vẫn là đường thủ công,
+          // nên một tick hỏng không cần báo gì — tick sau thử lại.
+        });
+    }, POLL_MS);
+
+    return () => window.clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initPhase, initSessionId]);
 
   async function submitCreateProject(name: string, parentPath: string) {
     setSubmitting(true);
