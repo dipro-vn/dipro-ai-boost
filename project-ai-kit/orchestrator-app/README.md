@@ -17,6 +17,7 @@
 7. [Tạo feature đầu tiên & chạy pipeline](#7-tạo-feature-đầu-tiên--chạy-pipeline)
 8. [Mở lại project đã setup](#8-mở-lại-project-đã-setup)
 9. [Ghi chú vận hành](#9-ghi-chú-vận-hành)
+10. [Đóng gói & phát cho máy khác (macOS)](#10-đóng-gói--phát-cho-máy-khác-macos)
 
 ---
 
@@ -76,7 +77,7 @@ pnpm tauri dev
 
 `pnpm tauri dev` mở cửa sổ desktop và hot-reload cả frontend (Vite) lẫn backend (Rust tự rebuild + restart). Lần chạy đầu Cargo phải build từ đầu — **mất vài phút**, lần sau nhanh hơn nhiều.
 
-Build bản cài đặt được:
+Build bản cài đặt được (`.dmg` trên macOS) — xem [mục 10](#10-đóng-gói--phát-cho-máy-khác-macos) để biết cách phát cho máy khác:
 
 ```bash
 pnpm tauri build
@@ -376,6 +377,67 @@ Khác với luồng "Mở project mới" ở [mục 4](#4-mở-project-trong-app
 | **Model & permission** | **Settings → Agents** chỉnh model, permission profile, max turns, timeout cho từng agent |
 | **Chi phí** | **Cost & Reports** (icon biểu đồ trên top bar) tổng hợp chi phí theo feature / stage / agent, export CSV được |
 | **Pipeline thay đổi** | Topology pipeline lưu ở `.orchestrator/pipeline.json`. App tự migrate khi bản mới đổi cấu trúc, backup file cũ thành `pipeline.json.v<N>.bak` |
+
+---
+
+## 10. Đóng gói & phát cho máy khác (macOS)
+
+### Build file cài đặt
+
+```bash
+cd project-ai-kit/orchestrator-app
+pnpm tauri build
+```
+
+Kết quả nằm ở `src-tauri/target/release/bundle/`:
+
+| File | Dùng để |
+|---|---|
+| `dmg/Dipro AI Boost_<version>_aarch64.dmg` | **Gửi cho người khác** — mở ra kéo app vào Applications |
+| `macos/Dipro AI Boost.app` | Bản app trần, chạy thử ngay trên máy build |
+
+> **Bản build ra chỉ chạy trên Mac Apple Silicon (M1 trở lên).** Tên file có `aarch64` là vì vậy. Máy Intel sẽ không mở được. Muốn một file chạy cả hai loại thì build universal:
+>
+> ```bash
+> rustup target add x86_64-apple-darwin
+> pnpm tauri build --target universal-apple-darwin
+> ```
+
+### App **chưa được ký bằng Apple Developer ID**
+
+Máy này không có chứng chỉ ký, nên app chỉ được **ad-hoc sign**. Hệ quả với người nhận:
+
+- macOS sẽ báo **"Dipro AI Boost không mở được vì Apple không thể kiểm tra…"** ở lần mở đầu tiên.
+- Đây là hành vi bình thường của Gatekeeper với app ngoài App Store chưa có Developer ID — **không phải app hỏng**.
+
+Muốn hết cảnh báo này thì cần tài khoản **Apple Developer Program** (99 USD/năm) để ký + notarize. Chưa có thì dùng cách dưới.
+
+### Hướng dẫn cho người nhận
+
+**Bước 1.** Mở file `.dmg`, kéo **Dipro AI Boost** vào thư mục **Applications**.
+
+**Bước 2.** Gỡ cờ "tải từ internet" — mở **Terminal**, dán đúng dòng này:
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/Dipro AI Boost.app"
+```
+
+**Bước 3.** Mở app từ Launchpad hoặc Applications như bình thường.
+
+> Nếu bỏ qua Bước 2: chuột phải vào app → **Open** → **Open** lần nữa trong hộp thoại. Cách này đôi khi không đủ với app chưa ký; lúc đó vào **System Settings → Privacy & Security**, kéo xuống cuối bấm **Open Anyway**, hoặc quay lại Bước 2.
+
+### Người nhận cần gì để app chạy được
+
+App **không tự gọi model** — nó spawn `claude` CLI trên máy người dùng. Nên máy đó bắt buộc phải có:
+
+| Thành phần | Kiểm tra |
+|---|---|
+| **Claude Code CLI, đã đăng nhập** | `claude --version` chạy được trong Terminal |
+| Thư mục project (agentsRoot · DOCS_ROOT · repositoryRoot) | Xem [mục 3](#3-chuẩn-bị-thư-mục-project) |
+
+Không cần Node, pnpm hay Rust — những thứ đó chỉ cần khi **build** app, không cần khi **chạy**.
+
+> App tìm `claude` theo `PATH`, các vị trí cài đặt thông dụng, rồi hỏi login shell. Vẫn không thấy thì chỉ đường dẫn tay ở **Settings → Claude CLI path**.
 
 ---
 
