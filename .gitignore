@@ -30,3 +30,13 @@ pm-ai-kit/performance-report/data/
 pm-ai-kit/performance-report/result/
 pm-ai-kit/performance-report/debug_*.csv
 pm-ai-kit/performance-report/*.xlsx
+
+# Other
+project-ai-kit/feedbacks
+project-ai-kit/demos
+
+# MkDocs build output (regenerable từ SPEC.md)
+project-ai-kit/site/
+
+# Orchestrator app (Tauri workspace — chưa ready commit)
+project-ai-kit/orchestrator-app/

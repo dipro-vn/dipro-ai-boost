@@ -121,22 +121,68 @@ Từ đó xác định:
 
 ### Bước 3 — Component Discovery (BẮT BUỘC trước khi vẽ)
 
-**3a. Hỏi user 1 lần để gom context:**
+**3a. Hỏi user (BẮT BUỘC — không được skip, không được tự đoán):**
 
+**Câu 0 — Platform target (BẮT BUỘC hỏi đầu tiên):**
 ```
-1. Có screen mẫu high-fidelity nào trong Figma để Designer reference pattern không?
-   (Vd: Figma URL của screen tương tự đã hoàn thiện) → giúp Designer học composition pattern.
-
-2. Component Library page đã đầy đủ chưa?
-   - Designer cần: Sidebar (per app), Header, Table, Filter Bar, Button (primary/outline/icon),
-     Input, DatePicker, StatusBadge, Pagination, Icon set, Modal wrapper
-   - Component nào CHƯA có → user cung cấp hoặc cho phép Designer đề xuất.
-
-3. Sample data nguồn ở đâu?
-   - Lấy từ SPEC "Cấu trúc dữ liệu" (đã có, nếu có)
-   - User cung cấp data sample khác
-   - Designer tự generate realistic sample theo domain/ngôn ngữ của dự án
+Feature này thiết kế cho PLATFORM nào? (chọn 1 hoặc kết hợp)
+   - Mobile app (native iOS/Android)
+   - Web app (mobile-first PWA)
+   - Website (desktop)
+   - iPad / Tablet
+→ Nếu SPEC.md ## Actors & Preconditions hoặc ## Responsive Requirements đã ghi rõ → skip câu này, extract từ SPEC.
+→ Nếu feature multi-platform (VD Doctor mobile + Admin web) → xác định từng NHÓM screens thuộc platform nào.
 ```
+
+**⚠️ Enforcement Câu 0:**
+- Nếu user CHƯA trả lời và SPEC.md CŨNG chưa ghi rõ → **DỪNG WORKFLOW**, không được tự đoán, không được tiếp tục Bước 4 vẽ frame
+- Lưu answer làm `TARGET_PLATFORM` — dùng cho `frame.resize()` ở Bước 4b (mapping chuẩn ở phần "Viewport CHUẨN CỨNG" ngay dưới)
+
+**Câu 0.5 — Figma URL output đích (BẮT BUỘC hỏi thứ hai):**
+```
+Figma Design file nào để đặt output screens? (URL dạng figma.com/design/...)
+   - File key + page/section đích
+   - Nếu file mới → có muốn Designer tạo file mới không? (dùng create_new_file)
+   - Nếu file có sẵn → verify qua get_metadata trước khi vẽ
+```
+
+**⚠️ Enforcement Câu 0.5:**
+- Nếu user CHƯA cung cấp URL và `.claude/context/designer-context.md` CŨNG chưa có `figma_output_file_key` → **DỪNG WORKFLOW**, không được tự chọn Figma file, không tự tạo file mới không hỏi
+- Lưu làm `FIGMA_OUTPUT_URL` — dùng xuyên suốt Bước 4 vẽ frames
+- Nếu URL trỏ `/board/` (FigJam) → warn user, xác nhận có muốn dùng FigJam không (designer-agent mặc định target `/design/` file)
+
+**Câu 1 — Reference screen (optional):**
+```
+Có screen mẫu high-fidelity nào trong Figma để Designer reference pattern không?
+(Vd: Figma URL của screen tương tự đã hoàn thiện) → giúp Designer học composition pattern.
+```
+
+**Câu 2 — Component Library (BẮT BUỘC):**
+```
+Component Library page đã đầy đủ chưa?
+- Designer cần: Sidebar (per app), Header, Table, Filter Bar, Button (primary/outline/icon),
+  Input, DatePicker, StatusBadge, Pagination, Icon set, Modal wrapper
+- Component nào CHƯA có → user cung cấp hoặc cho phép Designer đề xuất.
+```
+
+**Câu 3 — Sample data (optional):**
+```
+Sample data nguồn ở đâu?
+- Lấy từ SPEC "Cấu trúc dữ liệu" (đã có, nếu có)
+- User cung cấp data sample khác
+- Designer tự generate realistic sample theo domain/ngôn ngữ của dự án
+```
+
+**Viewport CHUẨN CỨNG theo `TARGET_PLATFORM` (không tự đổi):**
+
+| Platform | Viewport (W×H) | Ghi chú |
+|---|---|---|
+| Mobile app | **375×812** | iPhone standard — dùng cho native iOS/Android |
+| Web app (mobile-first PWA) | **375×812** | Same as mobile — web responsive mobile-first |
+| Website (desktop) | **1440×1024** | Desktop standard |
+| iPad / Tablet | **1024×768** | Landscape tablet |
+
+Kích thước này áp dụng cho `frame.resize()` ở Bước 4b — không dùng 390×844, 1920×1080 hay bất kỳ số nào khác.
 
 **3b. Discover library qua MCP:**
 
@@ -193,14 +239,22 @@ await figma.importComponentByKeyAsync(tableKey)
 
 **4b. Tạo frame + assemble:**
 
+Frame size PHẢI theo `TARGET_PLATFORM` đã xác định ở Bước 3a (mapping chuẩn cứng ở đầu Bước 3):
+
 ```
 const frame = figma.createFrame()
 frame.name = "<Screen Code>"  // vd XX_MENU_001 — Module lấy từ Epic code repo (AGENTS.md)
-frame.resize(1440, 1024)      // desktop, theo per-site layout rules trong design_rule.md
-                              // hoặc viewport mobile nếu target app là mobile
+
+// Viewport CHUẨN theo TARGET_PLATFORM (không tự đổi):
+switch (TARGET_PLATFORM) {
+  case "Mobile app":     frame.resize(375, 812);  break;  // iPhone
+  case "Web app":        frame.resize(375, 812);  break;  // mobile-first PWA
+  case "Website":        frame.resize(1440, 1024); break; // desktop
+  case "iPad/Tablet":    frame.resize(1024, 768);  break; // landscape
+}
 
 // Append instance, KHÔNG vẽ rectangle:
-const sidebarInstance = sidebar.createInstance()
+const sidebarInstance = sidebar.createInstance()   // desktop/website only
 const headerInstance = header.createInstance()
 const tableInstance = table.createInstance()
 
@@ -208,6 +262,11 @@ frame.appendChild(sidebarInstance)
 frame.appendChild(headerInstance)
 frame.appendChild(tableInstance)
 ```
+
+**Anti-pattern cần tránh:**
+- ❌ `frame.resize(390, 844)` — dùng size cũ (iPhone 14), không đúng chuẩn 375×812
+- ❌ `frame.resize(1920, 1080)` — Wide desktop, không thuộc 4 platform chuẩn
+- ❌ Dùng cùng 1 size cho mọi screen khi feature multi-platform
 
 **4c. Bind variables + fill sample data:**
 
