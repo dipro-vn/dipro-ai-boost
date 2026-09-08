@@ -82,7 +82,10 @@ export function FolderTree({
       type="button"
       onClick={() => rootCanModify && onSelectFolder(rootPath)}
       onContextMenu={handleRootContextMenu}
-      {...(rootCanModify ? { [EXPLORER_DIR_PATH_ATTR]: rootPath } : {})}
+      // Luôn nhận thả, kể cả khi chỉ đọc: bỏ thuộc tính này đi thì hit-test
+      // trượt hàng root và cú thả bị chuyển hướng đi nơi khác. Ghi được hay
+      // không để backend trả lời bằng một lỗi nói rõ.
+      {...{ [EXPLORER_DIR_PATH_ATTR]: rootPath }}
       title={rootCanModify ? rootPath : `${rootPath} (không ghi được vào thư mục này)`}
       className={cn(
         "flex w-full items-center gap-1 rounded px-1.5 py-1 text-left hover:bg-muted/60",

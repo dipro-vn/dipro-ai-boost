@@ -150,11 +150,22 @@ export function FolderExplorerSidebar({ onClose }: FolderExplorerSidebarProps) {
     setRefreshToken((token) => token + 1);
   }
 
-  /** Folder nhận file, ưu tiên theo thứ tự: nơi con trỏ đang chỉ → folder vừa
-   * bấm → root đang mở. Luôn có đích, nên thả/paste không bao giờ rơi vào hư
-   * không. */
+  /** Đích của một cú THẢ: đúng folder dưới con trỏ, không trúng folder nào thì
+   * là root đang mở.
+   *
+   * Cố tình KHÔNG lùi về `activeFolderPath`: thả là thao tác theo vị trí, nên
+   * chuyển hướng nó sang một folder người dùng chỉ bấm lúc trước là âm thầm bỏ
+   * file sai chỗ. Đó chính là lý do thả lên hàng root lại báo "đã chép vào
+   * <subfolder>". */
   const dropDestination = useCallback(
-    (path: string | null) => path ?? activeFolderPath ?? activeRootPath,
+    (path: string | null) => path ?? activeRootPath,
+    [activeRootPath],
+  );
+
+  /** Đích của một cú DÁN: không có toạ độ nào để bám, nên đi theo lựa chọn —
+   * folder vừa bấm, không có thì root. */
+  const pasteDestination = useCallback(
+    () => activeFolderPath ?? activeRootPath,
     [activeFolderPath, activeRootPath],
   );
 
@@ -190,9 +201,15 @@ export function FolderExplorerSidebar({ onClose }: FolderExplorerSidebarProps) {
         setDropTargetPath(null);
         // Thả ra ngoài Explorer thì không phải việc của nó — đừng nuốt file
         // của người ta vào một folder họ không nhắm tới.
-        if (!hit.inside) return;
+        if (!hit.inside || payload.paths.length === 0) return;
         const destination = dropDestination(hit.path);
-        if (!destination || payload.paths.length === 0) return;
+        if (!destination) {
+          // Im lặng ở đây nghĩa là người dùng thả file rồi không thấy gì xảy
+          // ra, không biết vì sao.
+          setTransferMessage(null);
+          setTransferError("Chưa xác định được thư mục đích để chép file vào.");
+          return;
+        }
 
         setTransferError(null);
         setTransferMessage(`Đang chép ${payload.paths.length} file...`);
@@ -219,12 +236,18 @@ export function FolderExplorerSidebar({ onClose }: FolderExplorerSidebarProps) {
   }, [dirPathAtPoint, dropDestination]);
 
   useEffect(() => {
+    if (!transferMessage) return;
+    const timer = window.setTimeout(() => setTransferMessage(null), 5_000);
+    return () => window.clearTimeout(timer);
+  }, [transferMessage]);
+
+  useEffect(() => {
     async function handlePaste(event: ClipboardEvent) {
       // Paste vào ô nhập liệu là paste chữ, không phải thả file vào Explorer.
       const node = event.target as HTMLElement | null;
       if (node?.closest("input, textarea, [contenteditable='true']")) return;
 
-      const destination = dropDestination(null);
+      const destination = pasteDestination();
       if (!destination) return;
 
       const files = Array.from(event.clipboardData?.files ?? []);
@@ -266,7 +289,7 @@ export function FolderExplorerSidebar({ onClose }: FolderExplorerSidebarProps) {
 
     document.addEventListener("paste", handlePaste);
     return () => document.removeEventListener("paste", handlePaste);
-  }, [dropDestination]);
+  }, [pasteDestination]);
 
   return (
     <div ref={sidebarRef} className="flex w-72 shrink-0 flex-col border-r border-border">
@@ -289,10 +312,11 @@ export function FolderExplorerSidebar({ onClose }: FolderExplorerSidebarProps) {
         </div>
       </div>
 
-      {/* Nói thẳng file sẽ rơi vào đâu — không thì kéo-thả và Cmd+V là đoán mò. */}
+      {/* Chỉ nói về DÁN. Thả thì đi theo con trỏ và đã có folder sáng lên báo
+          đích, nên gộp hai thứ vào một nhãn là hứa sai một trong hai. */}
       {(activeFolderPath ?? activeRootPath) && (
         <div className="border-b border-border px-3 py-1.5 text-[11px] text-muted-foreground">
-          Thả / dán vào:{" "}
+          Dán vào:{" "}
           <span className="font-mono text-foreground" title={activeFolderPath ?? activeRootPath ?? ""}>
             {(activeFolderPath ?? activeRootPath ?? "").split(/[\\/]/).pop()}
           </span>
