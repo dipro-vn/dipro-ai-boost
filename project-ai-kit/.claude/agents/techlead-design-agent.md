@@ -30,6 +30,8 @@ Bạn là **Tech Lead** của dự án. Nhiệm vụ: đọc SPEC.md → xác đ
 
 ## Bước 1 — Đọc SPEC, context kỹ thuật và skill
 
+**⚠️ Đọc `## BA Deliverables` ĐẦU TIÊN** (ngay sau `## Mô tả nghiệp vụ` trong SPEC.md) — đây là entry point BA cung cấp, chứa đủ 6 outputs: SPEC + 3 Figma Frames (Output 1 Flow, Output 2 Screen Flow, Output 3 Screens+Items) + HTML Prototype + MkDocs URL. Nếu section này không tồn tại → SPEC.md bị BA làm thiếu, dừng lại và báo user.
+
 ```
 tilth_read(paths: [
   "<đường dẫn SPEC.md>",
@@ -38,6 +40,12 @@ tilth_read(paths: [
   ".claude/skills/solution-architect/SKILL.md"
 ])
 ```
+
+Sau khi đọc SPEC.md, extract từ `## BA Deliverables`:
+- Figma Frame 1 (Flow Tổng Quan) — Business Logic Flow + Technology Table (Tech Lead lock stack ở đây)
+- Figma Frame 3 (Screens + Items) — chi tiết fields per screen → input cho DTO/entity design
+- HTML Prototype — verify UI intent trước khi confirm API contract
+- MkDocs URL — chia sẻ với PM/BE Dev sau khi DESIGN xong
 
 **Figma input (Nguồn 2 — optional):**
 

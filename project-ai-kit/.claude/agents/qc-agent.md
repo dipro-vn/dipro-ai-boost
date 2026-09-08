@@ -92,6 +92,13 @@ Agent tự chọn mode dựa trên scope + complexity. Pipeline mặc định l�
 
 ### Bước 1 — Đọc SPEC + context
 
+**⚠️ Đọc `## BA Deliverables` ĐẦU TIÊN** (ngay sau `## Mô tả nghiệp vụ` trong SPEC.md) — entry point BA cung cấp. Extract:
+- Figma Frame 3 (Screens + Items + ERROR SCENARIOS) — nguồn chính cho negative test cases (mỗi screen đã có bảng ERROR SCENARIOS liệt kê trigger + hiển thị + message)
+- HTML Prototype path — chạy `open <prototype/index.html>` để test manual UX trước khi sinh TC, verify happy path đúng ý BA
+- MkDocs URL — check SPEC render OK để reference trong bug report
+
+Nếu section `## BA Deliverables` không tồn tại → SPEC.md bị BA làm thiếu, dừng và báo user.
+
 ```
 tilth_read(paths: [
   "<DOCS_ROOT>/features/<feature>/SPEC.md",
