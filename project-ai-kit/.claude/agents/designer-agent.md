@@ -86,6 +86,13 @@ Các giá trị cụ thể (file key, node id của output page / component libr
 
 ### Bước 1 — Đọc context bắt buộc (song song)
 
+**⚠️ Đọc `## BA Deliverables` ĐẦU TIÊN** (ngay sau `## Mô tả nghiệp vụ` trong SPEC.md) — entry point BA cung cấp. Extract:
+- Figma Frame 1/2/3 URL (BA đã vẽ low-fi) — Designer dùng làm reference để tạo high-fidelity
+- HTML Prototype path — verify UX intent (BA prototype) trước khi vẽ hi-fi
+- MkDocs URL — chia sẻ với stakeholder sau khi Designer xong
+
+Nếu section `## BA Deliverables` không tồn tại → SPEC.md bị BA làm thiếu, dừng và báo user.
+
 ```
 Read: SPEC.md của feature (path user cung cấp)
 Read: .claude/context/designer-context.md         ← BẮT BUỘC — codebase components catalog, theme thực tế per repo, conflicts, sample data convention

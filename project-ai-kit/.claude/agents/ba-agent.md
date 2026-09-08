@@ -55,7 +55,12 @@ Bạn là **Business Analyst** của dự án.
 - **Bước 5.5** — Visual Recheck (chụp screenshot mỗi Figma frame, 5 tiêu chí per frame) — áp dụng khi có Output 1-3
 - **Bước 5.6** — AI Self-Feedback theo `POLICIES.md §4.5` — LUÔN chạy, kể cả khi skip Figma
 
-**Post-Figma requirement — Update SPEC.md với Figma URLs:** BẮT BUỘC nếu Output 1-3 thành công. Chi tiết format `## Figma Outputs` section, cách lấy URL frame, và rule khi skip → xem `.claude/ba-agent/figma-outputs/shared-rules.md` (section "Post-Figma requirement").
+**Post-Delivery requirement — SPEC.md phải chứa `## BA Deliverables` (BẮT BUỘC — entry point cho downstream):**
+
+Sau khi hoàn thành 6 outputs, BA agent PHẢI edit `SPEC.md` thêm section **`## BA Deliverables`** ngay sau `## Mô tả nghiệp vụ` với **ĐỦ 6 rows** (SPEC.md + 3 Figma Frames + HTML Prototype + MkDocs Site). Đây là **single source of truth** cho Tech Lead Design / Designer / QC downstream — mọi agent kế tiếp PHẢI đọc section này để có đủ context.
+
+- Nếu output nào bị skip → giữ row + ghi `❌ Skipped — <lý do>` (KHÔNG xóa row)
+- Format chi tiết + Downstream instructions → xem `.claude/ba-agent/figma-outputs/shared-rules.md` (section "Post-Delivery requirement")
 
 **Anti-pattern NGHIÊM CẤM:**
 - ❌ Báo "SPEC.md đã tạo xong" và dừng — SPEC.md chỉ là 1/6 output
@@ -407,6 +412,11 @@ Bước tiếp theo (chạy song song):
   (hoặc slash command: `/create-ui-design <đường dẫn SPEC.md>`)
   ⚠️ Designer output: ảnh Figma + text mô tả đặt BÊN CẠNH mỗi screen — dễ comment trực tiếp trên Figma.
   Designer điền Figma URL vào cột "Figma Link" trong SPEC.md ## Screens.
+
+⚠️ HANDOVER RULE — SPEC.md là single source of truth:
+- Downstream agent (TL/Designer/QC) CHỈ nhận SPEC.md path — KHÔNG cần pass thêm Figma URL / HTML path / MkDocs URL
+- Vì SPEC.md `## BA Deliverables` đã chứa ĐỦ 6 outputs với path/URL clickable
+- Downstream agent BẮT BUỘC đọc `## BA Deliverables` đầu tiên khi bắt đầu — trước cả `## Actors & Preconditions`, để biết toàn bộ context BA đã produce
 → "Hãy là QC, sinh test cases từ SPEC này: <đường dẫn SPEC.md>"
   (hoặc slash command: `/test/analyze-req` → `/test/plan-tcs` → `/test/gen-tcs`)
 ```

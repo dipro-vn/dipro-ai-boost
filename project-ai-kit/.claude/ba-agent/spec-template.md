@@ -7,6 +7,7 @@ Cấu trúc bắt buộc:
 # SPEC: <Feature Name>
 
 ## Mô tả nghiệp vụ
+## BA Deliverables        ← BẮT BUỘC — entry point cho downstream (TL/Designer/QC), format ở figma-outputs/shared-rules.md
 ## Actors & Preconditions
 ## Flow Tổng Quan
 ## Happy Path
@@ -17,6 +18,13 @@ Cấu trúc bắt buộc:
 ## Screen Details
 ## Responsive Requirements
 ```
+
+**⚠️ `## BA Deliverables` — vị trí + nội dung:**
+- Đặt NGAY SAU `## Mô tả nghiệp vụ`, TRƯỚC `## Actors & Preconditions`
+- Chứa đủ 6 outputs (SPEC.md + 3 Figma Frames + HTML Prototype + MkDocs Site) với path/URL clickable
+- Có "Downstream instructions" — chỉ rõ TL Design / Designer / QC dùng phần nào của SPEC + Figma
+- Format chi tiết → xem `.claude/ba-agent/figma-outputs/shared-rules.md` section "Post-Delivery requirement"
+- Bước 4 của ba-agent tạo skeleton (rows với `<URL>` placeholder). Bước 5 fill Figma URLs. Cuối cùng tất cả 6 rows đều có value hoặc `❌ Skipped — <lý do>`.
 
 ---
 
