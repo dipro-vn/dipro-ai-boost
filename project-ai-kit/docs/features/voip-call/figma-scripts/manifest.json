@@ -1,8 +1,0 @@
-{
-  "name": "BA - VoIP Flow Diagrams",
-  "id": "ba-voip-flow-diagrams",
-  "api": "1.0.0",
-  "main": "combined-run-once.js",
-  "editorType": ["figma"],
-  "documentAccess": "dynamic-page"
-}
