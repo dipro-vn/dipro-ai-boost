@@ -9,7 +9,7 @@
 //! (`project-ai-kit/AGENTS.md`) has. See `docs/orchestrator/ASSUMPTIONS-GAPS.md`.
 
 use std::collections::BTreeSet;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::domain::project::{EcosystemRepo, ProjectInitStatus};
 use crate::error::AppResult;
@@ -213,7 +213,7 @@ fn is_placeholder_cell(cell: &str) -> bool {
 /// Strips markdown emphasis from a cell that is an IDENTIFIER (repo name,
 /// path) rather than prose. `/init-kit` writes these in backticks often
 /// enough that a literal read breaks everything downstream: a
-/// `declared_path` of `` `repos/frontend` `` makes `resolve_repo_cloned`
+/// `declared_path` of `` `repos/frontend` `` makes `resolve_repo_path`
 /// look for a directory whose name contains backticks, so a repo sitting
 /// right there on disk reads as "not cloned".
 ///
@@ -439,14 +439,15 @@ pub fn declared_repo_paths(agents_md: &str) -> Vec<String> {
 /// showed real projects don't have one consistent root. This never claims
 /// "cloned" incorrectly — an absent match always falls through to
 /// `cloned: false`, which is the safe direction to be wrong in.
-pub fn resolve_repo_cloned(declared_path: &str, candidate_bases: &[&Path]) -> bool {
+pub fn resolve_repo_path(declared_path: &str, candidate_bases: &[&Path]) -> Option<PathBuf> {
     let declared = Path::new(declared_path);
     if declared.is_absolute() {
-        return declared.is_dir();
+        return declared.is_dir().then(|| declared.to_path_buf());
     }
     candidate_bases
         .iter()
-        .any(|base| base.join(declared).is_dir())
+        .map(|base| base.join(declared))
+        .find(|candidate| candidate.is_dir())
 }
 
 pub fn build_ecosystem(
@@ -464,8 +465,10 @@ pub fn build_ecosystem(
             // repo subfolder.
             let name = strip_cell_decoration(&name);
             let declared_path = strip_cell_decoration(&declared_path);
+            let resolved = resolve_repo_path(&declared_path, candidate_bases);
             EcosystemRepo {
-                cloned: resolve_repo_cloned(&declared_path, candidate_bases),
+                cloned: resolved.is_some(),
+                resolved_path: resolved.map(|path| path.display().to_string()),
                 name,
                 declared_path,
                 role_key: canonical_role(&role).map(str::to_string),
@@ -682,13 +685,13 @@ Mỗi repo có 1 **Epic code** ngắn tham chiếu xuyên suốt SPEC/DESIGN/tas
         let repo_dir = tmp.path().join("es-kitchen-api");
         std::fs::create_dir_all(&repo_dir).unwrap();
 
-        assert!(resolve_repo_cloned("es-kitchen-api", &[tmp.path()]));
+        assert!(resolve_repo_path("es-kitchen-api", &[tmp.path()]).is_some());
     }
 
     #[test]
     fn uncloned_repo_never_falsely_reported_as_cloned() {
         let tmp = tempfile::tempdir().unwrap();
-        assert!(!resolve_repo_cloned("does-not-exist", &[tmp.path()]));
+        assert!(resolve_repo_path("does-not-exist", &[tmp.path()]).is_none());
     }
 
     #[test]

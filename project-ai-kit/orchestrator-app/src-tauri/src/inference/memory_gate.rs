@@ -85,6 +85,7 @@ mod tests {
             role_key: crate::agents_reader::canonical_role(role).map(str::to_string),
             stack: "x".to_string(),
             cloned: true,
+            resolved_path: Some(format!("/tmp/{name}")),
         }
     }
 

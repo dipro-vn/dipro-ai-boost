@@ -567,6 +567,7 @@ mod tests {
                 role_key: crate::agents_reader::canonical_role(role).map(str::to_string),
                 stack: "x".to_string(),
                 cloned: true,
+                resolved_path: Some(format!("/tmp/{name}")),
             })
             .collect()
     }
@@ -752,6 +753,7 @@ mod tests {
                 role_key: Some("backend".to_string()),
                 stack: "x".to_string(),
                 cloned: true,
+                resolved_path: Some("/tmp/backend".to_string()),
             },
             EcosystemRepo {
                 name: "mystery-repo".to_string(),
@@ -760,6 +762,7 @@ mod tests {
                 role_key: None,
                 stack: "x".to_string(),
                 cloned: true,
+                resolved_path: Some("/tmp/mystery-repo".to_string()),
             },
         ];
         assert!(!slots_without_work_in_feature(&feature_dir, &ecosystem)

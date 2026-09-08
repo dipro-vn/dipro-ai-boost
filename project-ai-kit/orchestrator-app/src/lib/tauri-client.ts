@@ -45,6 +45,9 @@ export interface EcosystemRepo {
   roleKey: string | null;
   stack: string;
   cloned: boolean;
+  /** Nơi `declaredPath` thực sự trỏ tới trên đĩa, tuyệt đối. `null`/vắng khi
+   * chưa clone — tức đúng lúc `cloned` là false. */
+  resolvedPath?: string | null;
 }
 
 /** Mirrors `store::kit_template::KitGroup` — một nhóm khung kit chưa có

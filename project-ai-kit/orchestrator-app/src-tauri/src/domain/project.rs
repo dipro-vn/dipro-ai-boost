@@ -50,6 +50,17 @@ pub struct EcosystemRepo {
     pub role_key: Option<String>,
     pub stack: String,
     pub cloned: bool,
+    /// Where `declared_path` actually resolved to on disk, absolute — the
+    /// base that matched, joined. `None` when nothing matched, which is
+    /// exactly when `cloned` is false.
+    ///
+    /// `resolve_repo_path` used to throw this away and return a bool, so
+    /// nothing downstream could say where a repo lives. A per-repo build
+    /// agent needs it twice over: to be told in its prompt which checkout
+    /// it owns, and as an `--add-dir` grant, because its cwd is under
+    /// `docsRoot` which need not be anywhere near `repositoryRoot`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resolved_path: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
