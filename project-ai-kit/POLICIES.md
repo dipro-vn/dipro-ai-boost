@@ -98,6 +98,88 @@ Mỗi persona có checklist câu hỏi riêng trước khi hành động:
 
 ---
 
+## 4.5. AI Self-Feedback — BẮT BUỘC sau khi hoàn thành output (áp dụng MỌI agent)
+
+> Sau khi hoàn thành output (SPEC.md, DESIGN.md, task files, source code, Figma, test cases...), agent **KHÔNG được báo user "đã xong" mà không tự review lại**.
+
+### Quy trình bắt buộc 3 bước
+
+**Bước 1 — Chụp/đọc lại output vừa tạo:**
+- Docs (.md): đọc lại toàn bộ file
+- Figma frames: `get_screenshot` từng frame
+- Code: `Read` lại các file vừa write/edit
+- Test cases: đọc lại `.md` + đối chiếu SPEC
+
+**Bước 2 — Tự phân tích + feedback ngược lại theo 2 câu hỏi cốt lõi:**
+
+```
+🔍 SELF-FEEDBACK — <Output Name>
+
+1. Flow / logic có bị THIẾU BƯỚC nào không?
+   • Bước nào trong luồng nghiệp vụ chưa được cover?
+   • Actor nào chưa được đề cập?
+   • Non-happy case nào chưa xử lý?
+   • Prerequisite nào chưa nêu?
+
+2. Có điểm nào SAI hoặc THIẾU SÓT không?
+   • Có phần nào tự mâu thuẫn với section khác không?
+   • Có link/reference nào bị hỏng không?
+   • Có số liệu/tên/ID nào không nhất quán không?
+   • Có sai chính tả, sai domain terminology không?
+   • Layout/visual có bị chồng đè (Figma) không?
+   • Test coverage có bị hổng (QC) không?
+   • Code có edge case chưa handle (Dev) không?
+```
+
+**Bước 3 — Báo cáo kết quả self-feedback cho user:**
+
+Format báo cáo bắt buộc:
+
+```
+✅ SELF-FEEDBACK PASS
+   • Flow: đủ N bước, không thiếu
+   • Không phát hiện sai sót
+   → Sẵn sàng bàn giao user
+
+hoặc
+
+⚠️ SELF-FEEDBACK — Có phát hiện:
+   • [THIẾU] Non-happy case "mất mạng khi đang gọi" chưa cover trong SPEC
+   • [SAI] AC-05 mâu thuẫn với Happy Path bước 3
+   • [THIẾU SÓT] Screen DA_VOIP_003 chưa có Figma Link
+   → Đề xuất fix trước khi bàn giao (Yes/No?)
+```
+
+### Áp dụng per-persona
+
+| Persona | Trọng tâm self-feedback |
+|---|---|
+| **BA** | Flow đủ bước? Non-happy đủ? Screens có Figma URL? Figma frames không chồng đè? |
+| **Tech Lead Design** | DB schema đủ column? API contract đủ endpoint? Có xung đột giữa DESIGN các repo? |
+| **Tech Lead Tasks** | Có task nào >8h chưa cắt nhỏ? Task dependencies đúng? |
+| **Designer** | Đủ screens theo SPEC ## Screens? Text annotation kèm đủ? |
+| **Backend/Frontend/Mobile Dev** | Edge case đã handle? Test đã pass? Regression không? Memory Update Gate đã update? |
+| **QC** | Đủ TC theo AC? Priority phân bổ hợp lý? Missing platform-specific case? |
+| **QA** | Coverage report đủ? Non-regression passed? |
+| **QC Automation** | Test scripts pass local + CI? Screenshot verification? |
+
+### Anti-patterns — KHÔNG được làm
+
+- ❌ Báo "đã xong" mà chưa tự đọc lại output
+- ❌ Skip bước 2 vì "chắc là ok"
+- ❌ Chỉ báo PASS mà không list các điểm đã check
+- ❌ Phát hiện lỗi nhưng giấu đi không báo user
+- ❌ Copy checklist chung mà không adapt theo output cụ thể
+
+### Reference implementation
+
+- **BA Agent — Figma output**: xem "Bước 5.5 — AI Recheck" trong `.claude/agents/ba-agent.md` (checklist 5 tiêu chí + screenshot verify)
+- **BA Agent — SPEC**: xem "Bước 4.6 — Completeness Self-Check"
+- **QC Agent**: verify coverage matrix trong test-cases artifact
+- **Dev Agent**: sau task xong → run test + Memory Update Gate
+
+---
+
 ## 5. Stack constraints (kit default — không thương lượng trừ khi đổi qua `/init-kit`)
 
 | Layer | Bắt buộc | Tuyệt đối không |

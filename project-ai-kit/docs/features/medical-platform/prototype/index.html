@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=390, initial-scale=1.0">
+<title>Medical Platform — UI Prototype</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #1a1a2e; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 100vh; font-family: 'Inter', 'Noto Sans JP', sans-serif; padding: 24px 0 120px; }
+
+  /* ── Device Shell ── */
+  .device { width: 390px; min-height: 844px; background: #fff; border-radius: 40px; overflow: hidden; box-shadow: 0 32px 80px rgba(0,0,0,0.6); position: relative; display: flex; flex-direction: column; }
+
+  /* ── Screens ── */
+  .screen { display: none; flex-direction: column; width: 390px; min-height: 844px; position: relative; overflow: hidden; }
+  .screen.active { display: flex; }
+
+  /* ── Status Bar ── */
+  .status-bar { height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; font-size: 14px; font-weight: 700; flex-shrink: 0; background: #f6f8fa; color: #24292f; }
+  .status-bar .icons { display: flex; gap: 4px; align-items: center; font-size: 12px; }
+
+  /* ── Nav Header ── */
+  .nav-header { height: 56px; display: flex; align-items: center; padding: 0 16px; border-bottom: 1px solid #d0d7de; background: #fff; flex-shrink: 0; position: relative; }
+  .nav-back { color: #0969da; font-size: 20px; cursor: pointer; padding: 4px 8px; }
+  .nav-title { position: absolute; left: 50%; transform: translateX(-50%); font-size: 16px; font-weight: 700; color: #24292f; white-space: nowrap; }
+  .nav-action { position: absolute; right: 16px; font-size: 13px; font-weight: 700; color: #0969da; cursor: pointer; }
+
+  /* ── Search ── */
+  .search-bar { margin: 12px 16px 8px; height: 44px; background: #eaeef2; border-radius: 6px; display: flex; align-items: center; padding: 0 12px; gap: 8px; color: #6e7781; font-size: 13px; }
+
+  /* ── Filter chips ── */
+  .filter-row { display: flex; gap: 8px; padding: 0 16px 12px; overflow-x: auto; flex-shrink: 0; }
+  .filter-chip { height: 32px; padding: 0 14px; border-radius: 16px; font-size: 12px; font-weight: 700; display: flex; align-items: center; white-space: nowrap; cursor: pointer; flex-shrink: 0; }
+  .filter-chip.active { background: #0969da; color: #fff; border: none; }
+  .filter-chip.inactive { background: #fff; color: #6e7781; border: 1px solid #d0d7de; }
+
+  /* ── Tab filter ── */
+  .tab-row { display: flex; border-bottom: 1px solid #d0d7de; flex-shrink: 0; }
+  .tab-item { flex: 1; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; cursor: pointer; color: #6e7781; }
+  .tab-item.active { color: #0969da; border-bottom: 2px solid #0969da; }
+
+  /* ── Job Card ── */
+  .job-card { margin: 8px 16px; border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; cursor: pointer; background: #fff; }
+  .job-card:hover { border-color: #0969da; box-shadow: 0 2px 8px rgba(9,105,218,0.1); }
+  .job-title { font-size: 15px; font-weight: 700; color: #24292f; margin-bottom: 4px; }
+  .job-hospital { font-size: 12px; color: #6e7781; margin-bottom: 8px; }
+  .job-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+  .job-tag { font-size: 11px; padding: 2px 8px; border-radius: 4px; background: #e8f4fd; color: #0969da; font-weight: 700; }
+  .job-tag.green { background: #edfdf0; color: #1a7f37; }
+  .job-bottom { display: flex; justify-content: space-between; align-items: center; }
+  .job-salary { font-size: 14px; font-weight: 700; color: #0969da; }
+  .job-date { font-size: 11px; color: #6e7781; }
+  .heart { font-size: 18px; color: #d0d7de; cursor: pointer; }
+  .heart.active { color: #cf222e; }
+
+  /* ── Scout Card ── */
+  .scout-card { margin: 8px 16px; border: 1px solid #d0d7de; border-radius: 8px; padding: 14px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; }
+  .scout-card:hover { border-color: #1a7f37; }
+  .scout-avatar { width: 44px; height: 44px; border-radius: 50%; background: #edfdf0; color: #1a7f37; font-weight: 700; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .scout-info { flex: 1; }
+  .scout-name { font-size: 14px; font-weight: 700; color: #24292f; }
+  .scout-sub { font-size: 11px; color: #6e7781; margin-top: 2px; }
+  .status-badge { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; }
+  .status-badge.pending { background: #fff9eb; color: #d86107; }
+  .status-badge.accepted { background: #edfdf0; color: #1a7f37; }
+  .status-badge.rejected { background: #fff6f5; color: #cf222e; }
+
+  /* ── List Item ── */
+  .list-item { display: flex; align-items: center; padding: 14px 16px; height: 72px; border-bottom: 1px solid #d0d7de; cursor: pointer; gap: 12px; flex-shrink: 0; }
+  .list-item:hover { background: #f6f8fa; }
+  .avatar { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; position: relative; flex-shrink: 0; }
+  .item-info { flex: 1; overflow: hidden; }
+  .item-name { font-size: 14px; font-weight: 700; color: #24292f; }
+  .item-sub { font-size: 11px; color: #6e7781; margin-top: 2px; }
+  .chevron { color: #6e7781; font-size: 18px; }
+
+  /* ── Scrollable body ── */
+  .scroll-body { flex: 1; overflow-y: auto; padding-bottom: 100px; }
+
+  /* ── Section header ── */
+  .section-header { padding: 12px 16px 8px; }
+  .section-title { font-size: 13px; font-weight: 700; color: #24292f; }
+  .section-sub { font-size: 11px; color: #6e7781; margin-top: 2px; }
+
+  /* ── Detail Info Rows ── */
+  .info-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 12px 16px; border-bottom: 1px solid #d0d7de; }
+  .info-label { font-size: 12px; color: #6e7781; flex: 1; }
+  .info-value { font-size: 13px; font-weight: 700; color: #24292f; text-align: right; flex: 1.5; }
+
+  /* ── Hero (detail screen top) ── */
+  .hero { display: flex; flex-direction: column; align-items: center; padding: 24px 16px 20px; border-bottom: 1px solid #d0d7de; background: #f6f8fa; }
+  .hero-avatar { width: 72px; height: 72px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; }
+  .hero-name { font-size: 18px; font-weight: 700; color: #24292f; margin-top: 10px; }
+  .hero-sub { font-size: 12px; color: #6e7781; margin-top: 4px; }
+  .badge-pill { display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 700; margin-top: 8px; }
+  .badge-pill.blue { background: #e8f4fd; color: #0969da; }
+  .badge-pill.green { background: #edfdf0; color: #1a7f37; }
+  .badge-pill.orange { background: #fff9eb; color: #d86107; }
+  .badge-pill.red { background: #fff6f5; color: #cf222e; }
+
+  /* ── Sticky CTA ── */
+  .sticky-cta { position: absolute; bottom: 0; left: 0; right: 0; padding: 12px 16px 24px; background: #fff; border-top: 1px solid #d0d7de; display: flex; gap: 10px; }
+  .btn-primary { flex: 1; height: 48px; background: #0969da; color: #fff; border: none; border-radius: 6px; font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .btn-primary:hover { background: #0550ae; }
+  .btn-primary.green { background: #1a7f37; }
+  .btn-primary.green:hover { background: #116329; }
+  .btn-primary:disabled { background: #d0d7de; cursor: not-allowed; }
+  .btn-danger { flex: 1; height: 48px; background: #fff; color: #cf222e; border: 1px solid #cf222e; border-radius: 6px; font-size: 15px; font-weight: 700; cursor: pointer; }
+  .btn-outline { flex: 1; height: 48px; background: #fff; color: #0969da; border: 1px solid #0969da; border-radius: 6px; font-size: 15px; font-weight: 700; cursor: pointer; }
+
+  /* ── Contract Tab ── */
+  .contract-tab { display: flex; border-bottom: 1px solid #d0d7de; flex-shrink: 0; }
+  .contract-tab-item { flex: 1; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; cursor: pointer; color: #6e7781; }
+  .contract-tab-item.active { color: #0969da; border-bottom: 2px solid #0969da; }
+
+  /* ── Admin table ── */
+  .admin-table-row { display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #d0d7de; cursor: pointer; gap: 12px; }
+  .admin-table-row:hover { background: #f6f8fa; }
+  .admin-status { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px; }
+  .admin-status.active { background: #edfdf0; color: #1a7f37; }
+  .admin-status.suspended { background: #fff6f5; color: #cf222e; }
+
+  /* ── Modal overlay ── */
+  .modal-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: flex-end; z-index: 100; }
+  .modal-sheet { background: #fff; border-radius: 16px 16px 0 0; padding: 20px 20px 40px; width: 100%; }
+  .modal-handle { width: 32px; height: 4px; background: #d0d7de; border-radius: 2px; margin: 0 auto 20px; }
+  .modal-title { font-size: 16px; font-weight: 700; color: #24292f; margin-bottom: 8px; text-align: center; }
+  .modal-body { font-size: 13px; color: #6e7781; text-align: center; margin-bottom: 20px; }
+  .modal-actions { display: flex; flex-direction: column; gap: 10px; }
+
+  /* ── Policy Popup ── */
+  .policy-screen { background: #fff; }
+  .policy-header { padding: 20px 16px 16px; border-bottom: 1px solid #d0d7de; }
+  .policy-title { font-size: 18px; font-weight: 700; color: #24292f; }
+  .policy-sub { font-size: 12px; color: #6e7781; margin-top: 4px; }
+  .policy-content { padding: 16px; font-size: 13px; color: #6e7781; line-height: 1.6; flex: 1; overflow-y: auto; max-height: 480px; }
+  .policy-footer { padding: 16px; border-top: 1px solid #d0d7de; }
+  .checkbox-row { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; cursor: pointer; }
+  .checkbox { width: 20px; height: 20px; border-radius: 4px; border: 2px solid #d0d7de; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .checkbox.checked { background: #0969da; border-color: #0969da; color: #fff; font-size: 12px; }
+  .checkbox-label { font-size: 13px; color: #24292f; }
+
+  /* ── Empty state ── */
+  .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 24px; gap: 12px; }
+  .empty-icon { font-size: 48px; }
+  .empty-title { font-size: 15px; font-weight: 700; color: #24292f; text-align: center; }
+  .empty-sub { font-size: 13px; color: #6e7781; text-align: center; }
+
+  /* ── Toast ── */
+  .toast { position: absolute; bottom: 100px; left: 16px; right: 16px; background: #32383f; color: #fff; padding: 12px 16px; border-radius: 8px; font-size: 13px; display: none; z-index: 200; }
+  .toast.show { display: block; }
+  .toast.error { background: #cf222e; }
+
+  /* ── Scrollable list ── */
+  .list-body { overflow-y: auto; flex: 1; }
+
+  /* ── Form styles ── */
+  .form-section { padding: 16px; border-bottom: 1px solid #eaeef2; }
+  .form-label { font-size: 12px; font-weight: 700; color: #57606a; margin-bottom: 6px; }
+  .form-input { width: 100%; height: 44px; border: 1px solid #d0d7de; border-radius: 6px; padding: 0 12px; font-size: 14px; color: #24292f; background: #fff; outline: none; }
+  .form-input:focus { border-color: #0969da; }
+  .form-select { width: 100%; height: 44px; border: 1px solid #d0d7de; border-radius: 6px; padding: 0 12px; font-size: 14px; color: #24292f; background: #fff; outline: none; }
+  .form-textarea { width: 100%; border: 1px solid #d0d7de; border-radius: 6px; padding: 12px; font-size: 14px; color: #24292f; background: #fff; outline: none; resize: none; font-family: inherit; }
+
+  /* ── Dashboard card ── */
+  .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px; }
+  .dash-card { background: #fff; border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; }
+  .dash-card-label { font-size: 11px; color: #6e7781; }
+  .dash-card-value { font-size: 24px; font-weight: 700; color: #24292f; margin: 4px 0; }
+  .dash-card-sub { font-size: 11px; color: #1a7f37; }
+
+  /* ── FAB ── */
+  .fab { width: 52px; height: 52px; border-radius: 50%; background: #0969da; position: absolute; bottom: 24px; right: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(9,105,218,0.4); font-size: 22px; color: #fff; z-index: 10; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!--  DEVICE SHELL                                   -->
+<!-- ═══════════════════════════════════════════════ -->
+<div class="device" id="device">
+
+  <!-- ────────────────────────────────────── -->
+  <!-- S1: DR_JOB_001 — Job List (Doctor App) -->
+  <!-- ────────────────────────────────────── -->
+  <div class="screen active" id="s-dr-job-001">
+    <div class="status-bar">
+      <span>10:30</span>
+      <div class="icons"><span>●●●</span><span>WiFi</span><span>🔋</span></div>
+    </div>
+    <div class="nav-header">
+      <span class="nav-title">求人検索</span>
+      <span class="nav-action" onclick="goTo('s-dr-noti')">🔔 3</span>
+    </div>
+    <div class="search-bar">🔍  キーワード・診療科・地域で検索</div>
+    <div class="filter-row">
+      <div class="filter-chip active">すべて</div>
+      <div class="filter-chip inactive">内科</div>
+      <div class="filter-chip inactive">外科</div>
+      <div class="filter-chip inactive">地域</div>
+      <div class="filter-chip inactive">給与</div>
+    </div>
+    <div class="list-body">
+      <!-- Job Cards -->
+      <div class="job-card" onclick="goTo('s-dr-job-003')">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div class="job-title">内科常勤医師</div>
+          <span class="heart" onclick="event.stopPropagation();this.classList.toggle('active')">♥</span>
+        </div>
+        <div class="job-hospital">🏥 東京医療センター</div>
+        <div class="job-tags">
+          <span class="job-tag">内科</span>
+          <span class="job-tag green">常勤</span>
+          <span class="job-tag">東京都</span>
+        </div>
+        <div class="job-bottom">
+          <span class="job-salary">¥1,500,000~/月</span>
+          <span class="job-date">3日前</span>
+        </div>
+      </div>
+      <div class="job-card" onclick="goTo('s-dr-job-003')">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div class="job-title">外科アルバイト週3日</div>
+          <span class="heart" onclick="event.stopPropagation();this.classList.toggle('active')">♥</span>
+        </div>
+        <div class="job-hospital">🏥 横浜中央病院</div>
+        <div class="job-tags">
+          <span class="job-tag">外科</span>
+          <span class="job-tag orange" style="background:#fff9eb;color:#d86107;">非常勤</span>
+          <span class="job-tag">神奈川県</span>
+        </div>
+        <div class="job-bottom">
+          <span class="job-salary">¥60,000~/回</span>
+          <span class="job-date">1週間前</span>
+        </div>
+      </div>
+      <div class="job-card" onclick="goTo('s-dr-job-003')">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div class="job-title">精神科スポット</div>
+          <span class="heart active" onclick="event.stopPropagation();this.classList.toggle('active')">♥</span>
+        </div>
+        <div class="job-hospital">🏥 大阪メンタルクリニック</div>
+        <div class="job-tags">
+          <span class="job-tag">精神科</span>
+          <span class="job-tag orange" style="background:#fff9eb;color:#d86107;">スポット</span>
+          <span class="job-tag">大阪府</span>
+        </div>
+        <div class="job-bottom">
+          <span class="job-salary">¥80,000~/日</span>
+          <span class="job-date">2日前</span>
+        </div>
+      </div>
+      <div class="job-card" onclick="goTo('s-dr-job-003')">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div class="job-title">小児科非常勤</div>
+          <span class="heart" onclick="event.stopPropagation()">♥</span>
+        </div>
+        <div class="job-hospital">🏥 神戸こどもクリニック</div>
+        <div class="job-tags">
+          <span class="job-tag">小児科</span>
+          <span class="job-tag orange" style="background:#fff9eb;color:#d86107;">非常勤</span>
+          <span class="job-tag">兵庫県</span>
+        </div>
+        <div class="job-bottom">
+          <span class="job-salary">¥50,000~/回</span>
+          <span class="job-date">5日前</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ────────────────────────────────────────────── -->
+  <!-- S2: DR_JOB_003 — Job Detail (Doctor App)      -->
+  <!-- ────────────────────────────────────────────── -->
+  <div class="screen" id="s-dr-job-003">
+    <div class="status-bar">
+      <span>10:31</span>
+      <div class="icons"><span>●●●</span><span>WiFi</span><span>🔋</span></div>
+    </div>
+    <div class="nav-header">
+      <span class="nav-back" onclick="goTo('s-dr-job-001')">←</span>
+      <span class="nav-title">求人詳細</span>
+      <span class="nav-action">♥</span>
+    </div>
+    <div class="scroll-body">
+      <div style="padding:20px 16px 12px; border-bottom:1px solid #d0d7de;">
+        <div style="font-size:20px;font-weight:700;color:#24292f;margin-bottom:6px;">内科常勤医師</div>
+        <div style="font-size:13px;color:#6e7781;margin-bottom:12px;">🏥 東京医療センター</div>
+        <div class="job-tags" style="margin-bottom:12px;">
+          <span class="job-tag">内科</span>
+          <span class="job-tag green">常勤</span>
+          <span class="job-tag">東京都千代田区</span>
+        </div>
+        <div style="font-size:22px;font-weight:700;color:#0969da;">¥1,500,000 〜 ¥2,000,000 / 月</div>
+      </div>
+      <div class="section-header" style="margin-top:8px;">
+        <div class="section-title">勤務条件</div>
+      </div>
+      <div class="info-row"><span class="info-label">勤務形態</span><span class="info-value">常勤</span></div>
+      <div class="info-row"><span class="info-label">勤務日</span><span class="info-value">月〜金 (週5日)</span></div>
+      <div class="info-row"><span class="info-label">勤務時間</span><span class="info-value">9:00〜18:00</span></div>
+      <div class="info-row"><span class="info-label">診療科</span><span class="info-value">内科</span></div>
+      <div class="info-row"><span class="info-label">経験年数</span><span class="info-value">5年以上</span></div>
+      <div class="section-header" style="margin-top:8px;">
+        <div class="section-title">仕事内容</div>
+      </div>
+      <div style="padding:12px 16px;font-size:13px;color:#6e7781;line-height:1.7;border-bottom:1px solid #d0d7de;">
+        外来・入院患者の診療業務全般。専門外来の担当あり。チームワークを重視した職場環境です。当直あり（月3〜4回程度）。
+      </div>
+      <div class="section-header" style="margin-top:8px;">
+        <div class="section-title">福利厚生</div>
+      </div>
+      <div style="padding:12px 16px;font-size:13px;color:#6e7781;line-height:1.7;border-bottom:1px solid #d0d7de;">
+        健康保険・厚生年金・雇用保険完備。住宅手当あり。研修参加費補助。年次有給休暇20日。
+      </div>
+      <div style="padding:12px 16px;display:flex;gap:10px;border-bottom:1px solid #d0d7de;">
+        <button class="btn-outline" style="flex:1;height:40px;font-size:13px;" onclick="alert('PDF条件を表示します')">📄 PDF条件をダウンロード</button>
+        <button class="btn-outline" style="flex:1;height:40px;font-size:13px;color:#0969da;" onclick="alert('最大利益: ¥2,400,000/月')">💰 最大利益を表示</button>
+      </div>
+    </div>
+    <div class="sticky-cta">
+      <button class="btn-primary" onclick="goTo('s-dr-apply-confirm')">📝 今すぐ応募する</button>
+    </div>
+  </div>
+
+  <!-- ────────────────────────────────────────────── -->
+  <!-- S3: DR_JOB_004 — Apply Confirm Modal          -->
+  <!-- ────────────────────────────────────────────── -->
+  <div class="screen" id="s-dr-apply-confirm">
+    <div class="status-bar">
+      <span>10:32</span>
+      <div class="icons"><span>●●●</span><span>WiFi</span><span>🔋</span></div>
+    </div>
+    <div class="nav-header">
+      <span class="nav-back" onclick="goTo('s-dr-job-003')">←</span>
+      <span class="nav-title">応募確認</span>
+    </div>
+    <div class="scroll-body" style="padding:0 0 120px;">
+      <div style="padding:24px 16px;text-align:center;border-bottom:1px solid #d0d7de;">
+        <div style="font-size:40px;margin-bottom:12px;">📋</div>
+        <div style="font-size:16px;font-weight:700;color:#24292f;margin-bottom:8px;">応募を確認してください</div>
+        <div style="font-size:13px;color:#6e7781;">以下の求人に応募します。よろしいですか？</div>
+      </div>
+      <div class="info-row"><span class="info-label">求人名</span><span class="info-value">内科常勤医師</span></div>
+      <div class="info-row"><span class="info-label">病院名</span><span class="info-value">東京医療センター</span></div>
+      <div class="info-row"><span class="info-label">勤務形態</span><span class="info-value">常勤</span></div>
+      <div class="info-row"><span class="info-label">給与</span><span class="info-value">¥1,500,000〜/月</span></div>
+      <div style="padding:16px;background:#e8f4fd;margin:16px;border-radius:8px;font-size:12px;color:#0550ae;line-height:1.6;">
+        ⓘ 応募後、病院からの連絡をお待ちください。書類選考結果はマイページでご確認いただけます。
+      </div>
+    </div>
+    <div class="sticky-cta">
+      <button class="btn-outline" onclick="goTo('s-dr-job-003')">キャンセル</button>
+      <button class="btn-primary" onclick="applySuccess()">応募する</button>
+    </div>
+    <div class="toast" id="toast-apply">応募が完了しました！選考結果をお待ちください。</div>
+  </div>
+
+  <!-- ────────────────────────────────────────────── -->
+  <!-- S4: DR_SCOU_001 — Scout List (Doctor App)     -->
+  <!-- ────────────────────────────────────────────── -->
+  <div class="screen" id="s-dr-scou-001">
+    <div class="status-bar">
+      <span>10:33</span>
+      <div class="icons"><span>●●●</span><span>WiFi</span><span>🔋</span></div>
+    </div>
+    <div class="nav-header">
+      <span class="nav-title">スカウト一覧</span>
+    </div>
+    <div class="tab-row">
+      <div class="tab-item active">すべて (3)</div>
+      <div class="tab-item">未対応 (2)</div>
+      <div class="tab-item">承諾済 (1)</div>
+      <div class="tab-item">辞退 (0)</div>
+    </div>
+    <div class="list-body">
+      <div class="scout-card" onclick="goTo('s-ho-scou-002')">
+        <div class="scout-avatar">Y</div>
+        <div class="scout-info">
+          <div class="scout-name">横浜中央病院</div>
+          <div class="scout-sub">外科専門医 | 非常勤 | ¥60,000/回</div>
+          <div class="scout-sub" style="margin-top:4px;">2日前</div>
+        </div>
+        <div class="status-badge pending">未対応</div>
+      </div>
+      <div class="scout-card" onclick="goTo('s-ho-scou-002')">
+        <div class="scout-avatar" style="background:#e8f4fd;color:#0969da;">T</div>
+        <div class="scout-info">
+          <div class="scout-name">東京大学病院</div>
+          <div class="scout-sub">内科常勤医師 | 常勤 | ¥2,000,000/月</div>
+          <div class="scout-sub" style="margin-top:4px;">5日前</div>
+        </div>
+        <div class="status-badge accepted">承諾済</div>
+      </div>
+      <div class="scout-card" onclick="goTo('s-ho-scou-002')">
+        <div class="scout-avatar" style="background:#fff9eb;color:#d86107;">O</div>
+        <div class="scout-info">
+          <div class="scout-name">大阪医療クリニック</div>
+          <div class="scout-sub">小児科 | 非常勤 | ¥50,000/回</div>
+          <div class="scout-sub" style="margin-top:4px;">1週間前</div>
+        </div>
+        <div class="status-badge pending">未対応</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ────────────────────────────────────────────── -->
+  <!-- S5: HO_SCOU_002 — Doctor Profile (Hospital)  -->
+  <!-- ────────────────────────────────────────────── -->
+  <div class="screen" id="s-ho-scou-002">
+    <div class="status-bar">
+      <span>10:35</span>
+      <div class="icons"><span>●●●</span><span>WiFi</span><span>🔋</span></div>
+    </div>
+    <div class="nav-header">
+      <span class="nav-back" onclick="goBack()">←</span>
+      <span class="nav-title">医師プロフィール</span>
+    </div>
+    <div class="scroll-body">
+      <div class="hero">
+        <div class="hero-avatar" style="background:#e8f4fd;color:#0969da;font-size:32px;">👨‍⚕️</div>
+        <div class="hero-name">医師 #DR-20240312</div>
+        <div class="hero-sub" style="margin-top:4px;">Display ID — 個人情報は非公開</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px;">
+          <span class="badge-pill blue">内科</span>
+          <span class="badge-pill blue">外科</span>
+          <span class="badge-pill green">経験10年以上</span>
+        </div>
+      </div>
+      <div class="section-header" style="margin-top:8px;">
+        <div class="section-title">希望条件</div>
+      </div>
+      <div class="info-row"><span class="info-label">希望収入</span><span class="info-value">¥1,200,000〜 / 月</span></div>
+      <div class="info-row"><span class="info-label">勤務形態</span><span class="info-value">常勤 / 非常勤</span></div>
+      <div class="info-row"><span class="info-label">希望エリア</span><span class="info-value">東京・神奈川</span></div>
+      <div class="info-row"><span class="info-label">開始可能時期</span><span class="info-value">2024年4月〜</span></div>
+      <div class="section-header" style="margin-top:8px;">
+        <div class="section-title">専門・資格</div>
+      </div>
+      <div style="padding:12px 16px;font-size:13px;color:#6e7781;line-height:1.7;border-bottom:1px solid #d0d7de;">
+        内科専門医・外科認定医。日本内科学会会員。英語対応可（TOEIC 850）。地方勤務応相談。
+      </div>
+    </div>
+    <div class="sticky-cta">
+      <button class="btn-primary green" onclick="goTo('s-ho-scou-003')">📨 このドクターをスカウト</button>
+    </div>
+  </div>
+
+  <!-- ────────────────────────────────────────────── -->
+  <!-- S6: HO_SCOU_003 — Create Scout (Hospital)    -->
+  <!-- ────────────────────────────────────────────── -->
+  <div class="screen" id="s-ho-scou-003">
+    <div class="status-bar">
+      <span>10:36</span>
+      <div class="icons"><span>●●●</span><span>WiFi</span><span>🔋</span></div>
+    </div>
+    <div class="nav-header">
+      <span class="nav-back" onclick="goTo('s-ho-scou-002')">←</span>
+      <span class="nav-title">スカウトを作成</span>
+    </div>
+    <div class="scroll-body" style="padding-bottom:120px;">
+      <div class="form-section">
+        <div class="form-label">勤務条件テンプレート</div>
+        <select class="form-select">
+          <option>内科常勤 — ¥1,500,000/月</option>
+          <option>外科アルバイト — ¥60,000/回</option>
+          <option>新規テンプレートを作成</option>
+        </select>
+      </div>
+      <div class="form-section">
+        <div class="form-label">スカウトメッセージ</div>
+        <textarea class="form-textarea" rows="4" placeholder="医師へのメッセージを入力してください...">はじめまして。東京医療センター採用担当です。貴先生のご経歴を拝見し、ぜひ当院でのご勤務についてご相談させていただきたく、スカウトさせていただきました。</textarea>
+      </div>
+      <div class="form-section">
+        <div class="form-label">希望開始日</div>
+        <input class="form-input" type="date" value="2024-04-01">
+      </div>
+      <div style="padding:16px;background:#fff9eb;margin:0 16px;border-radius:8px;font-size:12px;color:#d86107;line-height:1.6;">
+        ⚠️ スカウトを送信すると医師への通知が届きます。医師が承諾後、病院側での審査が必要です。
+      </div>
+    </div>
+    <div class="sticky-cta">
+      <button class="btn-outline" onclick="goTo('s-ho-scou-002')">キャンセル</button>
+      <button class="btn-primary green" onclick="scoutSuccess()">スカウトを送信</button>
+    </div>
+    <div class="toast" id="toast-scout">スカウトを送信しました！医師の返答をお待ちください。</div>
+  </div>
+
+  <!-- ────────────────────────────────────────────── -->
+  <!-- S7: DR_CONT_002 — Contract Detail (Doctor)    -->
+  <!-- ────────────────────────────────────────────── -->
+  <div class="screen" id="s-dr-cont-002">
+    <div class="status-bar">
+      <span>10:38</span>
+      <div class="icons"><span>●●●</span><span>WiFi</span><span>🔋</span></div>
+    </div>
+    <div class="nav-header">
+      <span class="nav-back" onclick="goTo('s-dr-job-001')">←</span>
+      <span class="nav-title">契約詳細</span>
+    </div>
+    <div class="contract-tab">
+      <div class="contract-tab-item active">情報</div>
+      <div class="contract-tab-item">メッセージ</div>
+      <div class="contract-tab-item">書類</div>
+    </div>
+    <div class="scroll-body" style="padding-bottom:120px;">
+      <div style="padding:12px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #d0d7de;background:#f6f8fa;">
+        <span class="badge-pill orange">承認待ち</span>
+        <span style="font-size:12px;color:#6e7781;">契約 #CNT-2024-0312</span>
+      </div>
+      <div class="section-header" style="margin-top:8px;">
+        <div class="section-title">勤務条件</div>
+      </div>
+      <div class="info-row"><span class="info-label">病院名</span><span class="info-value">東京医療センター</span></div>
+      <div class="info-row"><span class="info-label">役職</span><span class="info-value">内科常勤医師</span></div>
+      <div class="info-row"><span class="info-label">勤務形態</span><span class="info-value">常勤 (週5日)</span></div>
+      <div class="info-row"><span class="info-label">給与</span><span class="info-value">¥1,800,000/月</span></div>
+      <div class="info-row"><span class="info-label">開始日</span><span class="info-value">2024年4月1日</span></div>
+      <div class="info-row"><span class="info-label">契約期間</span><span class="info-value">1年（更新あり）</span></div>
+      <div style="padding:16px;background:#e8f4fd;margin:16px;border-radius:8px;font-size:12px;color:#0550ae;line-height:1.6;">
+        ⓘ 契約を承諾すると正式な雇用関係が成立します。承諾前に必ず条件をご確認ください。
+      </div>
+    </div>
+    <div class="sticky-cta">
+      <button class="btn-danger" onclick="cancelContract()">キャンセル</button>
+      <button class="btn-primary" onclick="acceptContract()">承諾する</button>
+    </div>
+    <div class="toast" id="toast-contract">契約を承諾しました！おめでとうございます。</div>
+  </div>
+
+  <!-- ────────────────────────────────────────────── -->
+  <!-- S8: AD_DOCT_001 — Doctor List (Admin)         -->
+  <!-- ────────────────────────────────────────────── -->
+  <div class="screen" id="s-ad-doct-001">
+    <div class="status-bar">
+      <span>10:40</span>
+      <div class="icons"><span>●●●</span><span>WiFi</span><span>🔋</span></div>
+    </div>
+    <div class="nav-header">
+      <span class="nav-title">医師管理</span>
+    </div>
+    <div class="search-bar">🔍  医師を検索 (名前・メール・ID)</div>
+    <div class="filter-row">
+      <div class="filter-chip active">すべて</div>
+      <div class="filter-chip inactive">アクティブ</div>
+      <div class="filter-chip inactive">停止中</div>
+    </div>
+    <div class="list-body">
+      <div class="admin-table-row" onclick="goTo('s-ad-doct-002')">
+        <div class="avatar" style="background:#e8f4fd;color:#0969da;">田</div>
+        <div class="item-info">
+          <div class="item-name">田中 太郎 / DR-001</div>
+          <div class="item-sub">tanaka@example.com | 内科・外科</div>
+        </div>
+        <div class="admin-status active">アクティブ</div>
+      </div>
+      <div class="admin-table-row" onclick="goTo('s-ad-doct-002')">
+        <div class="avatar" style="background:#edfdf0;color:#1a7f37;">鈴</div>
+        <div class="item-info">
+          <div class="item-name">鈴木 花子 / DR-002</div>
+          <div class="item-sub">suzuki@example.com | 小児科</div>
+        </div>
+        <div class="admin-status active">アクティブ</div>
+      </div>
+      <div class="admin-table-row" onclick="goTo('s-ad-doct-002')">
+        <div class="avatar" style="background:#fff6f5;color:#cf222e;">山</div>
+        <div class="item-info">
+          <div class="item-name">山田 次郎 / DR-003</div>
+          <div class="item-sub">yamada@example.com | 精神科</div>
+        </div>
+        <div class="admin-status suspended">停止中</div>
+      </div>
+      <div class="admin-table-row" onclick="goTo('s-ad-doct-002')">
+        <div class="avatar" style="background:#fbeeff;color:#6639ba;">伊</div>
+        <div class="item-info">
+          <div class="item-name">伊藤 美咲 / DR-004</div>
+          <div class="item-sub">ito@example.com | 外科</div>
+        </div>
+        <div class="admin-status active">アクティブ</div>
+      </div>
+    </div>
+    <div class="fab">+</div>
+  </div>
+
+  <!-- ────────────────────────────────────────────── -->
+  <!-- S9: AD_DOCT_002 — Doctor Detail (Admin)       -->
+  <!-- ────────────────────────────────────────────── -->
+  <div class="screen" id="s-ad-doct-002">
+    <div class="status-bar">
+      <span>10:41</span>
+      <div class="icons"><span>●●●</span><span>WiFi</span><span>🔋</span></div>
+    </div>
+    <div class="nav-header">
+      <span class="nav-back" onclick="goTo('s-ad-doct-001')">←</span>
+      <span class="nav-title">医師詳細</span>
+    </div>
+    <div class="tab-row">
+      <div class="tab-item active">情報</div>
+      <div class="tab-item">応募</div>
+      <div class="tab-item">スカウト</div>
+    </div>
+    <div class="scroll-body" style="padding-bottom:120px;">
+      <div class="hero" style="padding:20px 16px 16px;">
+        <div class="hero-avatar" style="background:#e8f4fd;color:#0969da;">田</div>
+        <div class="hero-name">田中 太郎</div>
+        <div class="hero-sub">DR-001 | tanaka@example.com</div>
+        <span class="badge-pill green" style="margin-top:8px;">アクティブ</span>
+      </div>
+      <div class="section-header" style="margin-top:8px;">
+        <div class="section-title">アカウント情報</div>
+      </div>
+      <div class="info-row"><span class="info-label">登録日</span><span class="info-value">2023年10月15日</span></div>
+      <div class="info-row"><span class="info-label">最終ログイン</span><span class="info-value">本日 09:22</span></div>
+      <div class="info-row"><span class="info-label">LINE連携</span><span class="info-value">✅ 連携済み</span></div>
+      <div class="info-row"><span class="info-label">応募数</span><span class="info-value">12件</span></div>
+      <div class="info-row"><span class="info-label">スカウト受取</span><span class="info-value">5件</span></div>
+      <div class="info-row"><span class="info-label">成立契約</span><span class="info-value">3件</span></div>
+      <div style="padding:16px;background:#fff6f5;margin:16px;border-radius:8px;font-size:12px;color:#a40e26;line-height:1.6;">
+        ⚠️ アカウント停止を実施すると、このドクターはすぐにログインできなくなります。慎重に操作してください。
+      </div>
+    </div>
+    <div class="sticky-cta">
+      <button class="btn-danger" onclick="suspendDoctor()">アカウント停止</button>
+    </div>
+    <div class="toast error" id="toast-suspend">アカウントを停止しました。</div>
+  </div>
+
+  <!-- ────────────────────────────────────────────── -->
+  <!-- S10: DR_POLI_001 — Policy Agreement Popup     -->
+  <!-- ────────────────────────────────────────────── -->
+  <div class="screen policy-screen" id="s-dr-poli-001">
+    <div class="status-bar">
+      <span>10:42</span>
+      <div class="icons"><span>●●●</span><span>WiFi</span><span>🔋</span></div>
+    </div>
+    <div class="policy-header">
+      <div class="policy-title">利用規約が更新されました</div>
+      <div class="policy-sub">バージョン 2.1.0 | 2024年3月1日施行</div>
+    </div>
+    <div class="policy-content" id="policy-scroll" onscroll="checkPolicyScroll()">
+      <p style="font-weight:700;margin-bottom:10px;">第1条（目的）</p>
+      <p>本規約は、当社が提供する医療従事者向けマッチングプラットフォーム（以下「本サービス」）の利用に関し、ユーザーと当社との間の権利義務関係を定めることを目的とします。</p>
+      <p style="font-weight:700;margin:12px 0 8px;">第2条（定義）</p>
+      <p>本規約において使用する用語の定義は、以下のとおりとします。①「医師ユーザー」とは、本サービスに登録した医師をいいます。②「医療機関ユーザー」とは、本サービスに登録した医療機関をいいます。</p>
+      <p style="font-weight:700;margin:12px 0 8px;">第3条（プライバシーポリシー）</p>
+      <p>当社は、ユーザーの個人情報を適切に管理し、第三者への提供は法令に定める場合を除き行いません。詳細はプライバシーポリシーをご確認ください。</p>
+      <p style="font-weight:700;margin:12px 0 8px;">第4条（禁止事項）</p>
+      <p>ユーザーは以下の行為を行ってはなりません。①虚偽の情報を登録すること。②他のユーザーへの迷惑行為。③本サービスの不正利用。④医師資格を偽ること。</p>
+      <p style="font-weight:700;margin:12px 0 8px;">第5条（契約の成立）</p>
+      <p>医療機関と医師の間の契約は、双方が本プラットフォーム上で合意した時点で成立します。当社は契約当事者ではありません。</p>
+      <p style="font-weight:700;margin:12px 0 8px;">第6条（免責事項）</p>
+      <p>当社は、本サービスの利用に起因して生じた損害について、当社の故意または重大な過失による場合を除き、責任を負いません。</p>
+      <p style="color:#0969da;margin-top:16px;font-size:12px;cursor:pointer;">▶ 全文を読む（外部リンク）</p>
+    </div>
+    <div class="policy-footer">
+      <div class="checkbox-row" id="policy-checkbox-row" onclick="togglePolicyCheckbox()" style="opacity:0.4;cursor:not-allowed;">
+        <div class="checkbox" id="policy-checkbox"></div>
+        <span class="checkbox-label">読んで内容に同意します</span>
+      </div>
+      <button class="btn-primary" id="policy-agree-btn" disabled onclick="policyAgree()">同意して続ける</button>
+    </div>
+  </div>
+
+  <!-- Notification placeholder -->
+  <div class="screen" id="s-dr-noti">
+    <div class="status-bar"><span>10:30</span><div class="icons">🔋</div></div>
+    <div class="nav-header">
+      <span class="nav-back" onclick="goTo('s-dr-job-001')">←</span>
+      <span class="nav-title">通知</span>
+    </div>
+    <div class="empty-state">
+      <div class="empty-icon">🔔</div>
+      <div class="empty-title">新しい通知はありません</div>
+      <div class="empty-sub">応募状況やスカウトの通知がここに表示されます</div>
+    </div>
+  </div>
+
+</div><!-- end .device -->
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!--  DEV NAV BAR (Developer Navigation Bar)            -->
+<!--  Allows jumping directly to any screen for review  -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div style="
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: #0d1117; border-top: 1px solid #30363d;
+  padding: 12px 16px 20px;
+  display: flex; flex-direction: column; gap: 8px;
+  z-index: 1000;
+">
+  <div style="font-size: 10px; font-weight: 700; color: #6e7781; text-align: center; letter-spacing: 0.1em;">
+    DEV NAV — Medical Platform Prototype
+  </div>
+  <div style="display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; max-width: 390px; margin: 0 auto;">
+    <button onclick="goTo('s-dr-job-001')" style="padding:5px 10px;background:#161b22;color:#e8f4fd;border:1px solid #0969da;border-radius:4px;font-size:10px;cursor:pointer;font-weight:700;">DR_JOB_001<br>Job List</button>
+    <button onclick="goTo('s-dr-job-003')" style="padding:5px 10px;background:#161b22;color:#e8f4fd;border:1px solid #0969da;border-radius:4px;font-size:10px;cursor:pointer;font-weight:700;">DR_JOB_003<br>Job Detail</button>
+    <button onclick="goTo('s-dr-apply-confirm')" style="padding:5px 10px;background:#161b22;color:#e8f4fd;border:1px solid #0969da;border-radius:4px;font-size:10px;cursor:pointer;font-weight:700;">DR_JOB_004<br>Apply Modal</button>
+    <button onclick="goTo('s-dr-scou-001')" style="padding:5px 10px;background:#161b22;color:#e8f4fd;border:1px solid #0969da;border-radius:4px;font-size:10px;cursor:pointer;font-weight:700;">DR_SCOU_001<br>Scout List</button>
+    <button onclick="goTo('s-ho-scou-002')" style="padding:5px 10px;background:#161b22;color:#edfdf0;border:1px solid #1a7f37;border-radius:4px;font-size:10px;cursor:pointer;font-weight:700;">HO_SCOU_002<br>Doctor Profile</button>
+    <button onclick="goTo('s-ho-scou-003')" style="padding:5px 10px;background:#161b22;color:#edfdf0;border:1px solid #1a7f37;border-radius:4px;font-size:10px;cursor:pointer;font-weight:700;">HO_SCOU_003<br>Create Scout</button>
+    <button onclick="goTo('s-dr-cont-002')" style="padding:5px 10px;background:#161b22;color:#e8f4fd;border:1px solid #0969da;border-radius:4px;font-size:10px;cursor:pointer;font-weight:700;">DR_CONT_002<br>Contract</button>
+    <button onclick="goTo('s-ad-doct-001')" style="padding:5px 10px;background:#161b22;color:#fff9eb;border:1px solid #d86107;border-radius:4px;font-size:10px;cursor:pointer;font-weight:700;">AD_DOCT_001<br>Doctor List</button>
+    <button onclick="goTo('s-ad-doct-002')" style="padding:5px 10px;background:#161b22;color:#fff9eb;border:1px solid #d86107;border-radius:4px;font-size:10px;cursor:pointer;font-weight:700;">AD_DOCT_002<br>Doctor Detail</button>
+    <button onclick="goTo('s-dr-poli-001')" style="padding:5px 10px;background:#161b22;color:#fbeeff;border:1px solid #6639ba;border-radius:4px;font-size:10px;cursor:pointer;font-weight:700;">DR_POLI_001<br>Policy Popup</button>
+  </div>
+</div>
+
+<script>
+  // Track navigation history for back button
+  let history = ['s-dr-job-001'];
+  let currentPrevious = null;
+
+  function goTo(screenId) {
+    const current = document.querySelector('.screen.active');
+    if (current) {
+      history.push(current.id);
+      current.classList.remove('active');
+    }
+    const target = document.getElementById(screenId);
+    if (target) target.classList.add('active');
+    currentPrevious = history[history.length - 1] || null;
+  }
+
+  function goBack() {
+    const current = document.querySelector('.screen.active');
+    if (current) current.classList.remove('active');
+    const prev = history.pop();
+    if (prev) {
+      const target = document.getElementById(prev);
+      if (target) target.classList.add('active');
+    }
+  }
+
+  function showToast(id, duration = 2500) {
+    const toast = document.getElementById(id);
+    if (!toast) return;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), duration);
+  }
+
+  function applySuccess() {
+    showToast('toast-apply', 3000);
+    setTimeout(() => goTo('s-dr-job-001'), 3000);
+  }
+
+  function scoutSuccess() {
+    showToast('toast-scout', 3000);
+    setTimeout(() => goTo('s-dr-scou-001'), 3000);
+  }
+
+  function acceptContract() {
+    showToast('toast-contract', 3000);
+    setTimeout(() => goTo('s-dr-job-001'), 3000);
+  }
+
+  function cancelContract() {
+    if (confirm('契約をキャンセルしますか？\nこの操作は取り消せません。')) {
+      goTo('s-dr-job-001');
+    }
+  }
+
+  function suspendDoctor() {
+    if (confirm('このドクターのアカウントを停止しますか？')) {
+      showToast('toast-suspend', 3000);
+      setTimeout(() => goTo('s-ad-doct-001'), 3000);
+    }
+  }
+
+  // Policy scroll detection
+  let policyScrolled = false;
+  function checkPolicyScroll() {
+    if (policyScrolled) return;
+    const el = document.getElementById('policy-scroll');
+    if (!el) return;
+    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 20;
+    if (atBottom) {
+      policyScrolled = true;
+      const row = document.getElementById('policy-checkbox-row');
+      if (row) { row.style.opacity = '1'; row.style.cursor = 'pointer'; }
+    }
+  }
+
+  let policyChecked = false;
+  function togglePolicyCheckbox() {
+    if (!policyScrolled) return;
+    policyChecked = !policyChecked;
+    const cb = document.getElementById('policy-checkbox');
+    const btn = document.getElementById('policy-agree-btn');
+    if (cb) {
+      cb.className = 'checkbox' + (policyChecked ? ' checked' : '');
+      cb.textContent = policyChecked ? '✓' : '';
+    }
+    if (btn) btn.disabled = !policyChecked;
+  }
+
+  function policyAgree() {
+    if (!policyChecked) return;
+    goTo('s-dr-job-001');
+    // Reset for demo purposes
+    policyScrolled = false;
+    policyChecked = false;
+    const cb = document.getElementById('policy-checkbox');
+    if (cb) { cb.className = 'checkbox'; cb.textContent = ''; }
+    const btn = document.getElementById('policy-agree-btn');
+    if (btn) btn.disabled = true;
+    const row = document.getElementById('policy-checkbox-row');
+    if (row) { row.style.opacity = '0.4'; row.style.cursor = 'not-allowed'; }
+    const ps = document.getElementById('policy-scroll');
+    if (ps) ps.scrollTop = 0;
+  }
+</script>
+</body>
+</html>
