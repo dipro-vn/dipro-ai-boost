@@ -13,6 +13,15 @@ use serde::{Deserialize, Serialize};
 pub struct ExplorerRootEntry {
     pub label: String,
     pub path: String,
+    /// Whether new files/folders may be created directly in this root.
+    ///
+    /// Not always true: the root the tree shows is the common ancestor of
+    /// the 3 project roots, and when those are siblings that ancestor is a
+    /// plain folder the project does not manage. The frontend needs to know
+    /// before it offers "Tạo file" on the root row, rather than letting the
+    /// user find out from a rejected command.
+    #[serde(default)]
+    pub can_modify: bool,
 }
 
 /// One entry from `commands::explorer::list_directory` — one level of

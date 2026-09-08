@@ -374,6 +374,10 @@ export interface ArtifactContent {
 export interface ExplorerRootEntry {
   label: string;
   path: string;
+  /** Có tạo được file/folder ngay tại root này không. Root hiển thị là tổ
+   * tiên chung của 3 project root; khi 3 root là thư mục anh em thì tổ tiên
+   * đó không do project quản lý nên không ghi được. */
+  canModify: boolean;
 }
 
 /** Mirrors `domain::explorer::DirEntry`. `path` is always absolute — feed

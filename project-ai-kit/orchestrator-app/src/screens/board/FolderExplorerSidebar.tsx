@@ -327,6 +327,8 @@ export function FolderExplorerSidebar({ onClose }: FolderExplorerSidebarProps) {
               <FolderTree
                 key={`${roots[0].path}:${refreshToken}`}
                 rootPath={roots[0].path}
+                rootLabel={roots[0].label}
+                rootCanModify={roots[0].canModify}
                 selectedPath={selectedFilePath}
                 onSelectFile={setSelectedFilePath}
                 onSelectFolder={setActiveFolderPath}
@@ -359,6 +361,8 @@ export function FolderExplorerSidebar({ onClose }: FolderExplorerSidebarProps) {
                   <FolderTree
                     key={`${root.path}:${refreshToken}`}
                     rootPath={root.path}
+                    rootLabel={root.label}
+                    rootCanModify={root.canModify}
                     selectedPath={selectedFilePath}
                     onSelectFile={setSelectedFilePath}
                     onSelectFolder={setActiveFolderPath}

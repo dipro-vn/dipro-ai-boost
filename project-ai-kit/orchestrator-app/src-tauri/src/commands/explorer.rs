@@ -88,25 +88,30 @@ fn resolve_explorer_roots(project: &ProjectPaths) -> AppResult<Vec<ExplorerRootE
     ];
 
     if let Some(common) = common_ancestor(&canonical_roots) {
+        let filter = ImportFilter::for_project(Path::new(&project.agents_root));
+        let can_modify = can_modify_path(project, &filter, &common, &common);
         return Ok(vec![ExplorerRootEntry {
             label: "Project".to_string(),
             path: common.display().to_string(),
+            can_modify,
         }]);
     }
 
+    // Each declared root is inside itself (`assert_within` compares with
+    // `starts_with`), so these are writable unless the filter says otherwise.
+    let filter = ImportFilter::for_project(Path::new(&project.agents_root));
+    let root_entry = |label: &str, path: &str| {
+        let canonical = dunce::canonicalize(path).unwrap_or_else(|_| PathBuf::from(path));
+        ExplorerRootEntry {
+            label: label.to_string(),
+            path: path.to_string(),
+            can_modify: can_modify_path(project, &filter, &canonical, &canonical),
+        }
+    };
     Ok(vec![
-        ExplorerRootEntry {
-            label: "Agents/Kit".to_string(),
-            path: project.agents_root.clone(),
-        },
-        ExplorerRootEntry {
-            label: "Docs".to_string(),
-            path: project.docs_root.clone(),
-        },
-        ExplorerRootEntry {
-            label: "Repository".to_string(),
-            path: project.repository_root.clone(),
-        },
+        root_entry("Agents/Kit", &project.agents_root),
+        root_entry("Docs", &project.docs_root),
+        root_entry("Repository", &project.repository_root),
     ])
 }
 
@@ -865,6 +870,43 @@ mod tests {
         assert_eq!(roots[0].label, "Project");
         let expected = dunce::canonicalize(tmp.path().join("project")).unwrap();
         assert_eq!(PathBuf::from(&roots[0].path), expected);
+    }
+
+    /// Whether the root row may be created into depends on the project's
+    /// shape, which is exactly why the frontend has to be told rather than
+    /// assuming. Siblings under a plain folder: that folder belongs to
+    /// nobody, so no. `create_project`'s layout puts `agentsRoot` AT the
+    /// project folder, so the same row IS writable there.
+    #[test]
+    fn the_root_row_is_writable_only_when_the_shared_folder_is_itself_a_declared_root() {
+        let tmp = tempfile::tempdir().unwrap();
+
+        let siblings_root = tmp.path().join("siblings");
+        std::fs::create_dir_all(siblings_root.join("kit-repo/.claude")).unwrap();
+        std::fs::create_dir_all(siblings_root.join("docs")).unwrap();
+        std::fs::create_dir_all(siblings_root.join("repos")).unwrap();
+        let siblings = ProjectPaths {
+            agents_root: siblings_root.join("kit-repo").display().to_string(),
+            docs_root: siblings_root.join("docs").display().to_string(),
+            repository_root: siblings_root.join("repos").display().to_string(),
+        };
+        let roots = resolve_explorer_roots(&siblings).unwrap();
+        assert_eq!(roots.len(), 1);
+        assert!(!roots[0].can_modify);
+
+        // What `commands::project::new_project_paths` builds.
+        let nested_root = tmp.path().join("nested");
+        std::fs::create_dir_all(nested_root.join(".claude")).unwrap();
+        std::fs::create_dir_all(nested_root.join("docs")).unwrap();
+        std::fs::create_dir_all(nested_root.join("repos")).unwrap();
+        let nested = ProjectPaths {
+            agents_root: nested_root.display().to_string(),
+            docs_root: nested_root.join("docs").display().to_string(),
+            repository_root: nested_root.join("repos").display().to_string(),
+        };
+        let roots = resolve_explorer_roots(&nested).unwrap();
+        assert_eq!(roots.len(), 1);
+        assert!(roots[0].can_modify);
     }
 
     /// `resolve_explorer_roots` canonicalizes real paths on disk, so its
