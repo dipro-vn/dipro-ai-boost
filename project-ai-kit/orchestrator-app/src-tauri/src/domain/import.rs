@@ -22,7 +22,7 @@ pub struct ImportPreview {
 #[serde(rename_all = "camelCase")]
 pub struct ImportedRun {
     pub run_id: String,
-    /// Absolute path to the copy under `.orchestrator/inputs/<run-id>/` —
+    /// Absolute path to the copy under `.ai-boost/inputs/<run-id>/` —
     /// this is what goes into `ba-agent`'s prompt (AC-E2-23), not the
     /// user's original folder.
     pub copied_path: String,

@@ -63,7 +63,7 @@ khách hàng, biên bản họp, ghi chú kỹ thuật, mô tả màn hình vẽ
 
 | Thứ cần test | Cách nó được dựng |
 |---|---|
-| Bộ lọc file cấm đọc (AC-E2-32) | Có file `.env` — preview phải đưa vào mục **bị bỏ qua**, không copy sang `.orchestrator/inputs/` |
+| Bộ lọc file cấm đọc (AC-E2-32) | Có file `.env` — preview phải đưa vào mục **bị bỏ qua**, không copy sang `.ai-boost/inputs/` |
 | Preview đọc cả thư mục con | Có thư mục `mo-ta-man-hinh/` với 2 file bên trong |
 | Luồng agent hỏi lại (AC-E2-15/16/17) | Biên bản họp cố ý để **4 điểm chưa chốt** → BA phải hỏi thay vì tự bịa, node chuyển `waiting-input`, test được ô trả lời + `--resume` |
 | Node `blocked` khi repo chưa clone (AC-E2-11) | Ghi chú kỹ thuật nêu rõ feature đụng `example-mobile` — repo này cố ý chưa clone trong fixture |

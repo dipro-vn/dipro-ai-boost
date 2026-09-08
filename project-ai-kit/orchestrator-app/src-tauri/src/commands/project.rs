@@ -452,7 +452,7 @@ fn open_project_internal(
         );
     }
 
-    // .orchestrator/ lives under agentsRoot: it's the closest thing to a
+    // .ai-boost/ lives under agentsRoot: it's the closest thing to a
     // stable "this is the kit-managed project" anchor across the 3
     // independent roots (see A1 — there is no single project root anymore).
     orchestrator_dir::ensure_skeleton(&agents_root_path)?;
@@ -465,7 +465,7 @@ fn open_project_internal(
         &agents_root_path,
     )) {
         warnings.push(
-            "Thư mục .orchestrator/ đang được git theo dõi — nó chứa transcript agent (gồm nguyên văn nội dung file agent đã đọc/ghi) và bản sao input. Chạy `git rm -r --cached .orchestrator` rồi commit để gỡ khỏi repo."
+            "Thư mục .ai-boost/ đang được git theo dõi — nó chứa transcript agent (gồm nguyên văn nội dung file agent đã đọc/ghi) và bản sao input. Chạy `git rm -r --cached .ai-boost` rồi commit để gỡ khỏi repo."
                 .to_string(),
         );
     }

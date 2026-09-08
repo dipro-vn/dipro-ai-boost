@@ -1,6 +1,6 @@
 # SPEC: Orchestrator — Monitoring & Artifacts
 
-> EPIC **E3** của sản phẩm Dipro AI Boost. Bối cảnh sản phẩm, data model `.orchestrator/`, non-functional dùng chung → `docs/orchestrator/OVERVIEW.md`. Giả định chưa giải quyết → `docs/orchestrator/ASSUMPTIONS-GAPS.md`.
+> EPIC **E3** của sản phẩm Dipro AI Boost. Bối cảnh sản phẩm, data model `.ai-boost/`, non-functional dùng chung → `docs/orchestrator/OVERVIEW.md`. Giả định chưa giải quyết → `docs/orchestrator/ASSUMPTIONS-GAPS.md`.
 >
 > Nguồn: `SPEC-pipeline-orchestrator.md` v0.1 §F3.1–F3.3.
 
@@ -12,7 +12,7 @@ E3 giữ nguyên nguyên tắc đó nhưng tự động hoá việc quan sát: m
 
 Việc suy ra trạng thái không đơn giản như "file tồn tại = stage xong". Hai chỗ đặc biệt:
 
-- E2E execution report **không có path quy định** trong kit — không có gì để watch. App tự định nghĩa vị trí cho nó trong `.orchestrator/runs/`.
+- E2E execution report **không có path quy định** trong kit — không có gì để watch. App tự định nghĩa vị trí cho nó trong `.ai-boost/runs/`.
 - Nhánh Design-Analyst trong luồng của orchestrator (`design-analyst-agent`, agent mới — xem E2 và `ASSUMPTIONS-GAPS.md` B17) sinh ra `design-analysis.md`, **khác** với `designer-agent` gốc của kit vốn không tạo file `.md` nào. Nhờ vậy watcher có file thật để theo dõi.
 
 Ngoài quan sát, E3 còn phải trả lời được câu hỏi "artifact này thay đổi gì so với lần trước" — nền tảng cho phần diff của gate ở E4.
@@ -57,7 +57,7 @@ Ngoài quan sát, E3 còn phải trả lời được câu hỏi "artifact này 
 | ② Design — Design-Analyst | `<feature>/design-analysis.md` tồn tại |
 | ② Design — QC | `<feature>/test-cases/<module>/test-cases.md` tồn tại |
 | ③ Planning | Có ít nhất một `<feature>/<repo>/tasks/task-*.md` |
-| ④ Contract Lock | `.orchestrator/contract.lock` tồn tại và hợp lệ (chi tiết ở E4) |
+| ④ Contract Lock | `.ai-boost/contract.lock` tồn tại và hợp lệ (chi tiết ở E4) |
 | ⑤ Build | Trạng thái lấy từ `state.json` của run — không suy từ source code |
 | ⑥ Testing | `execution-report.md` tồn tại tại path do app quy định |
 | ⑦ Testing | QC checklist và/hoặc `execution-report.md` tồn tại |
@@ -74,7 +74,7 @@ Ngoài quan sát, E3 còn phải trả lời được câu hỏi "artifact này 
 | AF-5 | File bị xoá sau khi đã ghi nhận `done` | Trạng thái quay lại `idle`, hiện cảnh báo artifact đã biến mất |
 | AF-6 | Nhiều feature cùng tồn tại trong `<DOCS_ROOT>/features/` | Pipeline Board hiển thị một feature tại một thời điểm, có bộ chọn feature |
 | AF-7 | Artifact chứa mermaid sai cú pháp | Hiện nguyên khối code kèm thông báo lỗi cú pháp, **không** làm hỏng phần render còn lại |
-| AF-8 | Project không phải git repository | Diff dùng snapshot trong `.orchestrator/snapshots/`; UI nói rõ đang so sánh theo snapshot |
+| AF-8 | Project không phải git repository | Diff dùng snapshot trong `.ai-boost/snapshots/`; UI nói rõ đang so sánh theo snapshot |
 | AF-9 | Chưa có snapshot hoặc chưa có commit nào để so | Nút "So sánh phiên bản" bị vô hiệu kèm giải thích lý do |
 | AF-10 | Task file không match được ID nào trong SPEC hay test case | Tab Traceability hiện "chưa đủ dữ liệu để liên kết", nêu rõ đã tìm theo quy ước nào |
 | AF-11 | Thư mục `<DOCS_ROOT>/features/` rỗng | Pipeline Board hiện trạng thái rỗng kèm hướng dẫn tạo feature đầu tiên |
@@ -85,12 +85,12 @@ Ngoài quan sát, E3 còn phải trả lời được câu hỏi "artifact này 
 
 **File watcher**
 
-- **AC-E3-01** — App theo dõi liên tục các artifact trong `<DOCS_ROOT>/features/<feature>/`: `SPEC.md`, `design-analysis.md`, `design-resources/`, `<repo>/DESIGN.md`, `<repo>/tasks/`, `test-cases/`, cùng với `.orchestrator/contract.lock`.
+- **AC-E3-01** — App theo dõi liên tục các artifact trong `<DOCS_ROOT>/features/<feature>/`: `SPEC.md`, `design-analysis.md`, `design-resources/`, `<repo>/DESIGN.md`, `<repo>/tasks/`, `test-cases/`, cùng với `.ai-boost/contract.lock`.
 - **AC-E3-02** — Thay đổi trên file system được phản ánh lên Pipeline Board **trong vòng 2 giây** mà người dùng không phải refresh thủ công.
 - **AC-E3-03** — Nhiều thay đổi liên tiếp trong khoảng dưới 500ms chỉ tạo ra **một** lần cập nhật trạng thái (debounce) — UI không nhấp nháy.
 - **AC-E3-04** — Trạng thái nhánh Design-Analyst của stage ② được xác định bằng **sự tồn tại của `design-analysis.md`** trong folder feature.
 - **AC-E3-04a** — `design-resources/` là artifact phụ trợ, chỉ được theo dõi và hiển thị (đường dẫn, danh sách file) — **không** phải điều kiện để nhánh Design-Analyst đạt `done` (điều kiện `done` giữ nguyên như `AC-E3-04`).
-- **AC-E3-05** — Với các artifact mà kit không quy định đường dẫn (E2E execution report), app ghi chúng vào vị trí do app tự định nghĩa trong `.orchestrator/runs/<run-id>/` và theo dõi tại đó.
+- **AC-E3-05** — Với các artifact mà kit không quy định đường dẫn (E2E execution report), app ghi chúng vào vị trí do app tự định nghĩa trong `.ai-boost/runs/<run-id>/` và theo dõi tại đó.
 - **AC-E3-06** — Artifact bị xoá sau khi đã ghi nhận `done` khiến trạng thái stage quay về `idle` kèm cảnh báo nêu tên file đã biến mất.
 - **AC-E3-07** — Thư mục theo dõi tạm thời không truy cập được thì app hiện cảnh báo và giữ nguyên trạng thái cuối cùng, tự động theo dõi lại khi thư mục khả dụng trở lại — app không crash.
 
@@ -115,7 +115,7 @@ Ngoài quan sát, E3 còn phải trả lời được câu hỏi "artifact này 
 **Diff**
 
 - **AC-E3-20** — Người dùng chọn được 2 phiên bản của cùng một artifact và xem diff side-by-side, phần thêm và phần xoá được tô màu phân biệt.
-- **AC-E3-21** — Project là git repository thì phiên bản lấy từ lịch sử git; không phải git thì lấy từ `.orchestrator/snapshots/`. UI hiển thị rõ đang dùng nguồn nào.
+- **AC-E3-21** — Project là git repository thì phiên bản lấy từ lịch sử git; không phải git thì lấy từ `.ai-boost/snapshots/`. UI hiển thị rõ đang dùng nguồn nào.
 - **AC-E3-22** — Chưa có phiên bản nào để so sánh thì chức năng diff bị vô hiệu hoá kèm giải thích lý do, thay vì hiện diff rỗng.
 
 **Traceability**

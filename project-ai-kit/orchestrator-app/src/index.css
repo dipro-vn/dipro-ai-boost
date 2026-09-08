@@ -444,3 +444,37 @@
 .hljs-link {
   text-decoration: underline;
 }
+
+/* IME (bộ gõ tiếng Việt, tiếng Nhật, tiếng Trung) trong terminal init-kit.
+ *
+ * Triệu chứng gốc: gõ được ĐÚNG MỘT chữ có dấu rồi tắt hẳn, phải click lại vào
+ * terminal mới gõ thêm được một chữ nữa. Chữ đầu vào được đã chứng minh WKWebView
+ * có gắn IME vào textarea của xterm dù nó `opacity: 0` — nên thủ phạm không phải
+ * độ trong suốt, mà là thứ thay đổi giữa chữ thứ nhất và chữ thứ hai.
+ *
+ * Thứ đó là `_syncTextArea` của xterm (CoreBrowserTerminal). Nó ghi inline style
+ * left/top/width/height/lineHeight/zIndex lên textarea để bám theo ô con trỏ, và
+ * được gọi từ `onCursorMove` — tức là bắn ra gần như mỗi byte Claude echo ra màn
+ * hình. macOS huỷ input context của một phần tử khi phần tử đó bị dời hoặc đổi
+ * kích thước giữa chừng, nên chữ đầu vừa echo xong là phiên IME chết.
+ *
+ * Vì vậy ghim CẢ hình học bằng `!important` để inline style của `_syncTextArea`
+ * không thắng được. Đây là đảo ngược có chủ ý so với lần sửa trước — lần đó cố ý
+ * để left/top/width/height cho xterm điều khiển "để bảng gợi ý bộ gõ bám theo con
+ * trỏ", và chính chỗ đó giữ nguyên nguyên nhân.
+ *
+ * Đánh đổi: marked text (chữ đang ghép, gạch chân) không hiện ở vị trí con trỏ.
+ * Textarea vốn đã `opacity: 0` nên hiện tại cũng không thấy — không phải regression.
+ *
+ * `pointer-events: none` để ô 200x40 này không chắn chuột trên vùng terminal;
+ * xterm tự gọi `textarea.focus()` khi click vào màn hình nên focus vẫn chạy. */
+.xterm textarea.xterm-helper-textarea {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 200px !important;
+    height: 40px !important;
+    line-height: normal !important;
+    z-index: 0 !important;
+    pointer-events: none;
+}

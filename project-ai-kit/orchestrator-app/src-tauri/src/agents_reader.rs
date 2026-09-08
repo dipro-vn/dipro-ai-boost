@@ -137,12 +137,19 @@ pub fn assess_init_status(
         );
     };
 
-    let Some(rows) = parse_ecosystem_table(content) else {
+    // Chỉ cần bảng `## Repos` đúng cấu trúc; bảng RỖNG vẫn hợp lệ. Init kit
+    // trước rồi clone repo sau là luồng bình thường, và lúc `repos/` còn rỗng
+    // thì init-agent giữ nguyên dòng placeholder của kit — `is_placeholder_cell`
+    // loại dòng đó nên bảng đọc ra rỗng. Trước đây rỗng bị tính là chưa init,
+    // hệ quả là project kiểu đó kẹt ở `NeedsInit` vĩnh viễn và terminal
+    // init-kit không bao giờ tự đóng. Board vẫn hiện node Build và tự báo
+    // "không áp dụng" khi không có repo, nên chặn ở đây là thừa.
+    if parse_ecosystem_table(content).is_none() {
         return (
             ProjectInitStatus::Invalid,
             vec!["AGENTS.md không có bảng ## Repos đúng cấu trúc".to_string()],
         );
-    };
+    }
 
     let mut reasons = Vec::new();
     if content.contains("<PROJECT_NAME>") || content.contains("\\<PROJECT_NAME\\>") {
@@ -179,10 +186,6 @@ pub fn assess_init_status(
     }) {
         reasons.push("Chưa điền DOCS_ROOT".to_string());
     }
-    if rows.is_empty() {
-        reasons.push("Chưa khai báo repo trong Ecosystem".to_string());
-    }
-
     if reasons.is_empty() {
         (ProjectInitStatus::Ready, reasons)
     } else {
@@ -729,7 +732,9 @@ Mỗi repo có 1 **Epic code** ngắn tham chiếu xuyên suốt SPEC/DESIGN/tas
         let (status, reasons) = assess_init_status(Some(content), true);
 
         assert_eq!(status, ProjectInitStatus::NeedsInit);
-        assert_eq!(reasons.len(), 3);
+        // Tên project + Domain. Bảng Repos toàn placeholder KHÔNG còn là lý do:
+        // init trước, clone repo sau là hợp lệ.
+        assert_eq!(reasons.len(), 2, "reasons: {reasons:?}");
     }
 
     #[test]
@@ -885,6 +890,45 @@ Mỗi repo có 1 **Epic code** ngắn tham chiếu xuyên suốt SPEC/DESIGN/tas
             ProjectInitStatus::Ready,
             "reasons: {after_reasons:?}"
         );
+    }
+
+    /// Init kit trước, clone repo sau. Khi `repos/` còn rỗng, init-agent giữ
+    /// nguyên dòng placeholder của kit — `is_placeholder_cell` loại dòng đó nên
+    /// bảng đọc ra rỗng. Trước đây bảng rỗng bị tính là chưa init, và project
+    /// kiểu này kẹt `NeedsInit` mãi: terminal init-kit không bao giờ tự đóng vì
+    /// vòng poll chờ `Ready` không bao giờ tới.
+    #[test]
+    fn a_project_with_no_repos_declared_yet_is_ready() {
+        let agents_md = "\
+# Khkj — Project Rules for AI Agents
+
+## Repos
+
+| Repo | Đường dẫn | Vai trò | Stack |
+|---|---|---|---|
+| _(tên repo)_ | _(đường dẫn tương đối so với Repository root)_ | backend / frontend / mobile / other | _(NestJS / React / Flutter / ...)_ |
+
+- **Domain:** Dự án Khkj — dùng để test khung kit AI agent.
+";
+        let (status, reasons) = assess_init_status(Some(agents_md), true);
+        assert_eq!(status, ProjectInitStatus::Ready, "reasons: {reasons:?}");
+    }
+
+    /// Nới ở trên chỉ nới chuyện bảng RỖNG. Bảng sai cấu trúc (thiếu cột) vẫn
+    /// phải là `Invalid` — không có bảng đúng thì không đọc nổi Ecosystem.
+    #[test]
+    fn a_repos_table_with_the_wrong_columns_is_still_invalid() {
+        let agents_md = "\
+## Repos
+
+| Tên | Ghi chú |
+|---|---|
+| a | b |
+
+- **Domain:** Có domain thật.
+";
+        let (status, _) = assess_init_status(Some(agents_md), true);
+        assert_eq!(status, ProjectInitStatus::Invalid);
     }
 
     /// The shape a real `/init-kit` run produces: value filled in right

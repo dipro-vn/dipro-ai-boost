@@ -99,7 +99,7 @@ pub(crate) fn is_kebab_case(name: &str) -> bool {
 /// Validates the feature name, re-runs the same preview `preview_import`
 /// showed (so what gets copied always matches what the user confirmed —
 /// never trusts a preview the frontend cached earlier), copies every
-/// included file into `.orchestrator/inputs/<run-id>/`, and creates
+/// included file into `.ai-boost/inputs/<run-id>/`, and creates
 /// `<docsRoot>/features/<feature_name>/` so the feature appears on the
 /// Pipeline Board immediately (AC-E3-01 already treats an empty feature
 /// directory as a valid, just-created feature). Takes already-resolved

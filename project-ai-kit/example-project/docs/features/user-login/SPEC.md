@@ -1,6 +1,6 @@
 # SPEC: User Login (Đăng nhập bằng Email + Mật khẩu)
 
-> **Nguồn:** `.orchestrator/inputs/20260818T073609744Z-user-login/` — yêu cầu khách hàng (12/08/2026), biên bản họp kỹ thuật (13/08/2026), ràng buộc kỹ thuật, mô tả 2 màn hình.
+> **Nguồn:** `.ai-boost/inputs/20260818T073609744Z-user-login/` — yêu cầu khách hàng (12/08/2026), biên bản họp kỹ thuật (13/08/2026), ràng buộc kỹ thuật, mô tả 2 màn hình.
 > **Trạng thái:** Có **6 điểm chưa chốt** (xem `## Open Questions`) — các điểm này KHÔNG được tự quyết trong Design/Task.
 
 ---

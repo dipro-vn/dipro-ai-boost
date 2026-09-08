@@ -1,6 +1,6 @@
 # SPEC: Orchestrator — Pipeline Execution
 
-> EPIC **E2** của sản phẩm Dipro AI Boost. Bối cảnh sản phẩm, data model `.orchestrator/`, non-functional dùng chung → `docs/orchestrator/OVERVIEW.md`. Giả định chưa giải quyết → `docs/orchestrator/ASSUMPTIONS-GAPS.md`.
+> EPIC **E2** của sản phẩm Dipro AI Boost. Bối cảnh sản phẩm, data model `.ai-boost/`, non-functional dùng chung → `docs/orchestrator/OVERVIEW.md`. Giả định chưa giải quyết → `docs/orchestrator/ASSUMPTIONS-GAPS.md`.
 >
 > Nguồn: `SPEC-pipeline-orchestrator.md` v0.1 §F2.1–F2.4.
 
@@ -68,7 +68,7 @@ Pipeline này **không** bắt đầu từ trang giấy trắng. Cả hai đầu
 
 ### Định nghĩa pipeline
 
-Pipeline khai báo dạng DAG trong `.orchestrator/pipeline.json`. v1 dùng template chuẩn 8 stage theo sơ đồ trong `README.md` của kit:
+Pipeline khai báo dạng DAG trong `.ai-boost/pipeline.json`. v1 dùng template chuẩn 8 stage theo sơ đồ trong `README.md` của kit:
 
 | Stage | Agent | Quy tắc chạy |
 |---|---|---|
@@ -120,7 +120,7 @@ Pipeline khai báo dạng DAG trong `.orchestrator/pipeline.json`. v1 dùng temp
 
 **Định nghĩa & điều phối pipeline**
 
-- **AC-E2-01** — `.orchestrator/pipeline.json` khai báo tường minh, với mỗi stage: mã stage, danh sách agent, và stage phụ thuộc. App đọc file này để quyết định thứ tự chạy — không suy diễn từ tên file agent.
+- **AC-E2-01** — `.ai-boost/pipeline.json` khai báo tường minh, với mỗi stage: mã stage, danh sách agent, và stage phụ thuộc. App đọc file này để quyết định thứ tự chạy — không suy diễn từ tên file agent.
 - **AC-E2-02** — Ba agent của stage ② (`techlead-design-agent`, `design-analyst-agent`, `qc-agent`) được spawn **đồng thời** — cả ba đều ở trạng thái `running` cùng lúc, quan sát được trên Pipeline Board.
 - **AC-E2-03** — Ở stage ⑤, `frontend-agent` và `mobile-agent` chỉ được spawn **sau khi** `backend-agent` kết thúc với trạng thái `done`.
 - **AC-E2-03a** — Ràng buộc `AC-E2-03` **chỉ áp dụng khi backend thật sự có việc trong feature đó**. "Có việc" = tồn tại thư mục con của feature khớp một repo vai trò `backend` trong bảng Ecosystem **và** thư mục đó có ít nhất một `tasks/task-*.md`. Feature không có task backend nào (vd landing page thuần FE) thì Frontend/Mobile chạy được ngay, không chờ. Suy luận này chỉ được dùng khi **mọi** thư mục con của feature khớp được repo đã khai (giống chốt an toàn `AC-E4-11a`) và khi feature **đã có ít nhất một task** — chưa chạy Tech Lead Tasks thì không kết luận gì.

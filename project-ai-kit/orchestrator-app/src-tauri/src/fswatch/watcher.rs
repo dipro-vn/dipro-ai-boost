@@ -82,11 +82,11 @@ pub(crate) fn recompute_and_emit(
     }
 }
 
-/// Starts watching one feature's directory (plus `.orchestrator/runs/` for
+/// Starts watching one feature's directory (plus `.ai-boost/runs/` for
 /// QA/QC report conventions — AC-E3-05). The returned `Debouncer` must be
 /// kept alive in `AppState`; dropping it stops the watch (see its `Drop`
-/// impl). Deliberately does NOT watch `.orchestrator/contract.lock` /
-/// the rest of `.orchestrator/` — recursively watching that directory
+/// impl). Deliberately does NOT watch `.ai-boost/contract.lock` /
+/// the rest of `.ai-boost/` — recursively watching that directory
 /// would self-trigger on our own `state.json` writes, since both live
 /// side-by-side. Revisit properly once MVP3 needs Contract Lock inference.
 ///

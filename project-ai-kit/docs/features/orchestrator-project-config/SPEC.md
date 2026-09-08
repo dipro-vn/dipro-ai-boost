@@ -1,6 +1,6 @@
 # SPEC: Orchestrator — Project & Config
 
-> EPIC **E1** của sản phẩm Dipro AI Boost. Bối cảnh sản phẩm, data model `.orchestrator/`, non-functional dùng chung → `docs/orchestrator/OVERVIEW.md`. Giả định chưa giải quyết → `docs/orchestrator/ASSUMPTIONS-GAPS.md`.
+> EPIC **E1** của sản phẩm Dipro AI Boost. Bối cảnh sản phẩm, data model `.ai-boost/`, non-functional dùng chung → `docs/orchestrator/OVERVIEW.md`. Giả định chưa giải quyết → `docs/orchestrator/ASSUMPTIONS-GAPS.md`.
 >
 > Nguồn: `SPEC-pipeline-orchestrator.md` v0.1 §F1.1–F1.4.
 
@@ -10,11 +10,11 @@ Trước khi chạy được bất kỳ agent nào, orchestrator cần biết **
 
 Hiện tại cả ba đều là kiến thức nằm trong đầu người dùng. Model được chọn ngầm bởi frontmatter từng agent file (`ba-agent` = sonnet, `techlead-design-agent` = opus) — không đổi được mà không sửa kit. Quyền của agent chỉ được kiểm soát bằng rule văn xuôi trong `POLICIES.md` ("BA không sửa source code") cộng 3 hook security. Credentials nằm plaintext trong file config.
 
-E1 biến cả ba thành cấu hình tường minh, lưu trong `.orchestrator/` của project, sửa được từ UI mà không đụng vào `.claude/` của kit.
+E1 biến cả ba thành cấu hình tường minh, lưu trong `.ai-boost/` của project, sửa được từ UI mà không đụng vào `.claude/` của kit.
 
 Một ràng buộc quan trọng: app **chỉ đọc** `.claude/`. Người dùng đổi model cho `ba-agent` trong app thì app truyền `--model` khi spawn, chứ không sửa frontmatter của `ba-agent.md`. Kit vẫn dùng được độc lập với app.
 
-Ngoài ba thứ trên, E1 còn giữ **thiết lập giao diện** — cụ thể là chuyển đổi theme dark/light. Khác với ba thứ kia, đây là thiết lập **của người dùng chứ không phải của project**: nó phải giữ nguyên khi đổi sang project khác, nên không nằm trong `.orchestrator/` mà lưu ở mức ứng dụng.
+Ngoài ba thứ trên, E1 còn giữ **thiết lập giao diện** — cụ thể là chuyển đổi theme dark/light. Khác với ba thứ kia, đây là thiết lập **của người dùng chứ không phải của project**: nó phải giữ nguyên khi đổi sang project khác, nên không nằm trong `.ai-boost/` mà lưu ở mức ứng dụng.
 
 ## Actors & Preconditions
 
@@ -41,7 +41,7 @@ Ngoài ba thứ trên, E1 còn giữ **thiết lập giao diện** — cụ th�
    - **DOCS_ROOT** — thư mục chứa `features/`
    - **Repository root** — thư mục chứa các repo source
 4. App scaffold khung kit nếu còn thiếu, điền tên project vào các template project-facing, rồi đọc `AGENTS.md` để lấy bảng Ecosystem (danh sách repo + Epic code + vai trò), và đọc cấu hình MCP server của project để biết Figma được kết nối qua đâu.
-5. App tạo `.orchestrator/` trong project folder, sinh `config.json` với **model mặc định theo bảng đề xuất** và permission profile mặc định cho từng agent tìm thấy trong `.claude/agents/`.
+5. App tạo `.ai-boost/` trong project folder, sinh `config.json` với **model mặc định theo bảng đề xuất** và permission profile mặc định cho từng agent tìm thấy trong `.claude/agents/`.
 6. Nếu là project mới và `AGENTS.md` còn placeholder, app mở terminal Claude tại `agentsRoot` và tự gửi `/init-kit Tên dự án: <tên>`. PM trả lời trong modal.
 7. Khi init kết thúc, app đọc lại `AGENTS.md`. Project có sẵn chưa init vẫn có thể chạy `/init-kit` bên ngoài rồi bấm **Đã chạy init, kiểm tra lại**. Khi `AGENTS.md` hợp lệ, app chuyển project sang trạng thái sẵn sàng và cho phép chạy agent.
 8. App mở **Pipeline Board** (`OR_MONI_001`, thuộc E3).
@@ -83,7 +83,7 @@ Ngoài ba thứ trên, E1 còn giữ **thiết lập giao diện** — cụ th�
 | AF-3 | `AGENTS.md` còn nguyên placeholder (chưa chạy `/init-kit`) | App hiển thị trạng thái "project chưa init", handoff gồm `cd agentsRoot` → `claude` → `/init-kit`, cho xem project nhưng chặn spawn agent; sau đó có nút kiểm tra lại |
 | AF-4 | Repo khai trong Ecosystem nhưng chưa clone về máy | Đánh dấu repo đó `chưa clone` — trạng thái riêng, **không** coi là lỗi. Agent nhắm vào repo đó bị chặn từ trước khi spawn |
 | AF-5 | Project folder bị đổi tên / xoá sau khi đã lưu vào recent | Bấm vào recent → báo "không tìm thấy", cho xoá khỏi danh sách hoặc chỉ lại đường dẫn |
-| AF-6 | `.orchestrator/config.json` bị hỏng (JSON không parse được) | App không crash — backup file hỏng thành `config.json.bak`, sinh lại config mặc định, báo PM |
+| AF-6 | `.ai-boost/config.json` bị hỏng (JSON không parse được) | App không crash — backup file hỏng thành `config.json.bak`, sinh lại config mặc định, báo PM |
 | AF-7 | Agent tồn tại trong `.claude/agents/` nhưng chưa có trong `config.json` (kit thêm agent mới) | App tự thêm dòng với model + permission mặc định, đánh dấu "mới" để PM review |
 | AF-8 | Agent có trong `config.json` nhưng file agent đã bị xoá khỏi kit | App hiện dòng đó dạng mờ + nhãn "không còn trong kit", cho PM xoá |
 | AF-9 | OS keychain không truy cập được (bị khoá / không hỗ trợ) | Báo lỗi rõ, **không** fallback ghi plaintext. Integration bị vô hiệu cho tới khi keychain dùng được |
@@ -107,7 +107,7 @@ Ngoài ba thứ trên, E1 còn giữ **thiết lập giao diện** — cụ th�
 - **AC-E1-04b** — Repo có ô Vai trò không đọc ra được vẫn hiển thị trong bảng Ecosystem với nội dung nguyên văn. App cảnh báo lúc mở project, và node agent tương ứng nêu **đích danh** repo + ô vai trò sai kèm cách sửa — không báo "project không có repo vai trò đó" (thông báo đó chỉ dành cho project thật sự không khai repo vai trò ấy).
 - **AC-E1-04c** — Bảng `## Repos` parse được nhưng không dòng repo nào đã điền thì app cảnh báo và hướng dẫn chạy `/init-kit`, không im lặng trả về danh sách rỗng.
 - **AC-E1-05** — Nếu không tìm thấy `.claude/agents/` tại đường dẫn PM chỉ, app vẫn cho mở project ở chế độ read-only và hiển thị nhãn "read-only" cố định trên UI.
-- **AC-E1-06** — Sau khi mở project thành công, thư mục `.orchestrator/` tồn tại trong project folder và chứa `config.json`.
+- **AC-E1-06** — Sau khi mở project thành công, thư mục `.ai-boost/` tồn tại trong project folder và chứa `config.json`.
 - **AC-E1-07** — Project đã mở thành công xuất hiện trong danh sách recent ở lần mở app kế tiếp; project đã `ready` vào thẳng Pipeline Board mà không hỏi lại 3 đường dẫn, còn project `needs-init` mở lại Summary để tiếp tục handoff.
 - **AC-E1-34** — Khi scaffold file project-facing mới, app thay placeholder project name bằng tên PM nhập ở Launcher; file custom đã tồn tại không bị ghi đè.
 - **AC-E1-35** — Project mới được tạo trong app tự khởi chạy Claude CLI interactive tại `agentsRoot`, gửi `/init-kit` và hiển thị terminal trong modal; project có sẵn chưa init trả trạng thái `needs-init` và giữ handoff bên ngoài.
@@ -155,7 +155,7 @@ Ngoài ba thứ trên, E1 còn giữ **thiết lập giao diện** — cụ th�
 - **AC-E1-29** — Lần chạy đầu tiên, khi người dùng chưa từng chọn theme, app hiển thị ở **light**.
 - **AC-E1-30** — Chuyển theme có hiệu lực **ngay lập tức** trên toàn bộ giao diện đang mở, không cần khởi động lại app và không làm gián đoạn agent đang chạy.
 - **AC-E1-31** — Lựa chọn theme được lưu ở **mức ứng dụng**, giữ nguyên sau khi đóng/mở lại app và **không đổi** khi chuyển sang project khác.
-- **AC-E1-32** — Theme **không** được lưu trong `.orchestrator/` của project — xoá thư mục đó hoặc mở project mới không làm mất lựa chọn theme.
+- **AC-E1-32** — Theme **không** được lưu trong `.ai-boost/` của project — xoá thư mục đó hoặc mở project mới không làm mất lựa chọn theme.
 - **AC-E1-33** — Ở cả hai theme, log console giữ font monospace, và mọi trạng thái node trên Pipeline Board vẫn phân biệt được bằng mắt (liên quan `AC-E3-09`).
 
 ## Out of Scope
@@ -165,7 +165,7 @@ Ngoài ba thứ trên, E1 còn giữ **thiết lập giao diện** — cụ th�
 - **Multi-project song song** — v1 chỉ 1 project tại một thời điểm.
 - **Multi-user / phân quyền team** — mọi cấu hình là của người đang mở app.
 - **Chạy `/init-kit` từ trong app cho project mới** — app tự chạy phiên interactive trong terminal modal. Project có sẵn chưa init vẫn có thể dùng handoff bên ngoài.
-- **Đồng bộ config giữa nhiều máy** — `.orchestrator/` là local, gitignore-able.
+- **Đồng bộ config giữa nhiều máy** — `.ai-boost/` là local, gitignore-able.
 - **Tự động clone repo còn thiếu** — app chỉ báo trạng thái `chưa clone`.
 - **Cấu hình hoặc cài đặt MCP server** — app chỉ đọc cấu hình MCP có sẵn của project. Thêm/sửa MCP thì dùng editor ngoài.
 - **Quản lý credentials Figma** — do MCP server của project đảm nhiệm, app không đụng tới.

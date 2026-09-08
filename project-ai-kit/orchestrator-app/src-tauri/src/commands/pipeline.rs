@@ -104,10 +104,10 @@ pub struct FeatureDeletionPreview {
     /// the dialog can name what is being thrown away instead of only
     /// counting it.
     pub notable_artifacts: Vec<String>,
-    /// Slots with a persisted run under `.orchestrator/agent-runs/`.
+    /// Slots with a persisted run under `.ai-boost/agent-runs/`.
     pub run_count: usize,
     pub has_contract_lock: bool,
-    /// Imported input copies under `.orchestrator/inputs/<ts>-<name>/`.
+    /// Imported input copies under `.ai-boost/inputs/<ts>-<name>/`.
     pub input_copy_count: usize,
     /// Slots with a live process — deletion is refused while any exist.
     pub running_slots: Vec<String>,
@@ -226,7 +226,7 @@ pub fn preview_delete_feature(
 
 /// Removes a feature entirely: its `<docsRoot>/features/<name>/` directory
 /// (the only source of truth for whether a feature exists — the sidebar
-/// lists that directory) plus every piece of `.orchestrator/` bookkeeping
+/// lists that directory) plus every piece of `.ai-boost/` bookkeeping
 /// keyed by it.
 ///
 /// `run-history/` is deliberately NOT touched: cost accounting is
@@ -307,7 +307,7 @@ pub fn delete_feature(
     Ok(list_feature_ids(&docs_root))
 }
 
-/// Reads `.orchestrator/pipeline.json`, creating it from the v1 default
+/// Reads `.ai-boost/pipeline.json`, creating it from the v1 default
 /// template on first open (AC-E3-08 — template is fixed for MVP1, no UI to
 /// edit it). Not `#[tauri::command]` itself — `get_pipeline_definition`
 /// below is the IPC entry point; `commands::agentrun` also needs this to

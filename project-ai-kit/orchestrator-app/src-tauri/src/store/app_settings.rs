@@ -2,7 +2,7 @@
 //!
 //! The store plugin resolves `settings.json` below the app data directory. A
 //! product identifier change therefore creates a new directory unless the old
-//! settings are copied first. Project-local `.orchestrator/` data is unrelated
+//! settings are copied first. Project-local `.ai-boost/` data is unrelated
 //! and must never be moved by this module.
 
 use std::path::{Path, PathBuf};

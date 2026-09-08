@@ -35,7 +35,7 @@ ESKITCHEN-WORKSPACE/
 
 **Ảnh hưởng:** F1.1 validate "folder phải có `.claude/agents/`" sẽ **fail ngay màn hình đầu** với target thật. Ngoài ra `.claude/` xuất hiện ở 3 cấp khác nhau với ý nghĩa khác nhau (workspace-level, docs-repo-level, source-repo-level) — app phải phân biệt được cái nào là nguồn agent.
 
-**Đề xuất:** F1.1 không dò tự động theo 1 quy ước cứng. Cho user chỉ **3 path riêng** khi mở project (agents root · DOCS_ROOT · repository root), lưu vào `.orchestrator/config.json`. Đã phản ánh vào `AC-E1-02`, `AC-E1-03`.
+**Đề xuất:** F1.1 không dò tự động theo 1 quy ước cứng. Cho user chỉ **3 path riêng** khi mở project (agents root · DOCS_ROOT · repository root), lưu vào `.ai-boost/config.json`. Đã phản ánh vào `AC-E1-02`, `AC-E1-03`.
 
 ---
 
@@ -202,7 +202,7 @@ ESKITCHEN-WORKSPACE/
 
 **Ảnh hưởng:** F3.1 liệt kê `reports/` trong danh sách watch, nhưng kit không quy định artifact nào rơi vào đó → stage ⑥ và ⑦ không có tín hiệu hoàn thành đáng tin.
 
-**Đề xuất:** app tự định nghĩa path trong `.orchestrator/` cho các artifact kit không quy định (vd `.orchestrator/runs/<run>/qa-report.md`), sinh từ output agent. Không sửa kit. Đã phản ánh vào `AC-E3-05`.
+**Đề xuất:** app tự định nghĩa path trong `.ai-boost/` cho các artifact kit không quy định (vd `.ai-boost/runs/<run>/qa-report.md`), sinh từ output agent. Không sửa kit. Đã phản ánh vào `AC-E3-05`.
 
 ---
 
@@ -340,7 +340,7 @@ SPEC E5 mô tả app tự gọi Backlog API: tự fetch metadata, dựng dropdow
 | AC-E5-14 | Trạng thái cạnh **task node** trên Pipeline Board | Board không có node cho từng task file (node = slot agent) → bảng task ↔ issue ↔ status nằm ở màn Backlog |
 | AC-E5-01 | Nút Push chỉ bật khi **credentials đã cấu hình + test kết nối OK** | Nút bật khi feature **có task file** — đẩy không cần credentials của app (MCP server giữ credentials). Màn Backlog vẫn nhắc cấu hình vì phần *kéo trạng thái* cần API key |
 
-**Vẫn đúng SPEC:** AC-E5-03 (5 thông tin bắt buộc — nằm trong prompt), 06 (convention), 07/08 (issue mẫu → confirm → batch), 09 (mapping `.orchestrator/backlog/<feature>/mapping.json` nhóm theo phase), 10 (agent ghi mapping sau **mỗi** issue → đứt giữa chừng vẫn tiếp tục được, không tạo trùng), 11 (prompt liệt kê task đã có issue), 12 (cảnh báo thiếu Estimate), 13 (app chỉ đọc task file), 15–18.
+**Vẫn đúng SPEC:** AC-E5-03 (5 thông tin bắt buộc — nằm trong prompt), 06 (convention), 07/08 (issue mẫu → confirm → batch), 09 (mapping `.ai-boost/backlog/<feature>/mapping.json` nhóm theo phase), 10 (agent ghi mapping sau **mỗi** issue → đứt giữa chừng vẫn tiếp tục được, không tạo trùng), 11 (prompt liệt kê task đã có issue), 12 (cảnh báo thiếu Estimate), 13 (app chỉ đọc task file), 15–18.
 
 **Lưu ý AC-E5-15:** auto-refresh 15 phút chạy khi màn Backlog đang mở (không có background timer toàn app) — nút Làm mới thủ công luôn dùng được.
 
@@ -370,7 +370,7 @@ Nút Run bị mờ kèm **lý do đích danh** ("Đang chờ: qc-design", "Cần
 
 **Triệu chứng:** node `design-analyst` hiện "Đã bỏ qua" và không có nút nào, dù file agent đã tồn tại trong kit.
 
-**Nguyên nhân gốc (đã xác minh trên `example-project`):** `.orchestrator/pipeline.json` của project là bản ghi ngày 14/08 — **8 stage, không có 🚦 Trigger Gate, toàn bộ `dependsOn` rỗng**. `read_or_init_pipeline_def` chỉ ghi template mặc định khi file **thiếu hoặc hỏng**; file cũ vẫn parse được (serde điền default cho field mới) nên được giữ nguyên vĩnh viễn, **không version, không migration**.
+**Nguyên nhân gốc (đã xác minh trên `example-project`):** `.ai-boost/pipeline.json` của project là bản ghi ngày 14/08 — **8 stage, không có 🚦 Trigger Gate, toàn bộ `dependsOn` rỗng**. `read_or_init_pipeline_def` chỉ ghi template mặc định khi file **thiếu hoặc hỏng**; file cũ vẫn parse được (serde điền default cho field mới) nên được giữ nguyên vĩnh viễn, **không version, không migration**.
 
 Hệ quả dây chuyền: Board không có node Trigger Gate → gate chưa từng được duyệt → engine auto-chain cũ tìm stage kế bằng thứ tự danh sách (vì `dependsOn` rỗng) nên **nhảy thẳng từ BA sang cả 3 agent stage ②**, đi vòng qua gate. Đúng lúc đó `design-analyst` bị ghi `Skipped` vì fixture chưa có file agent.
 
@@ -399,7 +399,7 @@ Hệ quả dây chuyền: Board không có node Trigger Gate → gate chưa từ
 | Inference | node `pm`, `plan_md_missing` (`AC-E4-09`) |
 | AC không còn implement | `AC-E5-01..18` (Backlog), `AC-E4-09` (cảnh báo PLAN.md). `AC-E5-19..27` (Slack) vốn đã out-of-scope theo **B20** |
 
-**Migration:** `store::legacy_cleanup::purge()` chạy khi mở project — xoá `nodes["pm"]` khỏi `state.json`, `agents["pm-agent"]` + `node_nicknames["pm"]` + block `backlog` khỏi `config.json`, các thư mục `agent-runs/<feature>/{pm,backlog-push}/` và cả cây `.orchestrator/backlog/`, cùng API key Backlog trong OS keychain. Idempotent, chỉ cảnh báo ở đúng lần dọn thật; file JSON hỏng thì để nguyên cho đường recovery sẵn có xử lý. `pipeline.json` tự nâng cấp qua `load_pipeline_def` (backup `pipeline.json.v3.bak`).
+**Migration:** `store::legacy_cleanup::purge()` chạy khi mở project — xoá `nodes["pm"]` khỏi `state.json`, `agents["pm-agent"]` + `node_nicknames["pm"]` + block `backlog` khỏi `config.json`, các thư mục `agent-runs/<feature>/{pm,backlog-push}/` và cả cây `.ai-boost/backlog/`, cùng API key Backlog trong OS keychain. Idempotent, chỉ cảnh báo ở đúng lần dọn thật; file JSON hỏng thì để nguyên cho đường recovery sẵn có xử lý. `pipeline.json` tự nâng cấp qua `load_pipeline_def` (backup `pipeline.json.v3.bak`).
 
 **Giữ lại có chủ đích:**
 - Vai trò **người thật "PM"** — bảng RACI trong `POLICIES.md`, 5 ô xác nhận Contract Lock (`ALL_ROLES` vẫn có `"PM"`), quy định assignee trong `backlog-workflow.md`.

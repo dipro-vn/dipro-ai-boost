@@ -1,5 +1,5 @@
 //! Persists `RunHistoryRecord`s — one immutable timestamped JSON file per
-//! run under `.orchestrator/run-history/` (flat, cross-feature — the
+//! run under `.ai-boost/run-history/` (flat, cross-feature — the
 //! Reports History tab lists every feature's runs from one directory),
 //! mirroring `store::contract_lock`'s convention. Never overwritten; this
 //! is why deleting run LOGS (AC-E6-28) can never lose cost data.

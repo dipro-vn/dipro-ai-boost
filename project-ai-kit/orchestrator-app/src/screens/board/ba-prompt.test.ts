@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildBaPrompt } from "@/screens/board/BaStepPanel";
 
-const COPIED = "/agents/.orchestrator/inputs/20260818T032139674Z-user-signup";
+const COPIED = "/agents/.ai-boost/inputs/20260818T032139674Z-user-signup";
 
 describe("buildBaPrompt", () => {
   /** The regression this exists for: with only the folder path, the agent

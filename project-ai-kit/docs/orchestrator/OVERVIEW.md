@@ -83,7 +83,7 @@ E1 Project & Config ──► E2 Pipeline Execution ◄──► E4 Gates
 
 - Multi-project song song; multi-user / phân quyền team.
 - Tự deploy STG/PROD — stage ⑧ chỉ hiển thị checklist + trạng thái, không chạy CI/CD.
-- Chỉnh sửa nội dung agent/command từ trong app — app chỉ **đọc** `.claude/`. Folder Explorer có thể tạo file/folder rỗng và xoá folder trong các project root được phép, nhưng không ghi/xoá `.claude/`, `.git/`, `.orchestrator/` hoặc path restricted.
+- Chỉnh sửa nội dung agent/command từ trong app — app chỉ **đọc** `.claude/`. Folder Explorer có thể tạo file/folder rỗng và xoá folder trong các project root được phép, nhưng không ghi/xoá `.claude/`, `.git/`, `.ai-boost/` hoặc path restricted.
 - Biên tập nội dung file trong Folder Explorer — file mới được tạo rỗng; nội dung vẫn phải sửa bằng editor bên ngoài app.
 - Mỗi node agent có console riêng trong Agent Console Dock. Log được route theo `feature/slot`, còn Action Panel chỉ giữ action của node đang chọn.
 
@@ -124,7 +124,7 @@ Screen Code theo `<Module(2)>_<Feature(4)>_<Seq(3)>` (`.claude/agents/ba-agent.m
 
 ---
 
-## 6. Data model dùng chung — `.orchestrator/`
+## 6. Data model dùng chung — `.ai-boost/`
 
 App tạo thư mục này trong project folder (gitignore-able). Đây là **state store duy nhất** của app; artifact nghiệp vụ vẫn nằm ở `<DOCS_ROOT>/features/`.
 
@@ -138,7 +138,7 @@ Hai artifact **mới** so với convention gốc của kit, sinh ra bởi luồn
 > `design-analysis.md` **lệch với `.claude/context/doc-structure.md`**, vốn cấm Designer tạo file `.md`. Sai lệch có chủ đích, đã quyết định (14/08/2026): thêm agent mới `design-analyst-agent` thay vì sửa `designer-agent` gốc → `ASSUMPTIONS-GAPS.md` B17.
 
 ```
-.orchestrator/
+.ai-boost/
 ├── config.json        # agent↔model, permission profile, timeout, integration refs
 ├── pipeline.json      # định nghĩa DAG 8 stage (v1: template chuẩn)
 ├── state.json         # trạng thái runtime: stage/agent/task status, session-ids
@@ -171,7 +171,7 @@ Hai artifact **mới** so với convention gốc của kit, sinh ra bởi luồn
 | **Hiệu năng** | Watcher debounce 500ms. Log console virtualized — chịu được log hàng chục nghìn dòng không giật. |
 | **Độ tin cậy** | Mọi thao tác ghi state atomic (write-temp-rename). App crash không làm hỏng `state.json`. |
 | **Ngôn ngữ UI** | Tiếng Việt. Giữ tiếng Anh cho label kỹ thuật: Approve, Lock, Retry, Resume, Skip. |
-| **Theme** | Người dùng **tự chuyển** dark / light, **mặc định light**. Lựa chọn lưu ở mức app (áp dụng cho mọi project), không lưu trong `.orchestrator/`. Log console dùng font monospace ở cả hai theme. |
+| **Theme** | Người dùng **tự chuyển** dark / light, **mặc định light**. Lựa chọn lưu ở mức app (áp dụng cho mọi project), không lưu trong `.ai-boost/`. Log console dùng font monospace ở cả hai theme. |
 
 ---
 
@@ -186,7 +186,7 @@ Chỉ đọc, không chạy agent. Mục tiêu: chứng minh việc suy ra trạ
 | Task | Nội dung | EPIC | Est. |
 |---|---|---|---|
 | T1.1 | Scaffold Tauri 2 + React + TS + shadcn/ui + Tailwind, CI build macOS/Windows | — | 0.5d |
-| T1.2 | Project Launcher + validate `.claude/`, tạo `.orchestrator/` | E1 | 1d |
+| T1.2 | Project Launcher + validate `.claude/`, tạo `.ai-boost/` | E1 | 1d |
 | T1.3 | Rust file watcher (notify) + mapping file→stage → `state.json` | E3 | 2d |
 | T1.4 | Pipeline Board read-only: 8 stage, trạng thái suy ra từ artifact | E3 | 2d |
 | T1.5 | Artifact Viewer: markdown render + mermaid | E3 | 1.5d |

@@ -263,7 +263,7 @@ export function AgentStepPanel({
 
   const isDesignAnalyst = agent.id === "design-analyst";
 
-  // The URL the user gave last time, read back from `.orchestrator/`. The
+  // The URL the user gave last time, read back from `.ai-boost/`. The
   // draft it fills is what stage ⑤ ultimately gets, so showing it beats an
   // empty box: the user sees what Frontend/Mobile will be handed, and a
   // re-run does not mean hunting the link down in Figma again. Only fills a

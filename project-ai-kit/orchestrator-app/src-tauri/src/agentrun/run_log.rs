@@ -264,6 +264,39 @@ fn writes_outside_scope(events: &[StreamEvent], feature_dir: &Path) -> Vec<Strin
         .collect()
 }
 
+/// `Write`/`Edit` calls that produced a file with the SAME NAME as the slot's
+/// expected artifact but at a different path — the fingerprint of an agent
+/// that did its job and filed it somewhere the Board never looks.
+///
+/// Only reached when the expected file is genuinely absent, so this cannot
+/// fire for a run that also wrote the real one. Matching on file name rather
+/// than on the agent's prose ("✅ SPEC đã tạo tại …") keeps it from depending
+/// on wording the kit files are free to change.
+fn artifact_written_elsewhere(events: &[StreamEvent], expected: &Path) -> Vec<String> {
+    let Some(name) = expected.file_name() else {
+        return Vec::new();
+    };
+    let mut paths: Vec<String> = events
+        .iter()
+        .filter_map(|event| match event {
+            StreamEvent::ToolCall {
+                tool_name, input, ..
+            } if tool_name == "Write" || tool_name == "Edit" => {
+                input.get("file_path").and_then(|v| v.as_str())
+            }
+            _ => None,
+        })
+        .filter(|path| {
+            let path = Path::new(path);
+            path.file_name() == Some(name) && path != expected
+        })
+        .map(str::to_string)
+        .collect();
+    paths.sort();
+    paths.dedup();
+    paths
+}
+
 /// The CLI's resolved model id from the run's own `SessionStarted` event —
 /// AC-E6-18's "model thực tế đã dùng", as opposed to whatever config said.
 fn find_session_model(events: &[StreamEvent]) -> Option<String> {
@@ -352,6 +385,36 @@ pub fn finalize_run(
                     escaped.join(", ")
                 ),
             );
+        }
+    }
+
+    // The slot ran, said nothing failed, and still has no artifact where the
+    // Board looks — `apply_agent_run_metadata` will let this `WaitingInput`
+    // through and the node sits there asking for input the user has no way
+    // to give. When the agent demonstrably wrote that same file elsewhere,
+    // name both paths: the cause is almost always a `<DOCS_ROOT>`/feature-slug
+    // mismatch between `AGENTS.md` and the roots this project was opened with.
+    if summary.outcome == RunOutcome::WaitingInput {
+        if let Some(expected) =
+            stage_rules::canonical_single_artifact_path(ctx.feature_dir, ctx.slot)
+        {
+            if !expected.is_file() {
+                let elsewhere = artifact_written_elsewhere(&result.events, &expected);
+                if !elsewhere.is_empty() {
+                    append_warning(
+                        &mut summary,
+                        format!(
+                            "⚠ Agent đã ghi {} tại {} — nhưng app tìm artifact của node này tại {}, nên node không chuyển sang done. Kiểm tra <DOCS_ROOT> trong AGENTS.md và tên feature.",
+                            expected
+                                .file_name()
+                                .map(|n| n.to_string_lossy().into_owned())
+                                .unwrap_or_default(),
+                            elsewhere.join(", "),
+                            expected.display()
+                        ),
+                    );
+                }
+            }
         }
     }
 
@@ -774,6 +837,131 @@ mod tests {
                     stop_reason: Some("end_turn".to_string()),
                 },
             ]
+        );
+    }
+
+    /// The exact shape of the reported bug: the agent wrote a complete
+    /// SPEC.md, just under a `<DOCS_ROOT>`/feature-slug of its own choosing,
+    /// so the Board finds nothing and the node sits on `waiting-input` with
+    /// only the agent's closing prose to go on. The summary has to name both
+    /// paths or there is no way to tell this apart from a genuine question.
+    #[test]
+    fn finalize_run_warns_when_the_artifact_was_written_under_a_different_path() {
+        let tmp = tempfile::tempdir().unwrap();
+        let agents_root = tmp.path().join("agents");
+        let feature_dir = tmp.path().join("docs/features/user-login");
+        std::fs::create_dir_all(&feature_dir).unwrap();
+        let runs_dir = tmp.path().join("runs");
+        let elsewhere = tmp.path().join("proj-docs/docs/features/login/SPEC.md");
+        std::fs::create_dir_all(elsewhere.parent().unwrap()).unwrap();
+        std::fs::write(&elsewhere, "# SPEC").unwrap();
+
+        let result = RunResult {
+            events: vec![
+                StreamEvent::ToolCall {
+                    message_id: "m1".to_string(),
+                    tool_use_id: "t1".to_string(),
+                    tool_name: "Write".to_string(),
+                    input: serde_json::json!({ "file_path": elsewhere.display().to_string() }),
+                },
+                StreamEvent::AssistantText {
+                    message_id: "m2".to_string(),
+                    text: "✅ SPEC đã tạo".to_string(),
+                },
+                StreamEvent::RunFinished {
+                    is_error: false,
+                    total_cost_usd: 0.02,
+                    session_id: "s1".to_string(),
+                    stop_reason: Some("end_turn".to_string()),
+                },
+            ],
+            raw_lines: Vec::new(),
+            log_already_on_disk: true,
+            timed_out: false,
+            exit_code: Some(0),
+            stderr: String::new(),
+            stdout_drained: true,
+        };
+
+        let ctx = RunContext {
+            agents_root: &agents_root,
+            feature: "user-login",
+            slot: "ba",
+            feature_dir: &feature_dir,
+            runs_dir: &runs_dir,
+            permission: PermissionProfile::Full,
+        };
+
+        let summary = finalize_run(
+            &ctx,
+            &result,
+            "t0".to_string(),
+            "t1".to_string(),
+            "prompt",
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(summary.outcome, RunOutcome::WaitingInput);
+        let message = summary.last_message.unwrap();
+        assert!(message.contains(&elsewhere.display().to_string()));
+        assert!(message.contains(&feature_dir.join("SPEC.md").display().to_string()));
+    }
+
+    /// The normal first BA run — the agent legitimately stops to ask its
+    /// Bước 2 questions before writing anything. Nothing named SPEC.md was
+    /// written, so the question must reach the user unadorned.
+    #[test]
+    fn finalize_run_does_not_warn_when_the_agent_simply_asked_a_question() {
+        let tmp = tempfile::tempdir().unwrap();
+        let agents_root = tmp.path().join("agents");
+        let feature_dir = tmp.path().join("docs/features/user-login");
+        std::fs::create_dir_all(&feature_dir).unwrap();
+        let runs_dir = tmp.path().join("runs");
+
+        let result = RunResult {
+            events: vec![
+                StreamEvent::AssistantText {
+                    message_id: "m1".to_string(),
+                    text: "Feature này phục vụ actor nào?".to_string(),
+                },
+                StreamEvent::RunFinished {
+                    is_error: false,
+                    total_cost_usd: 0.02,
+                    session_id: "s1".to_string(),
+                    stop_reason: Some("end_turn".to_string()),
+                },
+            ],
+            raw_lines: Vec::new(),
+            log_already_on_disk: true,
+            timed_out: false,
+            exit_code: Some(0),
+            stderr: String::new(),
+            stdout_drained: true,
+        };
+
+        let ctx = RunContext {
+            agents_root: &agents_root,
+            feature: "user-login",
+            slot: "ba",
+            feature_dir: &feature_dir,
+            runs_dir: &runs_dir,
+            permission: PermissionProfile::Full,
+        };
+
+        let summary = finalize_run(
+            &ctx,
+            &result,
+            "t0".to_string(),
+            "t1".to_string(),
+            "prompt",
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(
+            summary.last_message.as_deref(),
+            Some("Feature này phục vụ actor nào?")
         );
     }
 

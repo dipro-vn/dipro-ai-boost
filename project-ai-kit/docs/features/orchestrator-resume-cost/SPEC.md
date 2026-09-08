@@ -1,6 +1,6 @@
 # SPEC: Orchestrator — Resume · Cost · Reliability
 
-> EPIC **E6** của sản phẩm Dipro AI Boost. Bối cảnh sản phẩm, data model `.orchestrator/`, non-functional dùng chung → `docs/orchestrator/OVERVIEW.md`. Giả định chưa giải quyết → `docs/orchestrator/ASSUMPTIONS-GAPS.md`.
+> EPIC **E6** của sản phẩm Dipro AI Boost. Bối cảnh sản phẩm, data model `.ai-boost/`, non-functional dùng chung → `docs/orchestrator/OVERVIEW.md`. Giả định chưa giải quyết → `docs/orchestrator/ASSUMPTIONS-GAPS.md`.
 >
 > Nguồn: `SPEC-pipeline-orchestrator.md` v0.1 §F6.1–F6.3.
 
@@ -29,7 +29,7 @@ Phần thứ ba là xử lý lỗi cho tử tế: agent hỏng thì không đư�
 
 **Preconditions:**
 
-- E1 đã hoàn tất: project đã mở, `.orchestrator/` tồn tại.
+- E1 đã hoàn tất: project đã mở, `.ai-boost/` tồn tại.
 - E2 đã hoàn tất: có engine chạy agent để mà theo dõi trạng thái và cost.
 - Spike A5 đã chạy: đã biết Claude Code báo cáo cost và khôi phục session như thế nào.
 
@@ -76,14 +76,14 @@ Phần thứ ba là xử lý lỗi cho tử tế: agent hỏng thì không đư�
 | AF-9 | Agent hỏng ngay khi khởi động (sai model, thiếu quyền) | Phân biệt với lỗi giữa chừng — nêu rõ lỗi ở khâu khởi động và nguyên nhân |
 | AF-10 | Retry một agent đã ghi ra artifact ở lần chạy trước | Cảnh báo artifact sẽ bị agent ghi đè trước khi chạy lại |
 | AF-11 | PM Skip một agent mà agent sau phụ thuộc vào nó | Cảnh báo rõ agent nào phía sau sẽ chạy thiếu đầu vào, PM tự quyết |
-| AF-12 | `.orchestrator/runs/` phình to sau nhiều lượt chạy | Có cách xoá log cũ; xoá log **không** làm mất số liệu cost tổng hợp |
+| AF-12 | `.ai-boost/runs/` phình to sau nhiều lượt chạy | Có cách xoá log cũ; xoá log **không** làm mất số liệu cost tổng hợp |
 | AF-13 | Đổi model của agent giữa các lượt chạy | Lịch sử cost ghi lại **model thực tế đã dùng** cho từng lượt, không dùng model hiện tại trong config để tính lại |
 
 ## Acceptance Criteria
 
 **Trạng thái & khôi phục**
 
-- **AC-E6-01** — Trạng thái từng stage, từng agent, và session id của lượt chạy gần nhất được ghi vào `.orchestrator/state.json`.
+- **AC-E6-01** — Trạng thái từng stage, từng agent, và session id của lượt chạy gần nhất được ghi vào `.ai-boost/state.json`.
 - **AC-E6-02** — Mọi thao tác ghi `state.json` là atomic: app bị kill giữa lúc ghi thì file cũ vẫn nguyên vẹn và đọc được, không bao giờ tồn tại file ghi dở.
 - **AC-E6-03** — Mở lại app sau khi đóng đột ngột dựng lại đúng trạng thái Pipeline Board như trước thời điểm đóng.
 - **AC-E6-04** — Agent đang chạy tại thời điểm app đóng được đánh dấu **`interrupted`**, phân biệt được với `failed` cả trong `state.json` lẫn trên UI.
@@ -96,7 +96,7 @@ Phần thứ ba là xử lý lỗi cho tử tế: agent hỏng thì không đư�
 
 **Chi phí**
 
-- **AC-E6-11** — Sau mỗi lượt chạy agent, app ghi lại chi phí của lượt đó vào `.orchestrator/runs/`.
+- **AC-E6-11** — Sau mỗi lượt chạy agent, app ghi lại chi phí của lượt đó vào `.ai-boost/runs/`.
 - **AC-E6-12** — Màn hình Cost & Reports hiển thị chi phí cộng dồn theo **agent**, theo **stage**, và theo **pipeline run**.
 - **AC-E6-13** — Không lấy được chi phí của một lượt chạy thì dòng đó hiện `không có số liệu`. App **không** điền 0 và **không** ước lượng.
 - **AC-E6-14** — Tổng chi phí có dòng thiếu số liệu vẫn hiển thị được, kèm ghi chú số lượt chạy chưa được tính vào tổng.

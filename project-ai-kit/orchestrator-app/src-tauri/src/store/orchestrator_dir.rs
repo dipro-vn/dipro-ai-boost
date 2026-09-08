@@ -4,11 +4,14 @@ use std::sync::{Mutex, MutexGuard, OnceLock};
 
 use crate::error::{AppError, AppResult};
 
-pub const ORCHESTRATOR_DIR_NAME: &str = ".orchestrator";
+/// Tên thư mục dữ liệu app đặt dưới `agentsRoot`. Module và hàm
+/// `orchestrator_dir()` vẫn giữ tên cũ từ thời thư mục còn là `.orchestrator`
+/// — đổi nốt là 188 chỗ trên 23 file, không đáng cho một lần đổi tên thư mục.
+pub const KIT_DATA_DIR_NAME: &str = ".ai-boost";
 
 /// Feature and slot ids are used as directory components throughout the app.
 /// Validate them once at the storage boundary so IPC callers cannot smuggle
-/// absolute paths or `..` segments into `.orchestrator`.
+/// absolute paths or `..` segments into `.ai-boost`.
 pub fn validate_run_ids(feature: &str, slot: &str) -> AppResult<()> {
     validate_run_id(feature, "feature")?;
     validate_run_id(slot, "slot")
@@ -36,7 +39,7 @@ fn validate_run_id(value: &str, kind: &str) -> AppResult<()> {
 }
 
 pub fn orchestrator_dir(project_root: &Path) -> PathBuf {
-    project_root.join(ORCHESTRATOR_DIR_NAME)
+    project_root.join(KIT_DATA_DIR_NAME)
 }
 
 pub fn config_json_path(project_root: &Path) -> PathBuf {
@@ -242,7 +245,7 @@ pub fn inputs_dir(project_root: &Path) -> PathBuf {
     orchestrator_dir(project_root).join("inputs")
 }
 
-/// Keeps `.orchestrator/` out of the user's git history, by ignoring itself
+/// Keeps `.ai-boost/` out of the user's git history, by ignoring itself
 /// rather than by editing the project's own `.gitignore` — that file belongs
 /// to the user and this app has no business rewriting it.
 ///
@@ -261,7 +264,7 @@ const SELF_IGNORE: &str = r"# Máy tự sinh — thư mục này chứa transcri
 *
 ";
 
-/// Creates `.orchestrator/{snapshots,runs,agent-runs}` under `project_root`
+/// Creates `.ai-boost/{snapshots,runs,agent-runs}` under `project_root`
 /// if missing, plus the self-ignoring `.gitignore` above. `config.json`/
 /// `pipeline.json`/`state.json` are written separately by their own owners
 /// (config_file, pipeline_def, fswatch) — this only guarantees the directory
@@ -285,7 +288,7 @@ pub fn ensure_skeleton(project_root: &Path) -> AppResult<()> {
 /// function in this codebase that reads or writes a file supplied (even
 /// indirectly) by the frontend MUST call this first — it is the single
 /// enforcement point for "the app never touches anything outside project
-/// roots it was explicitly given, plus its own `.orchestrator/`".
+/// roots it was explicitly given, plus its own `.ai-boost/`".
 ///
 /// Uses `dunce::canonicalize` rather than `std::fs::canonicalize` — the
 /// stdlib version prefixes Windows paths with `\\?\`, which breaks a naive

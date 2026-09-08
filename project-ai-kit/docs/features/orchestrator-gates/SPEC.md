@@ -1,6 +1,6 @@
 # SPEC: Orchestrator — Gates
 
-> EPIC **E4** của sản phẩm Dipro AI Boost. Bối cảnh sản phẩm, data model `.orchestrator/`, non-functional dùng chung → `docs/orchestrator/OVERVIEW.md`. Giả định chưa giải quyết → `docs/orchestrator/ASSUMPTIONS-GAPS.md`.
+> EPIC **E4** của sản phẩm Dipro AI Boost. Bối cảnh sản phẩm, data model `.ai-boost/`, non-functional dùng chung → `docs/orchestrator/OVERVIEW.md`. Giả định chưa giải quyết → `docs/orchestrator/ASSUMPTIONS-GAPS.md`.
 >
 > Nguồn: `SPEC-pipeline-orchestrator.md` v0.1 §F4.1–F4.3.
 >
@@ -66,7 +66,7 @@ Ngoài hai gate cứng còn một gate mềm: Memory Update Gate. Kit yêu cầu
 11. PM mở **Gate Review — Contract Lock** (`OR_GATE_002`): bảng API Contract gộp từ mọi `DESIGN.md` — REST endpoints, WebSocket events, Push payload.
 12. App liệt kê **danh sách file sẽ đưa vào khoá** kèm checksum hiện tại của từng file.
 13. PM lần lượt tick 5 vai trò: BE, FE, Mobile, PM, QC. Thiếu một vai trò thì nút **Lock** vẫn mờ.
-14. PM bấm **Lock**. App tính SHA-256 cho từng file trong danh sách và ghi `.orchestrator/contract.lock` gồm: danh sách file, checksum, thời điểm, người duyệt, các vai trò đã xác nhận.
+14. PM bấm **Lock**. App tính SHA-256 cho từng file trong danh sách và ghi `.ai-boost/contract.lock` gồm: danh sách file, checksum, thời điểm, người duyệt, các vai trò đã xác nhận.
 15. Node stage ④ chuyển `done`. `backend-agent` được spawn.
 16. Giữa lúc build, ai đó sửa `DESIGN.md` của backend — thêm một field vào response.
 17. Watcher phát hiện checksum lệch với `contract.lock` → pipeline chuyển **`CONTRACT VIOLATION`** ngay lập tức.
@@ -134,7 +134,7 @@ Ngoài hai gate cứng còn một gate mềm: Memory Update Gate. Kit yêu cầu
 **Tạo khoá**
 
 - **AC-E4-16** — Trước khi lock, app hiển thị **danh sách file sẽ đưa vào khoá** kèm checksum hiện tại của từng file.
-- **AC-E4-17** — Bấm **Lock** tạo file `.orchestrator/contract.lock` chứa: danh sách file, checksum SHA-256 của từng file, thời điểm lock, người duyệt, và các vai trò đã xác nhận.
+- **AC-E4-17** — Bấm **Lock** tạo file `.ai-boost/contract.lock` chứa: danh sách file, checksum SHA-256 của từng file, thời điểm lock, người duyệt, và các vai trò đã xác nhận.
 - **AC-E4-18** — Sau khi lock thành công, stage ④ chuyển `done` và `backend-agent` được spawn.
 - **AC-E4-19** — Lịch sử các lần lock trước được giữ lại và xem lại được, không bị ghi đè.
 - **AC-E4-20** — Xem lại được nội dung của các file contract **tại thời điểm lock**, không chỉ checksum.

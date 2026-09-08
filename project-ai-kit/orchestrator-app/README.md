@@ -29,7 +29,7 @@ flowchart TD
     B --> C{"③ Mở hoặc tạo project"}
     C -- "Mở project có sẵn" --> C1["Chọn thư mục ở bước ①"]
     C -- "Tạo project mới" --> C2["Nhập tên + chọn thư mục cha"]
-    C1 --> D["App tự dựng khung kit<br/>.claude/ · AGENTS.md · .orchestrator/"]
+    C1 --> D["App tự dựng khung kit<br/>.claude/ · AGENTS.md · .ai-boost/"]
     C2 --> D
     D --> E{"AGENTS.md<br/>đã init chưa?"}
     E -- "Chưa (placeholder)" --> F["④ App mở terminal Claude<br/>và chạy /init-kit"]
@@ -156,13 +156,13 @@ Ngay khi mở, app tự động:
 
 - Tạo 3 thư mục nếu chưa có.
 - **Copy toàn bộ khung kit** vào `agentsRoot`/`docsRoot`: `.claude/` (agents · commands · skills · rules · workflows · hooks), `CLAUDE.md`, `POLICIES.md`, `AGENTS.md` (bản placeholder), skeleton `docs/features/`.
-- Tạo `.orchestrator/` — state nội bộ của app (xem [mục 9](#9-ghi-chú-vận-hành)).
+- Tạo `.ai-boost/` — state nội bộ của app (xem [mục 9](#9-ghi-chú-vận-hành)).
 
 ### 4.4. Tạo project mới hoàn toàn trong app
 
 Từ Launcher, bấm **Tạo project mới**, nhập tên và chọn thư mục cha. App tạo
 `<thu-muc-cha>/<ten-project>/` với `docs/features/`, `repos/`, `.claude/` và
-`.orchestrator/`, sau đó mở một terminal Claude ngay trong app và tự gửi
+`.ai-boost/`, sau đó mở một terminal Claude ngay trong app và tự gửi
 `/init-kit Tên dự án: <ten-project>`.
 
 Terminal là interactive: các câu hỏi về domain, repo, actor và stack của
@@ -172,7 +172,7 @@ hoặc gõ lệnh init-kit thủ công. Có thể ẩn terminal và mở lại t
 
 Không cần `cp -r` tay như luồng CLI thuần ở [`../README.md`](../README.md) Bước 2 nữa.
 
-So sánh thư mục **trước** ([ảnh mục 3](#3-chuẩn-bị-thư-mục-project)) và **sau** khi mở trong app — `.claude/`, `.orchestrator/`, `AGENTS.md`, `CLAUDE.md`, `POLICIES.md` là do app tạo:
+So sánh thư mục **trước** ([ảnh mục 3](#3-chuẩn-bị-thư-mục-project)) và **sau** khi mở trong app — `.claude/`, `.ai-boost/`, `AGENTS.md`, `CLAUDE.md`, `POLICIES.md` là do app tạo:
 
 <img src="public/readme/project-folder-after-import-from-app.png" alt="Thư mục project sau khi app dựng khung kit" width="320">
 
@@ -330,7 +330,7 @@ Click node **BA · SPEC** → panel bên phải hiện form:
 
 ![Chọn folder tài liệu đầu vào cho BA](public/readme/select-input-folder-for-workflow.png)
 
-1. Bấm **Chọn** → trỏ vào thư mục tài liệu đầu vào của feature (ở đây là `inputs/login/`). App copy toàn bộ folder vào `.orchestrator/inputs/<run-id>/` để agent đọc, **không** đọc trực tiếp từ chỗ bạn chọn.
+1. Bấm **Chọn** → trỏ vào thư mục tài liệu đầu vào của feature (ở đây là `inputs/login/`). App copy toàn bộ folder vào `.ai-boost/inputs/<run-id>/` để agent đọc, **không** đọc trực tiếp từ chỗ bạn chọn.
 2. Ô ghi chú (*"Ghi chú thêm cho BA Agent, để trống vẫn chạy được"*) — thêm context nếu cần.
 3. Bấm **Chạy BA Agent**.
 
@@ -349,7 +349,7 @@ Header feature hiển thị tiến độ dạng `0/9 agent hoàn thành`.
 
 Node này có thêm ô **"URL Figma (selection)"** trước nút Run. Dán link (chuột phải vào frame trong Figma → *Copy link to selection*) rồi Run — agent dùng luôn URL đó, không dừng lại hỏi.
 
-URL được **lưu theo feature** vào `.orchestrator/design-refs/<feature>.json`:
+URL được **lưu theo feature** vào `.ai-boost/design-refs/<feature>.json`:
 
 - Lần sau mở lại node, ô nhập tự điền lại URL đã lưu — không phải đi tìm link lần nữa. Dán URL mới thì URL cũ bị ghi đè.
 - URL này được **tự động bơm vào prompt** của Frontend/Mobile ở stage ⑤, cùng đường dẫn `design-analysis.md`, `design-resources/`, `screenshot-design/` — để 2 agent đó code UI theo đúng design mà Design Analyst đã phân tích.
@@ -370,13 +370,13 @@ Khác với luồng "Mở project mới" ở [mục 4](#4-mở-project-trong-app
 
 | Chủ đề | Nội dung |
 |---|---|
-| **`.orchestrator/`** | State nội bộ của app trong `agentsRoot`: config, log run, snapshot, run history, execution report, design-refs. App tự thêm `.gitignore` cho thư mục này; lỡ commit trước đó → app cảnh báo và gợi ý `git rm -r --cached .orchestrator` |
+| **`.ai-boost/`** | State nội bộ của app trong `agentsRoot`: config, log run, snapshot, run history, execution report, design-refs. App tự thêm `.gitignore` cho thư mục này; lỡ commit trước đó → app cảnh báo và gợi ý `git rm -r --cached .ai-boost` |
 | **Read-only mode** | `agentsRoot` không có `.claude/agents/` → project vẫn mở được nhưng chỉ xem. Dùng **Bổ sung khung kit** để thoát trạng thái này |
 | **Auth Claude CLI** | Mặc định dùng nguyên cách `claude` CLI đã login trên máy (`cli-default`). Đổi sang Subscription / Console / API key riêng trong **Settings → Authentication** nếu tổ chức cần tách credential |
 | **1 project / lúc** | App chỉ mở 1 project tại 1 thời điểm — đóng project hiện tại (Kill agent đang chạy nếu có) trước khi mở project khác |
 | **Model & permission** | **Settings → Agents** chỉnh model, permission profile, max turns, timeout cho từng agent |
 | **Chi phí** | **Cost & Reports** (icon biểu đồ trên top bar) tổng hợp chi phí theo feature / stage / agent, export CSV được |
-| **Pipeline thay đổi** | Topology pipeline lưu ở `.orchestrator/pipeline.json`. App tự migrate khi bản mới đổi cấu trúc, backup file cũ thành `pipeline.json.v<N>.bak` |
+| **Pipeline thay đổi** | Topology pipeline lưu ở `.ai-boost/pipeline.json`. App tự migrate khi bản mới đổi cấu trúc, backup file cũ thành `pipeline.json.v<N>.bak` |
 
 ---
 

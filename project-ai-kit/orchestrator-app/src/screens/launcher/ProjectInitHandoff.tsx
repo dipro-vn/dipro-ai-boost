@@ -11,6 +11,11 @@ interface ProjectInitHandoffProps {
   reasons: string[];
   refreshing?: boolean;
   onRefresh: () => void;
+  /** Chỉ truyền ở màn hình nào có sẵn terminal init-kit — hiện tại là Launcher.
+   * Có nó thì nút cuối alert đổi thành mở terminal và chạy init ngay trong app;
+   * bỏ trống (Pipeline Board, hoặc project thiếu khung kit / read-only) thì giữ
+   * nút kiểm tra lại cho luồng chạy thủ công. */
+  onRunInitKit?: () => void;
 }
 
 function quotePath(path: string): string {
@@ -24,6 +29,7 @@ export function ProjectInitHandoff({
   reasons,
   refreshing = false,
   onRefresh,
+  onRunInitKit,
 }: ProjectInitHandoffProps) {
   const [copied, setCopied] = useState<"shell" | "prompt" | null>(null);
   const [copyError, setCopyError] = useState<string | null>(null);
@@ -55,8 +61,18 @@ export function ProjectInitHandoff({
       <AlertDescription>
         <div className="flex flex-col gap-3">
           <p>
-            App đã tạo khung kit nhưng không tự chạy <code>/init-kit</code>. Hãy
-            chạy lệnh này trong Claude Code tại <code>agentsRoot</code>:
+            {onRunInitKit ? (
+              <>
+                Project chưa chạy <code>/init-kit</code>. Bấm{" "}
+                <strong>Chạy init-kit trong app</strong> để mở terminal và chạy
+                ngay tại đây, hoặc tự chạy trong Claude Code:
+              </>
+            ) : (
+              <>
+                App đã tạo khung kit nhưng không tự chạy <code>/init-kit</code>.
+                Hãy chạy lệnh này trong Claude Code tại <code>agentsRoot</code>:
+              </>
+            )}
           </p>
           {reasons.length > 0 && (
             <ul className="list-inside list-disc text-xs">
@@ -100,16 +116,23 @@ export function ProjectInitHandoff({
             </div>
           </div>
           {copyError && <p className="text-xs text-destructive">{copyError}</p>}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onRefresh}
-            disabled={refreshing}
-          >
-            <RefreshCw className={refreshing ? "animate-spin" : undefined} />
-            {refreshing ? "Đang kiểm tra..." : "Đã chạy init, kiểm tra lại"}
-          </Button>
+          {onRunInitKit ? (
+            <Button type="button" size="sm" onClick={onRunInitKit}>
+              <Terminal />
+              Chạy init-kit trong app
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onRefresh}
+              disabled={refreshing}
+            >
+              <RefreshCw className={refreshing ? "animate-spin" : undefined} />
+              {refreshing ? "Đang kiểm tra..." : "Đã chạy init, kiểm tra lại"}
+            </Button>
+          )}
         </div>
       </AlertDescription>
     </Alert>

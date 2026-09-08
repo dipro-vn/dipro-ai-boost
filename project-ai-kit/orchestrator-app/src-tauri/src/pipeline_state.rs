@@ -270,7 +270,7 @@ fn apply_agent_run_metadata(
 }
 
 /// For every artifact that isn't inside a git repository, keeps
-/// `.orchestrator/snapshots/` up to date so T1.6's diff feature has
+/// `.ai-boost/snapshots/` up to date so T1.6's diff feature has
 /// history to compare against — git-tracked artifacts use real git
 /// history instead and are skipped here entirely (see
 /// `gitutil::git_source`).
@@ -391,9 +391,9 @@ mod tests {
 
     /// `project-ai-kit/example-project/` — synthetic fixture (T1.7), not
     /// real client data. `agents_root` here is always a fresh tempdir (this
-    /// module never needs to read from it, only write `.orchestrator/`
+    /// module never needs to read from it, only write `.ai-boost/`
     /// under it), so these tests never touch the checked-in fixture's own
-    /// `.orchestrator/` from an earlier manual run.
+    /// `.ai-boost/` from an earlier manual run.
     fn fixture_docs_root() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../../example-project/docs")

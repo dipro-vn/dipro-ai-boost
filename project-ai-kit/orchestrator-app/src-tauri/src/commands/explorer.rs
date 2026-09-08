@@ -10,9 +10,12 @@ use crate::domain::pipeline_def::slot;
 use crate::domain::project::ProjectPaths;
 use crate::error::{AppError, AppResult};
 use crate::store::contract_lock;
-use crate::store::orchestrator_dir::assert_within;
+use crate::store::orchestrator_dir::{assert_within, KIT_DATA_DIR_NAME};
 
-const PROTECTED_COMPONENTS: &[&str] = &[".claude", ".git", ".orchestrator"];
+// Tên thư mục dữ liệu lấy từ hằng chứ không chép lại chuỗi: chép lại là chỗ
+// duy nhất trong Rust từng lệch khỏi hằng, và lệch ở đây thì Explorer cho phép
+// đổi tên/xoá/thả file vào thư mục app đang dùng mà không test nào bắt được.
+const PROTECTED_COMPONENTS: &[&str] = &[".claude", ".git", KIT_DATA_DIR_NAME];
 const MAX_DELETE_SCAN_ENTRIES: usize = 20_000;
 
 const RUN_SLOTS: &[&str] = &[

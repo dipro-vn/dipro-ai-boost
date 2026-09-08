@@ -28,7 +28,7 @@ pub struct FeatureState {
     pub updated_at: String,
 }
 
-/// `.orchestrator/state.json`. Only holds what MVP1 can actually compute —
+/// `.ai-boost/state.json`. Only holds what MVP1 can actually compute —
 /// per-feature node states from file-system inference. Run history / cost
 /// (mentioned in `OVERVIEW.md` §6's illustrative `state.json` shape) has no
 /// producer until MVP2's agent runner exists, so it isn't modeled here yet.

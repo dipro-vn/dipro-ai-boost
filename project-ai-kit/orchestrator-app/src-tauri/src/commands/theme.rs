@@ -4,7 +4,7 @@ use tauri_plugin_store::StoreExt;
 use crate::error::{AppError, AppResult};
 
 /// Resolved via `BaseDirectory::AppData` by the store plugin — this is
-/// app-level storage, NOT part of any project's `.orchestrator/` directory.
+/// app-level storage, NOT part of any project's `.ai-boost/` directory.
 /// Theme must persist across projects (AC-E1-31) and never live inside a
 /// project folder (AC-E1-32).
 const STORE_FILE: &str = "settings.json";

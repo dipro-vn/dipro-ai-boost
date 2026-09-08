@@ -15,7 +15,7 @@
 > | Phase D-b | Crash-resume: trạng thái `interrupted`, Resume/Re-run, phát hiện process mồ côi, log ghi tăng dần | `AC-E6-04..07`, `09`, `10` |
 > | Phase E | ~~Backlog: keychain + kiểm tra kết nối, đẩy issue qua `pm-agent`+MCP, kéo trạng thái qua REST~~ — **đã gỡ hẳn 25/08/2026 cùng `pm-agent`, xem B24** | `AC-E5-01..18` (không còn implement) |
 > | Phase F (25/08) | Export design asset: `design-analyst-agent` ghi icon/ảnh vào `design-resources/`, app liệt kê chúng làm artifact của node Design-Analyst (chỉ hiển thị, không đổi điều kiện `done`) | `AC-E2-37a`, `AC-E3-01`, `AC-E3-04a` |
-> | Phase G (25/08) | Gỡ `pm-agent` + `PLAN.md` + toàn bộ tính năng Backlog khỏi kit và app; thêm migration `store::legacy_cleanup` dọn `.orchestrator/` cũ | B24 — `AC-E5-01..18`, `AC-E4-09` không còn implement |
+> | Phase G (25/08) | Gỡ `pm-agent` + `PLAN.md` + toàn bộ tính năng Backlog khỏi kit và app; thêm migration `store::legacy_cleanup` dọn `.ai-boost/` cũ | B24 — `AC-E5-01..18`, `AC-E4-09` không còn implement |
 >
 > **Đã loại khỏi phạm vi có chủ đích** (xem `ASSUMPTIONS-GAPS.md`): worktree `AC-E2-25/26` (B19), Slack `AC-E5-19..27` (B20), và toàn bộ Backlog `AC-E5-01..18` + `AC-E4-09` (B24 — thay thế B21).
 >
@@ -52,7 +52,7 @@
 | # | AC | Vấn đề | File liên quan |
 |---|---|---|---|
 | 1 | AC-E2-07, AC-E6-19 | Cost **không** cộng dồn hiển thị realtime lúc agent đang chạy — chỉ biết cost ở dòng `result` cuối cùng (giới hạn CLI, xem A5), nhưng app cũng chưa hiện ước tính tạm thời. | `BaStepPanel.tsx::LiveLogView` (chỉ có đồng hồ elapsed) |
-| 2 | AC-E2-20 | Log thô đã ghi ra `.orchestrator/agent-runs/<feature>/<slot>/log.jsonl` nhưng **không có command đọc lại** — tắt/mở lại app là mất lịch sử log dù file vẫn còn trên đĩa; `liveLines` chỉ là React state (mất khi unmount). | `agentrun/run_log.rs::write_run_log` (ghi), không có hàm đọc tương ứng |
+| 2 | AC-E2-20 | Log thô đã ghi ra `.ai-boost/agent-runs/<feature>/<slot>/log.jsonl` nhưng **không có command đọc lại** — tắt/mở lại app là mất lịch sử log dù file vẫn còn trên đĩa; `liveLines` chỉ là React state (mất khi unmount). | `agentrun/run_log.rs::write_run_log` (ghi), không có hàm đọc tương ứng |
 | 3 | AC-E3-06 | Xoá 1 artifact đang track không có cảnh báo rõ tên file đã biến mất — node lặng lẽ quay về `Idle`. | `inference/stage_rules.rs` |
 | 4 | AC-E3-07 | Watcher không tự kết nối lại sau lỗi (gap đã tự ghi chú từ T1.3, chưa vá). | `fswatch/watcher.rs` — comment "Reconnect-with-backoff... NOT implemented yet" |
 | 5 | AC-E6-08 | `state.json` hỏng: không tạo `.bak`, không báo cho người dùng biết (dù state vẫn dựng lại đúng từ nguồn thật, không mất dữ liệu artifact). | `pipeline_state.rs` |
@@ -124,7 +124,7 @@ AC-E2-33 đến AC-E2-40 — 100% chưa đụng, bị chặn bởi B17 (`design-
 
 ### [Đúng roadmap] — MVP3: Contract Lock inference
 
-- AC-E3-01 — watcher **cố ý** không watch `.orchestrator/contract.lock` (comment rõ trong `fswatch/watcher.rs`) — Partial vì phần còn lại của AC (watch feature dir + runs dir) đã đúng.
+- AC-E3-01 — watcher **cố ý** không watch `.ai-boost/contract.lock` (comment rõ trong `fswatch/watcher.rs`) — Partial vì phần còn lại của AC (watch feature dir + runs dir) đã đúng.
 - AC-E3-10 — stage ④ (Contract Lock) không có agent/inference nào — đúng, vì thuộc E4/MVP3 (Partial vì 7/8 stage còn lại đúng).
 - AC-E3-09 — 8 `NodeStatus` đều có icon/màu riêng, nhưng `Blocked`/`Skipped` chưa từng được tạo ra bởi code nào (Partial).
 

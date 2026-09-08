@@ -170,7 +170,7 @@ fn default_agent_config(agent_name: &str, newly_discovered: bool) -> AgentConfig
 }
 
 impl ProjectConfig {
-    /// Used the very first time `.orchestrator/config.json` is created for a
+    /// Used the very first time `.ai-boost/config.json` is created for a
     /// project (AC-E1-10/18) — nothing is "newly discovered" here, this IS
     /// the baseline.
     pub fn with_defaults(discovered_agent_names: &[String]) -> Self {

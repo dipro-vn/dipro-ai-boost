@@ -38,6 +38,20 @@ const EMPTY_PATHS: ProjectPaths = {
 
 type View = "recent" | "form" | "create" | "summary";
 
+/** Trần bộ đệm output — một phiên init-kit dài có thể xả rất nhiều chunk và
+ * giữ hết thì bộ nhớ phình vô hạn. Chunk cũ hơn mức này bị bỏ; `total` vẫn
+ * đếm tiếp nên terminal luôn biết mình đang lệch bao nhiêu. */
+const MAX_INIT_OUTPUT_CHUNKS = 10_000;
+
+interface InitKitOutput {
+  /** Các chunk còn giữ được, cũ nhất trước. */
+  chunks: string[];
+  /** Tổng số chunk đã nhận từ đầu phiên, kể cả những chunk đã bị cắt. */
+  total: number;
+}
+
+const EMPTY_INIT_OUTPUT: InitKitOutput = { chunks: [], total: 0 };
+
 function extractErrorMessage(err: unknown): string {
   if (isAppCommandError(err)) return err.message;
   if (err instanceof Error) return err.message;
@@ -69,13 +83,28 @@ export function ProjectLauncherScreen() {
   const [initDialogOpen, setInitDialogOpen] = useState(false);
   const [initProjectName, setInitProjectName] = useState("");
   const [initSessionId, setInitSessionId] = useState<string | null>(null);
-  const [initOutput, setInitOutput] = useState<string[]>([]);
+  /** Output của PTY init-kit. `chunks` bị cắt trần để không phình vô hạn, nên
+   * riêng nó không đủ để biết terminal đã vẽ tới đâu — `total` (tổng số chunk
+   * từ đầu phiên, không bao giờ giảm) mới là mốc. Gộp vào một state để hai giá
+   * trị không thể lệch nhau. */
+  const [initOutput, setInitOutput] = useState<InitKitOutput>(EMPTY_INIT_OUTPUT);
   const [initPhase, setInitPhase] = useState<InitKitPhase>("starting");
   const [initStopped, setInitStopped] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
+  /** Vì sao app vẫn chưa coi project là init xong, đọc từ lần `refreshProject`
+   * gần nhất của vòng poll. Terminal chỉ tự đóng khi `initStatus` là `ready`,
+   * mà tiêu chuẩn đó chặt hơn "Claude đã chạy xong /init-kit" — ví dụ bảng
+   * Repos còn nguyên placeholder vì lúc init `repos/` đang rỗng. Không hiện ra
+   * thì người dùng thấy Claude báo xong mà terminal cứ mở, không biết vì sao
+   * và cũng không đóng được (đóng được duy nhất qua "Dừng init-kit"). */
+  const [initPendingReasons, setInitPendingReasons] = useState<string[]>([]);
   const [leavingProject, setLeavingProject] = useState(false);
   const initSessionRef = useRef<string | null>(null);
   const initLaunchingRef = useRef(false);
+  /** Người dùng đã bấm "Dừng init-kit" trong lúc `startInitKit` còn đang chờ
+   * backend. Terminal giờ khoá kín khi đang chạy nên nút đó là lối ra duy nhất,
+   * không được để nó rơi vào khoảng trống chưa có `sessionId`. */
+  const initStopRequestedRef = useRef(false);
   /** Lần cuối PTY xuất ra byte nào — tín hiệu duy nhất cho "Claude đã ngừng
    * nói", dùng để không cắt ngang init-agent khi nó còn đang ghi file. */
   const initLastOutputAtRef = useRef(Date.now());
@@ -166,7 +195,10 @@ export function ProjectLauncherScreen() {
       }
       if (!initSessionRef.current) initSessionRef.current = payload.sessionId;
       initLastOutputAtRef.current = Date.now();
-      setInitOutput((current) => [...current, payload.data].slice(-10_000));
+      setInitOutput((current) => ({
+        chunks: [...current.chunks, payload.data].slice(-MAX_INIT_OUTPUT_CHUNKS),
+        total: current.total + 1,
+      }));
     });
     const unlistenFinished = onInitKitFinished((payload) => {
       if (payload.sessionId !== initSessionRef.current) return;
@@ -241,20 +273,30 @@ export function ProjectLauncherScreen() {
 
   async function startInitKit(projectName: string) {
     initLaunchingRef.current = true;
+    initStopRequestedRef.current = false;
     initSessionRef.current = null;
     initCompletingRef.current = false;
     initLastOutputAtRef.current = Date.now();
     setInitProjectName(projectName);
     setInitSessionId(null);
-    setInitOutput([]);
+    setInitOutput(EMPTY_INIT_OUTPUT);
     setInitPhase("starting");
     setInitStopped(false);
     setInitError(null);
+    setInitPendingReasons([]);
     setInitDialogOpen(true);
     try {
       const session = await commands.startInitKit(projectName);
       initLaunchingRef.current = false;
       initSessionRef.current = session.sessionId;
+      // Bấm dừng trước khi backend kịp trả session: giết ngay phiên vừa sinh ra
+      // thay vì để nó chạy tiếp và khoá lại terminal.
+      if (initStopRequestedRef.current) {
+        void commands
+          .stopInitKit(session.sessionId)
+          .catch((err) => setInitError(extractErrorMessage(err)));
+        return;
+      }
       setInitSessionId(session.sessionId);
       setInitPhase("running");
     } catch (err) {
@@ -306,7 +348,11 @@ export function ProjectLauncherScreen() {
         .refreshProject()
         .then((result) => {
           if (initCompletingRef.current) return;
-          if (result.initStatus !== "ready") return;
+          if (result.initStatus !== "ready") {
+            setInitPendingReasons(result.initReasons);
+            return;
+          }
+          setInitPendingReasons([]);
           void completeInitKit(result, initSessionId);
         })
         .catch(() => {
@@ -348,6 +394,17 @@ export function ProjectLauncherScreen() {
     }
   }
 
+  /** Chạy init-kit cho project vừa được MỞ (không phải project vừa tạo trong
+   * app). `createdProject` thực chất là cờ "phiên này có terminal init-kit"
+   * chứ không phải "project mới tạo" — `submitForm` cũng bật nó theo điều kiện
+   * chạy được init chứ không theo việc có tạo mới hay không. Bật lên ở đây để
+   * footer hiện "Mở lại terminal init-kit" và alert handoff nhường chỗ cho
+   * terminal, đúng như luồng của project vừa tạo. */
+  function runInitKitForOpenProject(projectName: string) {
+    setCreatedProject(true);
+    void startInitKit(projectName);
+  }
+
   async function refreshCurrentProject() {
     setRefreshingInit(true);
     setErrorMessage(null);
@@ -367,12 +424,36 @@ export function ProjectLauncherScreen() {
     }
   }
 
+  /** Đóng project đang mở và đưa màn hình về trang đầu (danh sách recent).
+   *
+   * `leaveProject` chỉ dọn store toàn cục; `view` và `summary` là state cục bộ
+   * của màn này nên phải tự đưa về. Thiếu bước đó thì bấm nút xong project đã
+   * đóng dưới backend nhưng card summary vẫn nằm nguyên trên màn hình, kèm nút
+   * "Vào Pipeline Board" trỏ vào một project không còn mở — trông y như nút
+   * không ăn.
+   *
+   * Phiên init-kit (nếu còn) do backend giết trong `AppState::close`; ở đây chỉ
+   * dọn nốt state phía frontend để lần mở project sau không thừa hưởng output
+   * và session id cũ. */
   async function backToProjectLauncher() {
     setLeavingProject(true);
     setErrorMessage(null);
     try {
       await commands.closeProject(true);
       leaveProject();
+      setView("recent");
+      setSummary(null);
+      setCreatedProject(false);
+      setInitDialogOpen(false);
+      setInitSessionId(null);
+      initSessionRef.current = null;
+      initCompletingRef.current = false;
+      setInitOutput(EMPTY_INIT_OUTPUT);
+      setInitError(null);
+      setInitStopped(false);
+      setInitPhase("starting");
+      // Project vừa đóng phải xuất hiện đúng vị trí trong danh sách recent.
+      await refreshRecent();
     } catch (err) {
       setErrorMessage(extractErrorMessage(err));
     } finally {
@@ -652,26 +733,11 @@ export function ProjectLauncherScreen() {
                         : "Init-kit chưa hoàn tất"}
                     </AlertTitle>
                     <AlertDescription>
-                      <div className="flex flex-col gap-3">
-                        <span>
-                          {summary.initStatus === "ready"
-                            ? "Project đã sẵn sàng. Bạn có thể vào Pipeline Board hoặc quay lại để chọn project khác."
-                            : "Project chưa sẵn sàng để chạy pipeline. Bạn có thể xem lại terminal hoặc quay lại để chọn project khác."}
-                        </span>
-                        <div>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => void backToProjectLauncher()}
-                            disabled={leavingProject}
-                          >
-                            {leavingProject
-                              ? "Đang quay lại..."
-                              : "Quay lại chọn hoặc tạo project"}
-                          </Button>
-                        </div>
-                      </div>
+                      {/* Nút quay lại nằm ở footer của card — luôn hiện,
+                          không phụ thuộc alert này có render hay không. */}
+                      {summary.initStatus === "ready"
+                        ? "Project đã sẵn sàng. Bạn có thể vào Pipeline Board hoặc quay lại để chọn project khác."
+                        : "Project chưa sẵn sàng để chạy pipeline. Bạn có thể xem lại terminal hoặc quay lại để chọn project khác."}
                     </AlertDescription>
                   </Alert>
                 )}
@@ -683,6 +749,11 @@ export function ProjectLauncherScreen() {
                   reasons={summary.initReasons}
                   refreshing={refreshingInit}
                   onRefresh={() => void refreshCurrentProject()}
+                  onRunInitKit={
+                    summary.missingKit.length === 0 && !summary.readOnly
+                      ? () => runInitKitForOpenProject(summary.label)
+                      : undefined
+                  }
                 />
               )}
               {summary.missingKit.length > 0 && (
@@ -724,22 +795,38 @@ export function ProjectLauncherScreen() {
                 </div>
               )}
               <EcosystemRepoTable repos={summary.ecosystem} />
-              <div className="flex justify-end">
-                {initNeedsCompletion && !initDialogOpen && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setInitDialogOpen(true)}
-                  >
-                    Mở lại terminal init-kit
-                  </Button>
-                )}
+              <div className="flex items-center justify-between gap-2">
+                {/* Đường thoát duy nhất khỏi màn này. Trước đây nút quay lại chỉ
+                    nằm trong alert "Init-kit đã/chưa hoàn tất", mà alert đó chỉ
+                    render cho project vừa tạo trong app và chỉ sau khi phiên
+                    init-kit kết thúc — mọi trường hợp khác là kẹt, không có
+                    cách nào về chọn project khác. */}
                 <Button
-                  onClick={() => setScreen("board")}
-                  disabled={initNeedsCompletion}
+                  type="button"
+                  variant="ghost"
+                  onClick={() => void backToProjectLauncher()}
+                  disabled={leavingProject}
                 >
-                  Vào Pipeline Board
+                  <ArrowLeft />
+                  {leavingProject ? "Đang quay lại..." : "Quay lại"}
                 </Button>
+                <div className="flex items-center gap-2">
+                  {initNeedsCompletion && !initDialogOpen && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setInitDialogOpen(true)}
+                    >
+                      Mở lại terminal init-kit
+                    </Button>
+                  )}
+                  <Button
+                    onClick={() => setScreen("board")}
+                    disabled={initNeedsCompletion}
+                  >
+                    Vào Pipeline Board
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -749,19 +836,26 @@ export function ProjectLauncherScreen() {
           open={initDialogOpen}
           projectName={initProjectName}
           sessionId={initSessionId}
-          output={initOutput}
+          output={initOutput.chunks}
+          outputTotal={initOutput.total}
           phase={initPhase}
           stopped={initStopped}
           errorMessage={initError}
+          pendingReasons={initPendingReasons}
           onOpenChange={setInitDialogOpen}
           onStop={() => {
-            if (!initSessionRef.current) return;
+            // Đánh dấu trước, gọi backend sau: phiên có thể chưa tồn tại (nút
+            // này bấm được ngay từ lúc phase "starting"), và dù chưa có gì để
+            // giết thì vẫn phải mở khoá terminal — nó không còn đường đóng nào
+            // khác. `startInitKit` đọc cờ này để giết phiên về muộn.
+            initStopRequestedRef.current = true;
+            initLaunchingRef.current = false;
+            setInitPhase("finished");
+            setInitStopped(true);
+            const sessionId = initSessionRef.current;
+            if (!sessionId) return;
             void commands
-              .stopInitKit(initSessionRef.current)
-              .then(() => {
-                setInitPhase("finished");
-                setInitStopped(true);
-              })
+              .stopInitKit(sessionId)
               .catch((err) => setInitError(extractErrorMessage(err)));
           }}
           onRetry={() => void startInitKit(initProjectName)}

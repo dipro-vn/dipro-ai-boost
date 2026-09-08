@@ -1,4 +1,4 @@
-//! Reads and writes `.orchestrator/design-refs/<feature>.json` — the Figma
+//! Reads and writes `.ai-boost/design-refs/<feature>.json` — the Figma
 //! selection URL `design-analyst` was given, kept so stage ⑤'s
 //! `frontend-agent`/`mobile-agent` can reach the same design.
 //!

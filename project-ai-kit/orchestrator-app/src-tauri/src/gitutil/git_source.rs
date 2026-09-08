@@ -36,7 +36,7 @@ fn discover(canonical_path: &Path) -> Option<Repository> {
 /// True when git's index already holds at least one file under `dir`.
 ///
 /// Adding a `.gitignore` does NOT untrack what git already tracks, so a
-/// project opened by a build that predates `.orchestrator/`'s self-ignore
+/// project opened by a build that predates `.ai-boost/`'s self-ignore
 /// keeps committing agent transcripts — including the verbatim contents of
 /// every file the agents read and wrote — until someone runs
 /// `git rm -r --cached`. This is how the app notices and says so, rather
@@ -60,7 +60,7 @@ pub fn has_tracked_entries_under(dir: &Path) -> bool {
     };
 
     // Index paths are always `/`-separated and repo-relative. The trailing
-    // slash keeps a sibling like `.orchestrator-notes/` from matching.
+    // slash keeps a sibling like `.ai-boost-notes/` from matching.
     let prefix = format!(
         "{}/",
         relative
@@ -226,12 +226,12 @@ mod tests {
         let repo = Repository::init(tmp.path()).unwrap();
         commit_file(
             &repo,
-            ".orchestrator/agent-runs/f/ba/log.jsonl",
+            ".ai-boost/agent-runs/f/ba/log.jsonl",
             "{}",
             "oops",
         );
 
-        assert!(has_tracked_entries_under(&tmp.path().join(".orchestrator")));
+        assert!(has_tracked_entries_under(&tmp.path().join(".ai-boost")));
     }
 
     /// The common case after the self-ignore lands: the directory exists and
@@ -242,7 +242,7 @@ mod tests {
         let repo = Repository::init(tmp.path()).unwrap();
         commit_file(&repo, "SPEC.md", "v1", "initial");
 
-        let orchestrator = tmp.path().join(".orchestrator");
+        let orchestrator = tmp.path().join(".ai-boost");
         std::fs::create_dir_all(orchestrator.join("agent-runs")).unwrap();
         std::fs::write(orchestrator.join("agent-runs/log.jsonl"), "{}").unwrap();
 
@@ -255,9 +255,9 @@ mod tests {
     fn a_sibling_with_a_similar_name_does_not_count_as_tracked() {
         let tmp = tempfile::tempdir().unwrap();
         let repo = Repository::init(tmp.path()).unwrap();
-        commit_file(&repo, ".orchestrator-notes/README.md", "hi", "notes");
+        commit_file(&repo, ".ai-boost-notes/README.md", "hi", "notes");
 
-        let orchestrator = tmp.path().join(".orchestrator");
+        let orchestrator = tmp.path().join(".ai-boost");
         std::fs::create_dir_all(&orchestrator).unwrap();
 
         assert!(!has_tracked_entries_under(&orchestrator));

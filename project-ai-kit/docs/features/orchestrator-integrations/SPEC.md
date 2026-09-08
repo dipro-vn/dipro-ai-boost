@@ -9,7 +9,7 @@
 >
 > Việc tạo issue Backlog từ task file giờ làm thủ công theo `.claude/context/backlog-workflow.md` (file này **vẫn còn** trong kit, cùng MCP server `backlog` mà `techlead-tasks-agent` dùng để tra Category).
 
-> EPIC **E5** của sản phẩm Dipro AI Boost. Bối cảnh sản phẩm, data model `.orchestrator/`, non-functional dùng chung → `docs/orchestrator/OVERVIEW.md`. Giả định chưa giải quyết → `docs/orchestrator/ASSUMPTIONS-GAPS.md`.
+> EPIC **E5** của sản phẩm Dipro AI Boost. Bối cảnh sản phẩm, data model `.ai-boost/`, non-functional dùng chung → `docs/orchestrator/OVERVIEW.md`. Giả định chưa giải quyết → `docs/orchestrator/ASSUMPTIONS-GAPS.md`.
 >
 > Nguồn: `SPEC-pipeline-orchestrator.md` v0.1 §F5.1–F5.2.
 
@@ -58,7 +58,7 @@ Nguyên tắc xuyên suốt: **không bao giờ tự tạo issue hàng loạt m�
 5. App hiện bảng preview: mỗi task file → một dòng, kèm Subject đã format, Issue Type, Priority, Estimated Hours, và nội dung description sẽ tạo.
 6. PM bấm **Tạo issue mẫu**. App tạo **đúng một** issue trên Backlog và hiện link để PM mở kiểm tra.
 7. PM xem thấy đúng → bấm **Tạo phần còn lại**. App tạo 11 issue còn lại, hiện tiến độ từng cái.
-8. Xong, app hiện danh sách issue key nhóm theo phase, ghi mapping `task file ↔ issue key` vào `.orchestrator/`.
+8. Xong, app hiện danh sách issue key nhóm theo phase, ghi mapping `task file ↔ issue key` vào `.ai-boost/`.
 
 ### Kéo trạng thái về
 
@@ -114,7 +114,7 @@ Nguyên tắc xuyên suốt: **không bao giờ tự tạo issue hàng loạt m�
 - **AC-E5-06** — Subject, Issue Type, và cấu trúc description tuân thủ đúng quy định trong `.claude/context/backlog-workflow.md`; app không dùng convention riêng.
 - **AC-E5-07** — App tạo **đúng một issue mẫu** trước, hiển thị link tới issue đó, và **chỉ** tạo các issue còn lại sau khi PM xác nhận.
 - **AC-E5-08** — PM huỷ sau khi xem issue mẫu thì các issue còn lại **không được tạo**, và app hiển thị link issue mẫu để PM tự xử lý.
-- **AC-E5-09** — Sau khi tạo xong, app hiển thị danh sách issue key nhóm theo phase và lưu mapping `task file ↔ issue key` trong `.orchestrator/`.
+- **AC-E5-09** — Sau khi tạo xong, app hiển thị danh sách issue key nhóm theo phase và lưu mapping `task file ↔ issue key` trong `.ai-boost/`.
 - **AC-E5-10** — Lỗi giữa chừng khi tạo hàng loạt khiến app dừng tại chỗ, giữ nguyên các issue đã tạo, hiển thị đã tạo tới đâu, và cho tiếp tục từ điểm dừng mà **không** tạo trùng.
 - **AC-E5-11** — Push to Backlog lần thứ hai cho cùng feature chỉ hiển thị các task **chưa có** issue tương ứng, kèm cảnh báo.
 - **AC-E5-12** — Task file thiếu metadata bắt buộc được đánh dấu cảnh báo ngay tại dòng đó trong preview.

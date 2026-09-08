@@ -29,9 +29,9 @@ const PM_AGENT: &str = "pm-agent";
 pub struct LegacyCleanupReport {
     /// Features whose `nodes` map still carried a `"pm"` entry.
     pub state_features_cleaned: Vec<String>,
-    /// `.orchestrator/agent-runs/<feature>/{pm,backlog-push}/` removed.
+    /// `.ai-boost/agent-runs/<feature>/{pm,backlog-push}/` removed.
     pub run_dirs_removed: Vec<String>,
-    /// `.orchestrator/backlog/` removed wholesale.
+    /// `.ai-boost/backlog/` removed wholesale.
     pub backlog_dir_removed: bool,
     pub config_pm_agent_removed: bool,
     pub config_pm_nickname_removed: bool,

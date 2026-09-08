@@ -81,7 +81,7 @@ export function CreateProjectForm({
           {destination}
         </p>
         <p className="mt-2 text-xs text-muted-foreground">
-          App sẽ tạo `.claude/`, `docs/features/`, `repos/` và `.orchestrator/`,
+          App sẽ tạo `.claude/`, `docs/features/`, `repos/` và `.ai-boost/`,
           sau đó mở Claude để chạy init-kit trong app.
         </p>
       </div>

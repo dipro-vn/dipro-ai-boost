@@ -107,6 +107,27 @@ fn current_project(state: &State<AppState>) -> AppResult<ProjectPaths> {
         .ok_or(AppError::NoProjectOpen)
 }
 
+/// Guarantees the child sees a UTF-8 locale.
+///
+/// `CommandBuilder::new` seeds the child environment from this process's own,
+/// and a macOS `.app` launched from Finder inherits launchd's environment —
+/// which has no `LANG` at all (`launchctl getenv LANG` is empty), unlike the
+/// login shell that `pnpm tauri dev` runs under. Anything under this PTY that
+/// consults the locale would therefore behave one way in development and
+/// another in the installed build.
+///
+/// An existing UTF-8 locale is left alone: a user whose `LANG` is
+/// `ja_JP.UTF-8` should keep it. `LC_ALL` is deliberately not set — it
+/// overrides every category and is far heavier than this needs to be.
+fn ensure_utf8_locale(command: &mut CommandBuilder) {
+    let already_utf8 = std::env::var("LC_ALL")
+        .or_else(|_| std::env::var("LANG"))
+        .is_ok_and(|value| value.to_ascii_uppercase().contains("UTF-8"));
+    if !already_utf8 {
+        command.env("LANG", "en_US.UTF-8");
+    }
+}
+
 fn configure_auth(command: &mut CommandBuilder, resolved: &auth::ResolvedClaudeAuth) {
     const OVERRIDES: [&str; 8] = [
         "ANTHROPIC_API_KEY",
@@ -129,27 +150,90 @@ fn configure_auth(command: &mut CommandBuilder, resolved: &auth::ResolvedClaudeA
     }
 }
 
+/// How many trailing bytes of `buf` begin a UTF-8 character whose remaining
+/// bytes have not arrived yet — at most 3, since no character is longer than
+/// 4 bytes. `0` when the buffer ends on a character boundary, and also `0`
+/// for bytes that can never become valid: those must be handed to the lossy
+/// decode now rather than held back forever waiting for a continuation that
+/// is never coming.
+fn incomplete_tail_len(buf: &[u8]) -> usize {
+    for back in 1..=buf.len().min(3) {
+        let byte = buf[buf.len() - back];
+        if byte < 0x80 {
+            return 0;
+        }
+        if byte & 0b1100_0000 == 0b1000_0000 {
+            continue;
+        }
+        let needed = if byte & 0b1110_0000 == 0b1100_0000 {
+            2
+        } else if byte & 0b1111_0000 == 0b1110_0000 {
+            3
+        } else if byte & 0b1111_1000 == 0b1111_0000 {
+            4
+        } else {
+            return 0;
+        };
+        return if back < needed { back } else { 0 };
+    }
+    0
+}
+
+/// Takes everything in `pending` that forms whole characters, leaving a
+/// split character's leading bytes behind for the next read to complete.
+///
+/// A PTY read boundary falls wherever the kernel put it, and a redrawing TUI
+/// fills the 8 KiB buffer often enough that landing mid-character is routine.
+/// Decoding each read on its own turned the two halves of `ế` (`E1 BA BF`)
+/// into two U+FFFD, permanently — Vietnamese output came back as `<?>` even
+/// though the bytes were intact.
+fn take_decodable(pending: &mut Vec<u8>) -> String {
+    let split = pending.len() - incomplete_tail_len(pending);
+    let whole: Vec<u8> = pending.drain(..split).collect();
+    String::from_utf8_lossy(&whole).into_owned()
+}
+
 fn start_reader(app: &AppHandle, session: Arc<InitKitSession>, mut reader: Box<dyn Read + Send>) {
     let app = app.clone();
     let session_id = session.id.clone();
     std::thread::spawn(move || {
         let mut buffer = [0_u8; 8192];
+        let mut pending: Vec<u8> = Vec::new();
         loop {
             match reader.read(&mut buffer) {
                 Ok(0) => break,
                 Ok(count) => {
                     session.saw_output.store(true, Ordering::SeqCst);
                     *session.last_output_at.lock().unwrap() = Instant::now();
+                    pending.extend_from_slice(&buffer[..count]);
+                    let data = take_decodable(&mut pending);
+                    // The whole read was the front of a split character —
+                    // nothing to draw yet, and emitting "" would only make
+                    // the frontend re-render for no reason.
+                    if data.is_empty() {
+                        continue;
+                    }
                     let _ = app.emit(
                         EVENT_OUTPUT,
                         InitKitOutputPayload {
                             session_id: session_id.clone(),
-                            data: String::from_utf8_lossy(&buffer[..count]).into_owned(),
+                            data,
                         },
                     );
                 }
                 Err(_) => break,
             }
+        }
+        // Whatever is still held back can never be completed now, but it is
+        // real output — show it rather than dropping it silently.
+        if !pending.is_empty() {
+            let _ = app.emit(
+                EVENT_OUTPUT,
+                InitKitOutputPayload {
+                    session_id: session_id.clone(),
+                    data: String::from_utf8_lossy(&pending).into_owned(),
+                },
+            );
         }
 
         let exit_code = session
@@ -343,6 +427,7 @@ pub fn start_init_kit(
     let mut command = CommandBuilder::new(cli_path::program());
     command.cwd(Path::new(&agents_root));
     command.env("TERM", "xterm-256color");
+    ensure_utf8_locale(&mut command);
     configure_auth(&mut command, &resolved_auth);
     let child = pair
         .slave
@@ -487,4 +572,72 @@ pub fn stop_init_kit(state: State<AppState>, session_id: String) -> AppResult<()
     }
     stop_session(&state.init_session);
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The bug this guards: a PTY read that ends between the bytes of a
+    /// Vietnamese character used to produce U+FFFD on both sides of the
+    /// boundary, so typed and echoed accents came back as `<?>`.
+    #[test]
+    fn a_character_split_across_two_reads_is_rejoined_intact() {
+        let bytes = "ế".as_bytes();
+        assert_eq!(bytes.len(), 3, "sanity: ế is a 3-byte character");
+
+        let mut pending = Vec::new();
+        pending.extend_from_slice(&bytes[..2]);
+        assert_eq!(
+            take_decodable(&mut pending),
+            "",
+            "an incomplete character must be held back, not replaced"
+        );
+
+        pending.extend_from_slice(&bytes[2..]);
+        assert_eq!(take_decodable(&mut pending), "ế");
+        assert!(pending.is_empty());
+    }
+
+    /// Only the split character waits — everything before it is drawn now,
+    /// or the terminal would stutter a whole frame behind.
+    #[test]
+    fn whole_characters_before_a_split_one_are_emitted_immediately() {
+        let mut pending = Vec::new();
+        pending.extend_from_slice("Tên dự á".as_bytes());
+        pending.extend_from_slice(&"ế".as_bytes()[..1]);
+
+        assert_eq!(take_decodable(&mut pending), "Tên dự á");
+        assert_eq!(pending.len(), 1, "the lone lead byte stays behind");
+    }
+
+    #[test]
+    fn ascii_and_complete_multibyte_pass_straight_through() {
+        let mut pending = Vec::new();
+        pending.extend_from_slice("/init-kit Tên dự án: x\r".as_bytes());
+        assert_eq!(take_decodable(&mut pending), "/init-kit Tên dự án: x\r");
+        assert!(pending.is_empty());
+    }
+
+    /// Bytes that can never start a valid character must not be held back, or
+    /// the reader would stall forever waiting for a continuation that is not
+    /// coming — better one U+FFFD than a frozen terminal.
+    #[test]
+    fn invalid_bytes_are_not_held_back_forever() {
+        let mut pending = vec![0xFF, 0xFE];
+        let decoded = take_decodable(&mut pending);
+        assert!(!decoded.is_empty());
+        assert!(pending.is_empty());
+    }
+
+    #[test]
+    fn incomplete_tail_len_counts_only_a_genuinely_truncated_character() {
+        assert_eq!(incomplete_tail_len("abc".as_bytes()), 0);
+        assert_eq!(incomplete_tail_len("ế".as_bytes()), 0);
+        assert_eq!(incomplete_tail_len(&"ế".as_bytes()[..1]), 1);
+        assert_eq!(incomplete_tail_len(&"ế".as_bytes()[..2]), 2);
+        // A lead byte more than 3 back cannot still be waiting: no character
+        // is longer than 4 bytes.
+        assert_eq!(incomplete_tail_len(&[0xE1, 0xBA, 0xBF, 0x61]), 0);
+    }
 }

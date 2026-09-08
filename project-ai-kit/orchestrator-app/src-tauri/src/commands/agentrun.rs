@@ -590,7 +590,7 @@ fn run_to_completion(
     let forwarder = runner::spawn_event_forwarder(app.clone(), feature.clone(), slot.clone(), rx);
 
     // AC-E2-23's Import Input copies the user's chosen folder into
-    // `.orchestrator/inputs/<run-id>/` under `agentsRoot` — NOT under
+    // `.ai-boost/inputs/<run-id>/` under `agentsRoot` — NOT under
     // `feature_dir` (cwd, under `docsRoot`; see A1: the roots can be three
     // unrelated directories). Without granting this directory too, `ba-agent`
     // (or any future slot that reads user-supplied files this way) hits
@@ -612,9 +612,21 @@ fn run_to_completion(
     let settings_path = agents_root.join(".claude").join("settings.json");
     let settings_file = settings_path.is_file().then_some(settings_path.as_path());
 
+    // Only the spawned copy carries the contract. `prompt` itself stays
+    // untouched: it is what lands in `RunningMarker` and in
+    // `summary.prompt`, which the Retry button replays verbatim — appending
+    // here would stack another copy of the contract onto every re-run.
+    // Skipped when resuming: that session already got it on its first
+    // spawn, and the prompt being delivered is the user's answer.
+    let spawn_prompt = if slot == slot::BA && resume_session_id.is_none() {
+        format!("{prompt}{}", ba_output_contract(&feature_dir))
+    } else {
+        prompt.clone()
+    };
+
     let params = SpawnParams {
         agent_name: &agent_name,
-        prompt: &prompt,
+        prompt: &spawn_prompt,
         cwd: &feature_dir,
         config: &config,
         resume_session_id: resume_session_id.as_deref(),
@@ -802,7 +814,7 @@ fn run_to_completion(
     );
 
     // `apply_agent_run_metadata` (pipeline_state) reads the marker
-    // `finalize_run` just wrote, from `.orchestrator/agent-runs/` — a
+    // `finalize_run` just wrote, from `.ai-boost/agent-runs/` — a
     // directory the file watcher (T1.3) does not watch. For a `Done`
     // outcome the watcher would eventually notice the new artifact on its
     // own, but `waiting-input`/`failed`/`timeout` touch nothing inside
@@ -1053,6 +1065,35 @@ fn build_slot_prompt(
             spec_path.display()
         ),
     }
+}
+
+/// The output contract appended to `ba-agent`'s prompt at spawn time.
+///
+/// BA is the one slot whose prompt is built in the frontend
+/// (`BaStepPanel.tsx`'s `buildBaPrompt`), and it names only the copied
+/// input folder — neither the feature folder nor the file to write. Every
+/// other slot goes through `build_slot_prompt`, which hands the agent
+/// absolute paths. Left to itself, `ba-agent.md` Bước 3 resolves
+/// `<DOCS_ROOT>/features/<feature-name>/SPEC.md` on its own: `<DOCS_ROOT>`
+/// out of `AGENTS.md` (whatever `/init-kit` wrote there) and
+/// `<feature-name>` invented from the requirement — both independent of the
+/// `docsRoot` and feature slug this app computes `feature_dir` from. When
+/// either diverges, `infer_ba` finds nothing at `feature_dir/SPEC.md`, the
+/// run classifies as `WaitingInput` (`run_log::classify_outcome`), and
+/// `apply_agent_run_metadata` lets that outcome through because inference
+/// said `Idle` — the node sits on "waiting-input" with the SPEC sitting in
+/// a directory the Board never looks at.
+///
+/// The closing instruction is what actually ends the `claude` session on time:
+/// left to its own workflow the agent keeps going after the file is written
+/// (Bước 1.5 rescans, closing summary tables), so the run runs well past the
+/// point the artifact is complete.
+fn ba_output_contract(feature_dir: &Path) -> String {
+    format!(
+        "\n\nGhi SPEC.md vào ĐÚNG đường dẫn tuyệt đối sau, KHÔNG tự chọn đường dẫn khác và KHÔNG tự đặt lại tên feature:\n{}\n(Feature folder: {})\n\nViết xong file đó thì in block `## Output` của bạn rồi KẾT THÚC lượt ngay — không rà thêm SPEC khác, không hỏi thêm.",
+        feature_dir.join("SPEC.md").display(),
+        feature_dir.display()
+    )
 }
 
 /// AC-E2-21..24 entry point once Import Input has copied the source folder
@@ -2630,6 +2671,25 @@ mod tests {
             Some("figma"),
             "a stale choice falls back to auto-detection"
         );
+    }
+
+    /// The BA prompt is assembled in the frontend and names only the copied
+    /// input folder, so the one thing that pins SPEC.md to the path the
+    /// Board actually inspects is this suffix. A run whose SPEC lands
+    /// elsewhere classifies as `WaitingInput` and the node never leaves it.
+    #[test]
+    fn ba_output_contract_names_the_exact_spec_path_and_tells_the_agent_to_stop() {
+        let tmp = tempfile::tempdir().unwrap();
+        let feature_dir = tmp.path().join("docs").join("features").join("user-login");
+        std::fs::create_dir_all(&feature_dir).unwrap();
+
+        let contract = ba_output_contract(&feature_dir);
+
+        assert!(contract.contains(&feature_dir.join("SPEC.md").display().to_string()));
+        assert!(contract.contains(&feature_dir.display().to_string()));
+        // Without this the agent keeps working past the finished artifact
+        // (Bước 1.5 rescans) and the session runs on long after SPEC.md.
+        assert!(contract.contains("KẾT THÚC lượt ngay"));
     }
 
     /// G4/B22 — the Figma URL typed in the UI must reach the agent, so it
