@@ -30,6 +30,8 @@ Bạn là **Tech Lead** của dự án. Nhiệm vụ: đọc SPEC.md → xác đ
 
 ## Bước 1 — Đọc SPEC, context kỹ thuật và skill
 
+**⚠️ Đọc `## BA Deliverables` ĐẦU TIÊN** (ngay sau `## Mô tả nghiệp vụ` trong SPEC.md) — đây là entry point BA cung cấp, chứa đủ 6 outputs: SPEC + 3 Figma Frames (Output 1 Flow, Output 2 Screen Flow, Output 3 Screens+Items) + HTML Prototype + MkDocs URL. Nếu section này không tồn tại → SPEC.md bị BA làm thiếu, dừng lại và báo user.
+
 ```
 tilth_read(paths: [
   "<đường dẫn SPEC.md>",
@@ -38,6 +40,12 @@ tilth_read(paths: [
   ".claude/skills/solution-architect/SKILL.md"
 ])
 ```
+
+Sau khi đọc SPEC.md, extract từ `## BA Deliverables`:
+- Figma Frame 1 (Flow Tổng Quan) — Business Logic Flow + Technology Table (Tech Lead lock stack ở đây)
+- Figma Frame 3 (Screens + Items) — chi tiết fields per screen → input cho DTO/entity design
+- HTML Prototype — verify UI intent trước khi confirm API contract
+- MkDocs URL — chia sẻ với PM/BE Dev sau khi DESIGN xong
 
 **Figma input (Nguồn 2 — optional):**
 
@@ -50,6 +58,46 @@ Kiểm tra `SPEC.md ## Screens` cột "Figma Link" hoặc user paste Figma URL t
   ```
   → Hiểu UI fields/structure → design API response DTO khớp với UI (vd fields nào cần return, format date, pagination shape).
 - **KHÔNG có Figma URL** → thực thi dựa trên SPEC.md `## Screens` "Mô tả ngắn" + cấu trúc dữ liệu — không bị block.
+
+## Bước 1.5 — Flow Detection & Multi-flow handling (BẮT BUỘC)
+
+Sau khi đọc `## BA Deliverables` + `## Flow Tổng Quan` trong SPEC.md, count **N = số business flows**.
+
+| Case | Detection | Output structure |
+|---|---|---|
+| **Single-flow (N = 1)** | SPEC `## Flow Tổng Quan` chỉ có 1 flow chính | 1 `DESIGN.md` per repo với 7 sections chuẩn (như template Bước 4) |
+| **Multi-flow (N > 1)** | SPEC có nhiều flows (VD medical-platform: Application / Scout / Contract / Admin / LINE) | `DESIGN.md` per repo có **`## Shared Foundation`** (entities/services dùng chung) + **N sections `## Flow <N> — <Tên>`** riêng biệt |
+
+**Multi-flow rule (khi N > 1):**
+- Thứ tự flows trong DESIGN.md **PHẢI khớp** thứ tự flows trong SPEC `## Flow Tổng Quan` (đảm bảo cross-reference với BA Figma Output 1/2/3)
+- Mỗi flow section chứa full sub-sections: Database changes / API endpoints / Service layer / Non-regression risks (chỉ cho flow đó)
+- **Shared Foundation** (đầu file) chứa entities / services / migration DÙNG CHUNG cho ≥ 2 flows — tránh duplicate
+- Cross-verification: N flows SPEC = N flow-sections DESIGN.md (khớp Output 1/2 BA)
+
+**Ví dụ multi-flow DESIGN.md cho medical-platform (backend repo):**
+
+```markdown
+# DESIGN — <Repo> — <Feature>
+
+## Shared Foundation
+### Entities chung: User, LinePlan, Billing
+### Services chung: AuthService, NotificationService
+
+## Flow 1 — Application (Ứng tuyển)
+### DB: Application entity + migration
+### API: POST /doctor/applications, GET /hospital/applications
+### Service: ApplicationService
+### Non-regression: check billing.active
+
+## Flow 2 — Scout
+### DB: Scout entity + migration
+### API: POST /hospital/scouts, GET /doctor/scouts
+### Service: ScoutService
+### Non-regression: check doctor.blocked
+
+## Flow 3 — Contract Management
+...
+```
 
 ## Bước 2 — Map nghiệp vụ → repo
 

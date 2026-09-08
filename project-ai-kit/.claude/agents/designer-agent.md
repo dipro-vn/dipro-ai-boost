@@ -86,6 +86,13 @@ Các giá trị cụ thể (file key, node id của output page / component libr
 
 ### Bước 1 — Đọc context bắt buộc (song song)
 
+**⚠️ Đọc `## BA Deliverables` ĐẦU TIÊN** (ngay sau `## Mô tả nghiệp vụ` trong SPEC.md) — entry point BA cung cấp. Extract:
+- Figma Frame 1/2/3 URL (BA đã vẽ low-fi) — Designer dùng làm reference để tạo high-fidelity
+- HTML Prototype path — verify UX intent (BA prototype) trước khi vẽ hi-fi
+- MkDocs URL — chia sẻ với stakeholder sau khi Designer xong
+
+Nếu section `## BA Deliverables` không tồn tại → SPEC.md bị BA làm thiếu, dừng và báo user.
+
 ```
 Read: SPEC.md của feature (path user cung cấp)
 Read: .claude/context/designer-context.md         ← BẮT BUỘC — codebase components catalog, theme thực tế per repo, conflicts, sample data convention
@@ -104,6 +111,44 @@ Nếu SPEC.md không tồn tại → dừng, hỏi user.
 - Sample data realistic dùng đúng ngôn ngữ/convention của dự án — theo section sample data trong `designer-context.md`.
 - **Library keys + composition pattern** (nếu đã extract trong `designer-context.md`) — dùng `importComponentByKeyAsync` cho Button/Input/Badge/Table cells/Pagination thay vì vẽ rectangle. Composition pattern (sidebar width + container width) là CHUẨN cứng của dự án — không tự đổi.
 - **Icons + Images** — nếu `designer-context.md` có hướng dẫn, đọc trực tiếp SVG content từ source code repo (`src/statics/icons/*.svg` hoặc tương đương) rồi `createNodeFromSvg()`. Logo/mascot (nếu có) là local components trong Figma file — `findOne by name`.
+
+### Bước 1.5 — Flow Detection & Multi-flow handling (BẮT BUỘC)
+
+Sau khi đọc `## BA Deliverables` + `## Flow Tổng Quan` trong SPEC.md, count **N = số business flows**.
+
+| Case | Detection | Figma output structure |
+|---|---|---|
+| **Single-flow (N = 1)** | SPEC `## Flow Tổng Quan` chỉ có 1 flow | 1 Figma page với tất cả high-fi screens (frames stacked hoặc grid) |
+| **Multi-flow (N > 1)** | SPEC có N flows (VD medical-platform: 5 flows) | Figma output CHIA THEO GROUP FLOW (tương tự BA Output 3 v2): N group frames, mỗi group chứa hi-fi screens thuộc flow đó |
+
+**Multi-flow rule (khi N > 1):**
+- Naming: Group frame đặt tên `Flow <N> — <Tên business flow>` (ví dụ `Flow 1 — Application`, `Flow 2 — Scout`)
+- Thứ tự groups trong Figma page **PHẢI khớp** thứ tự flows trong SPEC `## Flow Tổng Quan`
+- Mỗi group có label header màu actor + tất cả hi-fi screens thuộc flow đó
+- Gap giữa 2 groups: MIN 200px (để visual distinguish)
+- Screen dùng cross-flow (VD Login screen) → vẽ hi-fi 1 lần ở group đầu tiên, các group sau ghi Screen Code + reference
+- Cross-verification: N groups Designer output = N groups BA Output 2/3
+
+**Ví dụ multi-flow Figma output cho medical-platform (5 flows):**
+
+```
+Page: Design HiFi — medical-platform
+
+┌─── Group Frame 1 — Flow 1 Application (BLUE) ────┐
+│  Hi-fi screens: DR_AUTH_001, DR_JOB_001..004,    │
+│                 HO_AUTH_001, HO_JOB_001..004     │
+└──────────────────────────────────────────────────┘
+                    gap 200px
+┌─── Group Frame 2 — Flow 2 Scout (GREEN) ─────────┐
+│  Hi-fi screens: HO_SCOU_001..007, DR_SCOU_001..2 │
+└──────────────────────────────────────────────────┘
+                    gap 200px
+┌─── Group Frame 3 — Flow 3 Contract (PURPLE) ─────┐
+│  ...                                              │
+└──────────────────────────────────────────────────┘
+```
+
+**Screens phân bổ per flow** — đọc BA Figma Output 3 v2 (đã group sẵn) làm reference; Designer chỉ upgrade low-fi → hi-fi trong cùng group structure.
 
 ### Bước 2 — Phân tích ## Screens
 

@@ -88,25 +88,48 @@ Màu sắc và ý nghĩa KHÔNG thay đổi dù dùng FigJam hay Design:
 
 ---
 
-## Post-Figma requirement — Update SPEC.md với Figma URLs (BẮT BUỘC nếu Output 1-3 thành công)
+## Post-Delivery requirement — Update SPEC.md ## BA Deliverables (BẮT BUỘC — entry point cho downstream)
 
-Sau khi vẽ Output 1, 2, 3 lên Figma xong, BA agent PHẢI edit `SPEC.md` thêm section `## Figma Outputs` **ngay sau section `## Mô tả nghiệp vụ`** (trước `## Actors & Preconditions`). Mục đích: MkDocs (Output 5) sẽ render section này thành link clickable, stakeholder click từ browser mở thẳng Figma frame.
+> **Nguyên tắc:** SPEC.md là **single source of truth** cho Tech Lead / Designer / QC downstream. Toàn bộ 6 outputs của BA PHẢI được liệt kê trong SPEC.md để downstream agents đọc SPEC là có đủ context — không phải tìm kiếm scattered files.
 
-Format bắt buộc:
+Sau khi hoàn thành 6 outputs, BA agent PHẢI edit `SPEC.md` thêm section **`## BA Deliverables`** **ngay sau section `## Mô tả nghiệp vụ`** (trước `## Actors & Preconditions`). MkDocs (Output 5) sẽ render section này thành link clickable, stakeholder + downstream agents click từ browser mở thẳng deliverable.
+
+**Format bắt buộc (đủ 6 outputs, không thiếu output nào):**
 
 ```markdown
-## Figma Outputs
+## BA Deliverables
 
-> BA Figma outputs cho feature này. Click để xem trực tiếp trên Figma.
+> Toàn bộ output của BA cho feature này. Đây là entry point cho Tech Lead Design / Designer / QC downstream — mọi agent PHẢI đọc section này trước khi bắt đầu.
 
-| Output | Nội dung | Figma Frame |
-|---|---|---|
-| **Output 1 — Flow Tổng Quan** | Business Logic Flow + Technology Table + Sitemap WBS | [Mở Figma](<URL frame Output 1>) |
-| **Output 2 — Screen Flow** | Happy + Non-Happy + Bảng Index màn hình | [Mở Figma](<URL frame Output 2>) |
-| **Output 3 — Screens + Items** | Mockup HiFi + Bảng ITEMS + Bảng ERROR SCENARIOS | [Mở Figma](<URL frame Output 3>) |
+### Docs
+
+| # | Output | Path / URL | Note |
+|---|---|---|---|
+| 0 | **SPEC.md** (file này) | `<DOCS_ROOT>/features/<feature>/SPEC.md` | Chính là file bạn đang đọc |
+
+### Figma outputs (Bước 5 — Design output)
+
+| # | Output | Nội dung | Figma Frame |
+|---|---|---|---|
+| 1 | **Flow Tổng Quan** | Business Logic Flow + Technology Table + Sitemap WBS | [Mở Figma](<URL frame Output 1>) |
+| 2 | **Screen Flow** | N screen-flow groups (matching N business flows) + Bảng Index tổng | [Mở Figma](<URL frame Output 2>) |
+| 3 | **Screens + Items** | Grouped by business flow, đủ N screens, Bảng ITEMS + Bảng ERROR SCENARIOS | [Mở Figma](<URL frame Output 3>) |
 
 **Figma file:** [<Tên file>](<URL Figma file gốc>)
 **Page:** `<Tên page user cung cấp>`
+
+### Interactive prototype + Documentation site
+
+| # | Output | Path / URL | Cách chạy |
+|---|---|---|---|
+| 4 | **HTML Prototype** | `<DOCS_ROOT>/features/<feature>/prototype/index.html` | `open <DOCS_ROOT>/features/<feature>/prototype/index.html` — standalone, không cần build |
+| 5 | **MkDocs Site** | `http://127.0.0.1:8000` (Nav → Features → <feature> → SPEC) | `cd <PROJECT_ROOT> && mkdocs serve` (auto-refresh khi save SPEC) |
+
+### Downstream instructions
+
+- **Tech Lead Design agent** — dùng `## Screens` (list) + `## Screen Details` (per-screen data) + Figma Frame 3 (Items) để thiết kế DB schema, API contract, service layer
+- **Designer agent** — dùng Figma Frame 1/2/3 làm reference low-fi → tạo high-fidelity screens, điền cột "Figma Link" trong `## Screens`
+- **QC agent** — dùng `## Acceptance Criteria` + `## Alternative Flows & Edge Cases` + HTML Prototype để test manual + Figma Frame 3 để verify Error Scenarios
 ```
 
 **Cách lấy URL Figma frame:** sau khi `use_figma` tạo node, dùng `figma.currentPage.selection = [node]` hoặc lấy `node.id`, sau đó format URL:
@@ -116,4 +139,7 @@ https://www.figma.com/design/<FILE_KEY>/<FILE_NAME>?node-id=<NODE_ID_URL_ENCODED
 - `FILE_KEY`, `FILE_NAME` lấy từ URL gốc user cung cấp
 - `NODE_ID` = `node.id` (dạng `123:456`), encode thành `123-456` trong URL
 
-Nếu skip Output 1-3 (Figma MCP unavailable) → KHÔNG thêm section `## Figma Outputs` (tránh link chết). Thay vào đó ghi note trong bảng status.
+**Nếu skip Output nào** (VD Figma MCP unavailable → skip Output 1-3, hoặc mkdocs chưa cài → skip Output 5):
+- Vẫn giữ section `## BA Deliverables` với đủ 6 rows
+- Row bị skip: cột `Path / URL` ghi `❌ Skipped — <lý do>`, cột `Note` ghi hướng dẫn user hoàn thành
+- KHÔNG được xóa row (downstream cần biết output nào có/không để plan work)
