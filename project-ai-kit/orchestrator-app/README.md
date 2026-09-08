@@ -414,17 +414,19 @@ Muốn hết cảnh báo này thì cần tài khoản **Apple Developer Program*
 
 ### Hướng dẫn cho người nhận
 
-**Bước 1.** Mở file `.dmg`, kéo **Dipro AI Boost** vào thư mục **Applications**.
+Gửi kèm [`INSTALL-macOS.md`](INSTALL-macOS.md) — file đó viết cho người dùng cuối, có đủ ảnh chụp thao tác bằng chữ và phần xử lý lỗi. Tóm tắt:
 
-**Bước 2.** Gỡ cờ "tải từ internet" — mở **Terminal**, dán đúng dòng này:
+**Bước 1.** Mở `.dmg`, kéo **Dipro AI Boost** vào **Applications**.
+
+**Bước 2.** Bấm mở app một lần → macOS chặn → vào **System Settings → Privacy & Security**, kéo xuống cuối, bấm **Open Anyway**, xác nhận lần nữa. Chỉ phải làm một lần.
+
+> **Đừng hướng dẫn "chuột phải → Open".** macOS 15 (Sequoia) đã bỏ đường bypass đó; nó không còn tác dụng với app chưa ký.
+
+Người quen Terminal có thể thay Bước 2 bằng:
 
 ```bash
 xattr -dr com.apple.quarantine "/Applications/Dipro AI Boost.app"
 ```
-
-**Bước 3.** Mở app từ Launchpad hoặc Applications như bình thường.
-
-> Nếu bỏ qua Bước 2: chuột phải vào app → **Open** → **Open** lần nữa trong hộp thoại. Cách này đôi khi không đủ với app chưa ký; lúc đó vào **System Settings → Privacy & Security**, kéo xuống cuối bấm **Open Anyway**, hoặc quay lại Bước 2.
 
 ### Người nhận cần gì để app chạy được
 
