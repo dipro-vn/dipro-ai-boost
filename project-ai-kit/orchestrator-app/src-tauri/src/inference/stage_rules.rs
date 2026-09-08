@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 
 use crate::domain::node_status::NodeState;
 use crate::domain::pipeline_def::slot;
+use crate::domain::pipeline_expand;
 use crate::domain::project::EcosystemRepo;
 use crate::inference::spec_sections;
 
@@ -163,35 +164,20 @@ pub(crate) fn slots_without_work_in_feature(
     feature_dir: &Path,
     ecosystem: &[EcosystemRepo],
 ) -> Vec<String> {
-    let build_slots = [
-        (slot::BACKEND, "backend"),
-        (slot::FRONTEND, "frontend"),
-        (slot::MOBILE, "mobile"),
-    ];
-
-    let mut without_work: Vec<String> = if ecosystem.is_empty() {
-        Vec::new()
-    } else {
-        build_slots
-            .iter()
-            .filter(|(slot_id, _)| {
-                matches!(
-                    crate::agentrun::readiness::resolve_repo_readiness(ecosystem, slot_id),
-                    crate::agentrun::readiness::RepoReadiness::RoleNotInEcosystem
-                )
-            })
-            .map(|(slot_id, _)| slot_id.to_string())
-            .collect()
-    };
+    // A slot now exists only because its repo does, so the old first pass
+    // ("this project declares no repo for that role") has nothing left to
+    // find — it is the slot list itself.
+    let mut without_work: Vec<String> = Vec::new();
 
     if any_repo_has_task_files(feature_dir) {
         let (_, unmatched) = feature_scope_roles(feature_dir, ecosystem);
         if unmatched.is_empty() {
-            for (slot_id, role) in build_slots {
-                if !without_work.iter().any(|s| s == slot_id)
-                    && !role_has_task_files(feature_dir, ecosystem, role)
-                {
-                    without_work.push(slot_id.to_string());
+            for (slot_id, repo) in pipeline_expand::build_slot_entries(ecosystem) {
+                // The fallback role slots carry no repo to look under, and a
+                // project with no Ecosystem has nothing to conclude from.
+                let Some(repo) = repo else { continue };
+                if !repo_has_task_files(feature_dir, &repo.name) {
+                    without_work.push(slot_id);
                 }
             }
         }
@@ -200,22 +186,15 @@ pub(crate) fn slots_without_work_in_feature(
     without_work
 }
 
-/// True when some repo of `role` has at least one `task-*.md` for this
-/// feature. Deliberately not `DESIGN.md`: Tech Lead Design writes a
-/// `DESIGN.md` for a repo it merely *considered* (the landing-page project
-/// has one that says "N/A — không có endpoint mới"), whereas a task file
-/// only exists when there is actual work.
-fn role_has_task_files(feature_dir: &Path, ecosystem: &[EcosystemRepo], role: &str) -> bool {
-    repo_subdirs(feature_dir).iter().any(|dir| {
-        let Some(name) = dir.file_name().and_then(|n| n.to_str()) else {
-            return false;
-        };
-        let is_role = ecosystem.iter().any(|repo| {
-            repo.name.eq_ignore_ascii_case(name) && repo.role_key.as_deref() == Some(role)
-        });
-        is_role && !task_files_in_dir(dir).is_empty()
-    })
+/// True when THIS repo has at least one `task-*.md` for this feature.
+///
+/// Replaces a `role_has_task_files` that answered for any repo sharing the
+/// role — which is what let a feature touching only `web-user` mark
+/// `web-admin` as having work too.
+fn repo_has_task_files(feature_dir: &Path, repo_name: &str) -> bool {
+    !task_files_in_dir(&feature_dir.join(repo_name)).is_empty()
 }
+
 
 fn task_files_in_dir(repo_dir: &Path) -> Vec<PathBuf> {
     std::fs::read_dir(repo_dir.join("tasks"))
@@ -409,19 +388,15 @@ pub fn infer_feature_state(
     );
 
     let without_work = slots_without_work_in_feature(feature_dir, ecosystem);
-    for build_slot in [slot::BACKEND, slot::FRONTEND, slot::MOBILE] {
+    for (build_slot, repo) in pipeline_expand::build_slot_entries(ecosystem) {
+        let build_slot = build_slot.as_str();
         let node = if without_work.iter().any(|id| id == build_slot) {
-            let role = crate::agentrun::readiness::slot_repo_role(build_slot).unwrap_or(build_slot);
-            let detail = if !ecosystem.is_empty()
-                && matches!(
-                    crate::agentrun::readiness::resolve_repo_readiness(ecosystem, build_slot),
-                    crate::agentrun::readiness::RepoReadiness::RoleNotInEcosystem
-                )
-            {
-                format!("Dự án không có repo vai trò {role} trong Ecosystem — agent này không áp dụng.")
-            } else {
-                format!("Feature này không có task nào cho {build_slot} — agent không áp dụng.")
-            };
+            let target = repo.map_or_else(
+                || format!("slot {build_slot}"),
+                |repo| format!("repo \"{}\"", repo.name),
+            );
+            let detail =
+                format!("Feature này không có task nào cho {target} — agent không áp dụng.");
             NodeState::skipped(detail)
         } else {
             NodeState::idle()
@@ -541,20 +516,43 @@ mod tests {
         let runs_dir = tmp.path().join("runs");
         std::fs::create_dir_all(&runs_dir).unwrap();
 
-        let mut computed: Vec<String> = infer_feature_state(&feature_dir, &runs_dir, &[])
-            .into_keys()
-            .collect();
-        computed.sort();
+        // Both shapes ⑤ Build can take: the empty-Ecosystem fallback, and a
+        // real table with two repos sharing a role. Checking only the former
+        // would let the per-repo ids drift from the def unnoticed.
+        for ecosystem in [
+            Vec::new(),
+            eco(&[
+                ("api", "backend"),
+                ("web-user", "frontend"),
+                ("web-admin", "frontend"),
+            ]),
+        ] {
+            let mut computed: Vec<String> =
+                infer_feature_state(&feature_dir, &runs_dir, &ecosystem)
+                    .into_keys()
+                    .collect();
+            computed.sort();
 
-        let mut declared: Vec<String> = PipelineDef::default()
-            .stages
-            .into_iter()
-            .flat_map(|stage| stage.agents)
-            .map(|agent| agent.id)
-            .collect();
-        declared.sort();
+            let (def, _) = crate::domain::pipeline_expand::expand_build_stage(
+                PipelineDef::default(),
+                &ecosystem,
+            );
+            let mut declared: Vec<String> = def
+                .stages
+                .into_iter()
+                .flat_map(|stage| stage.agents)
+                .map(|agent| agent.id)
+                .collect();
+            declared.sort();
 
-        assert_eq!(computed, declared);
+            assert_eq!(computed, declared, "ecosystem: {ecosystem:?}");
+        }
+    }
+
+    /// Slot id for a repo, so the tests read in the same terms the app now
+    /// keys nodes by.
+    fn bid(repo_name: &str) -> String {
+        crate::domain::pipeline_expand::build_slot_id(repo_name)
     }
 
     fn eco(entries: &[(&str, &str)]) -> Vec<EcosystemRepo> {
@@ -581,7 +579,7 @@ mod tests {
     /// `frontend` only. Backend and Mobile have nothing to run, so Frontend
     /// must not be told to wait for them.
     #[test]
-    fn a_feature_planned_for_frontend_only_leaves_backend_and_mobile_without_work() {
+    fn a_feature_planned_for_frontend_only_leaves_the_backend_repo_without_work() {
         let tmp = tempfile::tempdir().unwrap();
         let feature_dir = tmp.path().join("landing-page");
         touch(&feature_dir.join("frontend/DESIGN.md"));
@@ -589,9 +587,12 @@ mod tests {
 
         let ecosystem = eco(&[("backend", "backend"), ("frontend", "frontend")]);
         let without = slots_without_work_in_feature(&feature_dir, &ecosystem);
-        assert!(without.contains(&slot::BACKEND.to_string()));
-        assert!(without.contains(&slot::MOBILE.to_string()));
-        assert!(!without.contains(&slot::FRONTEND.to_string()));
+        assert!(without.contains(&bid("backend")));
+        assert!(!without.contains(&bid("frontend")));
+        // The project declares no mobile repo, so there is no mobile slot to
+        // mark workless at all — an absent repo is now absent from the board
+        // rather than a permanently skipped node.
+        assert_eq!(without.len(), 1, "{without:?}");
     }
 
     /// A real cross-repo feature must keep every dependency it has.
@@ -604,10 +605,7 @@ mod tests {
 
         let ecosystem = eco(&[("api", "backend"), ("web", "frontend")]);
         let without = slots_without_work_in_feature(&feature_dir, &ecosystem);
-        assert!(!without.contains(&slot::BACKEND.to_string()));
-        assert!(!without.contains(&slot::FRONTEND.to_string()));
-        // No mobile repo touched -> nothing for that agent either.
-        assert!(without.contains(&slot::MOBILE.to_string()));
+        assert!(without.is_empty(), "{without:?}");
     }
 
     /// Tech Lead Design writes a `DESIGN.md` even for a repo it merely
@@ -621,8 +619,7 @@ mod tests {
         touch(&feature_dir.join("web/tasks/task-3-1.md"));
 
         let ecosystem = eco(&[("api", "backend"), ("web", "frontend")]);
-        assert!(slots_without_work_in_feature(&feature_dir, &ecosystem)
-            .contains(&slot::BACKEND.to_string()));
+        assert!(slots_without_work_in_feature(&feature_dir, &ecosystem).contains(&bid("api")));
     }
 
     /// `bug-reports/` is written by `qc-agent`, and leaving it off
@@ -648,8 +645,7 @@ mod tests {
         assert_eq!(repo_subdirs(&feature_dir).len(), 1);
 
         let ecosystem = eco(&[("backend", "backend"), ("frontend", "frontend")]);
-        assert!(slots_without_work_in_feature(&feature_dir, &ecosystem)
-            .contains(&slot::BACKEND.to_string()));
+        assert!(slots_without_work_in_feature(&feature_dir, &ecosystem).contains(&bid("backend")));
     }
 
     /// The safety chock, same one Contract Lock uses: an unmatched feature
@@ -703,16 +699,21 @@ mod tests {
     /// planned yet" and leave it `Idle` forever, blocking stage ⑥ on a slot
     /// that can never run in this project).
     #[test]
-    fn a_role_absent_from_a_configured_ecosystem_is_without_work_before_any_task_file_exists() {
+    fn a_role_absent_from_the_ecosystem_simply_has_no_slot() {
         let tmp = tempfile::tempdir().unwrap();
         let feature_dir = tmp.path().join("f");
         std::fs::create_dir_all(&feature_dir).unwrap();
 
         let ecosystem = eco(&[("backend", "backend"), ("frontend", "frontend")]);
-        let without = slots_without_work_in_feature(&feature_dir, &ecosystem);
-        assert!(without.contains(&slot::MOBILE.to_string()));
-        assert!(!without.contains(&slot::BACKEND.to_string()));
-        assert!(!without.contains(&slot::FRONTEND.to_string()));
+        // Nothing is concluded before any task file exists, and "mobile" is
+        // not a slot in the first place — the old code had to mark it
+        // workless because the three role slots existed unconditionally.
+        assert!(slots_without_work_in_feature(&feature_dir, &ecosystem).is_empty());
+        let ids: Vec<String> = crate::domain::pipeline_expand::build_slot_entries(&ecosystem)
+            .into_iter()
+            .map(|(id, _)| id)
+            .collect();
+        assert_eq!(ids, vec![bid("backend"), bid("frontend")]);
     }
 
     /// Same absent-role case, but now with real task files present AND an
@@ -730,8 +731,9 @@ mod tests {
 
         let ecosystem = eco(&[("backend", "backend"), ("frontend", "frontend")]);
         let without = slots_without_work_in_feature(&feature_dir, &ecosystem);
-        assert!(without.contains(&slot::MOBILE.to_string()));
-        assert!(!without.contains(&slot::BACKEND.to_string()));
+        // `mystery/` is unmatched, so guard 2 refuses to conclude anything
+        // from task files — including about `backend`, which does have one.
+        assert!(without.is_empty(), "{without:?}");
     }
 
     /// A role missing from `role_key` resolution because some OTHER repo's
@@ -780,10 +782,11 @@ mod tests {
 
         let ecosystem = eco(&[("backend", "backend"), ("frontend", "frontend")]);
         let nodes = infer_feature_state(&feature_dir, &runs_dir, &ecosystem);
-        assert_eq!(nodes[slot::BACKEND].status, NodeStatus::Skipped);
-        assert_eq!(nodes[slot::MOBILE].status, NodeStatus::Skipped);
+        assert_eq!(nodes[&bid("backend")].status, NodeStatus::Skipped);
         // The one that DOES have work stays runnable.
-        assert_eq!(nodes[slot::FRONTEND].status, NodeStatus::Idle);
+        assert_eq!(nodes[&bid("frontend")].status, NodeStatus::Idle);
+        // And no node exists for a role the project doesn't have.
+        assert!(!nodes.contains_key(&bid("mobile")));
     }
 
     #[test]

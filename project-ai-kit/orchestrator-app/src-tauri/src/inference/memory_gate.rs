@@ -27,9 +27,10 @@ fn dir_touched_since(dir: &Path, since: SystemTime) -> bool {
         })
 }
 
-/// `slot_role` is the repo role the slot targets (`"backend"`/`"frontend"`/
-/// `"mobile"` — callers pass `slot_repo_role`'s result; `None` for non-dev
-/// slots never reaches here). `started_at_rfc3339` is the run's start time.
+/// `repo` is the ONE Ecosystem row the slot builds — ⑤ Build has a slot per
+/// repo now, so warning about every repo that happens to share its role
+/// would nag about three untouched web apps each time the fourth ran.
+/// `started_at_rfc3339` is the run's start time.
 ///
 /// Returns `Some(warning)` only when at least one matching repo HAS an
 /// overview directory and NONE of its files were modified during the run
@@ -37,17 +38,16 @@ fn dir_touched_since(dir: &Path, since: SystemTime) -> bool {
 /// silently skipped, no noise (AC-E4-32).
 pub fn memory_update_warning(
     docs_root: &Path,
-    ecosystem: &[EcosystemRepo],
-    slot_role: &str,
+    repo: &EcosystemRepo,
     started_at_rfc3339: &str,
 ) -> Option<String> {
     let started_at: SystemTime = chrono::DateTime::parse_from_rfc3339(started_at_rfc3339)
         .ok()?
         .into();
+    let slot_role = repo.role_key.as_deref()?;
 
-    let stale_dirs: Vec<String> = ecosystem
-        .iter()
-        .filter(|repo| repo.role_key.as_deref() == Some(slot_role))
+    let stale_dirs: Vec<String> = [repo]
+        .into_iter()
         .filter_map(|repo| {
             let overview_dir = docs_root.join(slot_role).join(&repo.name).join("overview");
             if !overview_dir.is_dir() {
@@ -92,9 +92,9 @@ mod tests {
     #[test]
     fn no_overview_dir_is_not_applicable_no_warning() {
         let tmp = tempfile::tempdir().unwrap();
-        let ecosystem = vec![repo("api", "backend")];
+        let ecosystem = [repo("api", "backend")];
         let warning =
-            memory_update_warning(tmp.path(), &ecosystem, "backend", "2026-08-17T00:00:00Z");
+            memory_update_warning(tmp.path(), &ecosystem[0], "2026-08-17T00:00:00Z");
         assert!(warning.is_none()); // AC-E4-32
     }
 
@@ -108,9 +108,9 @@ mod tests {
         // A start time in the future of the file's mtime → nothing touched
         // during the run.
         let future = chrono::Utc::now() + chrono::Duration::hours(1);
-        let ecosystem = vec![repo("api", "backend")];
+        let ecosystem = [repo("api", "backend")];
         let warning =
-            memory_update_warning(tmp.path(), &ecosystem, "backend", &future.to_rfc3339())
+            memory_update_warning(tmp.path(), &ecosystem[0], &future.to_rfc3339())
                 .expect("warning expected");
         assert!(warning.contains("api-catalog.md")); // AC-E4-31: named files
         assert!(warning.contains("backend/api/overview"));
@@ -127,8 +127,8 @@ mod tests {
         let past = chrono::Utc::now() - chrono::Duration::hours(1);
         std::fs::write(overview.join("erd.md"), "updated").unwrap();
 
-        let ecosystem = vec![repo("api", "backend")];
-        let warning = memory_update_warning(tmp.path(), &ecosystem, "backend", &past.to_rfc3339());
+        let ecosystem = [repo("api", "backend")];
+        let warning = memory_update_warning(tmp.path(), &ecosystem[0], &past.to_rfc3339());
         assert!(warning.is_none()); // AC-E4-30 satisfied
     }
 }

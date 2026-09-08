@@ -237,7 +237,7 @@ fn apply_agent_run_metadata(
         // Every other slot is the opposite: the artifact on disk is the
         // truth, and a `Done` run must not paper over one that inference
         // judged `DoneIncomplete`.
-        let run_log_is_authoritative = crate::agentrun::readiness::slot_repo_role(slot_id).is_some();
+        let run_log_is_authoritative = crate::agentrun::readiness::slot_targets_repo(slot_id);
         if run_log_is_authoritative || node.status == NodeStatus::Idle {
             *node = match summary.outcome {
                 RunOutcome::WaitingInput => {

@@ -121,6 +121,37 @@ pub fn slot_repo<'a>(ecosystem: &'a [EcosystemRepo], slot_id: &str) -> Option<&'
         .map(|index| &ecosystem[index])
 }
 
+/// The ⑤ Build slots for a project, as `(slot_id, repo)` pairs.
+///
+/// `repo` is `None` only for the three legacy role slots the empty-Ecosystem
+/// fallback produces. Both `expand_build_stage` and `inference::stage_rules`
+/// go through this, so the def's slot ids and the ids `infer_feature_state`
+/// keys `FeatureState.nodes` by cannot drift apart — a drift the crate has
+/// a dedicated test for.
+pub fn build_slot_entries(ecosystem: &[EcosystemRepo]) -> Vec<(String, Option<&EcosystemRepo>)> {
+    let entries: Vec<(String, Option<&EcosystemRepo>)> = build_slot_ids(ecosystem)
+        .into_iter()
+        .zip(ecosystem.iter())
+        .filter(|(_, repo)| {
+            repo.role_key
+                .as_deref()
+                .is_some_and(|role| agent_name_for_role(role).is_some())
+        })
+        .map(|(id, repo)| (id, Some(repo)))
+        .collect();
+    if !entries.is_empty() {
+        return entries;
+    }
+    FALLBACK_SLOTS
+        .iter()
+        .map(|id| ((*id).to_string(), None))
+        .collect()
+}
+
+/// What ⑤ Build keeps when no repo yields a slot — the pre-per-repo role
+/// slots. See `expand_build_stage` for why an empty stage is not an option.
+const FALLBACK_SLOTS: [&str; 3] = ["backend", "frontend", "mobile"];
+
 fn agent_name_for_role(role_key: &str) -> Option<&'static str> {
     match role_key {
         "backend" => Some("backend-agent"),

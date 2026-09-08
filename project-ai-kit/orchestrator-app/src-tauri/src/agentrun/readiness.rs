@@ -31,6 +31,7 @@ use serde::Serialize;
 
 use crate::domain::node_status::NodeStatus;
 use crate::domain::pipeline_def::{is_checkpoint_stage, slot, PipelineDef};
+use crate::domain::pipeline_expand;
 use crate::domain::project::EcosystemRepo;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -78,9 +79,41 @@ pub enum SlotReadiness {
     UnknownSlot,
 }
 
-/// The repo role a slot works in, or `None` for slots that operate at the
-/// feature/docs level (BA, Tech Lead, PM, QC...) and never touch a repo.
-pub fn slot_repo_role(slot_id: &str) -> Option<&'static str> {
+/// The Ecosystem row a slot works in, or `None` for slots that operate at
+/// the feature/docs level (BA, Tech Lead, QC...) and never touch a repo.
+pub fn slot_repo<'a>(ecosystem: &'a [EcosystemRepo], slot_id: &str) -> Option<&'a EcosystemRepo> {
+    pipeline_expand::slot_repo(ecosystem, slot_id)
+}
+
+/// Whether a slot targets a repo at all — the test every "is this a dev
+/// slot" branch wants.
+///
+/// A string test, not an Ecosystem lookup, so it still answers correctly
+/// for a run log written before the repo was removed from `AGENTS.md`. The
+/// three legacy role ids stay recognised because `expand_build_stage` falls
+/// back to them when the Ecosystem is empty.
+pub fn slot_targets_repo(slot_id: &str) -> bool {
+    pipeline_expand::is_build_slot(slot_id)
+        || slot_id == slot::BACKEND
+        || slot_id == slot::FRONTEND
+        || slot_id == slot::MOBILE
+}
+
+/// What to call this slot's target in a user-facing reason: the repo name
+/// for a per-repo build slot, else the legacy role, else the raw id.
+///
+/// With four web repos, "project không có repo vai trò frontend" names
+/// nothing the user can act on — the repo name does.
+fn slot_target_label(ecosystem: &[EcosystemRepo], slot_id: &str) -> String {
+    if let Some(repo) = pipeline_expand::slot_repo(ecosystem, slot_id) {
+        return repo.name.clone();
+    }
+    static_slot_role(slot_id).unwrap_or(slot_id).to_string()
+}
+
+/// The role of the legacy static slots. Only reachable through
+/// `expand_build_stage`'s empty-Ecosystem fallback.
+fn static_slot_role(slot_id: &str) -> Option<&'static str> {
     match slot_id {
         s if s == slot::BACKEND => Some("backend"),
         s if s == slot::FRONTEND => Some("frontend"),
@@ -115,10 +148,34 @@ pub enum RepoReadiness {
         name: String,
         declared_path: String,
     },
+    /// The slot names a repo the Ecosystem no longer lists.
+    RepoNotInEcosystem,
 }
 
 pub fn resolve_repo_readiness(ecosystem: &[EcosystemRepo], slot_id: &str) -> RepoReadiness {
-    let Some(role) = slot_repo_role(slot_id) else {
+    // A per-repo build slot judges its OWN repo. The old code took the
+    // first repo of the slot's role, so in a project with four web repos
+    // the Frontend node reported whatever the first one happened to be —
+    // Ready while the repo actually being built sat uncloned.
+    if let Some(repo) = pipeline_expand::slot_repo(ecosystem, slot_id) {
+        return if repo.cloned {
+            RepoReadiness::Ready
+        } else {
+            RepoReadiness::RepoNotCloned {
+                name: repo.name.clone(),
+                declared_path: repo.declared_path.clone(),
+            }
+        };
+    }
+    if pipeline_expand::is_build_slot(slot_id) {
+        // Unreachable while the def and the Ecosystem come from one
+        // snapshot (`pipeline_def_for` guarantees that). Reported rather
+        // than waved through as Ready, because "run an agent for a repo we
+        // cannot identify" is the one outcome worth refusing.
+        return RepoReadiness::RepoNotInEcosystem;
+    }
+
+    let Some(role) = static_slot_role(slot_id) else {
         return RepoReadiness::Ready;
     };
     // Matches on `role_key`, never on the raw `role` cell — that cell is
@@ -231,14 +288,19 @@ pub fn compute_slot_readiness(
                 declared_path,
             }
         }
+        RepoReadiness::RepoNotInEcosystem => {
+            return SlotReadiness::RepoRoleMissing {
+                role: slot_id.to_string(),
+            }
+        }
         RepoReadiness::RoleNotInEcosystem => {
             return SlotReadiness::RepoRoleMissing {
-                role: slot_repo_role(slot_id).unwrap_or(slot_id).to_string(),
+                role: static_slot_role(slot_id).unwrap_or(slot_id).to_string(),
             }
         }
         RepoReadiness::RoleUnreadable { entries } => {
             return SlotReadiness::RepoRoleUnreadable {
-                role: slot_repo_role(slot_id).unwrap_or(slot_id).to_string(),
+                role: static_slot_role(slot_id).unwrap_or(slot_id).to_string(),
                 entries,
             }
         }
@@ -249,7 +311,7 @@ pub fn compute_slot_readiness(
     // waiting will never resolve it, so it outranks dependency talk.
     if slots_without_work.iter().any(|id| id == slot_id) {
         return SlotReadiness::NoWorkInFeature {
-            role: slot_repo_role(slot_id).unwrap_or(slot_id).to_string(),
+            role: slot_target_label(ecosystem, slot_id),
         };
     }
 

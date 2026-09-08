@@ -4,7 +4,7 @@ use tauri::{AppHandle, Emitter, Manager, State};
 
 use crate::agentrun::process_registry::RunKey;
 use crate::agentrun::readiness::{
-    self, resolve_repo_readiness, slot_repo_role, RepoReadiness, SlotReadiness,
+    self, resolve_repo_readiness, slot_targets_repo, RepoReadiness, SlotReadiness,
 };
 use crate::agentrun::run_log::{self, RunContext};
 use crate::agentrun::runner;
@@ -472,6 +472,20 @@ fn run_to_completion(
             recompute_and_emit(&app, &agents_root, &docs_root, &feature);
             return;
         }
+        RepoReadiness::RepoNotInEcosystem => {
+            record_pre_spawn_outcome(
+                &app,
+                &agents_root,
+                &feature,
+                &slot,
+                RunOutcome::Blocked,
+                format!(
+                    "Node \"{slot}\" không còn repo tương ứng trong bảng Ecosystem của AGENTS.md — mở lại project để đọc lại bảng."
+                ),
+            );
+            recompute_and_emit(&app, &agents_root, &docs_root, &feature);
+            return;
+        }
         RepoReadiness::RoleNotInEcosystem => {
             record_pre_spawn_outcome(
                 &app,
@@ -481,7 +495,7 @@ fn run_to_completion(
                 RunOutcome::Skipped,
                 format!(
                     "Project không có repo vai trò \"{}\" — bỏ qua agent này (không áp dụng).",
-                    slot_repo_role(&slot).unwrap_or(&slot)
+                    slot
                 ),
             );
             recompute_and_emit(&app, &agents_root, &docs_root, &feature);
@@ -494,7 +508,7 @@ fn run_to_completion(
                 &feature,
                 &slot,
                 RunOutcome::Blocked,
-                unreadable_role_message(slot_repo_role(&slot).unwrap_or(&slot), &entries),
+                unreadable_role_message(&slot, &entries),
             );
             recompute_and_emit(&app, &agents_root, &docs_root, &feature);
             return;
@@ -551,7 +565,7 @@ fn run_to_completion(
     // stage ⑤+) never spawns while the contract is `Violated`. An
     // already-running process for this `(feature, slot)` is untouched (no
     // kill) — this check only ever runs before a NEW spawn.
-    if slot_repo_role(&slot).is_some()
+    if slot_targets_repo(&slot)
         && contract_is_violated(&agents_root, &feature_dir, &feature, &ecosystem)
     {
         record_pre_spawn_outcome(
@@ -726,13 +740,10 @@ fn run_to_completion(
 
     // AC-E4-30..32 — Memory Update Gate (soft): dev slots only; produces
     // at most an advisory appended to the summary, never blocks anything.
-    let memory_warning = slot_repo_role(&slot).and_then(|role| {
-        crate::inference::memory_gate::memory_update_warning(
-            &docs_root,
-            &ecosystem,
-            role,
-            &started_at,
-        )
+    // Scoped to the slot's own repo: with four web repos, keying this off
+    // the role would nag about all four every time one of them ran.
+    let memory_warning = readiness::slot_repo(&ecosystem, &slot).and_then(|repo| {
+        crate::inference::memory_gate::memory_update_warning(&docs_root, repo, &started_at)
     });
     // AC-E6-06 — a failed `--resume` must say so: the user chose Resume
     // and needs to know re-running from scratch is the way out, rather
@@ -1615,10 +1626,10 @@ pub fn skip_run(
 #[tauri::command]
 pub fn force_done_run(app: AppHandle, state: State<AppState>, feature: String, slot: String) -> AppResult<()> {
     orchestrator_dir::validate_run_ids(&feature, &slot)?;
-    if slot_repo_role(&slot).is_none() {
+    if !slot_targets_repo(&slot) {
         return Err(AppError::Invalid {
             message: format!(
-                "Force Done chỉ áp dụng cho slot backend/frontend/mobile — \"{slot}\" không thuộc nhóm này, trạng thái của nó luôn do artifact trên đĩa quyết định, không thể ghi đè thủ công."
+                "Force Done chỉ áp dụng cho node Build của một repo — \"{slot}\" không thuộc nhóm này, trạng thái của nó luôn do artifact trên đĩa quyết định, không thể ghi đè thủ công."
             ),
         });
     }
