@@ -1,9 +1,0 @@
-{
-  "outcome": "blocked",
-  "sessionId": "",
-  "costUsd": 0.0,
-  "startedAt": "2026-08-20T03:36:22.655883+00:00",
-  "endedAt": "2026-08-20T03:36:22.655883+00:00",
-  "lastMessage": "Repo \"example-api\" chưa được clone — không thể spawn agent nhắm vào repo này.",
-  "attempt": 2
-}
