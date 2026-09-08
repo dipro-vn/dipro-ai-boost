@@ -99,6 +99,22 @@ pub mod slot {
 pub mod gate {
     pub const TRIGGER: &str = "S1b_trigger";
     pub const CONTRACT_LOCK: &str = "S4_contract_lock";
+    /// Not a gate the app implements — `is_checkpoint_stage` needs it by
+    /// name because it renders like one (empty, padlocked) until MVP4.
+    pub const DEPLOY: &str = "S7_deploy";
+}
+
+/// Whether a stage is a checkpoint (gate or structural placeholder) rather
+/// than a row of runnable agent slots.
+///
+/// Deliberately an explicit id list, never `agents.is_empty()`: ⑤ Build's
+/// slots now come from the Ecosystem table, so a project that has declared
+/// no repo yet produces an empty Build stage. Read as "empty ⇒ checkpoint"
+/// that would padlock Build in the UI and — far worse — let
+/// `agentrun::readiness` walk it as a stage with nothing incomplete, i.e.
+/// silently unlock ⑥ Testing.
+pub fn is_checkpoint_stage(stage_id: &str) -> bool {
+    matches!(stage_id, gate::TRIGGER | gate::CONTRACT_LOCK | gate::DEPLOY)
 }
 
 fn slot(id: &str, agent_name: &str, label: &str) -> AgentSlot {
@@ -210,7 +226,7 @@ impl Default for PipelineDef {
                     depends_on: Some("S5_build".to_string()),
                 },
                 StageDef {
-                    id: "S7_deploy".to_string(),
+                    id: gate::DEPLOY.to_string(),
                     label: "⑦ Deploy".to_string(),
                     agents: vec![],
                     depends_on: Some("S6_testing".to_string()),
@@ -275,6 +291,27 @@ mod tests {
                 assert!(!label.trim().is_empty(), "slot {} has no label", agent.id);
             }
         }
+    }
+
+    /// The whole point of `is_checkpoint_stage` is that it does NOT read
+    /// `agents.is_empty()`. ⑤ Build with zero slots (project chưa khai repo
+    /// nào) must stay a normal agent stage, or the board padlocks it and
+    /// `readiness` walks it as "nothing incomplete" → unlocks ⑥.
+    #[test]
+    fn an_empty_build_stage_is_not_mistaken_for_a_checkpoint() {
+        assert!(is_checkpoint_stage(gate::TRIGGER));
+        assert!(is_checkpoint_stage(gate::CONTRACT_LOCK));
+        assert!(is_checkpoint_stage(gate::DEPLOY));
+        assert!(!is_checkpoint_stage("S5_build"));
+
+        let mut def = PipelineDef::default();
+        let build = def
+            .stages
+            .iter_mut()
+            .find(|stage| stage.id == "S5_build")
+            .expect("template has a build stage");
+        build.agents.clear();
+        assert!(!is_checkpoint_stage(&build.id));
     }
 
     /// The reason `label` exists: `qc-design` and `qc-testing` both spawned

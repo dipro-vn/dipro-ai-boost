@@ -30,7 +30,7 @@ use std::collections::BTreeMap;
 use serde::Serialize;
 
 use crate::domain::node_status::NodeStatus;
-use crate::domain::pipeline_def::{slot, PipelineDef};
+use crate::domain::pipeline_def::{is_checkpoint_stage, slot, PipelineDef};
 use crate::domain::project::EcosystemRepo;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -283,7 +283,7 @@ pub fn compute_slot_readiness(
         };
         let predecessor = &def.stages[pred_idx];
 
-        if predecessor.agents.is_empty() {
+        if is_checkpoint_stage(&predecessor.id) {
             if passed_gates.iter().any(|id| id == &predecessor.id) {
                 return SlotReadiness::Ready;
             }

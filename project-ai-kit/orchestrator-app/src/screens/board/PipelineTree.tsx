@@ -25,6 +25,7 @@ import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   CONTRACT_LOCK_GATE_STAGE_ID,
+  isCheckpointStage,
   TRIGGER_GATE_STAGE_ID,
 } from "@/lib/tauri-client";
 import type {
@@ -280,7 +281,7 @@ export function edgeState(
   // gate never turns its connector lines green, even though the panel
   // beside it already says "Đã duyệt" / "Đã khoá".
   if (!fromStage) return "idle";
-  if (fromStage.agents.length === 0) {
+  if (isCheckpointStage(fromStage.id)) {
     if (fromStage.id === TRIGGER_GATE_STAGE_ID) {
       return featureState?.gates?.[TRIGGER_GATE_STAGE_ID]?.status === "approved"
         ? "done"
@@ -552,7 +553,7 @@ export function PipelineTree({
       </svg>
 
       {pipelineDef.stages.map((stage, index) => {
-        const isGate = stage.agents.length === 0;
+        const isGate = isCheckpointStage(stage.id);
         const StageIcon = stageIcon(stage);
         const phase = phaseForStage(stage);
         const previousPhase = index > 0 ? phaseForStage(pipelineDef.stages[index - 1]) : null;
@@ -582,6 +583,15 @@ export function PipelineTree({
                     contractLockState={featureState?.contractLock ?? undefined}
                     stageId={stage.id}
                   />
+                ) : stage.agents.length === 0 ? (
+                  // ⑤ Build sinh slot từ bảng Ecosystem, nên "chưa khai repo
+                  // nào" là trạng thái có thật. Nói thẳng ra, đừng để stage
+                  // trống trơn khiến người dùng tưởng board hỏng.
+                  <div className="max-w-xs rounded-lg border border-dashed border-border px-3 py-2 text-center text-xs text-muted-foreground">
+                    Chưa có repo nào trong bảng Ecosystem của AGENTS.md — chạy{" "}
+                    <code className="font-mono">/init-kit</code> hoặc bổ sung bảng{" "}
+                    <code className="font-mono">## Repos</code>.
+                  </div>
                 ) : (
                   stage.agents.map((agent) => {
                     const nickname = nodeNicknames[agent.id];

@@ -800,3 +800,21 @@ export const TRIGGER_GATE_STAGE_ID = "S1b_trigger";
 
 /** Mirrors `domain::pipeline_def::gate::CONTRACT_LOCK`. */
 export const CONTRACT_LOCK_GATE_STAGE_ID = "S4_contract_lock";
+
+/** Mirrors `domain::pipeline_def::gate::DEPLOY` — không phải gate thật, chỉ
+ * là stage rỗng cho tới MVP4, nhưng render y như một checkpoint. */
+export const DEPLOY_STAGE_ID = "S7_deploy";
+
+/** Mirrors `domain::pipeline_def::is_checkpoint_stage`.
+ *
+ * Cố tình liệt kê id tường minh, không suy từ `stage.agents.length === 0`:
+ * slot của ⑤ Build giờ sinh từ bảng Ecosystem, nên project chưa khai repo
+ * nào sẽ có Build rỗng — và "rỗng ⇒ checkpoint" sẽ khoá ⑤ lại bằng ổ khoá
+ * thay vì nói ra là chưa khai repo. */
+export function isCheckpointStage(stageId: string): boolean {
+  return (
+    stageId === TRIGGER_GATE_STAGE_ID ||
+    stageId === CONTRACT_LOCK_GATE_STAGE_ID ||
+    stageId === DEPLOY_STAGE_ID
+  );
+}
