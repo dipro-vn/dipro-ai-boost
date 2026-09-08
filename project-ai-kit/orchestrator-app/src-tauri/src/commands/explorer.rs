@@ -591,6 +591,225 @@ pub fn delete_explorer_entry(
     Ok(())
 }
 
+/// The largest file the paste path accepts. Pasted bytes travel through the
+/// IPC boundary as JSON, so this is a guard against wedging the app on a
+/// stray multi-gigabyte file, not a policy about file sizes.
+const MAX_PASTE_BYTES: usize = 64 * 1024 * 1024;
+
+/// Resolves an Explorer entry (file OR folder) the user is allowed to
+/// modify in place — rename, delete.
+///
+/// `resolve_deletable_folder`'s sibling: that one deliberately refuses
+/// files, because deleting a folder is the destructive operation that needs
+/// a typed confirmation. Renaming and deleting a single file need the same
+/// boundary checks but not the same ceremony.
+///
+/// No symlink check here on purpose: `resolve_within_explorer_roots`
+/// canonicalizes first, so a link pointing outside the Explorer roots is
+/// already rejected as `PathOutsideRoot`, and one pointing inside resolves
+/// to a real path inside that is legitimately modifiable. A second check on
+/// the canonical path could never fire.
+fn resolve_modifiable_entry(
+    project: &ProjectPaths,
+    path: &str,
+) -> AppResult<(PathBuf, PathBuf, ImportFilter)> {
+    let (canonical, explorer_root) = resolve_within_explorer_roots(project, path)?;
+    let filter = ImportFilter::for_project(Path::new(&project.agents_root));
+
+    if !can_modify_path(project, &filter, &canonical, &explorer_root) {
+        return Err(AppError::Invalid {
+            message: "Không được phép sửa mục này".to_string(),
+        });
+    }
+    if is_declared_root(project, &canonical) {
+        return Err(AppError::Invalid {
+            message: "Không thể sửa root do project quản lý".to_string(),
+        });
+    }
+    if has_protected_component(&canonical) {
+        return Err(AppError::Invalid {
+            message: "Mục này nằm trong vùng được bảo vệ".to_string(),
+        });
+    }
+    Ok((canonical, explorer_root, filter))
+}
+
+/// Refuses when the path is covered by a Contract Lock. Renaming or
+/// deleting a locked file breaks the lock just as surely as editing it, and
+/// the lock exists precisely so that cannot happen quietly.
+fn assert_not_contract_locked(project: &ProjectPaths, path: &Path, verb: &str) -> AppResult<()> {
+    if locked_files_under(project, path).is_empty() {
+        return Ok(());
+    }
+    Err(AppError::Invalid {
+        message: format!("File đang bị Contract Lock bảo vệ — không thể {verb}"),
+    })
+}
+
+/// Renames one file or folder in place. The new name is a single path
+/// segment; the backend joins it to the entry's own parent, so the frontend
+/// can never move an entry somewhere else through this command.
+#[tauri::command]
+pub fn rename_explorer_entry(
+    state: State<AppState>,
+    path: String,
+    new_name: String,
+) -> AppResult<DirEntry> {
+    let project = current_project(&state)?;
+    let (canonical, explorer_root, filter) = resolve_modifiable_entry(&project, &path)?;
+    let new_name = validate_entry_name(&new_name)?;
+
+    let parent = canonical.parent().ok_or_else(|| AppError::Invalid {
+        message: "Không xác định được thư mục cha".to_string(),
+    })?;
+    let target = parent.join(new_name);
+    if target == canonical {
+        return entry_for_path(&project, &filter, &canonical, &explorer_root);
+    }
+    if has_protected_component(&target) || is_restricted_path(&filter, &target, &explorer_root) {
+        return Err(AppError::Invalid {
+            message: "Không được phép dùng tên này tại vị trí này".to_string(),
+        });
+    }
+    if target.exists() {
+        return Err(AppError::Invalid {
+            message: format!("Đã có file/folder tên \"{new_name}\" trong thư mục này"),
+        });
+    }
+    assert_not_contract_locked(&project, &canonical, "đổi tên")?;
+
+    std::fs::rename(&canonical, &target)?;
+    entry_for_path(&project, &filter, &target, &explorer_root)
+}
+
+/// Deletes one file.
+///
+/// Folders keep going through `delete_explorer_entry`, which previews the
+/// whole subtree and demands the name typed back: that one can destroy work
+/// that is not on screen. A single file needs the same boundary and lock
+/// checks but not that ceremony — the UI confirms it inline.
+#[tauri::command]
+pub fn delete_explorer_file(state: State<AppState>, path: String) -> AppResult<()> {
+    let project = current_project(&state)?;
+    let (canonical, _explorer_root, _filter) = resolve_modifiable_entry(&project, &path)?;
+    if canonical.is_dir() {
+        return Err(AppError::Invalid {
+            message: "Đây là folder — dùng luồng xoá folder có xác nhận".to_string(),
+        });
+    }
+    assert_not_contract_locked(&project, &canonical, "xoá")?;
+
+    std::fs::remove_file(&canonical)?;
+    Ok(())
+}
+
+/// Copies files from anywhere on disk into an Explorer folder — the landing
+/// point for an OS drag-and-drop.
+///
+/// `sources` are OS paths the user dragged, so they are deliberately NOT
+/// checked against the Explorer roots: the whole point is that they come
+/// from outside. The DESTINATION is what gets checked, exactly as
+/// `create_explorer_file` checks it.
+#[tauri::command]
+pub fn import_explorer_paths(
+    state: State<AppState>,
+    parent_path: String,
+    sources: Vec<String>,
+) -> AppResult<Vec<DirEntry>> {
+    let project = current_project(&state)?;
+    let (parent, explorer_root, filter) = resolve_modifiable_parent(&project, &parent_path)?;
+
+    let mut created = Vec::new();
+    for source in &sources {
+        let source = PathBuf::from(source);
+        let metadata = std::fs::symlink_metadata(&source).map_err(|error| AppError::Invalid {
+            message: format!("Không đọc được {}: {error}", source.display()),
+        })?;
+        if metadata.file_type().is_symlink() {
+            return Err(AppError::Invalid {
+                message: format!("Bỏ qua symlink: {}", source.display()),
+            });
+        }
+        if metadata.is_dir() {
+            return Err(AppError::Invalid {
+                message: format!(
+                    "\"{}\" là folder — hiện chỉ thả được file, chưa copy được cả cây thư mục",
+                    source.display()
+                ),
+            });
+        }
+
+        let name = source
+            .file_name()
+            .map(|value| value.to_string_lossy().into_owned())
+            .ok_or_else(|| AppError::Invalid {
+                message: format!("Không lấy được tên file: {}", source.display()),
+            })?;
+        let name = validate_entry_name(&name)?;
+        let target = parent.join(name);
+
+        if has_protected_component(&target) || is_restricted_path(&filter, &target, &explorer_root)
+        {
+            return Err(AppError::Invalid {
+                message: format!("Không được phép ghi \"{name}\" vào vị trí này"),
+            });
+        }
+        if target.exists() {
+            return Err(AppError::Invalid {
+                message: format!("Đã có \"{name}\" trong thư mục này — đổi tên hoặc xoá trước"),
+            });
+        }
+
+        std::fs::copy(&source, &target).map_err(|error| map_create_error(error, &target))?;
+        created.push(entry_for_path(&project, &filter, &target, &explorer_root)?);
+    }
+
+    Ok(created)
+}
+
+/// Writes one file from bytes the webview holds — the landing point for a
+/// clipboard paste.
+///
+/// Separate from `import_explorer_paths` because a paste gives the webview
+/// the file's CONTENT, never its path: `DataTransfer` hands over a `File`
+/// blob, and there is no path on it to hand to `std::fs::copy`.
+#[tauri::command]
+pub fn write_explorer_file(
+    state: State<AppState>,
+    parent_path: String,
+    name: String,
+    contents: Vec<u8>,
+) -> AppResult<DirEntry> {
+    if contents.len() > MAX_PASTE_BYTES {
+        return Err(AppError::Invalid {
+            message: format!(
+                "File quá lớn để paste ({} MB) — kéo thả vào Explorer thay vì paste",
+                contents.len() / (1024 * 1024)
+            ),
+        });
+    }
+
+    let project = current_project(&state)?;
+    let (parent, explorer_root, filter) = resolve_modifiable_parent(&project, &parent_path)?;
+    let name = validate_entry_name(&name)?;
+    let target = parent.join(name);
+
+    if has_protected_component(&target) || is_restricted_path(&filter, &target, &explorer_root) {
+        return Err(AppError::Invalid {
+            message: "Không được phép ghi file vào vị trí này".to_string(),
+        });
+    }
+
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&target)
+        .map_err(|error| map_create_error(error, &target))?;
+    std::io::Write::write_all(&mut file, &contents)?;
+
+    entry_for_path(&project, &filter, &target, &explorer_root)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -772,5 +991,75 @@ mod tests {
             &dunce::canonicalize(agents_root.join(".claude")).unwrap(),
             &explorer_root,
         ));
+    }
+
+    /// Fixture mirroring `can_modify_path`'s, returned as the pieces
+    /// `resolve_modifiable_entry` needs.
+    fn modifiable_fixture() -> (tempfile::TempDir, ProjectPaths, PathBuf) {
+        let tmp = tempfile::tempdir().unwrap();
+        let project_root = tmp.path().join("project");
+        let agents_root = project_root.join("kit-repo");
+        let docs_root = project_root.join("docs");
+        let repository_root = project_root.join("repos");
+        std::fs::create_dir_all(agents_root.join(".claude")).unwrap();
+        std::fs::create_dir_all(&docs_root).unwrap();
+        std::fs::create_dir_all(repository_root.join("src")).unwrap();
+        let project = ProjectPaths {
+            agents_root: agents_root.display().to_string(),
+            docs_root: docs_root.display().to_string(),
+            repository_root: repository_root.display().to_string(),
+        };
+        (tmp, project, repository_root)
+    }
+
+    /// The capability `resolve_deletable_folder` deliberately withholds:
+    /// rename and single-file delete work on files too, which is why they
+    /// needed a resolver of their own rather than reusing that one.
+    #[test]
+    fn resolve_modifiable_entry_accepts_a_file_unlike_the_folder_resolver() {
+        let (_tmp, project, repository_root) = modifiable_fixture();
+        let file = repository_root.join("src/main.rs");
+        std::fs::write(&file, "fn main() {}").unwrap();
+        let path = file.display().to_string();
+
+        assert!(resolve_modifiable_entry(&project, &path).is_ok());
+        assert!(resolve_deletable_folder(&project, &path).is_err());
+    }
+
+    /// A symlink out of the project is stopped by canonicalization, not by
+    /// any symlink-specific branch — the resolver turns the link into its
+    /// real target and the root check then refuses it. Pinned as a test
+    /// because it is the only thing standing between a rename/delete and a
+    /// file outside every declared root.
+    #[cfg(unix)]
+    #[test]
+    fn a_symlink_pointing_out_of_the_project_is_refused_as_outside_the_roots() {
+        let (tmp, project, repository_root) = modifiable_fixture();
+        let outside = tmp.path().join("outside.txt");
+        std::fs::write(&outside, "secret").unwrap();
+        let link = repository_root.join("src/link.txt");
+        std::os::unix::fs::symlink(&outside, &link).unwrap();
+
+        assert!(matches!(
+            resolve_modifiable_entry(&project, &link.display().to_string()),
+            Err(AppError::PathOutsideRoot { .. })
+        ));
+        assert!(outside.exists(), "the link target must be left alone");
+    }
+
+    #[test]
+    fn resolve_modifiable_entry_refuses_a_declared_root_and_protected_dirs() {
+        let (_tmp, project, repository_root) = modifiable_fixture();
+
+        assert!(resolve_modifiable_entry(&project, &project.repository_root).is_err());
+        assert!(resolve_modifiable_entry(&project, &project.docs_root).is_err());
+        // `.claude` is protected wherever it sits.
+        let protected = Path::new(&project.agents_root).join(".claude");
+        assert!(resolve_modifiable_entry(&project, &protected.display().to_string()).is_err());
+        // …while an ordinary folder inside a root stays modifiable.
+        assert!(
+            resolve_modifiable_entry(&project, &repository_root.join("src").display().to_string())
+                .is_ok()
+        );
     }
 }

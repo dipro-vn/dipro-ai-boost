@@ -1,19 +1,22 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
-import { FilePlus, FolderPlus, Trash2 } from "lucide-react";
+import { FilePlus, FolderPlus, Pencil, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ExplorerContextTarget, ExplorerCreateKind } from "@/screens/explorer/explorer-types";
 
 interface ExplorerContextMenuProps {
   target: ExplorerContextTarget | null;
   onCreate: (kind: ExplorerCreateKind) => void;
+  onRename: () => void;
   onDelete: () => void;
   onClose: () => void;
 }
 
 function menuPosition(target: ExplorerContextTarget): { left: number; top: number } {
   const menuWidth = 196;
-  const menuHeight = 146;
+  // Folder có 4 mục, file có 2 — kẹp theo cái cao hơn thì menu của file bị
+  // đẩy lên khỏi con trỏ một cách vô cớ.
+  const menuHeight = target.isDir ? 186 : 102;
   return {
     left: Math.max(8, Math.min(target.x, window.innerWidth - menuWidth - 8)),
     top: Math.max(8, Math.min(target.y, window.innerHeight - menuHeight - 8)),
@@ -23,6 +26,7 @@ function menuPosition(target: ExplorerContextTarget): { left: number; top: numbe
 export function ExplorerContextMenu({
   target,
   onCreate,
+  onRename,
   onDelete,
   onClose,
 }: ExplorerContextMenuProps) {
@@ -66,25 +70,35 @@ export function ExplorerContextMenu({
       <div className="truncate px-2.5 py-1.5 font-mono text-[11px] text-muted-foreground" title={target.path}>
         {target.name}
       </div>
-      <button
-        type="button"
-        role="menuitem"
-        className={itemClassName}
-        onClick={() => onCreate("file")}
-      >
-        <FilePlus className="size-3.5" aria-hidden="true" />
-        Tạo file
+      {/* Tạo mới chỉ có nghĩa khi đang trỏ vào một folder — file không chứa
+          được gì. */}
+      {target.isDir && (
+        <>
+          <button
+            type="button"
+            role="menuitem"
+            className={itemClassName}
+            onClick={() => onCreate("file")}
+          >
+            <FilePlus className="size-3.5" aria-hidden="true" />
+            Tạo file
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className={itemClassName}
+            onClick={() => onCreate("folder")}
+          >
+            <FolderPlus className="size-3.5" aria-hidden="true" />
+            Tạo folder
+          </button>
+          <div className="my-1 h-px bg-border" />
+        </>
+      )}
+      <button type="button" role="menuitem" className={itemClassName} onClick={onRename}>
+        <Pencil className="size-3.5" aria-hidden="true" />
+        Đổi tên
       </button>
-      <button
-        type="button"
-        role="menuitem"
-        className={itemClassName}
-        onClick={() => onCreate("folder")}
-      >
-        <FolderPlus className="size-3.5" aria-hidden="true" />
-        Tạo folder
-      </button>
-      <div className="my-1 h-px bg-border" />
       <button
         type="button"
         role="menuitem"
@@ -92,7 +106,7 @@ export function ExplorerContextMenu({
         onClick={onDelete}
       >
         <Trash2 className="size-3.5" aria-hidden="true" />
-        Xoá folder
+        {target.isDir ? "Xoá folder" : "Xoá file"}
       </button>
     </div>,
     document.body,

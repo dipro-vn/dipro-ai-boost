@@ -13,7 +13,9 @@ interface FolderTreeProps {
   rootPath: string;
   selectedPath: string | null;
   onSelectFile: (path: string) => void;
+  onSelectFolder: (path: string) => void;
   onContextMenu: (target: ExplorerContextTarget) => void;
+  dropTargetPath: string | null;
 }
 
 /** One root's tree (docsRoot or repositoryRoot) — top-level listing only;
@@ -21,7 +23,14 @@ interface FolderTreeProps {
  * expands it. The parent gives this a `key` that changes on refresh, so
  * "Làm mới" remounts (and thus fully resets) the whole subtree instead of
  * needing a reload signal threaded through every node. */
-export function FolderTree({ rootPath, selectedPath, onSelectFile, onContextMenu }: FolderTreeProps) {
+export function FolderTree({
+  rootPath,
+  selectedPath,
+  onSelectFile,
+  onSelectFolder,
+  onContextMenu,
+  dropTargetPath,
+}: FolderTreeProps) {
   const [entries, setEntries] = useState<DirEntry[] | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -63,7 +72,9 @@ export function FolderTree({ rootPath, selectedPath, onSelectFile, onContextMenu
           depth={0}
           selectedPath={selectedPath}
           onSelectFile={onSelectFile}
+          onSelectFolder={onSelectFolder}
           onContextMenu={onContextMenu}
+          dropTargetPath={dropTargetPath}
         />
       ))}
     </div>

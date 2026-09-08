@@ -2,7 +2,10 @@ import { useState, type MouseEvent } from "react";
 import { ChevronRight, File, Folder, FolderOpen, Lock } from "lucide-react";
 import { commands, isAppCommandError, type DirEntry } from "@/lib/tauri-client";
 import { cn } from "@/lib/utils";
-import type { ExplorerContextTarget } from "@/screens/explorer/explorer-types";
+import {
+  EXPLORER_DIR_PATH_ATTR,
+  type ExplorerContextTarget,
+} from "@/screens/explorer/explorer-types";
 
 function extractErrorMessage(err: unknown): string {
   if (isAppCommandError(err)) return err.message;
@@ -15,7 +18,10 @@ interface FolderTreeNodeProps {
   depth: number;
   selectedPath: string | null;
   onSelectFile: (path: string) => void;
+  onSelectFolder: (path: string) => void;
   onContextMenu: (target: ExplorerContextTarget) => void;
+  /** Folder đang được rê file lên trên — tô sáng để thấy rõ sẽ thả vào đâu. */
+  dropTargetPath: string | null;
 }
 
 /** One row of the folder explorer's tree, plus its lazily-loaded children.
@@ -23,7 +29,15 @@ interface FolderTreeNodeProps {
  * — same source `ImportFilter` reads) show a lock icon and can't be opened;
  * restricted directories still expand normally — the restriction is about
  * content exposure, not directory existence. */
-export function FolderTreeNode({ entry, depth, selectedPath, onSelectFile, onContextMenu }: FolderTreeNodeProps) {
+export function FolderTreeNode({
+  entry,
+  depth,
+  selectedPath,
+  onSelectFile,
+  onSelectFolder,
+  onContextMenu,
+  dropTargetPath,
+}: FolderTreeNodeProps) {
   const [expanded, setExpanded] = useState(false);
   const [children, setChildren] = useState<DirEntry[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -48,6 +62,8 @@ export function FolderTreeNode({ entry, depth, selectedPath, onSelectFile, onCon
 
   function handleRowClick() {
     if (entry.isDir) {
+      // Bấm folder vừa để mở/đóng, vừa để chọn nó làm đích nhận file.
+      if (entry.canModify) onSelectFolder(entry.path);
       toggleExpand();
       return;
     }
@@ -56,17 +72,21 @@ export function FolderTreeNode({ entry, depth, selectedPath, onSelectFile, onCon
   }
 
   function handleContextMenu(event: MouseEvent<HTMLButtonElement>) {
-    if (!entry.isDir || !entry.canModify) return;
+    // File cũng có menu (đổi tên, xoá) — trước đây thoát sớm ở đây nên chuột
+    // phải vào file không ra gì cả.
+    if (!entry.canModify) return;
     event.preventDefault();
     onContextMenu({
       path: entry.path,
       name: entry.name,
+      isDir: entry.isDir,
       x: event.clientX,
       y: event.clientY,
     });
   }
 
   const isSelected = !entry.isDir && selectedPath === entry.path;
+  const isDropTarget = entry.isDir && dropTargetPath === entry.path;
 
   return (
     <div>
@@ -75,9 +95,11 @@ export function FolderTreeNode({ entry, depth, selectedPath, onSelectFile, onCon
         onClick={handleRowClick}
         onContextMenu={handleContextMenu}
         disabled={!entry.isDir && entry.isRestricted}
+        {...(entry.isDir && entry.canModify ? { [EXPLORER_DIR_PATH_ATTR]: entry.path } : {})}
         className={cn(
           "flex w-full items-center gap-1 rounded px-1.5 py-1 text-left text-sm hover:bg-muted/60 disabled:cursor-not-allowed disabled:opacity-50",
           isSelected && "bg-muted text-primary",
+          isDropTarget && "bg-primary/15 ring-1 ring-primary/60",
         )}
         style={{ paddingLeft: `${depth * 16 + 6}px` }}
           title={
@@ -144,7 +166,9 @@ export function FolderTreeNode({ entry, depth, selectedPath, onSelectFile, onCon
               depth={depth + 1}
               selectedPath={selectedPath}
               onSelectFile={onSelectFile}
+              onSelectFolder={onSelectFolder}
               onContextMenu={onContextMenu}
+              dropTargetPath={dropTargetPath}
             />
           ))}
         </div>

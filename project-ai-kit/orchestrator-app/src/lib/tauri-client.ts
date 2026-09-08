@@ -769,6 +769,24 @@ export const commands = {
   deleteExplorerEntry: (path: string, confirmation: string) =>
     invoke<void>("delete_explorer_entry", { path, confirmation }),
 
+  /** Xoá đúng một file. Folder vẫn đi đường `deleteExplorerEntry` — nó có
+   * preview cả cây con và bắt gõ lại tên. */
+  deleteExplorerFile: (path: string) =>
+    invoke<void>("delete_explorer_file", { path }),
+
+  renameExplorerEntry: (path: string, newName: string) =>
+    invoke<DirEntry>("rename_explorer_entry", { path, newName }),
+
+  /** Copy file từ ngoài vào một folder trong Explorer — điểm tiếp đất của
+   * kéo-thả từ OS, nên `sources` là đường dẫn tuyệt đối ngoài project. */
+  importExplorerPaths: (parentPath: string, sources: string[]) =>
+    invoke<DirEntry[]>("import_explorer_paths", { parentPath, sources }),
+
+  /** Ghi một file từ bytes webview đang giữ — điểm tiếp đất của paste, vì
+   * clipboard chỉ đưa nội dung file chứ không đưa đường dẫn. */
+  writeExplorerFile: (parentPath: string, name: string, contents: number[]) =>
+    invoke<DirEntry>("write_explorer_file", { parentPath, name, contents }),
+
   /** B22 — per-slot readiness for every node of a feature, one call. */
   getSlotReadiness: (feature: string) =>
     invoke<Record<string, SlotReadiness>>("get_slot_readiness", { feature }),

@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { RefreshCw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -9,12 +10,17 @@ import { FolderTree } from "@/screens/explorer/FolderTree";
 import { ExplorerContextMenu } from "@/screens/explorer/ExplorerContextMenu";
 import { ExplorerDeleteDialog } from "@/screens/explorer/ExplorerDeleteDialog";
 import { ExplorerEntryDialog } from "@/screens/explorer/ExplorerEntryDialog";
-import type {
-  ExplorerContextTarget,
-  ExplorerCreateKind,
-  ExplorerFolderTarget,
+import { ExplorerRenameDialog } from "@/screens/explorer/ExplorerRenameDialog";
+import { ExplorerDeleteFileDialog } from "@/screens/explorer/ExplorerDeleteFileDialog";
+import {
+  EXPLORER_DIR_PATH_ATTR,
+  type ExplorerContextTarget,
+  type ExplorerCreateKind,
+  type ExplorerEntryTarget,
+  type ExplorerFolderTarget,
 } from "@/screens/explorer/explorer-types";
 import { ArtifactModal } from "@/screens/board/ArtifactModal";
+import { cn } from "@/lib/utils";
 
 function extractErrorMessage(err: unknown): string {
   if (isAppCommandError(err)) return err.message;
@@ -48,7 +54,15 @@ export function FolderExplorerSidebar({ onClose }: FolderExplorerSidebarProps) {
     target: ExplorerFolderTarget;
   } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ExplorerFolderTarget | null>(null);
+  const [deleteFileTarget, setDeleteFileTarget] = useState<ExplorerFolderTarget | null>(null);
+  const [renameTarget, setRenameTarget] = useState<ExplorerEntryTarget | null>(null);
   const [refreshToken, setRefreshToken] = useState(0);
+  /** Folder người dùng bấm gần nhất — đích mặc định của paste. */
+  const [activeFolderPath, setActiveFolderPath] = useState<string | null>(null);
+  const [dropTargetPath, setDropTargetPath] = useState<string | null>(null);
+  const [transferMessage, setTransferMessage] = useState<string | null>(null);
+  const [transferError, setTransferError] = useState<string | null>(null);
+  const sidebarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -83,8 +97,38 @@ export function FolderExplorerSidebar({ onClose }: FolderExplorerSidebarProps) {
 
   function requestDelete() {
     if (!contextTarget) return;
-    setDeleteTarget({ path: contextTarget.path, name: contextTarget.name });
+    const target = { path: contextTarget.path, name: contextTarget.name };
+    // Folder đi đường có preview + gõ lại tên; file thì thứ bị xoá đang hiện
+    // ngay trước mắt nên chỉ cần xác nhận một nhịp.
+    if (contextTarget.isDir) {
+      setDeleteTarget(target);
+    } else {
+      setDeleteFileTarget(target);
+    }
     setContextTarget(null);
+  }
+
+  function requestRename() {
+    if (!contextTarget) return;
+    setRenameTarget({
+      path: contextTarget.path,
+      name: contextTarget.name,
+      isDir: contextTarget.isDir,
+    });
+    setContextTarget(null);
+  }
+
+  async function handleRename(target: ExplorerEntryTarget, newName: string) {
+    await commands.renameExplorerEntry(target.path, newName);
+    // Cây được dựng lại từ đĩa nên path cũ không còn tồn tại; bỏ chọn để
+    // ArtifactModal không mở một file vừa bị đổi tên.
+    setSelectedFilePath((selected) =>
+      selected && isInsidePath(selected, target.path) ? null : selected,
+    );
+    setActiveFolderPath((current) =>
+      current && isInsidePath(current, target.path) ? null : current,
+    );
+    setRefreshToken((token) => token + 1);
   }
 
   async function handleCreate(kind: ExplorerCreateKind, target: ExplorerFolderTarget, name: string) {
@@ -102,11 +146,130 @@ export function FolderExplorerSidebar({ onClose }: FolderExplorerSidebarProps) {
 
   function handleDeleted(target: ExplorerFolderTarget) {
     setSelectedFilePath((selected) => (selected && isInsidePath(selected, target.path) ? null : selected));
+    setActiveFolderPath((current) => (current && isInsidePath(current, target.path) ? null : current));
     setRefreshToken((token) => token + 1);
   }
 
+  /** Folder nhận file, ưu tiên theo thứ tự: nơi con trỏ đang chỉ → folder vừa
+   * bấm → root đang mở. Luôn có đích, nên thả/paste không bao giờ rơi vào hư
+   * không. */
+  const dropDestination = useCallback(
+    (path: string | null) => path ?? activeFolderPath ?? activeRootPath,
+    [activeFolderPath, activeRootPath],
+  );
+
+  /** Sự kiện kéo-thả của Tauri chỉ đưa toạ độ vật lý, không đưa phần tử DOM —
+   * nên phải hit-test ngược để biết đang ở trên folder nào. */
+  const dirPathAtPoint = useCallback((position: { x: number; y: number }) => {
+    const ratio = window.devicePixelRatio || 1;
+    const element = document.elementFromPoint(position.x / ratio, position.y / ratio);
+    if (!element || !sidebarRef.current?.contains(element)) return { inside: false, path: null };
+    const row = element.closest(`[${EXPLORER_DIR_PATH_ATTR}]`);
+    return { inside: true, path: row?.getAttribute(EXPLORER_DIR_PATH_ATTR) ?? null };
+  }, []);
+
+  useEffect(() => {
+    let disposed = false;
+    let unlisten: (() => void) | undefined;
+
+    void getCurrentWebview()
+      .onDragDropEvent((event) => {
+        const payload = event.payload;
+        if (payload.type === "leave") {
+          setDropTargetPath(null);
+          return;
+        }
+        if (payload.type === "enter" || payload.type === "over") {
+          const hit = dirPathAtPoint(payload.position);
+          setDropTargetPath(hit.inside ? dropDestination(hit.path) : null);
+          return;
+        }
+        if (payload.type !== "drop") return;
+
+        const hit = dirPathAtPoint(payload.position);
+        setDropTargetPath(null);
+        // Thả ra ngoài Explorer thì không phải việc của nó — đừng nuốt file
+        // của người ta vào một folder họ không nhắm tới.
+        if (!hit.inside) return;
+        const destination = dropDestination(hit.path);
+        if (!destination || payload.paths.length === 0) return;
+
+        setTransferError(null);
+        setTransferMessage(`Đang chép ${payload.paths.length} file...`);
+        commands
+          .importExplorerPaths(destination, payload.paths)
+          .then((created) => {
+            setTransferMessage(`Đã chép ${created.length} file vào ${destination}`);
+            setRefreshToken((token) => token + 1);
+          })
+          .catch((err) => {
+            setTransferMessage(null);
+            setTransferError(extractErrorMessage(err));
+          });
+      })
+      .then((fn) => {
+        if (disposed) fn();
+        else unlisten = fn;
+      });
+
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, [dirPathAtPoint, dropDestination]);
+
+  useEffect(() => {
+    async function handlePaste(event: ClipboardEvent) {
+      // Paste vào ô nhập liệu là paste chữ, không phải thả file vào Explorer.
+      const node = event.target as HTMLElement | null;
+      if (node?.closest("input, textarea, [contenteditable='true']")) return;
+
+      const destination = dropDestination(null);
+      if (!destination) return;
+
+      const files = Array.from(event.clipboardData?.files ?? []);
+      // Copy file trong Finder rồi paste vào webview không phải lúc nào cũng
+      // ra `files`: WebKit hay đưa sang dưới dạng đường dẫn text. Nhận cả hai,
+      // vì nếu chỉ nhận `files` thì Cmd+V sẽ im lặng không làm gì.
+      const pastedPaths = (event.clipboardData?.getData("text/plain") ?? "")
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0)
+        .filter((line) => line.startsWith("/") || /^[A-Za-z]:[\\/]/.test(line));
+
+      if (files.length === 0 && pastedPaths.length === 0) {
+        // Không nuốt phím: có thể người dùng đang paste chữ ở chỗ khác.
+        return;
+      }
+
+      event.preventDefault();
+      setTransferError(null);
+      try {
+        if (files.length > 0) {
+          setTransferMessage(`Đang dán ${files.length} file...`);
+          for (const file of files) {
+            const bytes = Array.from(new Uint8Array(await file.arrayBuffer()));
+            await commands.writeExplorerFile(destination, file.name, bytes);
+          }
+          setTransferMessage(`Đã dán ${files.length} file vào ${destination}`);
+        } else {
+          setTransferMessage(`Đang chép ${pastedPaths.length} file...`);
+          const created = await commands.importExplorerPaths(destination, pastedPaths);
+          setTransferMessage(`Đã chép ${created.length} file vào ${destination}`);
+        }
+        setRefreshToken((token) => token + 1);
+      } catch (err) {
+        setTransferMessage(null);
+        setTransferError(extractErrorMessage(err));
+      }
+    }
+
+    document.addEventListener("paste", handlePaste);
+    return () => document.removeEventListener("paste", handlePaste);
+  }, [dropDestination]);
+
   return (
-    <div className="flex w-72 shrink-0 flex-col border-r border-border">
+    <div ref={sidebarRef} className="flex w-72 shrink-0 flex-col border-r border-border">
       <div className="flex items-center justify-between gap-2 border-b border-border p-3">
         <span className="text-sm font-semibold">Explorer</span>
         <div className="flex items-center gap-1">
@@ -125,6 +288,26 @@ export function FolderExplorerSidebar({ onClose }: FolderExplorerSidebarProps) {
           </Button>
         </div>
       </div>
+
+      {/* Nói thẳng file sẽ rơi vào đâu — không thì kéo-thả và Cmd+V là đoán mò. */}
+      {(activeFolderPath ?? activeRootPath) && (
+        <div className="border-b border-border px-3 py-1.5 text-[11px] text-muted-foreground">
+          Thả / dán vào:{" "}
+          <span className="font-mono text-foreground" title={activeFolderPath ?? activeRootPath ?? ""}>
+            {(activeFolderPath ?? activeRootPath ?? "").split(/[\\/]/).pop()}
+          </span>
+        </div>
+      )}
+      {(transferMessage || transferError) && (
+        <div
+          className={cn(
+            "border-b border-border px-3 py-1.5 text-[11px]",
+            transferError ? "text-destructive" : "text-muted-foreground",
+          )}
+        >
+          {transferError ?? transferMessage}
+        </div>
+      )}
 
       <div className="flex-1 overflow-hidden p-2">
         {loadError && (
@@ -146,7 +329,9 @@ export function FolderExplorerSidebar({ onClose }: FolderExplorerSidebarProps) {
                 rootPath={roots[0].path}
                 selectedPath={selectedFilePath}
                 onSelectFile={setSelectedFilePath}
+                onSelectFolder={setActiveFolderPath}
                 onContextMenu={handleContextMenu}
+                dropTargetPath={dropTargetPath}
               />
             </ScrollArea>
           </div>
@@ -176,7 +361,9 @@ export function FolderExplorerSidebar({ onClose }: FolderExplorerSidebarProps) {
                     rootPath={root.path}
                     selectedPath={selectedFilePath}
                     onSelectFile={setSelectedFilePath}
+                    onSelectFolder={setActiveFolderPath}
                     onContextMenu={handleContextMenu}
+                    dropTargetPath={dropTargetPath}
                   />
                 </ScrollArea>
               </TabsContent>
@@ -188,6 +375,7 @@ export function FolderExplorerSidebar({ onClose }: FolderExplorerSidebarProps) {
       <ExplorerContextMenu
         target={contextTarget}
         onCreate={requestCreate}
+        onRename={requestRename}
         onDelete={requestDelete}
         onClose={() => setContextTarget(null)}
       />
@@ -197,9 +385,19 @@ export function FolderExplorerSidebar({ onClose }: FolderExplorerSidebarProps) {
         onClose={() => setCreateRequest(null)}
         onCreate={handleCreate}
       />
+      <ExplorerRenameDialog
+        target={renameTarget}
+        onClose={() => setRenameTarget(null)}
+        onRename={handleRename}
+      />
       <ExplorerDeleteDialog
         target={deleteTarget}
         onClose={() => setDeleteTarget(null)}
+        onDeleted={handleDeleted}
+      />
+      <ExplorerDeleteFileDialog
+        target={deleteFileTarget}
+        onClose={() => setDeleteFileTarget(null)}
         onDeleted={handleDeleted}
       />
       <ArtifactModal path={selectedFilePath} onClose={() => setSelectedFilePath(null)} />
