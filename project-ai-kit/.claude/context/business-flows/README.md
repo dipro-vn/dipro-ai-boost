@@ -29,7 +29,7 @@ Nguồn truth nên là **1 file có cấu trúc** (spreadsheet, Notion database,
 |---|---|
 | BA tạo SPEC mới, chưa biết feature thuộc domain nào | `business-flow-index.md` để lookup → chọn 1 domain |
 | BA đã biết domain | `domains/<slug>.md` tương ứng |
-| Tech Lead Design cần hiểu actors/flow trước khi vẽ data model | `domains/<slug>.md` |
+| Tech Lead cần hiểu actors/flow trước khi vẽ data model | `domains/<slug>.md` |
 | PM cần ước lượng scope theo epic | `function-list.md` (summary by epic) |
 | Dev / QC cần đặt screen code mới | `screen-code-rule.md` |
 

@@ -7,14 +7,14 @@
 
 ## Single-repo feature
 
-Khi feature chỉ ảnh hưởng **1 repo duy nhất** (ví dụ: 1 tính năng chỉ chạm backend, hoặc chỉ chạm 1 web app) — DESIGN.md có thể nằm thẳng trong subfolder repo:
+Khi feature chỉ ảnh hưởng **1 repo duy nhất** (ví dụ: 1 tính năng chỉ chạm backend, hoặc chỉ chạm 1 web app) — Design-Technical.md có thể nằm thẳng trong subfolder repo:
 
 ```
 <DOCS_ROOT>/features/<feature-name>/
 ├── SPEC.md                  ← BA tạo (nghiệp vụ + Screens table); Designer điền cột Figma Link
 ├── PLAN.md                  ← PM tạo (kế hoạch)
 └── <backend-repo>/
-    ├── DESIGN.md            ← Tech Lead tạo
+    ├── Design-Technical.md            ← Tech Lead tạo
     └── tasks/
         ├── task-1-1.md
         └── task-2-1.md
@@ -33,21 +33,21 @@ Khi feature ảnh hưởng **nhiều repo** (BE + FE, BE + Mobile, hoặc cả 3
 ├── SPEC.md                          ← BA tạo (1 file, nghiệp vụ + Screens table); Designer điền cột Figma Link
 ├── PLAN.md                          ← PM tạo (tổng hợp tất cả repo)
 ├── <backend-repo>/
-│   ├── DESIGN.md                    ← Tech Lead (kỹ thuật BE)
+│   ├── Design-Technical.md                    ← Tech Lead (kỹ thuật BE)
 │   └── tasks/
 │       ├── task-1-1.md              ← Phase 1: DB migration
 │       ├── task-2-1.md              ← Phase 2: Service
 │       └── task-2-2.md              ← Phase 2: API endpoint
 ├── <web-repo-a>/                    ← nếu repo này liên quan
-│   ├── DESIGN.md
+│   ├── Design-Technical.md
 │   └── tasks/
 │       └── task-3-1.md
 ├── <web-repo-b>/                    ← nếu repo này liên quan
-│   ├── DESIGN.md
+│   ├── Design-Technical.md
 │   └── tasks/
 │       └── task-3-2.md
 └── <mobile-repo>/                   ← nếu Mobile liên quan
-    ├── DESIGN.md
+    ├── Design-Technical.md
     └── tasks/
         └── task-3-3.md
 ```
@@ -70,7 +70,7 @@ Khi feature ảnh hưởng **nhiều repo** (BE + FE, BE + Mobile, hoặc cả 3
 
 ## Khi nào Mobile cần DESIGN riêng?
 
-Repo mobile cần subfolder + DESIGN.md khi SPEC có:
+Repo mobile cần subfolder + Design-Technical.md khi SPEC có:
 
 - Người dùng thao tác trên mobile app
 - WebSocket event mới

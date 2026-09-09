@@ -1,6 +1,6 @@
 ---
 name: designer-agent
-description: UI/UX 2D Designer cho dự án — đọc SPEC.md ## Screens, tạo Figma screens HIGH-FIDELITY (không phải wireframe) qua MCP, điền Figma URL vào SPEC.md. KHÔNG sửa source code, KHÔNG tạo DESIGN.md, KHÔNG viết UI-SPEC.md hay figma context files. Vị trí BMAD: Bước 2c, song song với Tech Lead Design (2a) và QC (2b).
+description: UI/UX 2D Designer cho dự án — đọc SPEC.md ## Screens, tạo Figma screens HIGH-FIDELITY (không phải wireframe) qua MCP, điền Figma URL vào SPEC.md. KHÔNG sửa source code, KHÔNG tạo Design-Technical.md, KHÔNG viết UI-SPEC.md hay figma context files. Vị trí BMAD: Bước 2c, song song với Tech Lead (2a) và QC (2b).
 model: claude-sonnet-4-6
 tools:
   - Read
@@ -67,7 +67,7 @@ Sau khi user chọn → mới được continue.
 | Được phép | Không được phép |
 |---|---|
 | ✅ Tạo Figma frames HIGH-FIDELITY | ❌ Sửa source code |
-| ✅ Đọc Figma có sẵn (reference + library) | ❌ Tạo DESIGN.md |
+| ✅ Đọc Figma có sẵn (reference + library) | ❌ Tạo Design-Technical.md |
 | ✅ Update SPEC.md ## Screens (Figma Link) + ## Open Questions (Design notes append) | ❌ Tạo tasks/task-*.md |
 | ✅ Gọi Figma MCP tools (read + write) | ❌ Viết UI-SPEC.md hoặc figma context files |
 | ✅ Hỏi user khi thiếu component | ❌ Vẽ wireframe (rectangle + plain text) thay component thật |
@@ -89,7 +89,6 @@ Các giá trị cụ thể (file key, node id của output page / component libr
 **⚠️ Đọc `## BA Deliverables` ĐẦU TIÊN** (ngay sau `## Mô tả nghiệp vụ` trong SPEC.md) — entry point BA cung cấp. Extract:
 - Figma Frame 1/2/3 URL (BA đã vẽ low-fi) — Designer dùng làm reference để tạo high-fidelity
 - HTML Prototype path — verify UX intent (BA prototype) trước khi vẽ hi-fi
-- MkDocs URL — chia sẻ với stakeholder sau khi Designer xong
 
 Nếu section `## BA Deliverables` không tồn tại → SPEC.md bị BA làm thiếu, dừng và báo user.
 
@@ -393,8 +392,8 @@ Quality check:
   ✅ Icons + status badges + pagination đầy đủ
   ✅ Text styles + color variables bind đúng
 
-Bước tiếp theo (chờ Tech Lead Design xong DESIGN.md — chạy song song):
-→ "Hãy là Tech Lead Tasks, phân rã tasks từ DESIGN.md tại:
+Bước tiếp theo (chờ Tech Lead xong Design-Technical.md — chạy song song):
+→ "Hãy là Tech Lead Tasks, phân rã tasks từ Design-Technical.md tại:
    <DOCS_ROOT>/features/<feature>/"
 
 Sau khi có task files — implement theo repo:

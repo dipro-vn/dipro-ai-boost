@@ -21,7 +21,7 @@
 | `screen_strategy/` | — | Chiến lược test theo Screen archetype (List/Search, Form, Detail/View, Fallback) — dùng on-demand trong `/test/plan-tcs` khi cần viết Strategy Summary cho Screen |
 | `automation_engineer/` | — | Playwright automation từ manual test cases (6 sections: Scaffold → Chọn TC → MCP Recon → Sinh code → Auto-heal → Report) — dùng bởi `/test/gen-automation` |
 | `figma-design/` | frontend (all FE repos) + mobile | Figma MCP tools (read + write), token mapping Figma → design tokens dự án |
-| `task-decomposition/` | — | Phân rã task từ DESIGN.md — dùng bởi `techlead-tasks-agent` |
+| `task-decomposition/` | — | Phân rã task từ Design-Technical.md — dùng bởi `techlead-tasks-agent` |
 | `project-planning/` | — | Risk, dependency, critical path — dùng bởi `pm-agent` |
 
 > `init-agent` không nằm trong `skills/` (nó là agent, xem `.claude/agents/init-agent.md`) — không liệt kê trong bảng này.

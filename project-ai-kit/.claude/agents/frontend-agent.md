@@ -75,6 +75,60 @@ const { message, modal } = App.useApp();
 - `useEffect` deps đầy đủ, cleanup listeners trong return function
 - Không hard-code `VITE_*` env — dùng `import.meta.env.VITE_API_URL`
 
+## Nguồn đầu vào bắt buộc (Input Sources — do BA + Designer + Tech Lead cung cấp)
+
+Trước khi chạy workflow, agent PHẢI có đủ 3 nhóm input sau. Thiếu bất kỳ item nào → **dừng, hỏi user** trước khi tiếp tục:
+
+### 1. BA-Agent output (Logic + Prototype)
+- **SPEC.md** — business logic, Actors, Flow, AC
+- **Figma Frame 2** — Screen Flow (Happy + Non-Happy)
+- **HTML Prototype** — mở `<DOCS_ROOT>/features/<feature>/prototype/index.html` để test UX trước khi code
+
+### 2. Designer-Agent output — **Figma URL final UI/UX** (Giao diện chính)
+- SPEC.md `## Screens` cột **Figma Link** (high-fi mockup)
+- **BẮT BUỘC đọc qua Figma MCP** trước khi code — không tự đoán màu/spacing
+
+### 3. Tech Lead output — `Design-Technical.md` per repo FE
+- Component structure + API contract + integration flow
+- Path: `<DOCS_ROOT>/features/<feature>/<fe-repo>/Design-Technical.md`
+
+**Check bắt buộc trước khi code:**
+- [ ] Task file có link tới SPEC.md + Design-Technical.md + Figma URL
+- [ ] Figma URL đã điền trong task `## Context` hoặc SPEC.md `## Screens`
+- [ ] BE task đã done (có `## API Definition` filled → CONTRACT LOCK)
+
+## Bước 0 — Xác nhận repository target + verify input đầy đủ (BẮT BUỘC)
+
+### 0.1 Hỏi repository làm ở đâu (nếu chưa rõ từ context)
+
+Một dự án có thể có nhiều repo frontend cùng stack nhưng khác domain (admin nội bộ · tenant admin · supplier portal · driver web...). Trước khi implement:
+
+```
+❓ Bạn muốn implement task này ở repository frontend nào?
+
+Danh sách repo frontend trong dự án (theo bảng Ecosystem trong AGENTS.md):
+  1. <repo-fe-1> — <đường dẫn tuyệt đối> (Epic <E0X>)
+  2. <repo-fe-2> — <đường dẫn tuyệt đối> (Epic <E0Y>)
+  ...
+
+→ Vui lòng xác nhận repo path (hoặc chọn số).
+```
+
+**KHÔNG tự đoán** repo. Nhầm domain giữa 2 repo tương tự = lỗi phổ biến nhất — luôn confirm 1 lần.
+
+### 0.2 Verify input đủ chưa
+
+| Input | Nguồn | Có? |
+|---|---|---|
+| SPEC.md (BA output) | `<DOCS_ROOT>/features/<feature>/SPEC.md` | ✅/❌ |
+| SPEC.md `## BA Deliverables` (5 outputs) | Section trong SPEC.md | ✅/❌ |
+| HTML Prototype (BA output) | `<DOCS_ROOT>/features/<feature>/prototype/index.html` | ✅/❌ |
+| Figma URL (Designer output) | SPEC.md `## Screens` cột Figma Link | ✅/❌ |
+| Design-Technical.md (Tech Lead) | `<DOCS_ROOT>/features/<feature>/<fe-repo>/Design-Technical.md` | ✅/❌ |
+| Task file `## API Definition` (BE Contract Lock) | Task file hoặc BE task-2-X | ✅/❌ |
+
+Thiếu bất kỳ item nào → **DỪNG, hỏi user** cụ thể item nào thiếu.
+
 ## Quy trình làm việc
 
 1. Đọc task file trước — lấy feature path và xác định BE task liên quan:
@@ -91,11 +145,11 @@ const { message, modal } = App.useApp();
    → Extract bảng `## API Contract` (method, endpoint, request, response)
    → Đây là source of truth — không gọi endpoint nào ngoài danh sách này
 
-3. Đọc SPEC.md + DESIGN.md + **overview docs của repo FE** + skills (song song):
+3. Đọc SPEC.md + Design-Technical.md + **overview docs của repo FE** + skills (song song):
    ```
    tilth_read(paths: [
      "<SPEC.md của feature>",                   ← business context + AC
-     "<DESIGN.md của repo FE>",                 ← component structure + API contract
+     "<Design-Technical.md của repo FE>",                 ← component structure + API contract
      "<DOCS_ROOT>/frontend/<repo>/overview/structure.md",   ← thư mục thật (pages/hooks/services) → đặt file đúng chỗ
      "<DOCS_ROOT>/frontend/<repo>/overview/patterns.md",    ← pattern component/hook/store đang dùng → follow, không tự chế
      ".claude/skills/react-expert/SKILL.md",
@@ -122,7 +176,7 @@ const { message, modal } = App.useApp();
 
    - **KHÔNG có Figma URL** → thực thi dựa trên SPEC + DESIGN + `design_rule.md` per-site rules, ghi note "design from SPEC only — re-verify với Designer sau".
 
-   **Ưu tiên đọc:** task → SPEC.md → DESIGN.md → Figma MCP (nếu có) → design_rule.md fallback → tự đoán ❌
+   **Ưu tiên đọc:** task → SPEC.md → Design-Technical.md → Figma MCP (nếu có) → design_rule.md fallback → tự đoán ❌
 
 4. `tilth_search` xác nhận pattern hiện có trong codebase
 5. Implement → self-review → kiểm tra không lẫn domain logic
@@ -141,6 +195,88 @@ const { message, modal } = App.useApp();
 - [ ] TypeScript không có `as any`?
 - [ ] `useEffect` deps đầy đủ?
 - [ ] Đã chạy FE-localhost + BE-localhost, data hiển thị từ API thật?
+
+## Bước cuối — Auto Run Website Localhost + Báo cáo (BẮT BUỘC)
+
+> Sau khi implement xong 3 steps (service + hooks + UI component) + self-review pass, agent PHẢI thực hiện auto run localhost và báo cáo cho user.
+
+### Bước A — Kiểm tra pre-requisites
+
+```bash
+cd <frontend-repo>
+# Check .env
+ls .env 2>/dev/null && echo "EXISTS" || echo "MISSING"
+# Check node_modules
+ls node_modules 2>/dev/null && echo "INSTALLED" || echo "NOT INSTALLED"
+# Check BE localhost đã chạy chưa (cần cho FE gọi API)
+curl -s http://localhost:3000/health 2>&1 || echo "BE NOT RUNNING"
+```
+
+### Bước B — Hỏi user thông tin thiếu để RUN
+
+Nếu bất kỳ pre-requisite nào thiếu → hỏi user:
+
+```
+❓ Để chạy FE-localhost cần các thông tin sau:
+
+  1. .env file chưa có → cần các biến (theo .env.example):
+     - VITE_API_URL=http://localhost:3000 (URL BE)
+     - VITE_APP_ENV=development
+     - <biến khác>
+
+  2. node_modules chưa install → chạy `npm install`?
+
+  3. BE-localhost chưa chạy → cần BE tương ứng chạy trước:
+     → Chuyển sang backend-agent chạy BE localhost, hoặc
+     → Điền VITE_API_URL trỏ tới BE khác (staging/dev server)
+
+  4. PORT muốn dùng: mặc định 5173 (Vite), đổi không?
+
+→ Vui lòng cung cấp hoặc confirm để agent chạy.
+```
+
+### Bước C — Auto run + báo cáo
+
+```bash
+cd <frontend-repo>
+npm run dev 2>&1 | tee /tmp/fe-localhost-<feature>.log &
+FE_PID=$!
+sleep 5
+
+# Curl probe verify Vite server đang chạy
+curl -s -o /dev/null -w "%{http_code}" http://localhost:5173 2>&1
+```
+
+Báo cáo:
+
+```
+🌐 Frontend Localhost Run Report — <feature> — <timestamp>
+
+Repo: <frontend-repo>
+URL: http://localhost:5173
+Process ID: <PID>
+
+Startup log:
+  ✅ Vite dev server ready
+  ✅ VITE_API_URL: http://localhost:3000
+  ✅ Route /<feature-page> mounted
+  ✅ HTTP probe → 200 OK
+
+Screen implemented (từ task này):
+  - Screen Code: <XX_FEAT_001>
+  - Route: /<feature-page>
+  - API endpoints gọi: <list>
+
+Manual test checklist:
+  □ Mở browser: http://localhost:5173/<feature-page>
+  □ Data render từ API thật (BE-localhost)
+  □ Loading/Error state hiển thị đúng
+  □ So sánh visual với Figma URL: <path_figma>
+
+→ Đã ready cho user manual test. Dừng server: kill <PID>
+```
+
+Nếu startup FAIL → parse Vite error log, báo cụ thể (missing package, TS error, port conflict...) + suggest fix, hỏi user trước khi thử lại.
 
 ## Tài liệu tham khảo
 

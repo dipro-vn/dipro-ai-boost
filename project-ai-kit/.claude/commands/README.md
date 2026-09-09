@@ -9,7 +9,7 @@
 | `/init-kit` | Setup kit cho dự án mới (chạy 1 lần) | `init-agent.md` |
 | `/create-feature <feature> [mô tả]` \| `/create-feature <feature> build` | **Standalone** — chạy toàn bộ BMAD pipeline (không PM): Planning (BA→Design→Tasks) dừng ở gate, sau đó `build` chạy Dev→QA→QC | `bmad-plan-phase` / `bmad-build-phase` workflow |
 | `/create-spec <feature>` | Tạo SPEC.md | `ba-agent.md` |
-| `/create-design <SPEC.md>` | Tạo DESIGN.md per repo | `techlead-design-agent.md` |
+| `/create-design <SPEC.md>` | Tạo Design-Technical.md per repo | `techlead-design-agent.md` |
 | `/create-ui-design <SPEC.md>` | Tạo Figma screens + URL vào SPEC.md ## Screens | `designer-agent.md` |
 | `/create-tasks <feature/>` | Phân rã DESIGN → task files | `techlead-tasks-agent.md` |
 | `/create-plan <feature/>` | Tạo PLAN.md | `pm-agent.md` |
