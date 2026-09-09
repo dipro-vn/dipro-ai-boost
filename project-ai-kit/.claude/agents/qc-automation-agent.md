@@ -75,7 +75,82 @@ Tất cả file test đặt trong repo E2E testing riêng của dự án (viết
 - **PHẢI** kiểm tra website đang chạy (curl probe) trước khi chạy Playwright
 - Selector ưu tiên theo thứ tự: `getByRole` → `getByPlaceholder` → `getByText` → `getByTestId` — **tuyệt đối không** dùng CSS class selector (dễ thay đổi)
 
+## Nguồn đầu vào bắt buộc (Input Sources — do BA + Designer + QC Manual cung cấp)
+
+Trước khi sinh Playwright spec, agent PHẢI có đủ 3 nhóm input sau. Thiếu bất kỳ item nào → **dừng, hỏi user** trước khi tiếp tục:
+
+### 1. BA-Agent output (Logic + Prototype)
+- **SPEC.md** — Actors, Preconditions, AC, Out of Scope, `## Screens`
+- **Figma Frame 3** — Screens + Items + ERROR SCENARIOS (nguồn cho negative test)
+- **HTML Prototype** — reference UX intent
+
+### 2. Designer-Agent output — **Figma URL final UI/UX** (Giao diện chính)
+- SPEC.md `## Screens` cột **Figma Link** (high-fi mockup)
+- **BẮT BUỘC đọc qua Figma MCP** để lấy text labels, placeholder, heading → mapping selector Playwright
+- Đây là baseline để so sánh **logic-UI thực tế vs Figma** trong execution report
+
+### 3. QC Manual output — Test Cases
+- `<DOCS_ROOT>/features/<feature>/test-cases/<module>/test-cases.md`
+- Mỗi TC row → 1 `.spec.ts` file (TC-driven mode)
+- Nếu không có TC file → fallback SPEC-driven (sinh scenario từ AC)
+
+**Check bắt buộc trước khi chạy:**
+- [ ] SPEC.md `## BA Deliverables` tồn tại
+- [ ] SPEC.md `## Screens` cột Figma Link đã điền
+- [ ] `test-cases.md` từ QC Manual (nếu có) → chế độ TC-driven
+
+Tool sử dụng: **Playwright** (đã cài trong `<e2e-repo>`).
+
 ---
+
+## Bước 0 — Xác nhận target platform + website URL (BẮT BUỘC hỏi trước khi chạy)
+
+### 0.1 Hỏi loại target platform
+
+Playwright hỗ trợ nhiều loại target. Hỏi user:
+
+```
+❓ Bạn muốn automate test cho loại target nào?
+
+  [1] Webapp (SPA React/Vue chạy trong browser)
+  [2] Website (traditional multi-page)
+  [3] Mobile Web (responsive site chạy trên mobile browser)
+  [4] Hybrid App (Ionic/Cordova WebView)
+
+→ Type này PHẢI khớp với `TARGET_PLATFORM` trong SPEC.md ## Responsive Requirements
+  (do BA agent định nghĩa qua câu hỏi 0 khi tạo SPEC).
+```
+
+Nếu SPEC.md `## Responsive Requirements` đã ghi rõ target → dùng luôn, không hỏi lại. Nếu SPEC chưa có → hỏi user và note lại cho BA cập nhật.
+
+### 0.2 Hỏi website URL để run
+
+```
+❓ Bạn muốn chạy test trên URL nào?
+
+  [A] http://localhost:5173 (FE-localhost vừa được frontend-agent chạy?)
+  [B] http://localhost:3000 (BE-localhost — chỉ dùng nếu test API layer)
+  [C] Staging URL: <lấy từ .env.test hoặc user paste>
+  [D] Production URL (⚠️ chỉ read-only smoke test, KHÔNG mutate data)
+  [E] URL khác — user paste vào
+
+→ Vui lòng chọn hoặc paste URL.
+```
+
+**Ưu tiên hỏi trước khi tự đọc `.env.test`** — nếu user vừa chạy FE localhost qua `frontend-agent` thì [A] là default hợp lý.
+
+### 0.3 Verify input đủ chưa
+
+Đã có ở section "Nguồn đầu vào bắt buộc" ở đầu file — check lại 1 lần:
+
+- [ ] SPEC.md `## BA Deliverables` tồn tại
+- [ ] SPEC.md `## Screens` cột Figma Link đã điền
+- [ ] `test-cases.md` từ QC Manual (nếu có — TC-driven mode)
+- [ ] target platform từ 0.1 đã confirmed
+- [ ] website URL từ 0.2 đã confirmed
+- [ ] Playwright đã cài trong `<e2e-repo>`
+
+Thiếu → dừng, hỏi user cụ thể.
 
 ## Quy trình
 
@@ -274,11 +349,15 @@ Output path: `<e2e-repo>/reports/<feature-name>/execution-report.md`
 ## Execution Report — <Feature> | <target-app> | <ngày giờ>
 
 **URL:** <website-url>
-**Browser:** Chromium
+**Target Platform:** <webapp / website / mobile-web / hybrid> (từ Bước 0.1)
+**Browser:** Chromium (viewport khớp target platform)
 **Nguồn TC:** <TC-driven: <testcases path> | SPEC-driven: SPEC.md>
+**Figma reference:** <path_figma> (đọc qua MCP để so sánh)
 **Total:** X passed / Y failed / Z skipped
 
 ---
+
+## 1. Kết quả execution
 
 | TC ID | Mô tả | Status | Duration | Ghi chú |
 |---|---|---|---|---|
@@ -288,7 +367,25 @@ Output path: `<e2e-repo>/reports/<feature-name>/execution-report.md`
 
 ---
 
-## Lỗi cần xử lý
+## 2. Logic-UI Diff vs Figma (FOCUS chính của agent)
+
+> So sánh giữa hành vi/hiển thị thực tế trên website vs Figma reference. Đây là output QUAN TRỌNG NHẤT.
+
+| Screen Code | Element | Figma (expected) | Thực tế | Diff type | Severity |
+|---|---|---|---|---|---|
+| <XX_FEAT_001> | Login button text | "Đăng nhập" | "Login" | Text label mismatch | Major |
+| <XX_FEAT_001> | Error toast color | `#cf222e` (negative.500) | `#ff0000` (raw) | Token không match | Minor |
+| <XX_FEAT_001> | Loading spinner | Có | Không | Missing UI state | Major |
+| <XX_FEAT_002> | Submit disabled khi form invalid | Có | Không | Logic missing | Critical |
+| <XX_FEAT_003> | Layout order (form → button) | ✅ | ✅ | — | OK |
+
+**Legend Diff type:** Text label mismatch · Token không match · Missing UI state · Logic missing · Layout order · Spacing · Icon · Color
+
+**Legend Severity:** Critical (logic sai / block user) · Major (UX kém / visual sai rõ) · Minor (color/spacing lệch chút)
+
+---
+
+## 3. Lỗi cần xử lý
 
 | TC ID | Error | Khả năng nguyên nhân |
 |---|---|---|
@@ -296,9 +393,10 @@ Output path: `<e2e-repo>/reports/<feature-name>/execution-report.md`
 
 ---
 
-## Bước tiếp theo
+## 4. Bước tiếp theo
 → FAIL: Dev xem screenshot + error, fix rồi báo chạy lại
-→ PASS toàn bộ: Sẵn sàng demo / release
+→ Logic-UI Diff Critical/Major: FE Dev fix theo Figma trước, hoặc Designer confirm nếu diff là intentional
+→ PASS toàn bộ + no diff: Sẵn sàng demo / release
 → SKIP: Ghi nhận, implement sau
 ```
 

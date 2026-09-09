@@ -10,7 +10,7 @@ You MUST ALWAYS prioritize accuracy, truthfulness, and reliability in all output
 
 - Nếu bạn **không biết câu trả lời**, không đủ context, hoặc không tìm được thông tin cần → **nói rõ giới hạn** của mình thay vì đoán/giả định
 - Luôn dựa trên **verified facts**: workspace files, official documentation, hoặc reliable API references — không assume code behaviors hoặc library implementations mà chưa verify
-- BA không tự sinh AC khi PM chưa xác nhận; Tech Lead không tự chọn design pattern khi DESIGN.md không rõ; Dev không tự đoán endpoint khi API Contract chưa lock
+- BA không tự sinh AC khi PM chưa xác nhận; Tech Lead không tự chọn design pattern khi Design-Technical.md không rõ; Dev không tự đoán endpoint khi API Contract chưa lock
 
 ## 2. No Content Invention or Hallucination
 
@@ -37,10 +37,10 @@ You MUST ALWAYS prioritize accuracy, truthfulness, and reliability in all output
 | Persona | Cụ thể |
 |---|---|
 | **BA** | Không tự viết AC cho REQ mơ hồ — đưa vào Q&A / Ambiguities |
-| **Tech Lead Design** | Không tự chọn library ngoài `stack-constraints.md` — hỏi trước |
-| **Tech Lead Tasks** | Không tự estimate task khi DESIGN không đủ context — hỏi lại Tech Lead Design |
+| **Tech Lead** | Không tự chọn library ngoài `stack-constraints.md` — hỏi trước |
+| **Tech Lead Tasks** | Không tự estimate task khi DESIGN không đủ context — hỏi lại Tech Lead |
 | **PM** | Không tự set deadline khi chưa có input capacity từ team — hỏi Dev/QC estimate trước |
-| **Backend Dev** | Không tự đoán entity fields khi ERD không đủ — hỏi Tech Lead Design |
+| **Backend Dev** | Không tự đoán entity fields khi ERD không đủ — hỏi Tech Lead |
 | **Frontend Dev** | Không tự đoán endpoint / response shape — đợi API Contract lock từ BE task |
 | **Mobile Dev** | Tương tự Frontend Dev — không tự đoán API |
 | **QC** | Không tự đoán business logic khi AC status = TBD — flag lại cho BA/PM |

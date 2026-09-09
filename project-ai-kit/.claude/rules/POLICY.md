@@ -143,7 +143,7 @@ Xem thêm: `SECURITY.md` (danh sách file cụ thể) + `security-rules.md` (bes
 **MUST:**
 
 - Chỉ bàn giao qua **kênh được thỏa thuận** với client (repo client, file server được duyệt)
-- Xóa secret / config nội bộ khỏi bản bàn giao (SPEC.md / DESIGN.md / PLAN.md sanitize trước khi share ra ngoài)
+- Xóa secret / config nội bộ khỏi bản bàn giao (SPEC.md / Design-Technical.md / PLAN.md sanitize trước khi share ra ngoài)
 - Deliverable (SRS, source, doc) chỉ gửi đúng người có thẩm quyền phía client
 
 **MUST NOT:**

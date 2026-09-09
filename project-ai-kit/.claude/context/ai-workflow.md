@@ -243,7 +243,7 @@ figma/
 .claude/agents/
 ├── init-agent.md             ← Kit Setup Assistant: điền AGENTS.md (chạy 1 lần)
 ├── ba-agent.md                ← Business Analyst: SPEC.md
-├── techlead-design-agent.md   ← Tech Lead Design: DESIGN.md per repo
+├── techlead-design-agent.md   ← Tech Lead: Design-Technical.md per repo
 ├── techlead-tasks-agent.md    ← Tech Lead Tasks: task-x-y.md
 ├── backend-agent.md           ← Backend Developer (repo vai trò `backend`)
 ├── frontend-agent.md          ← Frontend Developer (repo vai trò `frontend`)
@@ -410,7 +410,7 @@ Requirement
 ba-agent  →  SPEC.md
 ↓
 [song song]
-  techlead-design-agent  →  DESIGN.md per repo
+  techlead-design-agent  →  Design-Technical.md per repo
   qc-agent               →  test-cases/tc_*.md
   designer-agent         →  Figma frames + URL vào SPEC.md ## Screens
 ↓

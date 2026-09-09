@@ -25,7 +25,7 @@ Nếu feature có N business flows (VD Application / Scout / Contract / Admin / 
 - Bảng 2 cột: `Technology | Mô tả mục đích sử dụng`
 - Liệt kê 8-10 tech: Framework/SDK/Service/Database/Cache/Storage/Auth
 - Format: header row 32px xanh, data row 60px alternating white/BGL
-- Ghi chú cuối: "Tech Lead sẽ chốt lại trong DESIGN.md"
+- Ghi chú cuối: "Tech Lead sẽ chốt lại trong Design-Technical.md"
 
 **Phần C — Sitemap WBS Tree** (dưới Flow, y=560+):
 - 4 levels: Feature → Actor → Hành động verb-first → Screen/Popup

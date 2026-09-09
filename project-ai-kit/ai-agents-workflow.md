@@ -41,7 +41,7 @@
 |---|---|
 | Bước 1 = đọc context + skill trước khi hành động | Mọi agent |
 | Chỉ tạo/sửa `.md` (trừ Dev) | BA, PM, Tech Lead, QC, QA, Designer, QC-Auto |
-| `tilth_deps` blast radius BẮT BUỘC trước khi đổi public interface | Tech Lead Design, Tech Lead Tasks, Backend, Frontend, Mobile |
+| `tilth_deps` blast radius BẮT BUỘC trước khi đổi public interface | Tech Lead, Tech Lead Tasks, Backend, Frontend, Mobile |
 | Không tự đoán khi thiếu context — phải hỏi user | Mọi agent |
 | Handover message = natural language + slash command song song | Mọi agent |
 | Không commit / push khi user không yêu cầu rõ ràng | Mọi agent (đặc biệt Dev) |
@@ -89,14 +89,14 @@ flowchart TD
     G -- Không --> H[Hỏi user - KHÔNG tự đoán]
     H --> F
     G -- Đủ --> I["Viết SPEC.md:<br/>Mô tả nghiệp vụ · Actors ·<br/>Happy/Alt/Edge · AC ·<br/>Out of Scope · Screens table<br/>(Code+Screen+Actor+App+Type+Figma Link)"]
-    I --> J[Bàn giao SONG SONG:<br/>Tech Lead Design 2a +<br/>Designer 2c +<br/>QC 2b]
+    I --> J[Bàn giao SONG SONG:<br/>Tech Lead 2a +<br/>Designer 2c +<br/>QC 2b]
 ```
 
 **❌ Không:** đưa giải pháp kỹ thuật · sửa source code · skip Bước 1.5 scan SPEC cũ.
 
 ---
 
-### 3.2 `techlead-design-agent` — Tech Lead Design
+### 3.2 `techlead-design-agent` — Tech Lead
 
 ```mermaid
 flowchart TD
@@ -110,7 +110,7 @@ flowchart TD
     G --> H{SPEC mơ hồ?}
     H -- Có --> I[Hỏi user - KHÔNG tự đoán]
     I --> H
-    H -- Không --> J[Viết DESIGN.md per repo — 7 sections:<br/>1 Tổng quan · 2 Database Changes ·<br/>3 API Definition Contract Lock ·<br/>4 Service Layer · 5 Interface cross-repo ·<br/>6 Luồng xử lý · 7 Non-Regression Risks]
+    H -- Không --> J[Viết Design-Technical.md per repo — 7 sections:<br/>1 Tổng quan · 2 Database Changes ·<br/>3 API Definition Contract Lock ·<br/>4 Service Layer · 5 Interface cross-repo ·<br/>6 Luồng xử lý · 7 Non-Regression Risks]
     J --> K[Bàn giao Tech Lead Tasks<br/>sau khi Designer có Figma URL]
 ```
 
@@ -167,7 +167,7 @@ flowchart TD
     H --> I["Update SPEC.md ## Screens<br/>điền cột Figma Link"]
     I --> J{Phát hiện gap?}
     J -- Có --> K["Append [Design] notes<br/>vào SPEC ## Open Questions"]
-    J -- Không --> L[Bàn giao Tech Lead Tasks<br/>chờ DESIGN.md xong<br/>FE/Mobile đọc Figma URL từ task]
+    J -- Không --> L[Bàn giao Tech Lead Tasks<br/>chờ Design-Technical.md xong<br/>FE/Mobile đọc Figma URL từ task]
     K --> L
 ```
 
@@ -179,7 +179,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A["/create-tasks &lt;feature/&gt;"] --> B["Đọc tilth_files */DESIGN.md +<br/>doc-structure.md +<br/>skill task-decomposition +<br/>SPEC ## Screens (Code + Figma URL)"]
+    A["/create-tasks &lt;feature/&gt;"] --> B["Đọc tilth_files */Design-Technical.md +<br/>doc-structure.md +<br/>skill task-decomposition +<br/>SPEC ## Screens (Code + Figma URL)"]
     B --> C{Cần estimate complexity?}
     C -- Có --> D[get_metadata + get_screenshot]
     C -- Không --> E[tilth_search + tilth_read +<br/>tilth_deps blast radius]
@@ -345,7 +345,7 @@ flowchart TD
 | # | Điểm cần check | Cách verify |
 |---|---|---|
 | 1 | BA có scan SPEC cũ trước khi tạo mới không? | `ba-agent.md` Bước 1.5 phải có `business-flow-index.md` + outline SPEC + hỏi user related feature |
-| 2 | Tech Lead có `tilth_deps` blast radius không? | DESIGN.md ## 7 Non-Regression Risks phải có nội dung thật, không placeholder |
+| 2 | Tech Lead có `tilth_deps` blast radius không? | Design-Technical.md ## 7 Non-Regression Risks phải có nội dung thật, không placeholder |
 | 3 | Task có Unit Test không? | Mỗi task-x-y.md phải có section "Unit Tests (BẮT BUỘC)" với coverage target |
 | 4 | FE có tự đoán endpoint không? | task-3-x.md ## API Contract phải copy từ BE task-2-X, không tự viết |
 | 5 | Designer có vẽ wireframe hay không? | Verify: mỗi frame Figma phải dùng component instance, không rectangle + text |

@@ -49,6 +49,24 @@ Không trùng nhau, không thay thế nhau. qc-agent tạo bộ TC để qa-agen
 - FULL RBT **bắt buộc tuần tự 6 bước**, không gộp, không bỏ checkpoint Q&A
 - Output tiếng **Việt**, format Markdown
 
+## Nguồn đầu vào bắt buộc (Input Sources — do BA + Designer cung cấp)
+
+Trước khi sinh TC, agent PHẢI có đủ 2 nhóm input sau. Thiếu bất kỳ item nào → **dừng, hỏi user** trước khi tiếp tục:
+
+### 1. BA-Agent output (Logic + Prototype)
+- **SPEC.md** — Actors, Preconditions, Happy Path, Alternative Flows, AC, Out of Scope, `## Screens`
+- **Figma Frame 3** — Screens + Items + **ERROR SCENARIOS** (nguồn chính cho negative TC)
+- **HTML Prototype** — mở để test manual UX, verify happy path đúng ý BA trước khi sinh TC
+
+### 2. Designer-Agent output — **Figma URL final UI/UX** (Giao diện chính)
+- SPEC.md `## Screens` cột **Figma Link** (high-fi mockup)
+- Đọc qua Figma MCP để sinh TC chi tiết về states (empty/error/loading), layout, labels, micro-interactions
+
+**Check bắt buộc trước khi sinh TC:**
+- [ ] SPEC.md `## BA Deliverables` tồn tại
+- [ ] SPEC.md `## Screens` cột Figma Link đã điền
+- [ ] HTML Prototype tồn tại → chạy `open <prototype/index.html>` để verify
+
 ## Output path (BMAD)
 
 | Loại artifact | Đường dẫn |
@@ -95,7 +113,6 @@ Agent tự chọn mode dựa trên scope + complexity. Pipeline mặc định l�
 **⚠️ Đọc `## BA Deliverables` ĐẦU TIÊN** (ngay sau `## Mô tả nghiệp vụ` trong SPEC.md) — entry point BA cung cấp. Extract:
 - Figma Frame 3 (Screens + Items + ERROR SCENARIOS) — nguồn chính cho negative test cases (mỗi screen đã có bảng ERROR SCENARIOS liệt kê trigger + hiển thị + message)
 - HTML Prototype path — chạy `open <prototype/index.html>` để test manual UX trước khi sinh TC, verify happy path đúng ý BA
-- MkDocs URL — check SPEC render OK để reference trong bug report
 
 Nếu section `## BA Deliverables` không tồn tại → SPEC.md bị BA làm thiếu, dừng và báo user.
 

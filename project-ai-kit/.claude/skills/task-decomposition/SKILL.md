@@ -1,13 +1,13 @@
 ---
 name: task-decomposition
-description: Methodology phân rã DESIGN.md thành task files atomic — INVEST criteria, dependency detection, parallelism rules, estimation heuristics cho NestJS/React/Flutter. Dùng khi techlead-tasks-agent cần quyết định cắt task ở đâu và estimate bao nhiêu giờ.
+description: Methodology phân rã Design-Technical.md thành task files atomic — INVEST criteria, dependency detection, parallelism rules, estimation heuristics cho NestJS/React/Flutter. Dùng khi techlead-tasks-agent cần quyết định cắt task ở đâu và estimate bao nhiêu giờ.
 metadata:
   tags: task-decomposition, agile, story-splitting, estimation
 ---
 
 # Task Decomposition
 
-> Áp dụng cho: `techlead-tasks-agent` khi phân rã DESIGN.md → task files
+> Áp dụng cho: `techlead-tasks-agent` khi phân rã Design-Technical.md → task files
 
 ---
 

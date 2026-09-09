@@ -3,8 +3,8 @@ export const meta = {
   description: 'BMAD Planning phase — BA → Design (Tech Lead/QC/Designer song song) → Tech Lead Tasks. Dừng lại chờ user duyệt trước khi chạy bmad-build-phase. Không bao gồm PM.',
   phases: [
     { title: 'BA', detail: 'Phân tích yêu cầu, tạo SPEC.md' },
-    { title: 'Design', detail: 'Tech Lead Design + QC manual TC + Designer Figma — chạy song song' },
-    { title: 'Tasks', detail: 'Phân rã DESIGN.md thành task files' },
+    { title: 'Design', detail: 'Tech Lead + QC manual TC + Designer Figma — chạy song song' },
+    { title: 'Tasks', detail: 'Phân rã Design-Technical.md thành task files' },
   ],
 }
 
@@ -23,7 +23,7 @@ log('BA xong: SPEC.md đã tạo')
 phase('Design')
 const [design, testcases, ui] = await parallel([
   () => agent(
-    `Đọc .claude/agents/techlead-design-agent.md rồi đóng vai Tech Lead Design, tạo DESIGN.md per repo từ SPEC.md của feature "${args.feature}"`,
+    `Đọc .claude/agents/techlead-design-agent.md rồi đóng vai Tech Lead, tạo Design-Technical.md per repo từ SPEC.md của feature "${args.feature}"`,
     { agentType: 'techlead-design-agent', label: 'techlead-design-agent', phase: 'Design' }
   ),
   () => agent(
@@ -35,11 +35,11 @@ const [design, testcases, ui] = await parallel([
     { agentType: 'designer-agent', label: 'designer-agent', phase: 'Design' }
   ),
 ])
-log('Design phase xong: DESIGN.md (per repo) + test cases + Figma screens')
+log('Design phase xong: Design-Technical.md (per repo) + test cases + Figma screens')
 
 phase('Tasks')
 const tasks = await agent(
-  `Đọc .claude/agents/techlead-tasks-agent.md rồi đóng vai Tech Lead Tasks, phân rã DESIGN.md thành task files cho feature "${args.feature}"`,
+  `Đọc .claude/agents/techlead-tasks-agent.md rồi đóng vai Tech Lead Tasks, phân rã Design-Technical.md thành task files cho feature "${args.feature}"`,
   { agentType: 'techlead-tasks-agent', label: 'techlead-tasks-agent' }
 )
 log('Tasks xong: task files đã tạo')

@@ -90,16 +90,16 @@ Màu sắc và ý nghĩa KHÔNG thay đổi dù dùng FigJam hay Design:
 
 ## Post-Delivery requirement — Update SPEC.md ## BA Deliverables (BẮT BUỘC — entry point cho downstream)
 
-> **Nguyên tắc:** SPEC.md là **single source of truth** cho Tech Lead / Designer / QC downstream. Toàn bộ 6 outputs của BA PHẢI được liệt kê trong SPEC.md để downstream agents đọc SPEC là có đủ context — không phải tìm kiếm scattered files.
+> **Nguyên tắc:** SPEC.md là **single source of truth** cho Tech Lead / Designer / QC downstream. Toàn bộ 5 outputs của BA PHẢI được liệt kê trong SPEC.md để downstream agents đọc SPEC là có đủ context — không phải tìm kiếm scattered files.
 
-Sau khi hoàn thành 6 outputs, BA agent PHẢI edit `SPEC.md` thêm section **`## BA Deliverables`** **ngay sau section `## Mô tả nghiệp vụ`** (trước `## Actors & Preconditions`). MkDocs (Output 5) sẽ render section này thành link clickable, stakeholder + downstream agents click từ browser mở thẳng deliverable.
+Sau khi hoàn thành 5 outputs, BA agent PHẢI edit `SPEC.md` thêm section **`## BA Deliverables`** **ngay sau section `## Mô tả nghiệp vụ`** (trước `## Actors & Preconditions`). Section này chứa link clickable, stakeholder + downstream agents click từ browser mở thẳng deliverable.
 
-**Format bắt buộc (đủ 6 outputs, không thiếu output nào):**
+**Format bắt buộc (đủ 5 outputs, không thiếu output nào):**
 
 ```markdown
 ## BA Deliverables
 
-> Toàn bộ output của BA cho feature này. Đây là entry point cho Tech Lead Design / Designer / QC downstream — mọi agent PHẢI đọc section này trước khi bắt đầu.
+> Toàn bộ output của BA cho feature này. Đây là entry point cho Tech Lead / Designer / QC downstream — mọi agent PHẢI đọc section này trước khi bắt đầu.
 
 ### Docs
 
@@ -118,16 +118,15 @@ Sau khi hoàn thành 6 outputs, BA agent PHẢI edit `SPEC.md` thêm section **`
 **Figma file:** [<Tên file>](<URL Figma file gốc>)
 **Page:** `<Tên page user cung cấp>`
 
-### Interactive prototype + Documentation site
+### Interactive prototype
 
 | # | Output | Path / URL | Cách chạy |
 |---|---|---|---|
 | 4 | **HTML Prototype** | `<DOCS_ROOT>/features/<feature>/prototype/index.html` | `open <DOCS_ROOT>/features/<feature>/prototype/index.html` — standalone, không cần build |
-| 5 | **MkDocs Site** | `http://127.0.0.1:8000` (Nav → Features → <feature> → SPEC) | `cd <PROJECT_ROOT> && mkdocs serve` (auto-refresh khi save SPEC) |
 
 ### Downstream instructions
 
-- **Tech Lead Design agent** — dùng `## Screens` (list) + `## Screen Details` (per-screen data) + Figma Frame 3 (Items) để thiết kế DB schema, API contract, service layer
+- **Tech Lead agent** — dùng `## Screens` (list) + `## Screen Details` (per-screen data) + Figma Frame 3 (Items) để thiết kế DB schema, API contract, service layer
 - **Designer agent** — dùng Figma Frame 1/2/3 làm reference low-fi → tạo high-fidelity screens, điền cột "Figma Link" trong `## Screens`
 - **QC agent** — dùng `## Acceptance Criteria` + `## Alternative Flows & Edge Cases` + HTML Prototype để test manual + Figma Frame 3 để verify Error Scenarios
 ```
@@ -139,7 +138,7 @@ https://www.figma.com/design/<FILE_KEY>/<FILE_NAME>?node-id=<NODE_ID_URL_ENCODED
 - `FILE_KEY`, `FILE_NAME` lấy từ URL gốc user cung cấp
 - `NODE_ID` = `node.id` (dạng `123:456`), encode thành `123-456` trong URL
 
-**Nếu skip Output nào** (VD Figma MCP unavailable → skip Output 1-3, hoặc mkdocs chưa cài → skip Output 5):
-- Vẫn giữ section `## BA Deliverables` với đủ 6 rows
+**Nếu skip Output nào** (VD Figma MCP unavailable → skip Output 1-3):
+- Vẫn giữ section `## BA Deliverables` với đủ 5 rows
 - Row bị skip: cột `Path / URL` ghi `❌ Skipped — <lý do>`, cột `Note` ghi hướng dẫn user hoàn thành
 - KHÔNG được xóa row (downstream cần biết output nào có/không để plan work)

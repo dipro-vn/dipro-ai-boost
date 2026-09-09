@@ -45,10 +45,10 @@ src/
 ├── SPEC.md                  ← BA
 ├── PLAN.md                  ← PM
 ├── <backend-repo>/
-│   ├── DESIGN.md            ← Tech Lead
+│   ├── Design-Technical.md            ← Tech Lead
 │   └── tasks/task-X-Y.md
 ├── <web-repo-a>/            ← nếu repo này liên quan
-│   ├── DESIGN.md
+│   ├── Design-Technical.md
 │   └── tasks/task-X-Y.md
 ├── <web-repo-b>/            ← nếu repo này liên quan
 └── <mobile-repo>/           ← nếu Mobile liên quan

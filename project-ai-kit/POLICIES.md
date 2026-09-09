@@ -89,7 +89,7 @@
 Mỗi persona có checklist câu hỏi riêng trước khi hành động:
 
 - **BA**: checklist câu hỏi trong `.claude/agents/ba-agent.md` Bước 2
-- **Tech Lead Design**: Hỏi nếu SPEC không đủ rõ về AC, data model, integration
+- **Tech Lead**: Hỏi nếu SPEC không đủ rõ về AC, data model, integration
 - **Tech Lead Tasks**: Hỏi nếu DESIGN còn mơ hồ về scope/file
 - **PM**: checklist câu hỏi trong `.claude/agents/pm-agent.md` Bước 2 (deadline, dev available, dependency, deploy, QA)
 - **Dev**: Hỏi nếu task không đủ context để implement trong 4–8h
@@ -100,7 +100,7 @@ Mỗi persona có checklist câu hỏi riêng trước khi hành động:
 
 ## 4.5. AI Self-Feedback — BẮT BUỘC sau khi hoàn thành output (áp dụng MỌI agent)
 
-> Sau khi hoàn thành output (SPEC.md, DESIGN.md, task files, source code, Figma, test cases...), agent **KHÔNG được báo user "đã xong" mà không tự review lại**.
+> Sau khi hoàn thành output (SPEC.md, Design-Technical.md, task files, source code, Figma, test cases...), agent **KHÔNG được báo user "đã xong" mà không tự review lại**.
 
 ### Quy trình bắt buộc 3 bước
 
@@ -155,7 +155,7 @@ hoặc
 | Persona | Trọng tâm self-feedback |
 |---|---|
 | **BA** | Flow đủ bước? Non-happy đủ? Screens có Figma URL? Figma frames không chồng đè? |
-| **Tech Lead Design** | DB schema đủ column? API contract đủ endpoint? Có xung đột giữa DESIGN các repo? |
+| **Tech Lead** | DB schema đủ column? API contract đủ endpoint? Có xung đột giữa DESIGN các repo? |
 | **Tech Lead Tasks** | Có task nào >8h chưa cắt nhỏ? Task dependencies đúng? |
 | **Designer** | Đủ screens theo SPEC ## Screens? Text annotation kèm đủ? |
 | **Backend/Frontend/Mobile Dev** | Edge case đã handle? Test đã pass? Regression không? Memory Update Gate đã update? |

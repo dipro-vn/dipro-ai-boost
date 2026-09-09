@@ -37,7 +37,7 @@ tilth_files(pattern: "**/SPEC.md")   ← tìm các SPEC liên quan
 Với mỗi feedback item → xác định:
 - Ảnh hưởng section nào trong SPEC? (Happy Path / AC / Screens / Screen Details)
 - Có cần thêm/sửa/xóa screen không?
-- Cần thông báo Tech Lead Design (DESIGN.md bị ảnh hưởng)?
+- Cần thông báo Tech Lead (Design-Technical.md bị ảnh hưởng)?
 
 Trình user bảng impact trước khi sửa:
 

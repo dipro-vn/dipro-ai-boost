@@ -303,7 +303,7 @@ for (let i = 0; i < techList.length; i++) {
 // Ghi chú
 r(460, 60, BLUELT, TX, TY+10, frame, 6, BLUE);
 t("💡 GHI CHÚ", 10, true, BLUE, TX+12, TY+18, frame);
-t("Danh sách công nghệ đề xuất — Tech Lead sẽ chốt lại trong DESIGN.md.", 9, false, TH, TX+12, TY+34, frame, 436);
+t("Danh sách công nghệ đề xuất — Tech Lead sẽ chốt lại trong Design-Technical.md.", 9, false, TH, TX+12, TY+34, frame, 436);
 t("BA chỉ liệt kê để user hình dung stack tổng quan.", 9, false, TH, TX+12, TY+48, frame, 436);
 ```
 

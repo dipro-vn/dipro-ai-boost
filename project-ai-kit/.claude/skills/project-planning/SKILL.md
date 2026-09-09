@@ -138,7 +138,7 @@ Trước khi estimate deadline, xác định feature cần pass gate nào:
 | Gate | Tiêu chí | Blocker nếu fail |
 |---|---|---|
 | **G1** — Requirements | SPEC.md approved, AC rõ ràng | Không được bắt đầu Design |
-| **G2** — Design | DESIGN.md approved, Contract Lock signed | Không được bắt đầu Phase 3 |
+| **G2** — Design | Design-Technical.md approved, Contract Lock signed | Không được bắt đầu Phase 3 |
 | **G3** — Code Complete | Tất cả tasks "Request Review", CI pass | Không được deploy STG |
 | **G4** — STG Testing | QC sign-off, no Critical/Major bug open | Không được deploy PROD |
 | **G5** — Release | PM + Stakeholder approve | Không release |

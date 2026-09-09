@@ -9,7 +9,7 @@ features/<feature-name>/
 ├── SPEC.md              ← BA — nghiệp vụ, actors, flow, AC, Screens
 ├── PLAN.md               ← PM — kế hoạch, timeline, dependencies
 └── <repo>/
-    ├── DESIGN.md         ← Tech Lead — thiết kế kỹ thuật per repo
+    ├── Design-Technical.md         ← Tech Lead — thiết kế kỹ thuật per repo
     └── tasks/task-*.md   ← Task chi tiết cho Dev implement
 ```
 
