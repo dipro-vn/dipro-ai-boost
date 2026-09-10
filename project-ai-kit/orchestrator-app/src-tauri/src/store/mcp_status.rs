@@ -176,15 +176,42 @@ mod tests {
     const REAL_OUTPUT: &str = "Checking MCP server health…\n\n\
 claude.ai Zapier: https://mcp.zapier.com/api/v1/connect - ! Needs authentication\n\
 claude.ai Slack: https://mcp.slack.com/mcp - ✔ Connected\n\
+claude.ai Figma: https://mcp.figma.com/mcp - ✔ Connected\n\
 figma-mcp-go: npx -y @vkhanhqui/figma-mcp-go@latest - ✔ Connected\n\
 backlog: npx -y backlog-mcp-server - ✔ Connected\n";
+
+    /// The gate that decides whether `ba-agent` may run reads exactly these
+    /// two parsed fields. Asserting the role here closes the loop from the
+    /// CLI's own text to the decision, without spawning a process — and
+    /// pins that a connected Figma Desktop server is still not enough.
+    #[test]
+    fn figma_role_of_the_parsed_entries_separates_write_from_read_only() {
+        use crate::store::mcp_config::{figma_role, FigmaRole};
+
+        let entries = parse_mcp_list(REAL_OUTPUT);
+        let role = |name: &str| {
+            let e = entries.iter().find(|e| e.name == name).unwrap();
+            figma_role(&e.name, &e.detail)
+        };
+
+        assert_eq!(role("claude.ai Figma"), FigmaRole::WriteCapable);
+        assert_eq!(role("figma-mcp-go"), FigmaRole::ReadOnly);
+        assert_eq!(role("claude.ai Slack"), FigmaRole::NotFigma);
+
+        let desktop = parse_mcp_list("figma: http://127.0.0.1:3845/mcp - ✔ Connected\n");
+        assert_eq!(
+            figma_role(&desktop[0].name, &desktop[0].detail),
+            FigmaRole::ReadOnly,
+            "Figma Desktop connected vẫn không vẽ được canvas"
+        );
+    }
 
     #[test]
     fn parses_real_cli_output_including_the_health_banner() {
         let entries = parse_mcp_list(REAL_OUTPUT);
         assert_eq!(
             entries.len(),
-            4,
+            5,
             "the banner and blank line must be skipped"
         );
 
@@ -196,8 +223,11 @@ backlog: npx -y backlog-mcp-server - ✔ Connected\n";
         assert_eq!(entries[1].detail, "https://mcp.slack.com/mcp");
         assert_eq!(entries[1].status, McpConnectionStatus::Connected);
 
-        assert_eq!(entries[2].detail, "npx -y @vkhanhqui/figma-mcp-go@latest");
-        assert_eq!(entries[3].name, "backlog");
+        assert_eq!(entries[2].name, "claude.ai Figma");
+        assert_eq!(entries[2].detail, "https://mcp.figma.com/mcp");
+
+        assert_eq!(entries[3].detail, "npx -y @vkhanhqui/figma-mcp-go@latest");
+        assert_eq!(entries[4].name, "backlog");
     }
 
     /// A detail containing `" - "` must not be mangled — that's why the

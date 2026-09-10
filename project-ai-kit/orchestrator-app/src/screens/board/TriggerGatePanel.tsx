@@ -175,7 +175,7 @@ export function TriggerGatePanel({ feature, gateState }: TriggerGatePanelProps) 
     return (
       <div className="flex flex-col gap-3 rounded-lg border border-border p-3">
         <p className="text-sm text-muted-foreground">
-          Chờ BA Agent hoàn thành SPEC.md đầy đủ 7 section trước khi gate này mở.
+          Chờ BA Agent hoàn thành SPEC.md đầy đủ các section bắt buộc trước khi gate này mở.
         </p>
         {missingSections.length > 0 && (
           <div className="flex flex-col gap-1">
@@ -218,7 +218,7 @@ export function TriggerGatePanel({ feature, gateState }: TriggerGatePanelProps) 
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant="secondary">Chờ duyệt</Badge>
-        <Badge variant="secondary">Đủ 7 section</Badge>
+        <Badge variant="secondary">Đủ section</Badge>
         {specPath && (
           <Button variant="outline" size="sm" onClick={() => setShowCompare(true)}>
             So sánh với lần trước

@@ -18,9 +18,18 @@ export interface AgentDraft {
   sourceFolder: string;
   context: string;
   figmaUrl: string;
+  /** BA only — `TARGET_PLATFORM` (ba-agent.md Bước 2b câu 0). Decides the
+   * viewport of Figma Output 3 and the `## Responsive Requirements` table,
+   * and the kit forbids the agent guessing it. */
+  targetPlatform: string;
 }
 
-export const emptyAgentDraft: AgentDraft = { sourceFolder: "", context: "", figmaUrl: "" };
+export const emptyAgentDraft: AgentDraft = {
+  sourceFolder: "",
+  context: "",
+  figmaUrl: "",
+  targetPlatform: "",
+};
 
 export function agentDraftKey(feature: string, slot: string): string {
   return `${feature}:${slot}`;

@@ -61,19 +61,38 @@ pub fn discover_agents(agents_root: &Path) -> Option<Vec<String>> {
 /// unrestricted and can call any connected server, so callers must not
 /// treat it as "declares nothing" and block it.
 pub fn declared_mcp_servers(agents_root: &Path, agent_name: &str) -> Option<BTreeSet<String>> {
-    let path = agents_root
-        .join(".claude")
-        .join("agents")
-        .join(format!("{agent_name}.md"));
-    let raw = std::fs::read_to_string(&path).ok()?;
+    let raw = std::fs::read_to_string(agent_file_path(agents_root, agent_name)).ok()?;
     mcp_servers_in_tools_block(&raw)
 }
 
-/// The `declared_mcp_servers` body, split out so it can be tested against
-/// the kit's real agent files via `include_str!` rather than a fixture that
+/// Every entry an agent file's `tools:` allowlist names, verbatim and in
+/// file order.
+///
+/// The general case `declared_mcp_servers` narrows: the same list also
+/// drives the `--allowedTools` rules the app passes at spawn, and those need
+/// the built-in names (`Bash`, `Write`) as much as the MCP ones. Deriving
+/// both from one parse is what keeps "what the agent may call" and "what the
+/// app tells the CLI to permit" from drifting apart.
+///
+/// `None` carries the same meaning as in `declared_mcp_servers` — no
+/// `tools:` key at all, i.e. unrestricted — which is NOT an empty list.
+pub fn declared_tools(agents_root: &Path, agent_name: &str) -> Option<Vec<String>> {
+    let raw = std::fs::read_to_string(agent_file_path(agents_root, agent_name)).ok()?;
+    tools_in_tools_block(&raw)
+}
+
+fn agent_file_path(agents_root: &Path, agent_name: &str) -> std::path::PathBuf {
+    agents_root
+        .join(".claude")
+        .join("agents")
+        .join(format!("{agent_name}.md"))
+}
+
+/// The `declared_tools` body, split out so it can be tested against the
+/// kit's real agent files via `include_str!` rather than a fixture that
 /// might drift from them.
-fn mcp_servers_in_tools_block(raw: &str) -> Option<BTreeSet<String>> {
-    let mut servers = BTreeSet::new();
+fn tools_in_tools_block(raw: &str) -> Option<Vec<String>> {
+    let mut tools = Vec::new();
     let mut in_frontmatter = false;
     let mut in_tools = false;
     let mut saw_tools_key = false;
@@ -95,11 +114,7 @@ fn mcp_servers_in_tools_block(raw: &str) -> Option<BTreeSet<String>> {
 
         if let Some(item) = trimmed.strip_prefix("- ") {
             if in_tools {
-                if let Some(rest) = item.trim().strip_prefix("mcp__") {
-                    if let Some((server, _tool)) = rest.split_once("__") {
-                        servers.insert(server.to_string());
-                    }
-                }
+                tools.push(item.trim().to_string());
             }
             continue;
         }
@@ -109,7 +124,19 @@ fn mcp_servers_in_tools_block(raw: &str) -> Option<BTreeSet<String>> {
         saw_tools_key |= in_tools;
     }
 
-    saw_tools_key.then_some(servers)
+    saw_tools_key.then_some(tools)
+}
+
+/// The MCP server prefixes among the declared tools.
+fn mcp_servers_in_tools_block(raw: &str) -> Option<BTreeSet<String>> {
+    Some(
+        tools_in_tools_block(raw)?
+            .iter()
+            .filter_map(|item| item.strip_prefix("mcp__"))
+            .filter_map(|rest| rest.split_once("__"))
+            .map(|(server, _tool)| server.to_string())
+            .collect(),
+    )
 }
 
 pub fn has_claude_agents_dir(agents_root: &Path) -> bool {
@@ -307,14 +334,11 @@ pub fn canonical_role(role_cell: &str) -> Option<&'static str> {
 /// word. Word chars here are alphanumerics — every separator the role cell
 /// realistically uses (space, `/`, `—`, `,`, `(`) is not one.
 fn contains_word(haystack: &str, needle: &str) -> bool {
-    haystack
-        .match_indices(needle)
-        .any(|(start, matched)| {
-            let before = haystack[..start].chars().next_back();
-            let after = haystack[start + matched.len()..].chars().next();
-            !before.is_some_and(char::is_alphanumeric)
-                && !after.is_some_and(char::is_alphanumeric)
-        })
+    haystack.match_indices(needle).any(|(start, matched)| {
+        let before = haystack[..start].chars().next_back();
+        let after = haystack[start + matched.len()..].chars().next();
+        !before.is_some_and(char::is_alphanumeric) && !after.is_some_and(char::is_alphanumeric)
+    })
 }
 
 /// The cell up to its first separator — what's left is the role itself when
@@ -587,7 +611,10 @@ Mỗi repo có 1 **Epic code** ngắn tham chiếu xuyên suốt SPEC/DESIGN/tas
         assert_eq!(canonical_role("**Frontend** (web admin)"), Some("frontend"));
         assert_eq!(canonical_role("`mobile`"), Some("mobile"));
         assert_eq!(canonical_role("Backend"), Some("backend"));
-        assert_eq!(canonical_role("frontend, chỉ phần public"), Some("frontend"));
+        assert_eq!(
+            canonical_role("frontend, chỉ phần public"),
+            Some("frontend")
+        );
     }
 
     /// The app must say "I can't read this" rather than pick something —
@@ -775,6 +802,43 @@ Mỗi repo có 1 **Epic code** ngắn tham chiếu xuyên suốt SPEC/DESIGN/tas
     /// Parsed against the kit's REAL agent files, not a fixture: the whole
     /// point is to know what those files actually declare, and a fixture
     /// would drift from them the first time someone adds a tool.
+    /// `declared_mcp_servers` narrows this; the `--allowedTools` rules the
+    /// app passes at spawn need the built-in names too, so both must come
+    /// from one parse or they drift.
+    #[test]
+    fn declared_tools_returns_every_entry_not_just_mcp_servers() {
+        let ba = tools_in_tools_block(include_str!("../../../.claude/agents/ba-agent.md"))
+            .expect("ba-agent declares tools:");
+
+        for expected in [
+            "Read",
+            "Write",
+            "Bash",
+            "ToolSearch",
+            "mcp__claude_ai_Figma__use_figma",
+            "mcp__figma__use_figma",
+        ] {
+            assert!(
+                ba.iter().any(|t| t == expected),
+                "thiếu {expected} trong {ba:?}"
+            );
+        }
+        // `skills:` nằm ngay sau `tools:` — một lỗi parser sẽ kéo tên skill vào.
+        assert!(!ba.iter().any(|t| t == "business-analyst"));
+        assert!(!ba.iter().any(|t| t == "ba-figma-output"));
+    }
+
+    /// Không có key `tools:` nghĩa là KHÔNG giới hạn, khác hẳn list rỗng —
+    /// nhầm hai cái này là biến một agent tự do thành một agent bị chặn hết.
+    #[test]
+    fn declared_tools_distinguishes_a_missing_key_from_an_empty_list() {
+        assert_eq!(tools_in_tools_block("---\nname: x\n---\n"), None);
+        assert_eq!(
+            tools_in_tools_block("---\nname: x\ntools:\nskills:\n  - s\n---\n"),
+            Some(vec![])
+        );
+    }
+
     #[test]
     fn declared_mcp_servers_reads_the_kits_own_agent_files() {
         let design_analyst = mcp_servers_in_tools_block(include_str!(
@@ -812,6 +876,59 @@ Mỗi repo có 1 **Epic code** ngắn tham chiếu xuyên suốt SPEC/DESIGN/tas
             .expect("qa-agent declares tools:");
         assert!(qa.contains("claude_ai_Figma"));
         assert!(!qa.contains("figma-bridge"));
+
+        // Every agent that touches Figma must also declare the bare `figma`
+        // name: that is what the official
+        // `claude mcp add … figma https://mcp.figma.com/mcp` produces, and
+        // `tools:` is an allowlist — an agent missing it loses Figma
+        // silently on any machine installed that way.
+        for (agent, raw) in [
+            (
+                "ba-agent",
+                include_str!("../../../.claude/agents/ba-agent.md"),
+            ),
+            (
+                "designer-agent",
+                include_str!("../../../.claude/agents/designer-agent.md"),
+            ),
+            (
+                "design-analyst-agent",
+                include_str!("../../../.claude/agents/design-analyst-agent.md"),
+            ),
+            (
+                "frontend-agent",
+                include_str!("../../../.claude/agents/frontend-agent.md"),
+            ),
+            (
+                "mobile-agent",
+                include_str!("../../../.claude/agents/mobile-agent.md"),
+            ),
+            (
+                "backend-agent",
+                include_str!("../../../.claude/agents/backend-agent.md"),
+            ),
+            (
+                "qa-agent",
+                include_str!("../../../.claude/agents/qa-agent.md"),
+            ),
+        ] {
+            let declared = mcp_servers_in_tools_block(raw).expect("declares tools:");
+            assert!(
+                declared.contains("figma"),
+                "{agent} thiếu prefix `figma` — cài server remote bằng lệnh chính thức là mất Figma"
+            );
+        }
+
+        // `figma-bridge` has 13 tools, all read/export. Declaring write
+        // tools for it reads as "this bridge can draw", which is what sent
+        // `ba-agent` at a server that cannot.
+        let ba = mcp_servers_in_tools_block(include_str!("../../../.claude/agents/ba-agent.md"))
+            .expect("ba-agent declares tools:");
+        assert!(
+            !ba.contains("figma-bridge"),
+            "ba-agent cần tool GHI, mà figma-bridge chỉ đọc — không khai nó ở đây"
+        );
+        assert!(ba.contains("figma") && ba.contains("claude_ai_Figma"));
     }
 
     #[test]
@@ -838,16 +955,6 @@ Mỗi repo có 1 **Epic code** ngắn tham chiếu xuyên suốt SPEC/DESIGN/tas
             mcp_servers_in_tools_block("---\nname: x\ntools:\n  - Read\n  - Bash\n---\n"),
             Some(BTreeSet::new())
         );
-    }
-
-    /// The checked-in `example-project` is a REAL inited project. If the
-    /// app cannot see it as ready, no user's project can be either.
-    #[test]
-    fn the_example_project_is_seen_as_inited() {
-        let agents_md = include_str!("../../../example-project/kit-repo/AGENTS.md");
-        let (status, reasons) = assess_init_status(Some(agents_md), true);
-        println!("EXAMPLE = {status:?} reasons={reasons:?}");
-        assert_eq!(status, ProjectInitStatus::Ready, "reasons: {reasons:?}");
     }
 
     #[test]

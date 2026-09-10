@@ -13,7 +13,7 @@
 | # | Phase | Agent | Trigger | Song song với |
 |---|---|---|---|---|
 | 0 | Setup | `init-agent` | `/init-kit` (1 lần) | — |
-| 1 | Discovery | `ba-agent` | `/create-spec <feature>` | — |
+| 1 | Discovery | `ba-agent` | `/create-spec <feature>` | — (6 outputs — xem §3.1) |
 | 2a | Design | `techlead-design-agent` | `/create-design <SPEC.md>` | 2b, 2c |
 | 2b | Design | `qc-agent` (manual TC lần 1) | Pipeline: `/test/analyze-req` → `/test/plan-tcs` → `/test/gen-tcs` | 2a, 2c |
 | 2c | Design | `designer-agent` | `/create-ui-design <SPEC.md>` | 2a, 2b |
@@ -81,16 +81,26 @@ flowchart TD
     B --> C["tilth_files SPEC.md +<br/>đọc business-flow-index.md +<br/>outline ## Mô tả nghiệp vụ SPEC hiện có"]
     C --> D{Có SPEC liên quan?}
     D -- Có --> E[User chọn related SPEC<br/>→ đọc full]
-    D -- Không --> F[Hỏi 10 câu discovery:<br/>actor · problem · precondition ·<br/>happy path · edge case · AC ·<br/>related · mobile · real-time · integration]
+    D -- Không --> F[Hỏi 12 câu discovery:<br/>câu 0 platform · câu 0.5 Figma URL ·<br/>actor · problem · precondition ·<br/>happy path · edge case · AC ·<br/>related · mobile · real-time · integration]
     E --> F
     F --> G{Đủ thông tin?}
     G -- Không --> H[Hỏi user - KHÔNG tự đoán]
     H --> F
-    G -- Đủ --> I["Viết SPEC.md:<br/>Mô tả nghiệp vụ · Actors ·<br/>Happy/Alt/Edge · AC ·<br/>Out of Scope · Screens table<br/>(Code+Screen+Actor+App+Type+Figma Link)"]
-    I --> J[Bàn giao SONG SONG:<br/>Tech Lead Design 2a +<br/>Designer 2c +<br/>QC 2b]
+    G -- Đủ --> I["Output 0 — Viết SPEC.md 11 sections:<br/>Mô tả nghiệp vụ · BA Deliverables · Actors ·<br/>Flow Tổng Quan · Happy/Alt/Edge · AC ·<br/>Out of Scope · Screens table · Screen Details ·<br/>Responsive Requirements"]
+    I --> I2[Bước 4.5 UX Self-Review +<br/>Bước 4.6 Completeness Self-Check]
+    I2 --> K1["Output 1 — Figma: Flow Tổng Quan<br/>(Business Flow + Tech Table + Sitemap)"]
+    K1 --> K2["Output 2 — Figma: Screen Flow<br/>(N group khớp N business flow + Bảng Index)"]
+    K2 --> K3["Output 3 — Figma: Screens + Items<br/>(mockup + Bảng ITEMS + ERROR SCENARIOS)"]
+    K3 --> K4["Output 4 — prototype/index.html"]
+    K4 --> K5["Output 5 — mkdocs build"]
+    K5 --> L[Bước 5.5 Visual Recheck 5 tiêu chí/frame +<br/>Bước 5.6 AI Self-Feedback]
+    L --> M["Điền đủ 6 row vào SPEC.md<br/>## BA Deliverables<br/>(row skip ghi ❌ Skipped + lý do)"]
+    M --> J[Bàn giao SONG SONG:<br/>Tech Lead Design 2a +<br/>Designer 2c +<br/>QC 2b<br/>chỉ pass SPEC.md path]
 ```
 
-**❌ Không:** đưa giải pháp kỹ thuật · sửa source code · skip Bước 1.5 scan SPEC cũ.
+> Output 1 → 2 → 3 là **tuần tự, không parallel**: Output 1 quyết định N business flows, Output 2 và 3 phải khớp đúng N đó.
+
+**❌ Không:** đưa giải pháp kỹ thuật · sửa source code (trừ `prototype/index.html`) · skip Bước 1.5 scan SPEC cũ · **báo "xong" khi mới có SPEC.md** (SPEC.md là 1/6 output).
 
 ---
 

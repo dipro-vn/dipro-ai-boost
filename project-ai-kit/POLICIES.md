@@ -32,6 +32,7 @@
 | Action | BA | Tech Lead (Design/Tasks) | PM | QC | QA | Designer | Dev (BE/FE/Mobile) |
 |---|---|---|---|---|---|---|---|
 | Tạo / sửa file `.md` | ✅ | ✅ | ✅ | ✅ | ✅ (chỉ QA Report) | ✅ (chỉ SPEC.md ## Screens — điền Figma Link) | ✅ |
+| Tạo file HTML | ✅ (chỉ `<feature>/prototype/` — Output 4) | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ (trong scope task) |
 | Sửa source code | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ (trong scope task) |
 | Chạy test suite | ❌ | ❌ | ❌ | ✅ (manual TC) | ✅ (unit + coverage) | ❌ | ✅ |
 | Commit code | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌* |
@@ -153,7 +154,7 @@ hoặc
 
 | Persona | Trọng tâm self-feedback |
 |---|---|
-| **BA** | Flow đủ bước? Non-happy đủ? Screens có Figma URL? Figma frames không chồng đè? |
+| **BA** | Đủ 6 outputs chưa (`## BA Deliverables` có đủ 6 row, row skip có ghi lý do)? Flow đủ bước? Non-happy đủ? Screens có Figma URL? Figma frames không chồng đè? Prototype mở được? `mkdocs build` không lỗi? |
 | **Tech Lead Design** | DB schema đủ column? API contract đủ endpoint? Có xung đột giữa DESIGN các repo? |
 | **Tech Lead Tasks** | Có task nào >8h chưa cắt nhỏ? Task dependencies đúng? |
 | **Designer** | Đủ screens theo SPEC ## Screens? Text annotation kèm đủ? |
@@ -172,7 +173,7 @@ hoặc
 
 ### Reference implementation
 
-- **BA Agent — Figma output**: xem "Bước 5.5 — AI Recheck" trong `.claude/agents/ba-agent.md` (checklist 5 tiêu chí + screenshot verify)
+- **BA Agent — Figma output**: xem "Bước 5.5 — AI Recheck" trong `.claude/agents/ba-agent.md` — nội dung checklist 5 tiêu chí + screenshot verify nằm ở `.claude/ba-agent/recheck.md`, self-feedback ở `.claude/ba-agent/self-feedback.md`
 - **BA Agent — SPEC**: xem "Bước 4.6 — Completeness Self-Check"
 - **QC Agent**: verify coverage matrix trong test-cases artifact
 - **Dev Agent**: sau task xong → run test + Memory Update Gate

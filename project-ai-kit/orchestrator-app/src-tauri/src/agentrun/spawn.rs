@@ -5,6 +5,14 @@
 //! `acceptEdits` for write-scoped agents. Only the explicitly full profile
 //! uses `bypassPermissions`.
 //!
+//! `acceptEdits` alone is NOT enough, and that was a real bug: it
+//! auto-approves file edits and nothing else, so a write-scoped agent's
+//! `Bash` and MCP calls were all refused ("Claude requested permissions to
+//! use …, but you haven't granted it yet" — observed for `ba-agent`'s
+//! `mkdocs build` and `use_figma`, and earlier for `design-analyst`'s
+//! `mcp__figma-bridge__get_selection`). `--allowedTools`, built from the
+//! agent's own `tools:` allowlist, is what actually grants them.
+//!
 //! `claude --help` (v2.1.232) has no `--max-turns` flag — `AgentConfig`'s
 //! `max_turns` field cannot be passed to the CLI (see `ASSUMPTIONS-GAPS.md`
 //! A7). It is intentionally NOT used here.
@@ -54,9 +62,52 @@ fn model_flag(model: Model) -> &'static str {
 fn tools_flag(permission: PermissionProfile) -> &'static str {
     match permission {
         PermissionProfile::ReadOnly => "Read Grep Glob",
-        PermissionProfile::WriteScoped => "Read Grep Glob Write Edit Bash",
+        PermissionProfile::WriteScoped => "Read Grep Glob Write Edit Bash ToolSearch",
         PermissionProfile::Full => "default",
     }
+}
+
+/// Turns an agent file's `tools:` entries into `--allowedTools` rules.
+///
+/// Only two shapes survive, both passed through verbatim:
+/// `mcp__<server>__<tool>` (fully qualified, so the server segment is
+/// glob-free and Claude Code will not skip it) and a bare built-in name
+/// like `Bash`. Anything else — skill names such as `figma:figma-use`,
+/// malformed lines — is dropped.
+///
+/// It NEVER emits `*` or `mcp__*`: an unanchored allow glob is discarded by
+/// the CLI with a warning, so a rule like that would look like a grant and
+/// be none. Sorted and de-duplicated to keep the emitted argv deterministic.
+///
+/// A bare `Bash` here does allow every command for the five write-scoped
+/// agents that declare it. That is deliberate and unavoidable — `mkdocs
+/// build`, `npx playwright test` and `base64 -d` cannot be enumerated as
+/// prefixes — and is still strictly less than the `Full` profile those
+/// agents' peers already run under.
+pub fn allow_rules_from_declared_tools(declared: &[String]) -> Vec<String> {
+    let mut rules: Vec<String> = declared
+        .iter()
+        .map(|item| item.trim())
+        .filter(|item| {
+            let qualified_mcp = item
+                .strip_prefix("mcp__")
+                .and_then(|rest| rest.split_once("__"))
+                .is_some_and(|(server, tool)| {
+                    !server.is_empty() && !tool.is_empty() && !item.contains('*')
+                });
+            // `mcp__` is excluded here on purpose: `mcp__broken` is all
+            // legal identifier characters, so without this a malformed MCP
+            // entry would pass as a built-in tool name and be granted.
+            let bare_builtin = !item.starts_with("mcp__")
+                && item.chars().next().is_some_and(|c| c.is_ascii_alphabetic())
+                && item.chars().all(|c| c.is_ascii_alphanumeric() || c == '_');
+            qualified_mcp || bare_builtin
+        })
+        .map(str::to_string)
+        .collect();
+    rules.sort();
+    rules.dedup();
+    rules
 }
 
 fn permission_mode(permission: PermissionProfile) -> &'static str {
@@ -90,6 +141,17 @@ pub struct SpawnParams<'a> {
     /// still needs to read task files under `docsRoot` (A1: the roots can
     /// be three unrelated directories).
     pub add_dirs: &'a [PathBuf],
+    /// Permission allow rules, one per element, passed as `--allowedTools`.
+    ///
+    /// `--permission-mode acceptEdits` auto-approves file edits and nothing
+    /// else — a real `ba-agent` run had all 5 of its `Bash` calls and both
+    /// its Figma MCP calls refused with "Claude requested permissions to use
+    /// …, but you haven't granted it yet", because a headless spawn has no
+    /// TTY to answer the prompt. These rules are what turn that into an
+    /// approval. Computed by the caller from `agents_reader::declared_tools`
+    /// so this module stays I/O-free and its tests can build the list by
+    /// hand.
+    pub allowed_tools: &'a [String],
     /// The kit's `<agentsRoot>/.claude/settings.json`, passed as
     /// `--settings` when it exists.
     ///
@@ -145,6 +207,26 @@ pub fn build_command(params: &SpawnParams) -> Command {
         .arg(permission_mode(params.config.permission))
         .arg("--tools")
         .arg(tools_flag(params.config.permission));
+
+    // One argv element per rule, never a joined string: `--allowedTools` is
+    // variadic and the CLI's own example (`"Bash(git *) Edit"`) contains a
+    // rule with a space in it, so joining would silently corrupt the first
+    // such rule the kit ever declares. The `is_empty` guard matters too — a
+    // bare `--allowedTools` would swallow the flag that follows it.
+    if !params.allowed_tools.is_empty() {
+        cmd.arg("--allowedTools");
+        for rule in params.allowed_tools {
+            cmd.arg(rule);
+        }
+    }
+
+    // Deliberately NOT passing `--permission-prompts none`: with no host
+    // handler a prompt is already an automatic denial — the real BA run's
+    // `permission_denials` array proves it, since those calls were refused
+    // rather than left hanging. The flag would restate the current default
+    // while adding a hard dependency on a newer CLI, and the app enforces no
+    // minimum version (`is_claude_cli_available` only checks presence), so
+    // an older `claude` would fail EVERY spawn on an unknown option.
 
     if let Some(settings) = params.settings_file {
         cmd.arg("--settings").arg(settings);
@@ -244,9 +326,10 @@ mod tests {
                 cwd: Path::new("."),
                 config: &cfg,
                 resume_session_id: None,
-            settings_file: None,
+                settings_file: None,
                 add_dirs: &[],
                 auth: SpawnAuth::CliDefault,
+                allowed_tools: &[],
             });
             let args = args_of(&cmd);
             let idx = args.iter().position(|a| a == "--permission-mode").unwrap();
@@ -270,6 +353,7 @@ mod tests {
             settings_file: None,
             add_dirs: &[],
             auth: SpawnAuth::CliDefault,
+            allowed_tools: &[],
         });
         let args = args_of(&cmd);
         let idx = args.iter().position(|a| a == "--tools").unwrap();
@@ -291,11 +375,119 @@ mod tests {
             settings_file: None,
             add_dirs: &[],
             auth: SpawnAuth::CliDefault,
+            allowed_tools: &[],
         });
         let args = args_of(&cmd);
         let idx = args.iter().position(|a| a == "--tools").unwrap();
         assert!(!args[idx + 1].contains("Bash"));
         assert!(!args[idx + 1].contains("Write"));
+    }
+
+    fn permission_args(permission: PermissionProfile, allowed: &[String]) -> Vec<String> {
+        let cfg = AgentConfig {
+            model: Model::Sonnet,
+            max_turns: 20,
+            permission,
+            stale: false,
+            newly_discovered: false,
+            timeout_minutes: 30,
+        };
+        let cmd = build_command(&SpawnParams {
+            agent_name: "ba-agent",
+            prompt: "p",
+            cwd: Path::new("."),
+            config: &cfg,
+            resume_session_id: None,
+            settings_file: Some(Path::new("/kit/.claude/settings.json")),
+            add_dirs: &[],
+            allowed_tools: allowed,
+            auth: SpawnAuth::CliDefault,
+        });
+        args_of(&cmd)
+    }
+
+    /// The CLI's own example rule is `"Bash(git *) Edit"` — a rule with a
+    /// space in it. Joining rules into one argument would corrupt the first
+    /// such rule the kit ever declares, so each gets its own element.
+    #[test]
+    fn write_scoped_emits_one_argv_element_per_allow_rule() {
+        let rules = vec![
+            "Bash".to_string(),
+            "mcp__figma__use_figma".to_string(),
+            "mcp__tilth__tilth_read".to_string(),
+        ];
+        let args = permission_args(PermissionProfile::WriteScoped, &rules);
+        let at = args.iter().position(|a| a == "--allowedTools").unwrap();
+
+        assert_eq!(&args[at + 1..at + 4], rules.as_slice());
+        assert_eq!(
+            args[at + 4],
+            "--settings",
+            "the variadic list must end at the next flag"
+        );
+        assert!(args[at + 1..at + 4].iter().all(|a| !a.contains(' ')));
+    }
+
+    /// A bare `--allowedTools` with nothing after it would swallow the flag
+    /// that follows.
+    #[test]
+    fn an_empty_allowlist_emits_no_allowed_tools_flag() {
+        let args = permission_args(PermissionProfile::Full, &[]);
+        assert!(!args.iter().any(|a| a == "--allowedTools"));
+        assert!(args.iter().any(|a| a == "--settings"));
+    }
+
+    /// The app enforces no minimum CLI version, so every flag it emits is a
+    /// hard dependency. This one would only restate the existing default.
+    #[test]
+    fn no_permission_prompts_flag_is_emitted() {
+        let args = permission_args(PermissionProfile::WriteScoped, &["Bash".to_string()]);
+        assert!(!args.iter().any(|a| a == "--permission-prompts"));
+    }
+
+    /// An unanchored allow glob is discarded by the CLI with a warning — it
+    /// would look like a grant and be none.
+    #[test]
+    fn allow_rules_keep_fully_qualified_mcp_names_and_never_emit_a_bare_glob() {
+        let declared = vec![
+            "mcp__claude_ai_Figma__use_figma".to_string(),
+            "mcp__figma__*".to_string(),
+            "mcp__*".to_string(),
+            "*".to_string(),
+            "mcp__broken".to_string(),
+        ];
+        let rules = allow_rules_from_declared_tools(&declared);
+        assert_eq!(rules, vec!["mcp__claude_ai_Figma__use_figma".to_string()]);
+    }
+
+    /// `skills:` sits right after `tools:` in the kit's frontmatter, so a
+    /// parser slip would drag skill names in as tool rules.
+    #[test]
+    fn allow_rules_drop_skill_names() {
+        let declared = vec![
+            "business-analyst".to_string(),
+            "figma:figma-use".to_string(),
+            "ba-figma-output".to_string(),
+            "Bash".to_string(),
+        ];
+        assert_eq!(
+            allow_rules_from_declared_tools(&declared),
+            vec!["Bash".to_string()]
+        );
+    }
+
+    #[test]
+    fn allow_rules_are_sorted_and_deduplicated() {
+        let declared = vec![
+            "Write".to_string(),
+            "Bash".to_string(),
+            "Bash".to_string(),
+            "Read".to_string(),
+        ];
+        assert_eq!(
+            allow_rules_from_declared_tools(&declared),
+            vec!["Bash".to_string(), "Read".to_string(), "Write".to_string()]
+        );
     }
 
     #[test]
@@ -310,6 +502,7 @@ mod tests {
             settings_file: None,
             add_dirs: &[],
             auth: SpawnAuth::CliDefault,
+            allowed_tools: &[],
         });
         let args = args_of(&cmd);
         let idx = args.iter().position(|a| a == "--tools").unwrap();
@@ -328,6 +521,7 @@ mod tests {
             settings_file: None,
             add_dirs: &[],
             auth: SpawnAuth::ApiKey("secret-value"),
+            allowed_tools: &[],
         });
         assert_eq!(
             env_value(&cmd, "ANTHROPIC_API_KEY").as_deref(),
@@ -348,6 +542,7 @@ mod tests {
             settings_file: None,
             add_dirs: &[],
             auth: SpawnAuth::CliDefault,
+            allowed_tools: &[],
         });
         let args = args_of(&cmd);
         let idx = args.iter().position(|a| a == "--resume").unwrap();
@@ -371,6 +566,7 @@ mod tests {
             settings_file: Some(settings),
             add_dirs: &[],
             auth: SpawnAuth::CliDefault,
+            allowed_tools: &[],
         });
         let args = args_of(&cmd);
         let idx = args
@@ -394,6 +590,7 @@ mod tests {
             settings_file: None,
             add_dirs: &[],
             auth: SpawnAuth::CliDefault,
+            allowed_tools: &[],
         });
         assert!(!args_of(&cmd).iter().any(|a| a == "--settings"));
     }
@@ -412,6 +609,7 @@ mod tests {
             settings_file: None,
             add_dirs: &[],
             auth: SpawnAuth::CliDefault,
+            allowed_tools: &[],
         });
         assert!(!args_of(&cmd).iter().any(|a| a.contains("max-turns")));
     }
@@ -448,6 +646,7 @@ mod tests {
             settings_file: None,
             add_dirs: &[],
             auth: SpawnAuth::CliDefault,
+            allowed_tools: &[],
         });
         // A generous cap, not a tight one: a first call in a fresh cwd pays
         // full cache-creation cost (~$0.06 observed for this exact prompt,
@@ -540,6 +739,7 @@ mod tests {
             settings_file: None,
             add_dirs: &[],
             auth: SpawnAuth::CliDefault,
+            allowed_tools: &[],
         });
         cmd.arg("--max-budget-usd").arg("0.20");
 

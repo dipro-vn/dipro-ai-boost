@@ -156,7 +156,7 @@ pub fn compute_and_persist(
     Ok((state, warnings))
 }
 
-/// AC-E3-06 — a slot that was `Done`/`DoneIncomplete` in the previously
+/// AC-E3-06 — a slot that was `Done`/`DoneIncomplete`/`DonePartial` in the previously
 /// persisted state and is now `Idle` in the freshly computed one means its
 /// artifact disappeared from under it; name the file rather than letting
 /// the Board silently revert to `Idle`. Only the single-file slots can be
@@ -176,7 +176,7 @@ fn warn_about_vanished_artifacts(
     for (slot_id, old_node) in &previous.nodes {
         let was_tracked = matches!(
             old_node.status,
-            NodeStatus::Done | NodeStatus::DoneIncomplete
+            NodeStatus::Done | NodeStatus::DoneIncomplete | NodeStatus::DonePartial
         );
         let now_idle = new_state
             .nodes
@@ -557,9 +557,15 @@ mod tests {
         let spec_path = feature_dir.join("SPEC.md");
         std::fs::write(
             &spec_path,
-            "## Mô tả nghiệp vụ\nx\n## Actors & Preconditions\nx\n## Happy Path\nx\n## Alternative Flows & Edge Cases\nx\n## Acceptance Criteria\nx\n## Out of Scope\nx\n## Screens\nx\n",
+            crate::inference::spec_sections::complete_spec_fixture(),
         )
         .unwrap();
+        // Output 4 của BA — không có nó thì node dừng ở `DoneIncomplete` và
+        // test này không còn quan sát được thứ nó muốn quan sát (artifact
+        // biến mất khỏi một node ĐANG `Done`).
+        let prototype = feature_dir.join("prototype");
+        std::fs::create_dir_all(&prototype).unwrap();
+        std::fs::write(prototype.join("index.html"), "<html>").unwrap();
         let docs_root = tmp.path().join("docs-root");
 
         let (first, first_warnings) =

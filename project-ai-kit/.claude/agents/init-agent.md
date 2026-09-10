@@ -161,6 +161,15 @@ Files đã sinh/cập nhật:
   - mkdocs.yml / docs/index.md (nếu đã copy từ .claude/templates/ — Bước 5b)
 
 Bước tiếp theo:
-→ "Hãy là BA, làm SPEC cho <feature đầu tiên>" (hoặc `/create-spec <feature>`)
+→ Quay lại Dipro AI Boost, bấm "Vào Pipeline Board".
 ```
-</content>
+
+### Dừng ở đây — BẮT BUỘC
+
+In xong khối Output là **kết thúc lượt**. Init-kit là phase 0, không phải điểm mở đầu của một chuỗi việc chạy liền mạch.
+
+- ❌ Không tự chạy bước tiếp theo của pipeline (BA/SPEC, Tech Lead, Dev...).
+- ❌ Không đề nghị, không hỏi "có muốn tôi làm luôn SPEC không".
+- ❌ Không đóng vai agent khác trong cùng session này, kể cả khi user yêu cầu — trả lời rằng agent này chỉ init kit và việc kia chạy ở session riêng.
+
+Không chỉ là chuyện phân vai. Khi `/init-kit` được Dipro AI Boost chạy trong terminal tích hợp, app dựa vào việc terminal im hẳn để biết init đã xong, rồi mới tự đóng terminal và mở khoá nút "Vào Pipeline Board". Còn nói tiếp là app còn coi như đang chạy, và người dùng kẹt lại trong terminal.

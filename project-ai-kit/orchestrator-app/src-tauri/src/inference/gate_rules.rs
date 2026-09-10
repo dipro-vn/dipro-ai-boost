@@ -54,8 +54,6 @@ mod tests {
         std::fs::write(path, content).unwrap();
     }
 
-    const COMPLETE_SPEC: &str = "## Mô tả nghiệp vụ\nx\n## Actors & Preconditions\nx\n## Happy Path\nx\n## Alternative Flows & Edge Cases\nx\n## Acceptance Criteria\nx\n## Out of Scope\nx\n## Screens\nx\n";
-
     #[test]
     fn no_spec_md_is_not_ready_with_all_sections_missing() {
         let tmp = tempfile::tempdir().unwrap();
@@ -85,7 +83,10 @@ mod tests {
     fn complete_spec_md_is_pending_review() {
         let tmp = tempfile::tempdir().unwrap();
         let feature_dir = tmp.path().join("feature");
-        write(&feature_dir.join("SPEC.md"), COMPLETE_SPEC);
+        write(
+            &feature_dir.join("SPEC.md"),
+            &crate::inference::spec_sections::complete_spec_fixture(),
+        );
 
         let gate = infer_trigger_gate_state(&feature_dir, None);
         assert_eq!(gate.status, GateStatus::PendingReview);
@@ -96,7 +97,10 @@ mod tests {
     fn approved_gate_is_sticky_even_if_spec_md_changes_again() {
         let tmp = tempfile::tempdir().unwrap();
         let feature_dir = tmp.path().join("feature");
-        write(&feature_dir.join("SPEC.md"), COMPLETE_SPEC);
+        write(
+            &feature_dir.join("SPEC.md"),
+            &crate::inference::spec_sections::complete_spec_fixture(),
+        );
 
         let approved = GateState {
             status: GateStatus::Approved,

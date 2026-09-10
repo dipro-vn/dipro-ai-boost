@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
-import { FolderOpen, RotateCcw } from "lucide-react";
+import { FolderOpen, RotateCcw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,21 +44,80 @@ import { TerminalFrame } from "@/screens/board/TerminalFrame";
  * observed on the first real `user-signup` run. Mirrors the same
  * list-the-real-files approach `build_backend_agent_prompt` uses in Rust.
  */
+/** The 4 platforms `ba-agent.md` Bước 2b câu 0 allows, with the viewport
+ * each one pins Figma Output 3 and `## Responsive Requirements` to. The kit
+ * calls these "CHUẨN CỨNG (không tự đổi)", so they are reproduced verbatim
+ * — a 390×844 here would silently contradict the agent's own table. */
+export const TARGET_PLATFORMS = [
+  { value: "Mobile app", viewport: "375×812" },
+  { value: "Web app", viewport: "375×812" },
+  { value: "Website", viewport: "1440×1024" },
+  { value: "iPad/Tablet", viewport: "1024×768" },
+] as const;
+
+/** Only a Figma **Design** file can host Outputs 1-3: `/board/` is FigJam
+ * (no real viewport, so Output 3's phone mockups cannot be to spec) and
+ * `/file/` is the legacy URL shape. Blank is not invalid here — it just
+ * means the run goes ahead without Outputs 1-3. */
+export function isFigmaDesignPageUrl(url: string): boolean {
+  const trimmed = url.trim();
+  if (trimmed === "") return false;
+  try {
+    const parsed = new URL(trimmed);
+    return (
+      /(^|\.)figma\.com$/.test(parsed.hostname) && parsed.pathname.startsWith("/design/")
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function buildBaPrompt(
-  copiedPath: string,
+  /** `null` when the user gave no requirements folder — the whole
+   * requirement then lives in `context`. */
+  copiedPath: string | null,
   files: string[],
   context: string,
+  figmaUrl: string,
+  targetPlatform: string,
 ): string {
   const trimmedContext = context.trim();
   const fileList = files.map((file) => `- ${copiedPath}/${file}`).join("\n");
+  const viewport = TARGET_PLATFORMS.find((p) => p.value === targetPlatform)?.viewport;
+  const trimmedUrl = figmaUrl.trim();
+  // Two sources, either of which can be the only one. Say which case this
+  // is up front: told to "analyse the copied input" with no folder, the
+  // agent goes looking for files that do not exist instead of reading the
+  // text it was given.
+  const requirement = copiedPath
+    ? [
+        "Phân tích input đã được copy sẵn tại thư mục sau và thực hiện đúng quy trình của bạn:",
+        copiedPath,
+        "",
+        files.length > 0
+          ? `Danh sách file trong thư mục đó (đường dẫn tuyệt đối, đọc từng file bằng Read):\n${fileList}`
+          : "(Thư mục này không có file nào đọc được.)",
+      ].join("\n")
+    : "Phân tích yêu cầu dưới đây và thực hiện đúng quy trình của bạn.\nNgười dùng KHÔNG cung cấp folder tài liệu — toàn bộ mô tả yêu cầu nằm ở mục \"Mô tả yêu cầu từ người dùng\" bên dưới. KHÔNG có file nào để đọc thêm, đừng đi tìm.";
   return [
-    "Phân tích input đã được copy sẵn tại thư mục sau và thực hiện đúng quy trình của bạn:",
-    copiedPath,
-    "",
-    files.length > 0
-      ? `Danh sách file trong thư mục đó (đường dẫn tuyệt đối, đọc từng file bằng Read):\n${fileList}`
-      : "(Thư mục này không có file nào đọc được.)",
-    trimmedContext ? `\nBối cảnh thêm từ người dùng:\n${trimmedContext}` : "",
+    requirement,
+    // Bước 2b câu 0 / 0.5 của ba-agent.md là hai câu hỏi BẮT BUỘC, nhưng
+    // run này chạy headless — không ai trả lời được. Người dùng đã trả lời
+    // sẵn ở panel, nên đưa thẳng câu trả lời vào thay vì để agent hỏi.
+    `\nFIGMA_OUTPUT_URL (Bước 2b câu 0.5 — user đã cung cấp, KHÔNG hỏi lại, KHÔNG tự chọn file/page Figma khác, KHÔNG tự tạo page mới):\n${
+      trimmedUrl !== ""
+        ? trimmedUrl
+        : "(Chưa có — BỎ QUA Output 1-3, ghi `❌ Skipped — user không cung cấp Figma URL` vào 3 row đó của `## BA Deliverables`, vẫn làm Output 0/4/5.)"
+    }`,
+    `\nTARGET_PLATFORM (Bước 2b câu 0 — KHÔNG tự suy diễn):\n${targetPlatform}${
+      viewport ? ` — viewport ${viewport}` : ""
+    }`,
+    // Same text, different role: with a folder it supplements the files;
+    // without one it IS the requirement, and mislabelling it "bối cảnh
+    // thêm" would invite the agent to treat it as an aside.
+    trimmedContext
+      ? `\n${copiedPath ? "Bối cảnh thêm từ người dùng" : "Mô tả yêu cầu từ người dùng"}:\n${trimmedContext}`
+      : "",
   ].join("\n");
 }
 
@@ -69,9 +128,15 @@ interface ImportFormProps {
   disabled?: boolean;
 }
 
-/** Folder picker + preview + optional context — the feature is already
- * fixed to whichever step this drawer belongs to, so (unlike the original
- * standalone Import Input screen) there is no separate feature-name field.
+/** The BA step's input form — the feature is already fixed to whichever
+ * step this drawer belongs to, so (unlike the original standalone Import
+ * Input screen) there is no separate feature-name field.
+ *
+ * Both requirement sources are optional individually and at least one is
+ * mandatory together: a folder of documents to import, a free-text
+ * description, or both. Neither the folder picker nor the text box may be
+ * the only supported way in — a requirement that lives in someone's head is
+ * as legitimate an input as one that lives in a folder of `.docx`.
  *
  * `sourceFolder`/`context` live in the global store as a draft (keyed by
  * feature, slot fixed to `"ba"`) instead of local `useState`, so navigating
@@ -83,6 +148,8 @@ function ImportForm({ feature, primary, onStart, disabled = false }: ImportFormP
   const clearAgentDraft = useAppStore((s) => s.clearAgentDraft);
   const sourceFolder = draft.sourceFolder;
   const context = draft.context;
+  const figmaUrl = draft.figmaUrl;
+  const targetPlatform = draft.targetPlatform;
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
@@ -122,20 +189,49 @@ function ImportForm({ feature, primary, onStart, disabled = false }: ImportFormP
     await runPreview(selected);
   }
 
+  const folderChosen = sourceFolder.trim() !== "";
+  const folderHasFiles = preview !== null && preview.included.length > 0;
+  // The folder is optional, but SOMETHING has to describe the requirement:
+  // either readable files or the text box. A folder that was picked yet
+  // yields nothing still blocks — the user meant to use it, and silently
+  // falling back to the text box would hide the mistake.
+  const hasRequirementInput = folderChosen ? folderHasFiles : context.trim() !== "";
+
+  // Cả platform lẫn Figma URL đều gate: ba-agent.md bắt DỪNG khi chưa biết
+  // platform, và Output 1-3 phải vẽ vào đúng page user chỉ định — run headless
+  // không có ai để hỏi cả hai thứ đó. Đi kèm gate MCP Figma ghi-được bên Rust:
+  // có URL mà không có server vẽ được thì cũng vô nghĩa.
   const canSubmit =
     !disabled &&
-    sourceFolder.trim() !== "" &&
-    preview !== null &&
-    preview.included.length > 0 &&
+    hasRequirementInput &&
+    targetPlatform !== "" &&
+    isFigmaDesignPageUrl(figmaUrl) &&
     !submitting;
+
+  function clearFolder() {
+    setAgentDraft(feature, "ba", { sourceFolder: "" });
+    setPreview(null);
+    setPreviewError(null);
+  }
 
   async function handleRun() {
     if (!canSubmit) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const run = await commands.importFolder(sourceFolder, feature);
-      onStart(buildBaPrompt(run.copiedPath, run.files, context));
+      // No folder means nothing to copy: skip the import entirely rather
+      // than importing an empty selection. `feature_dir` — the agent's cwd —
+      // already exists either way, `create_feature_dir` made it.
+      const run = folderChosen ? await commands.importFolder(sourceFolder, feature) : null;
+      onStart(
+        buildBaPrompt(
+          run?.copiedPath ?? null,
+          run?.files ?? [],
+          context,
+          figmaUrl,
+          targetPlatform,
+        ),
+      );
       clearAgentDraft(feature, "ba");
     } catch (err) {
       setSubmitError(extractErrorMessage(err));
@@ -147,7 +243,9 @@ function ImportForm({ feature, primary, onStart, disabled = false }: ImportFormP
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor={`source-folder-${feature}`}>Folder nguồn</Label>
+        <Label htmlFor={`source-folder-${feature}`}>
+          Folder chứa mô tả yêu cầu (tuỳ chọn)
+        </Label>
         <div className="flex gap-2">
           <Input
             id={`source-folder-${feature}`}
@@ -160,7 +258,20 @@ function ImportForm({ feature, primary, onStart, disabled = false }: ImportFormP
             <FolderOpen />
             Chọn
           </Button>
+          {/* Optional means it must be undoable — without this a folder
+              picked by mistake can never be taken back. */}
+          {folderChosen && (
+            <Button type="button" variant="ghost" size="sm" onClick={clearFolder}>
+              <X />
+              Bỏ chọn
+            </Button>
+          )}
         </div>
+        {!folderChosen && (
+          <p className="text-xs text-muted-foreground">
+            Không chọn cũng được — khi đó BA phân tích dựa trên phần mô tả bạn viết bên dưới.
+          </p>
+        )}
       </div>
 
       {previewLoading && <p className="text-xs text-muted-foreground">Đang quét folder...</p>}
@@ -175,7 +286,10 @@ function ImportForm({ feature, primary, onStart, disabled = false }: ImportFormP
       {preview && preview.included.length === 0 && (
         <Alert variant="destructive">
           <AlertTitle>Folder rỗng hoặc không có file đọc được</AlertTitle>
-          <AlertDescription>Không có file nào sẽ được import.</AlertDescription>
+          <AlertDescription>
+            Không có file nào sẽ được import. Chọn folder khác, hoặc bấm "Bỏ chọn" rồi mô tả
+            yêu cầu trực tiếp bên dưới.
+          </AlertDescription>
         </Alert>
       )}
 
@@ -203,15 +317,72 @@ function ImportForm({ feature, primary, onStart, disabled = false }: ImportFormP
       )}
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor={`context-${feature}`}>Bối cảnh thêm (tuỳ chọn)</Label>
+        <Label htmlFor={`platform-${feature}`}>Platform đích</Label>
+        <select
+          id={`platform-${feature}`}
+          value={targetPlatform}
+          onChange={(e) => setAgentDraft(feature, "ba", { targetPlatform: e.target.value })}
+          className="rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          <option value="">— chọn platform —</option>
+          {TARGET_PLATFORMS.map((p) => (
+            <option key={p.value} value={p.value}>
+              {p.value} — {p.viewport}
+            </option>
+          ))}
+        </select>
+        <p className="text-xs text-muted-foreground">
+          Quyết định viewport của mockup Figma và bảng Responsive Requirements. BA không được tự
+          đoán, nên phải chọn trước khi chạy.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor={`figma-url-${feature}`}>Figma Design page</Label>
+        <Input
+          id={`figma-url-${feature}`}
+          value={figmaUrl}
+          onChange={(e) => setAgentDraft(feature, "ba", { figmaUrl: e.target.value })}
+          placeholder="https://www.figma.com/design/..."
+          className="font-mono text-xs"
+        />
+        {figmaUrl.trim() === "" ? (
+          <p className="text-xs text-muted-foreground">
+            Output 1-3 được vẽ thẳng vào page này. App cũng kiểm tra MCP Figma ghi được ngay
+            trước khi chạy — thiếu là node bị chặn kèm lệnh cài.
+          </p>
+        ) : !isFigmaDesignPageUrl(figmaUrl) ? (
+          <p className="text-xs text-warning">
+            Link này không phải Figma Design (`/design/`). FigJam (`/board/`) và link cũ
+            (`/file/`) không đủ chuẩn viewport cho mockup Output 3.
+          </p>
+        ) : null}
+      </div>
+
+      {/* One field, two roles — the label follows whichever the folder
+          leaves it. Calling it "bối cảnh thêm" while it is the only input
+          would read as optional when it is the requirement. */}
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor={`context-${feature}`}>
+          {folderChosen ? "Bối cảnh thêm (tuỳ chọn)" : "Mô tả yêu cầu"}
+        </Label>
         <textarea
           id={`context-${feature}`}
           value={context}
           onChange={(e) => setAgentDraft(feature, "ba", { context: e.target.value })}
-          placeholder="Ghi chú thêm cho BA Agent, để trống vẫn chạy được"
-          rows={3}
+          placeholder={
+            folderChosen
+              ? "Ghi chú thêm cho BA Agent, để trống vẫn chạy được"
+              : "Mô tả yêu cầu nghiệp vụ cần phân tích — actor, vấn đề, luồng chính..."
+          }
+          rows={folderChosen ? 3 : 6}
           className="rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
         />
+        {!folderChosen && context.trim() === "" && (
+          <p className="text-xs text-muted-foreground">
+            Chưa chọn folder thì đây là đầu vào duy nhất của BA — cần điền để chạy được.
+          </p>
+        )}
       </div>
 
       {submitError && (

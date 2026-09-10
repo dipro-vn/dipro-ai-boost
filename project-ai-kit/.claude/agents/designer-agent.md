@@ -6,6 +6,19 @@ tools:
   - Read
   - Write
   - Edit
+  # Cùng một server Figma remote (https://mcp.figma.com/mcp) xuất hiện dưới
+  # hai tên tuỳ cách cài, mà `tools:` là allowlist — thiếu tên nào là mọi
+  # tool của tên đó bị từ chối, im lặng:
+  #   `figma`           — claude mcp add --scope user --transport http figma https://mcp.figma.com/mcp
+  #   `claude_ai_Figma` — connector user-level "claude.ai Figma"
+  - mcp__figma__get_design_context
+  - mcp__figma__get_metadata
+  - mcp__figma__get_variable_defs
+  - mcp__figma__get_screenshot
+  - mcp__figma__use_figma
+  - mcp__figma__get_libraries
+  - mcp__figma__search_design_system
+  - mcp__figma__get_context_for_code_connect
   - mcp__claude_ai_Figma__get_design_context
   - mcp__claude_ai_Figma__get_metadata
   - mcp__claude_ai_Figma__get_variable_defs

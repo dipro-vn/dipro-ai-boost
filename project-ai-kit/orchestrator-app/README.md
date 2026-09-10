@@ -241,11 +241,24 @@ App luôn nêu lý do cụ thể trong warning, không im lặng bỏ qua.
 
 ## 6. Cấu hình MCP Figma
 
-Bước này chỉ cần khi bạn dùng nhánh **② Design Analyst** (đọc design Figma có sẵn) hoặc muốn Frontend/Mobile đọc lại design khi code UI. Bỏ qua được nếu dự án không có Figma.
+Cần cho **① BA** (vẽ Output 1-3 vào Figma) và cho nhánh **② Design Analyst** (đọc design có sẵn), cũng như khi muốn Frontend/Mobile đọc lại design lúc code UI.
+
+### 6.0. ⚠️ BA cần server GHI được — desktop server không đủ
+
+`ba-agent` vẽ Output 1-3 bằng tool `use_figma`. Figma **chỉ phục vụ tool ghi từ server remote**; server local của Figma Desktop (`http://127.0.0.1:3845/mcp`) và mọi bridge chỉ đọc/export — tài liệu Figma ghi rõ *"Write to canvas and Code to canvas features are unavailable on the desktop server"*. Một server desktop đang `✔ Connected` vẫn không vẽ nổi một frame.
+
+```bash
+claude mcp add --scope user --transport http figma https://mcp.figma.com/mcp
+# rồi mở Claude Code, chạy /mcp để đăng nhập Figma (OAuth)
+```
+
+App kiểm tra đúng điều này **ngay trước khi spawn BA** (`claude mcp list`, mất vài giây): thiếu server ghi-được, chưa đăng nhập, hoặc chỉ có loại chỉ-đọc → node BA bị **chặn** kèm lệnh cài ở trên, thay vì chạy 2 tiếng rồi mới hỏng.
 
 ### 6.1. Khai báo server
 
-Khai MCP server trong `.mcp.json` hoặc `.claude/settings.json` tại `agentsRoot` (app cũng đọc ngược lên tối đa 4 cấp thư mục cha, nên khai ở workspace gốc vẫn nhận):
+Khai MCP server trong `.mcp.json` tại `agentsRoot` (app cũng đọc ngược lên tối đa 4 cấp thư mục cha, nên khai ở workspace gốc vẫn nhận), hoặc thêm ở cấp user bằng `claude mcp add --scope user …`:
+
+> `mcpServers` đặt trong `.claude/settings.json` **không được Claude Code nạp** — app vẫn hiện dòng đó trong bảng Settings nhưng đánh dấu *(Claude Code không nạp)*, vì agent sẽ không bao giờ gọi được server khai ở đấy.
 
 ```json
 {
@@ -271,7 +284,7 @@ Có **từ 2 server Figma trở lên** → cột phải hiện radio **"dùng ch
 
 ### 6.3. ⚠️ Cảnh báo "Agent chưa khai tool của MCP …"
 
-`tools:` trong file agent (`.claude/agents/*.md`) là **allowlist**: tool không nằm trong đó thì agent **không gọi được**, dù MCP server đã kết nối và khoẻ. Kit khai sẵn tool cho đúng 2 server: `figma-bridge` và `claude.ai Figma`.
+`tools:` trong file agent (`.claude/agents/*.md`) là **allowlist**: tool không nằm trong đó thì agent **không gọi được**, dù MCP server đã kết nối và khoẻ. Kit khai sẵn tool cho 3 tên server: `figma` (lệnh cài chính thức), `claude.ai Figma` (connector), và `figma-bridge` (chỉ ở các agent đọc).
 
 Project dùng MCP Figma tên khác (ví dụ `figma`, `figma-mcp-go`) → Settings hiện Alert đỏ nêu đích danh file agent nào còn thiếu, kèm tiền tố tool cần thêm. Khi đó:
 

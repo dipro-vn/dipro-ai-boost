@@ -7,7 +7,7 @@ Cấu trúc bắt buộc:
 # SPEC: <Feature Name>
 
 ## Mô tả nghiệp vụ
-## BA Deliverables        ← BẮT BUỘC — entry point cho downstream (TL/Designer/QC), format ở figma-outputs/shared-rules.md
+## BA Deliverables
 ## Actors & Preconditions
 ## Flow Tổng Quan
 ## Happy Path
@@ -19,7 +19,9 @@ Cấu trúc bắt buộc:
 ## Responsive Requirements
 ```
 
-**⚠️ `## BA Deliverables` — vị trí + nội dung:**
+> Copy nguyên văn các dòng `## ` ở trên — **không thêm chú thích vào cuối dòng heading**. Tool kiểm tra SPEC khớp heading chính xác sau khi trim, một chữ dính đuôi là section coi như thiếu.
+
+**⚠️ `## BA Deliverables` — BẮT BUỘC, entry point cho downstream (TL/Designer/QC) — vị trí + nội dung:**
 - Đặt NGAY SAU `## Mô tả nghiệp vụ`, TRƯỚC `## Actors & Preconditions`
 - Chứa đủ 6 outputs (SPEC.md + 3 Figma Frames + HTML Prototype + MkDocs Site) với path/URL clickable
 - Có "Downstream instructions" — chỉ rõ TL Design / Designer / QC dùng phần nào của SPEC + Figma

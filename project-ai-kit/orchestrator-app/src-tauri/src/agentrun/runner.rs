@@ -501,6 +501,7 @@ mod tests {
             settings_file: None,
             add_dirs: &[],
             auth: crate::agentrun::spawn::SpawnAuth::CliDefault,
+            allowed_tools: &[],
         };
         let (tx, rx) = std::sync::mpsc::channel();
 
@@ -622,6 +623,7 @@ mod tests {
             settings_file: None,
             add_dirs: &[],
             auth: crate::agentrun::spawn::SpawnAuth::CliDefault,
+            allowed_tools: &[],
         };
         let (tx, _rx) = std::sync::mpsc::channel();
 
@@ -676,6 +678,7 @@ mod tests {
             settings_file: None,
             add_dirs: &[],
             auth: crate::agentrun::spawn::SpawnAuth::CliDefault,
+            allowed_tools: &[],
         };
         let (tx, _rx) = std::sync::mpsc::channel();
 

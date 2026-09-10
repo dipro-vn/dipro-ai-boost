@@ -5,7 +5,7 @@
 > Phiên bản này: v0.2 — 14/08/2026, tái cấu trúc theo convention BMAD của kit.
 >
 > **File này KHÔNG phải SPEC.** Nội dung nghiệp vụ đã được tách thành 6 SPEC per-EPIC trong `docs/features/`.
-> Ở đây chỉ giữ những thứ **dùng chung cho cả 6 feature** — nhét vào từng SPEC sẽ lặp 6 lần và phá template 7 section của `ba-agent`.
+> Ở đây chỉ giữ những thứ **dùng chung cho cả 6 feature** — nhét vào từng SPEC sẽ lặp 6 lần và phá template SPEC của `ba-agent`.
 >
 > **Giả định & điểm lệch chưa giải quyết** → `ASSUMPTIONS-GAPS.md` (đọc trước khi thiết kế).
 
@@ -238,5 +238,5 @@ Chi tiết đầy đủ và log quyết định → `ASSUMPTIONS-GAPS.md` mục 
 - `ASSUMPTIONS-GAPS.md` — sổ giả định + 14 điểm lệch SPEC ↔ thực tế (**đọc trước khi thiết kế**)
 - `SPEC-pipeline-orchestrator.md` (root kit) — bản v0.1 gốc, giữ nguyên làm tham chiếu lịch sử
 - `.claude/context/doc-structure.md` — convention folder feature
-- `.claude/agents/ba-agent.md` — template SPEC 7 section
+- `.claude/agents/ba-agent.md` — template SPEC (danh sách section bắt buộc — `REQUIRED_SPEC_SECTIONS` bên Rust bám theo file này)
 - `ai-agents-workflow.md` §4, §5 — bảng audit + common failure modes (nguồn cảm hứng cho phần lớn AC của E4)

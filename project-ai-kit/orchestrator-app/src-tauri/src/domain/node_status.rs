@@ -2,7 +2,8 @@ use serde::{Deserialize, Serialize};
 
 /// All 7 SPEC-defined node states, plus `DoneIncomplete` (used when an
 /// artifact exists but is missing required content — e.g. `SPEC.md` without
-/// all 7 sections). MVP1 can only ever produce `Idle`, `Done`, and
+/// all its sections) and `DonePartial`. MVP1 can only ever produce `Idle`,
+/// `Done`, `DonePartial`, and
 /// `DoneIncomplete` from pure file-system inference — `Running`,
 /// `WaitingInput`, `Failed`, `Blocked`, and `Skipped` all require a live
 /// agent runner (MVP2+). The type still models all of them now so the
@@ -15,6 +16,15 @@ pub enum NodeStatus {
     WaitingInput,
     Done,
     DoneIncomplete,
+    /// Agent giao xong phần nó tự kiểm chứng được, nhưng TỰ KHAI là thiếu
+    /// output phụ thuộc công cụ ngoài — hiện chỉ có BA: Output 1-3 (Figma
+    /// MCP) và Output 5 (mkdocs) ghi `❌ Skipped` trong `## BA Deliverables`.
+    ///
+    /// Khác `DoneIncomplete` ở đúng một điểm quan trọng: nó **tính là hoàn
+    /// thành** với `readiness::is_complete`, nên stage kế tiếp vẫn mở. Chặn
+    /// pipeline vì một MCP người dùng chưa cấu hình là phạt họ cho thứ app
+    /// không tự kiểm chứng được — nên nó cảnh báo, không chặn.
+    DonePartial,
     Failed,
     Blocked,
     Skipped,
@@ -74,6 +84,17 @@ impl NodeState {
     pub fn done_incomplete(detail: impl Into<String>) -> Self {
         NodeState {
             status: NodeStatus::DoneIncomplete,
+            detail: Some(detail.into()),
+            session_id: None,
+            cost_usd: None,
+            started_at: None,
+            ended_at: None,
+        }
+    }
+
+    pub fn done_partial(detail: impl Into<String>) -> Self {
+        NodeState {
+            status: NodeStatus::DonePartial,
             detail: Some(detail.into()),
             session_id: None,
             cost_usd: None,

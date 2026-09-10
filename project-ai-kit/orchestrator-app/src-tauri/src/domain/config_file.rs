@@ -125,10 +125,25 @@ const DEFAULT_MODELS: &[(&str, Model)] = &[
     ("init-agent", Model::Sonnet),
 ];
 
-/// "Permission profile" table: Dev agents (BE/FE/Mobile) default to `full`,
-/// everything else defaults to `write-scoped` (AC-E1-18: "Dev=full, còn lại
-/// =write-scoped").
-const FULL_PERMISSION_AGENTS: &[&str] = &["backend-agent", "frontend-agent", "mobile-agent"];
+/// "Permission profile" table. AC-E1-18 reads "Dev=full, còn lại
+/// =write-scoped", and the three Dev agents are still the reason it exists —
+/// but `ba-agent` had to join them.
+///
+/// BA is the only slot that must BOTH call a write-capable MCP (`use_figma`
+/// draws Figma Outputs 1-3) and run arbitrary Bash (`mkdocs build` is its
+/// Output 5). Under `write-scoped` → `acceptEdits`, a real run had every one
+/// of those refused: 5 `Bash` denials and 2 Figma denials in a single
+/// `permission_denials` array, and 3 of its 6 outputs missing. `--allowedTools`
+/// (see `agentrun::spawn`) fixes the general write-scoped case, but not the
+/// one where a claude.ai connector tool is pinned to "ask" by an org policy —
+/// allow rules do not apply to those. `bypassPermissions` is the only
+/// configuration ever observed at 0 denials.
+const FULL_PERMISSION_AGENTS: &[&str] = &[
+    "backend-agent",
+    "frontend-agent",
+    "mobile-agent",
+    "ba-agent",
+];
 
 /// SPEC does not give a per-agent default for "Max turns" (it's a Settings
 /// table column with no stated values). NOTE (A7): the `claude` CLI has no
@@ -141,6 +156,20 @@ pub const DEFAULT_MAX_TURNS: u32 = 20;
 /// `agentrun::runner::DEFAULT_TIMEOUT` encoded before it became
 /// configurable.
 pub const DEFAULT_TIMEOUT_MINUTES: u32 = 30;
+
+/// Agent nào cần nhiều hơn 30 phút mặc định. `ba-agent` giao 6 outputs
+/// trong MỘT lượt (SPEC.md + 3 frame Figma + HTML prototype + build MkDocs),
+/// kèm vòng visual recheck chụp lại từng frame — 30 phút chỉ đủ cho cái đầu
+/// tiên, phần còn lại bị cắt giữa chừng thành `RunOutcome::Timeout`.
+const AGENT_TIMEOUT_MINUTES: &[(&str, u32)] = &[("ba-agent", 120)];
+
+pub fn default_timeout_minutes_for(agent_name: &str) -> u32 {
+    AGENT_TIMEOUT_MINUTES
+        .iter()
+        .find(|(name, _)| *name == agent_name)
+        .map(|(_, minutes)| *minutes)
+        .unwrap_or(DEFAULT_TIMEOUT_MINUTES)
+}
 
 pub fn default_model_for(agent_name: &str) -> Model {
     DEFAULT_MODELS
@@ -165,7 +194,7 @@ fn default_agent_config(agent_name: &str, newly_discovered: bool) -> AgentConfig
         permission: default_permission_for(agent_name),
         stale: false,
         newly_discovered,
-        timeout_minutes: DEFAULT_TIMEOUT_MINUTES,
+        timeout_minutes: default_timeout_minutes_for(agent_name),
     }
 }
 
@@ -199,6 +228,28 @@ impl ProjectConfig {
                 Some(existing) => {
                     existing.stale = false;
                     existing.newly_discovered = false;
+                    // Project tạo từ trước giữ nguyên 30 phút trong
+                    // `config.json` mãi mãi, kể cả sau khi agent đó được
+                    // nâng default. Chỉ nâng khi giá trị đang là default cũ
+                    // — y hệt kỷ luật của `SUPERSEDED_KIT_FILES`: giá trị
+                    // user đã tự sửa thì không bao giờ đụng vào.
+                    if existing.timeout_minutes == DEFAULT_TIMEOUT_MINUTES {
+                        existing.timeout_minutes = default_timeout_minutes_for(name);
+                    }
+                    // Cùng kỷ luật: `WriteScoped` là giá trị MỌI agent
+                    // không-phải-Dev nhận từ `default_permission_for` trước
+                    // khi `ba-agent` được thêm vào danh sách, nên nó = "vẫn
+                    // đang ở default cũ". `ReadOnly` chỉ đạt được khi user tự
+                    // chọn trong Settings → không bao giờ bị đụng.
+                    //
+                    // Cùng giới hạn đã biết như migration timeout ở trên:
+                    // user CỐ Ý chọn `write-scoped` cho ba-agent thì không
+                    // phân biệt được với default chưa đụng, và sẽ bị nâng.
+                    if existing.permission == PermissionProfile::WriteScoped
+                        && default_permission_for(name) == PermissionProfile::Full
+                    {
+                        existing.permission = PermissionProfile::Full;
+                    }
                 }
                 None => {
                     self.agents
@@ -238,10 +289,71 @@ mod tests {
 
     #[test]
     fn with_defaults_fills_new_fields() {
-        let config = ProjectConfig::with_defaults(&["ba-agent".to_string()]);
+        let config =
+            ProjectConfig::with_defaults(&["ba-agent".to_string(), "qc-agent".to_string()]);
         assert_eq!(config.max_retries, 2);
         assert!(config.node_nicknames.is_empty());
-        assert_eq!(config.agents["ba-agent"].timeout_minutes, 30);
+        assert_eq!(config.agents["ba-agent"].timeout_minutes, 120);
+        assert_eq!(
+            config.agents["ba-agent"].permission,
+            PermissionProfile::Full
+        );
+        assert_eq!(
+            config.agents["qc-agent"].permission,
+            PermissionProfile::WriteScoped,
+            "chỉ BA lên Full, không phải nâng tất cả"
+        );
+        assert_eq!(
+            config.agents["qc-agent"].timeout_minutes,
+            DEFAULT_TIMEOUT_MINUTES
+        );
         assert_eq!(config.agents["ba-agent"].max_turns, DEFAULT_MAX_TURNS);
+    }
+
+    /// Đường duy nhất để default mới tới được project cũ. `ReadOnly` là lựa
+    /// chọn có chủ đích của user, không bao giờ được ghi đè.
+    #[test]
+    fn reconcile_raises_an_untouched_write_scoped_ba_to_full_but_never_a_read_only_one() {
+        let names = vec!["ba-agent".to_string(), "qc-agent".to_string()];
+
+        let mut config = ProjectConfig::with_defaults(&names);
+        config.agents.get_mut("ba-agent").unwrap().permission = PermissionProfile::WriteScoped;
+        config.reconcile(&names);
+        assert_eq!(
+            config.agents["ba-agent"].permission,
+            PermissionProfile::Full
+        );
+
+        config.agents.get_mut("ba-agent").unwrap().permission = PermissionProfile::ReadOnly;
+        config.reconcile(&names);
+        assert_eq!(
+            config.agents["ba-agent"].permission,
+            PermissionProfile::ReadOnly,
+            "lựa chọn có chủ đích của user không bị nâng"
+        );
+
+        assert_eq!(
+            config.agents["qc-agent"].permission,
+            PermissionProfile::WriteScoped,
+            "agent ngoài danh sách Full không bị đụng tới"
+        );
+    }
+
+    /// Project tạo từ trước giữ `config.json` cũ mãi mãi — `reconcile` là
+    /// đường duy nhất để default mới tới được chúng. Nhưng chỉ khi giá trị
+    /// còn nguyên default cũ: user đã tự chỉnh thì không được đụng vào.
+    #[test]
+    fn reconcile_raises_an_untouched_default_timeout_but_never_a_customised_one() {
+        let mut config = ProjectConfig::with_defaults(&["ba-agent".to_string()]);
+        config.agents.get_mut("ba-agent").unwrap().timeout_minutes = DEFAULT_TIMEOUT_MINUTES;
+        config.reconcile(&["ba-agent".to_string()]);
+        assert_eq!(config.agents["ba-agent"].timeout_minutes, 120);
+
+        config.agents.get_mut("ba-agent").unwrap().timeout_minutes = 45;
+        config.reconcile(&["ba-agent".to_string()]);
+        assert_eq!(
+            config.agents["ba-agent"].timeout_minutes, 45,
+            "giá trị user đã sửa không bao giờ bị ghi đè"
+        );
     }
 }

@@ -852,6 +852,13 @@ export function ProjectLauncherScreen() {
             initLaunchingRef.current = false;
             setInitPhase("finished");
             setInitStopped(true);
+            // Đọc lại project sau khi dừng. Vòng poll chỉ chạy lúc phase
+            // "running" nên nó vừa tắt cùng lúc này, mà `summary` thì vẫn là
+            // bản đọc lúc mở project. Thiếu bước này thì dừng init lúc
+            // AGENTS.md đã đủ vẫn để `initStatus` cũ, nút "Vào Pipeline Board"
+            // vẫn khoá và alert còn mời chạy init-kit thêm lần nữa — dừng
+            // xong vẫn không đi đâu được.
+            void refreshCurrentProject();
             const sessionId = initSessionRef.current;
             if (!sessionId) return;
             void commands

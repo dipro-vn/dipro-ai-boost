@@ -191,12 +191,24 @@ export interface FigmaMcpReadiness {
   agentsMissingTools: string[];
 }
 
-/** Mirrors `store::mcp_config::McpServer`. */
+/** Mirrors `store::mcp_config::McpServer`.
+ *
+ * `figmaRole` is serialized from Rust rather than re-derived here: the
+ * predicate that decides it also gates whether `ba-agent` may spawn, and two
+ * copies of it would eventually tell the user two different stories.
+ *
+ * `source: "claude-settings"` means the row was declared in
+ * `.claude/settings.json`, which **Claude Code does not load** — the app can
+ * see it, the agents never get it. */
 export interface McpServer {
   name: string;
   kind: "stdio" | "http";
   detail: string;
   figmaCandidate: boolean;
+  /** `write-capable` = can draw the canvas (`use_figma`); Figma Desktop's
+   * local server and the read bridges are `read-only`. */
+  figmaRole: "not-figma" | "read-only" | "write-capable";
+  source: "mcp-json" | "claude-settings";
 }
 
 /**
@@ -211,6 +223,7 @@ export type NodeStatus =
   | "waiting-input"
   | "done"
   | "done-incomplete"
+  | "done-partial"
   | "failed"
   | "blocked"
   | "skipped"
@@ -447,6 +460,10 @@ export type StreamEvent =
       totalCostUsd: number;
       sessionId: string;
       stopReason: string | null;
+      /** Tools the CLI refused for want of permission, verbatim and not
+       * de-duplicated. Note `isError` is `false` on the very same event —
+       * a run can look clean while half its work was blocked. */
+      deniedTools: string[];
     }
   | { kind: "unrecognized"; rawType: string };
 

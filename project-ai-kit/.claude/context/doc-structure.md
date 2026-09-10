@@ -11,7 +11,8 @@ Khi feature chỉ ảnh hưởng **1 repo duy nhất** (ví dụ: 1 tính năng 
 
 ```
 <DOCS_ROOT>/features/<feature-name>/
-├── SPEC.md                  ← BA tạo (nghiệp vụ + Screens table); Designer điền cột Figma Link
+├── SPEC.md                  ← BA tạo (nghiệp vụ + Screens table + ## BA Deliverables); Designer điền cột Figma Link
+├── prototype/index.html     ← BA tạo (Output 4)
 └── <backend-repo>/
     ├── DESIGN.md            ← Tech Lead tạo
     └── tasks/
@@ -19,6 +20,8 @@ Khi feature chỉ ảnh hưởng **1 repo duy nhất** (ví dụ: 1 tính năng 
         └── task-2-1.md
 ```
 
+> **BA và Designer đều vẽ Figma, khác tầng.** BA (Output 1-3) vẽ **low-fi**: flow nghiệp vụ, screen flow, và mockup + bảng item cho từng màn — đủ để chốt phạm vi trước khi ai vẽ đẹp. Designer đọc chúng làm reference rồi vẽ **high-fidelity** screens. Cả hai vẽ trên Figma page do user cung cấp, không tạo page mới.
+>
 > **Designer không tạo file `.md` nào trong folder feature.** Output Designer = Figma frames (cloud) + URL điền vào cột `Figma Link` của bảng `## Screens` trong SPEC.md. FE/Mobile/QC/QA agents tự gọi Figma MCP để đọc design khi cần.
 
 ---
@@ -29,7 +32,8 @@ Khi feature ảnh hưởng **nhiều repo** (BE + FE, BE + Mobile, hoặc cả 3
 
 ```
 <DOCS_ROOT>/features/<feature-name>/
-├── SPEC.md                          ← BA tạo (1 file, nghiệp vụ + Screens table); Designer điền cột Figma Link
+├── SPEC.md                          ← BA tạo (1 file, nghiệp vụ + Screens table + ## BA Deliverables); Designer điền cột Figma Link
+├── prototype/index.html             ← BA tạo (Output 4)
 ├── <backend-repo>/
 │   ├── DESIGN.md                    ← Tech Lead (kỹ thuật BE)
 │   └── tasks/
@@ -58,8 +62,8 @@ Khi feature ảnh hưởng **nhiều repo** (BE + FE, BE + Mobile, hoặc cả 3
 
 | Role | Trách nhiệm |
 |---|---|
-| BA | Tạo **1 SPEC** — nghiệp vụ, actors, flow, AC, **Screens table**. Không cần biết ranh giới repo. |
-| Designer | Đọc SPEC (section `## Screens`) → tạo Figma frames → **điền Figma URL vào cột Figma Link** trong `## Screens` của SPEC.md. Không viết file `.md` riêng. |
+| BA | Giao **6 outputs**: 1 SPEC (nghiệp vụ, actors, flow, AC, **Screens table**, `## BA Deliverables`) + 3 Figma frame **low-fi** + HTML prototype + MkDocs site. Không cần biết ranh giới repo. |
+| Designer | Đọc SPEC (`## BA Deliverables` → `## Screens`) + 3 frame low-fi của BA → tạo Figma **high-fidelity** → **điền Figma URL vào cột Figma Link** trong `## Screens` của SPEC.md. Không viết file `.md` riêng. |
 | Tech Lead | Đọc SPEC (gồm Figma URLs) → xác định repo (theo bảng Ecosystem trong `AGENTS.md`) → tạo **DESIGN per repo** + tasks (truyền Figma URL vào task Context cho FE/Mobile) |
 | Dev | Implement task của repo mình |
 

@@ -123,7 +123,7 @@ Sau khi hoàn thành 6 outputs, BA agent PHẢI edit `SPEC.md` thêm section **`
 | # | Output | Path / URL | Cách chạy |
 |---|---|---|---|
 | 4 | **HTML Prototype** | `<DOCS_ROOT>/features/<feature>/prototype/index.html` | `open <DOCS_ROOT>/features/<feature>/prototype/index.html` — standalone, không cần build |
-| 5 | **MkDocs Site** | `http://127.0.0.1:8000` (Nav → Features → <feature> → SPEC) | `cd <PROJECT_ROOT> && mkdocs serve` (auto-refresh khi save SPEC) |
+| 5 | **MkDocs Site** | `<PROJECT_ROOT>/site/` — xem tại `http://127.0.0.1:8000` (Nav → Features → <feature> → SPEC) | `cd <PROJECT_ROOT> && python3 -m mkdocs serve` (auto-refresh khi save SPEC; dạng `python3 -m` không phụ thuộc `PATH`) |
 
 ### Downstream instructions
 

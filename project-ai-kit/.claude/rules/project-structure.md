@@ -42,7 +42,8 @@ src/
 
 ```
 <DOCS_ROOT>/features/<feature>/
-├── SPEC.md                  ← BA
+├── SPEC.md                  ← BA (11 sections, ## BA Deliverables liệt kê cả 6 output)
+├── prototype/index.html     ← BA (Output 4 — mở bằng `open`, không cần build)
 ├── <backend-repo>/
 │   ├── DESIGN.md            ← Tech Lead
 │   └── tasks/task-X-Y.md

@@ -242,7 +242,7 @@ figma/
 ```txt
 .claude/agents/
 ├── init-agent.md             ← Kit Setup Assistant: điền AGENTS.md (chạy 1 lần)
-├── ba-agent.md                ← Business Analyst: SPEC.md
+├── ba-agent.md                ← Business Analyst: 6 outputs (SPEC.md + 3 Figma frame + prototype + MkDocs)
 ├── techlead-design-agent.md   ← Tech Lead Design: DESIGN.md per repo
 ├── techlead-tasks-agent.md    ← Tech Lead Tasks: task-x-y.md
 ├── backend-agent.md           ← Backend Developer (repo vai trò `backend`)
@@ -405,7 +405,7 @@ Claude AI
 ```txt
 Requirement
 ↓
-ba-agent  →  SPEC.md
+ba-agent  →  SPEC.md (11 sections, ## BA Deliverables) + 3 Figma frame + prototype/index.html + MkDocs
 ↓
 [song song]
   techlead-design-agent  →  DESIGN.md per repo

@@ -236,19 +236,23 @@ pub struct RunContext<'a> {
     /// AC-E1-16 — which directory a `WriteScoped` run was supposed to be
     /// confined to. Ignored for other profiles.
     pub permission: PermissionProfile,
+    /// Named in the permission-denial warning so the user is told which
+    /// `.claude/agents/<name>.md` to look at. Without it the warning can say
+    /// a call was refused but not where to fix it.
+    pub agent_name: &'a str,
 }
 
 /// AC-E1-16, detective half — verified via a live spike
 /// (`spawn::tests::bypass_permissions_allows_writes_entirely_outside_cwd`)
-/// that `--permission-mode bypassPermissions` (unconditional for every
-/// headless spawn — see `spawn`'s own top doc comment) disables the CLI's
+/// that `--permission-mode bypassPermissions` (the `Full` profile only —
+/// see `spawn::permission_mode`) disables the CLI's
 /// own directory-scoping checks entirely, so nothing this app passes on the
 /// command line can PREVENT a `WriteScoped` agent from writing outside
 /// `feature_dir`. This instead looks at the `Write`/`Edit` tool calls
 /// already captured in the run's events and flags any whose `file_path`
 /// falls outside `feature_dir` — after the fact, never claiming to have
 /// blocked anything it didn't.
-fn writes_outside_scope(events: &[StreamEvent], feature_dir: &Path) -> Vec<String> {
+fn writes_outside_scope(events: &[StreamEvent], allowed_roots: &[&Path]) -> Vec<String> {
     events
         .iter()
         .filter_map(|event| match event {
@@ -259,7 +263,7 @@ fn writes_outside_scope(events: &[StreamEvent], feature_dir: &Path) -> Vec<Strin
             }
             _ => None,
         })
-        .filter(|path| orchestrator_dir::assert_within(Path::new(path), feature_dir).is_err())
+        .filter(|path| orchestrator_dir::assert_within_any(Path::new(path), allowed_roots).is_err())
         .map(str::to_string)
         .collect()
 }
@@ -304,6 +308,24 @@ fn find_session_model(events: &[StreamEvent]) -> Option<String> {
         StreamEvent::SessionStarted { model, .. } => Some(model.clone()),
         _ => None,
     })
+}
+
+/// Tools the CLI refused for want of permission, from the final `result`
+/// event.
+///
+/// That same event reports `is_error: false` and `subtype: "success"`, so
+/// nothing else in the payload reveals that half the run's work was blocked
+/// — a real `ba-agent` run filed as `done` with 7 denials and 3 of its 6
+/// outputs missing.
+fn denied_tools(events: &[StreamEvent]) -> Vec<String> {
+    events
+        .iter()
+        .rev()
+        .find_map(|e| match e {
+            StreamEvent::RunFinished { denied_tools, .. } => Some(denied_tools.clone()),
+            _ => None,
+        })
+        .unwrap_or_default()
 }
 
 fn append_warning(summary: &mut RunSummary, warning: String) {
@@ -374,17 +396,89 @@ pub fn finalize_run(
     // input instead of making the user re-pick a folder.
     summary.prompt = Some(prompt.to_string());
 
-    if ctx.permission == PermissionProfile::WriteScoped {
-        let escaped = writes_outside_scope(&result.events, ctx.feature_dir);
+    // BA chạy `Full` (bypassPermissions) nên CLI không còn hàng rào thư mục
+    // nào — nó là agent CẦN check hậu kiểm này nhất, không phải ít nhất.
+    // Nhưng Output 5 của nó ghi `<agentsRoot>/mkdocs.yml` và
+    // `<agentsRoot>/docs/index.md` một cách chính đáng, nên phạm vi hợp lệ
+    // là HAI root — đúng hai cái `run_to_completion` đã cấp `--add-dir`.
+    let is_ba = ctx.slot == crate::domain::pipeline_def::slot::BA;
+    if ctx.permission == PermissionProfile::WriteScoped || is_ba {
+        let roots: Vec<&Path> = if is_ba {
+            vec![ctx.feature_dir, ctx.agents_root]
+        } else {
+            vec![ctx.feature_dir]
+        };
+        let escaped = writes_outside_scope(&result.events, &roots);
         if !escaped.is_empty() {
+            let scope = roots
+                .iter()
+                .map(|r| r.display().to_string())
+                .collect::<Vec<_>>()
+                .join(", ");
             append_warning(
                 &mut summary,
                 format!(
-                    "⚠ AC-E1-16: agent (write-scoped) đã ghi ngoài phạm vi cho phép ({}): {}",
-                    ctx.feature_dir.display(),
+                    "⚠ AC-E1-16: agent đã ghi ngoài phạm vi cho phép ({scope}): {}",
                     escaped.join(", ")
                 ),
             );
+        }
+    }
+
+    // Denial trước, thiếu output sau: cái đầu là nguyên nhân của cái sau, và
+    // warning render theo thứ tự append. Phát cho mọi profile — một run
+    // `Full` vẫn bị từ chối được (connector claude.ai bị tổ chức đặt "ask"
+    // bỏ qua cả allow rule lẫn bypassPermissions), và đó mới là ca đáng
+    // surface nhất.
+    let denied = denied_tools(&result.events);
+    if !denied.is_empty() {
+        let mut names: Vec<&str> = denied.iter().map(String::as_str).collect();
+        names.sort_unstable();
+        names.dedup();
+        // Dedupe vì payload thật là 5× `Bash`; cap 5 vì một tên MCP dài 40
+        // ký tự và panel run summary thì hẹp. `denied.len()` giữ nguyên số
+        // thô nên không giấu gì.
+        let shown = names.iter().take(5).copied().collect::<Vec<_>>().join(", ");
+        let more = names.len().saturating_sub(5);
+        let suffix = if more > 0 {
+            format!(" (+{more} tool khác)")
+        } else {
+            String::new()
+        };
+        append_warning(
+            &mut summary,
+            format!(
+                "⚠ {} lượt gọi tool bị TỪ CHỐI quyền trong run này: {shown}{suffix}. Agent chạy headless nên không ai trả lời được prompt cấp quyền — kết quả có thể thiếu. Kiểm tra `tools:` trong .claude/agents/{}.md và Permission profile của agent ở Settings.",
+                denied.len(),
+                ctx.agent_name
+            ),
+        );
+        if names.iter().any(|n| n.starts_with("mcp__claude_ai_")) {
+            append_warning(
+                &mut summary,
+                "↳ Tool `mcp__claude_ai_*` là connector claude.ai: nếu tổ chức đặt tool đó ở chế độ \"ask\" thì allow rule KHÔNG có tác dụng, kể cả với permission profile `full`. Cài server remote dưới tên thường rồi chạy lại, ví dụ Figma:\nclaude mcp add --scope user --transport http figma https://mcp.figma.com/mcp"
+                    .to_string(),
+            );
+        }
+    }
+
+    // BA tự khai output nào không giao được, trong bảng `## BA Deliverables`
+    // của SPEC.md. Node vẫn là `DonePartial` (stage kế tiếp mở bình thường —
+    // xem `NodeStatus::DonePartial`), nhưng người dùng phải đọc được thiếu
+    // gì mà không cần mở SPEC ra dò.
+    if ctx.slot == crate::domain::pipeline_def::slot::BA {
+        if let Ok(spec) = std::fs::read_to_string(ctx.feature_dir.join("SPEC.md")) {
+            let skipped = crate::inference::spec_sections::skipped_deliverables(&spec);
+            if !skipped.is_empty() {
+                append_warning(
+                    &mut summary,
+                    format!(
+                        "⚠ BA giao thiếu {}/6 output (theo `## BA Deliverables`): {}. Chạy lại node BA sau khi cấu hình MCP Figma / cài mkdocs nếu cần đủ bộ.",
+                        skipped.len(),
+                        skipped.join(", ")
+                    ),
+                );
+            }
         }
     }
 
@@ -586,6 +680,7 @@ mod tests {
                 total_cost_usd: 0.02,
                 session_id: "s1".to_string(),
                 stop_reason: None,
+                denied_tools: vec![],
             },
         ]);
 
@@ -624,6 +719,7 @@ mod tests {
                 total_cost_usd: 0.03,
                 session_id: "s1".to_string(),
                 stop_reason: Some("end_turn".to_string()),
+                denied_tools: vec![],
             },
         ]);
 
@@ -649,7 +745,7 @@ mod tests {
         let feature_dir = tmp.path().join("feature");
         write(
             &feature_dir.join("SPEC.md"),
-            "## Mô tả nghiệp vụ\nx\n## Actors & Preconditions\nx\n## Happy Path\nx\n## Alternative Flows & Edge Cases\nx\n## Acceptance Criteria\nx\n## Out of Scope\nx\n## Screens\nx\n",
+            &crate::inference::spec_sections::complete_spec_fixture(),
         );
         let runs_dir = tmp.path().join("runs");
 
@@ -658,6 +754,7 @@ mod tests {
             total_cost_usd: 0.04,
             session_id: "s1".to_string(),
             stop_reason: Some("end_turn".to_string()),
+            denied_tools: vec![],
         }]);
 
         let summary = build_run_summary(
@@ -691,6 +788,7 @@ mod tests {
                 total_cost_usd: 0.05,
                 session_id: "s1".to_string(),
                 stop_reason: Some("end_turn".to_string()),
+                denied_tools: vec![],
             },
         ]);
 
@@ -723,6 +821,7 @@ mod tests {
                 total_cost_usd: 0.02,
                 session_id: "s1".to_string(),
                 stop_reason: Some("end_turn".to_string()),
+            denied_tools: vec![],
             },
         ]);
 
@@ -835,6 +934,7 @@ mod tests {
                     total_cost_usd: 0.04,
                     session_id: "s1".to_string(),
                     stop_reason: Some("end_turn".to_string()),
+                    denied_tools: vec![],
                 },
             ]
         );
@@ -873,6 +973,7 @@ mod tests {
                     total_cost_usd: 0.02,
                     session_id: "s1".to_string(),
                     stop_reason: Some("end_turn".to_string()),
+                    denied_tools: vec![],
                 },
             ],
             raw_lines: Vec::new(),
@@ -890,6 +991,7 @@ mod tests {
             feature_dir: &feature_dir,
             runs_dir: &runs_dir,
             permission: PermissionProfile::Full,
+            agent_name: "ba-agent",
         };
 
         let summary = finalize_run(
@@ -930,6 +1032,7 @@ mod tests {
                     total_cost_usd: 0.02,
                     session_id: "s1".to_string(),
                     stop_reason: Some("end_turn".to_string()),
+                    denied_tools: vec![],
                 },
             ],
             raw_lines: Vec::new(),
@@ -947,6 +1050,7 @@ mod tests {
             feature_dir: &feature_dir,
             runs_dir: &runs_dir,
             permission: PermissionProfile::Full,
+            agent_name: "ba-agent",
         };
 
         let summary = finalize_run(
@@ -984,6 +1088,7 @@ mod tests {
                     total_cost_usd: 0.02,
                     session_id: "s1".to_string(),
                     stop_reason: Some("end_turn".to_string()),
+                    denied_tools: vec![],
                 },
             ],
             raw_lines: vec![r#"{"type":"result"}"#.to_string()],
@@ -1001,6 +1106,7 @@ mod tests {
             feature_dir: &feature_dir,
             runs_dir: &runs_dir,
             permission: PermissionProfile::WriteScoped,
+            agent_name: "ba-agent",
         };
 
         let summary = finalize_run(
@@ -1064,6 +1170,7 @@ mod tests {
                     total_cost_usd: 0.02,
                     session_id: "s1".to_string(),
                     stop_reason: Some("end_turn".to_string()),
+                    denied_tools: vec![],
                 },
             ],
             raw_lines: vec![r#"{"type":"result"}"#.to_string()],
@@ -1081,6 +1188,7 @@ mod tests {
             feature_dir: &feature_dir,
             runs_dir: &runs_dir,
             permission: PermissionProfile::WriteScoped,
+            agent_name: "ba-agent",
         };
 
         let summary = finalize_run(
@@ -1123,6 +1231,7 @@ mod tests {
                     total_cost_usd: 0.02,
                     session_id: "s1".to_string(),
                     stop_reason: Some("end_turn".to_string()),
+                    denied_tools: vec![],
                 },
             ],
             raw_lines: vec![r#"{"type":"result"}"#.to_string()],
@@ -1140,11 +1249,178 @@ mod tests {
             feature_dir: &feature_dir,
             runs_dir: &runs_dir,
             permission: PermissionProfile::WriteScoped,
+            agent_name: "ba-agent",
         };
 
-        finalize_run(&ctx, &result, "t0".to_string(), "t1".to_string(), "prompt", None).unwrap();
+        finalize_run(
+            &ctx,
+            &result,
+            "t0".to_string(),
+            "t1".to_string(),
+            "prompt",
+            None,
+        )
+        .unwrap();
 
         assert!(!runs_dir.exists() || std::fs::read_dir(&runs_dir).unwrap().next().is_none());
+    }
+
+    fn finalize_with(
+        events: Vec<StreamEvent>,
+        slot: &str,
+        permission: PermissionProfile,
+    ) -> crate::domain::run_summary::RunSummary {
+        let tmp = tempfile::tempdir().unwrap();
+        let agents_root = tmp.path().join("kit");
+        let feature_dir = tmp.path().join("docs/features/f1");
+        let runs_dir = agents_root.join(".ai-boost/agent-runs");
+        std::fs::create_dir_all(&feature_dir).unwrap();
+        std::fs::create_dir_all(&agents_root).unwrap();
+        // `classify_outcome` cần artifact của slot tồn tại thì mới ra `Done`
+        // — nếu không mọi test dưới đây đo nhầm `WaitingInput`.
+        std::fs::write(feature_dir.join("SPEC.md"), "x").unwrap();
+        std::fs::create_dir_all(feature_dir.join("prototype")).unwrap();
+        std::fs::write(feature_dir.join("prototype/index.html"), "x").unwrap();
+        std::fs::create_dir_all(feature_dir.join("repo")).unwrap();
+        std::fs::write(feature_dir.join("repo/DESIGN.md"), "x").unwrap();
+
+        let result = RunResult {
+            events,
+            raw_lines: vec![r#"{"type":"result"}"#.to_string()],
+            log_already_on_disk: false,
+            timed_out: false,
+            exit_code: Some(0),
+            stderr: String::new(),
+            stdout_drained: true,
+        };
+        let ctx = RunContext {
+            agents_root: &agents_root,
+            feature: "f1",
+            slot,
+            feature_dir: &feature_dir,
+            runs_dir: &runs_dir,
+            permission,
+            agent_name: "ba-agent",
+        };
+        finalize_run(
+            &ctx,
+            &result,
+            "t0".to_string(),
+            "t1".to_string(),
+            "prompt",
+            None,
+        )
+        .unwrap()
+    }
+
+    fn finished_with_denials(denied: &[&str]) -> StreamEvent {
+        StreamEvent::RunFinished {
+            is_error: false,
+            total_cost_usd: 0.02,
+            session_id: "s1".to_string(),
+            stop_reason: Some("end_turn".to_string()),
+            denied_tools: denied.iter().map(|s| s.to_string()).collect(),
+        }
+    }
+
+    /// The real run that motivated this reported `is_error: false` and was
+    /// filed as `done` while 3 of its 6 outputs were missing. The outcome
+    /// stays `Done` on purpose — the warning is what makes it visible.
+    #[test]
+    fn permission_denials_append_a_warning_without_changing_the_outcome() {
+        let summary = finalize_with(
+            vec![finished_with_denials(&[
+                "Bash",
+                "mcp__claude_ai_Figma__use_figma",
+            ])],
+            "ba",
+            PermissionProfile::Full,
+        );
+
+        assert_eq!(summary.outcome, RunOutcome::Done);
+        let msg = summary.last_message.unwrap();
+        assert!(msg.contains("bị TỪ CHỐI quyền"));
+        assert!(msg.contains("mcp__claude_ai_Figma__use_figma"));
+        assert!(msg.contains(".claude/agents/ba-agent.md"));
+        // Connector claude.ai: allow rule không cứu được, phải nêu lối ra.
+        assert!(msg.contains("claude mcp add --scope user"));
+    }
+
+    #[test]
+    fn a_run_with_no_denials_gets_no_permission_warning() {
+        let summary = finalize_with(
+            vec![finished_with_denials(&[])],
+            "backend",
+            PermissionProfile::WriteScoped,
+        );
+        assert!(!summary.last_message.unwrap_or_default().contains("TỪ CHỐI"));
+    }
+
+    /// Payload thật là 5× `Bash`; in ra 5 lần là nhiễu. Nhưng số thô phải
+    /// giữ, và tên MCP dài nên phải cap.
+    #[test]
+    fn denied_tool_names_are_deduplicated_and_capped_at_five() {
+        let denied = [
+            "Bash",
+            "Bash",
+            "Bash",
+            "mcp__a__t",
+            "mcp__b__t",
+            "mcp__c__t",
+            "mcp__d__t",
+            "mcp__e__t",
+        ];
+        let summary = finalize_with(
+            vec![finished_with_denials(&denied)],
+            "backend",
+            PermissionProfile::WriteScoped,
+        );
+        let msg = summary.last_message.unwrap();
+
+        assert!(
+            msg.contains("⚠ 8 lượt gọi tool"),
+            "giữ nguyên số thô: {msg}"
+        );
+        assert!(msg.contains("(+1 tool khác)"), "{msg}");
+        assert_eq!(msg.matches("Bash").count(), 1, "dedupe: {msg}");
+        // Không phải connector claude.ai thì không gợi ý sai chỗ.
+        assert!(!msg.contains("claude mcp add"));
+    }
+
+    /// BA chạy `Full` nên CLI không còn chặn thư mục — nó cần check hậu
+    /// kiểm này nhất. Nhưng Output 5 ghi vào `agentsRoot` một cách chính
+    /// đáng, nên chỉ những gì ngoài CẢ HAI root mới là vi phạm.
+    #[test]
+    fn ba_full_profile_still_gets_the_scope_warning_but_not_for_agents_root_writes() {
+        let tmp = tempfile::tempdir().unwrap();
+        let agents_root = tmp.path().join("kit");
+        let feature_dir = tmp.path().join("docs/features/f1");
+        std::fs::create_dir_all(&feature_dir).unwrap();
+        std::fs::create_dir_all(&agents_root).unwrap();
+
+        // `assert_within` canonicalize nên file phải tồn tại thật.
+        let write = |path: &std::path::Path| {
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, "x").unwrap();
+            StreamEvent::ToolCall {
+                message_id: "m".to_string(),
+                tool_use_id: "t".to_string(),
+                tool_name: "Write".to_string(),
+                input: serde_json::json!({ "file_path": path.display().to_string() }),
+            }
+        };
+        let roots = [feature_dir.as_path(), agents_root.as_path()];
+
+        // Output 5 của BA: hợp lệ, nằm dưới agentsRoot.
+        assert!(writes_outside_scope(&[write(&agents_root.join("mkdocs.yml"))], &roots).is_empty());
+
+        // Ngoài cả hai root: vẫn phải bị bắt.
+        let stray = tmp.path().join("elsewhere/notes.md");
+        assert_eq!(
+            writes_outside_scope(&[write(&stray)], &roots).len(),
+            1,
+            "ghi ngoài cả hai root vẫn phải bị cảnh báo"
+        );
     }
 
     #[test]
@@ -1182,7 +1458,7 @@ mod tests {
             },
         ];
 
-        let escaped = writes_outside_scope(&events, &feature_dir);
+        let escaped = writes_outside_scope(&events, &[feature_dir.as_path()]);
         assert_eq!(escaped.len(), 1);
         assert!(escaped[0].contains("escaped.txt"));
     }
@@ -1212,6 +1488,7 @@ mod tests {
                     total_cost_usd: 0.01,
                     session_id: "s1".to_string(),
                     stop_reason: Some("end_turn".to_string()),
+                    denied_tools: vec![],
                 },
             ],
             raw_lines: vec![],
@@ -1229,6 +1506,7 @@ mod tests {
             feature_dir: &feature_dir,
             runs_dir: &runs_dir,
             permission: PermissionProfile::WriteScoped,
+            agent_name: "ba-agent",
         };
         let summary = finalize_run(
             &ctx,
@@ -1276,6 +1554,7 @@ mod tests {
                     total_cost_usd: 0.01,
                     session_id: "s1".to_string(),
                     stop_reason: Some("end_turn".to_string()),
+                    denied_tools: vec![],
                 },
             ],
             raw_lines: vec![],
@@ -1293,6 +1572,7 @@ mod tests {
             feature_dir: &feature_dir,
             runs_dir: &runs_dir,
             permission: PermissionProfile::Full,
+            agent_name: "ba-agent",
         };
         let summary = finalize_run(
             &ctx,

@@ -10,6 +10,14 @@ tools:
   - mcp__claude_ai_Figma__get_metadata
   - mcp__claude_ai_Figma__get_variable_defs
   - mcp__claude_ai_Figma__get_screenshot
+  # `figma` — cùng server remote đó nhưng cài bằng lệnh chính thức
+  # (`claude mcp add --scope user --transport http figma https://mcp.figma.com/mcp`).
+  # `tools:` là allowlist: thiếu tên này thì cài kiểu đó là mất Figma, im lặng.
+  # CHỈ tool đọc — không bao giờ thêm `use_figma`/`create_new_file` vào đây.
+  - mcp__figma__get_design_context
+  - mcp__figma__get_metadata
+  - mcp__figma__get_variable_defs
+  - mcp__figma__get_screenshot
   # figma-bridge — cầu nối tới Figma desktop đang mở, đọc selection hiện tại.
   # Liệt kê từng tool thay vì dùng wildcard `mcp__figma-bridge` để giữ đúng
   # ràng buộc CHỈ ĐỌC: wildcard sẽ mở luôn mọi tool server đó có sau này.

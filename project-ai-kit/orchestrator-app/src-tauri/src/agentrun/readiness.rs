@@ -141,7 +141,9 @@ pub enum RepoReadiness {
     RoleNotInEcosystem,
     /// No repo matched, and the Ecosystem contains rows whose Vai trò cell
     /// is unreadable — report those instead of claiming the role is absent.
-    RoleUnreadable { entries: Vec<UnreadableRole> },
+    RoleUnreadable {
+        entries: Vec<UnreadableRole>,
+    },
     /// AC-E2-11 — a repo of this role exists but isn't cloned yet. Carries
     /// the repo's name and declared path so the message can be specific.
     RepoNotCloned {
@@ -226,8 +228,13 @@ fn predecessor_index(def: &PipelineDef, stage_idx: usize) -> Option<usize> {
         .or_else(|| (stage.depends_on.is_none() && stage_idx > 0).then(|| stage_idx - 1))
 }
 
+/// `DonePartial` tính là hoàn thành — xem doc của chính variant đó: nó là
+/// cảnh báo về output phụ thuộc công cụ ngoài, không phải lỗi của feature.
 fn is_complete(status: Option<&NodeStatus>) -> bool {
-    matches!(status, Some(NodeStatus::Done) | Some(NodeStatus::Skipped))
+    matches!(
+        status,
+        Some(NodeStatus::Done) | Some(NodeStatus::DonePartial) | Some(NodeStatus::Skipped)
+    )
 }
 
 /// `statuses` is keyed by slot id; a missing entry counts as `Idle`.
@@ -328,7 +335,15 @@ pub fn compute_slot_readiness(
         .after_slots
         .iter()
         .filter(|dep| !slots_without_work.iter().any(|id| id == dep.as_str()))
-        .filter(|dep| !matches!(statuses.get(dep.as_str()), Some(NodeStatus::Done)))
+        // Cố ý KHÔNG dùng `is_complete`: `Skipped` ở đây vẫn phải chặn
+        // (xem `skipped_backend_still_blocks_frontend`). Chỉ `DonePartial`
+        // được đi qua, vì nó là một `Done` có kèm cảnh báo.
+        .filter(|dep| {
+            !matches!(
+                statuses.get(dep.as_str()),
+                Some(NodeStatus::Done) | Some(NodeStatus::DonePartial)
+            )
+        })
         .cloned()
         .collect();
     if !unmet.is_empty() {
@@ -438,6 +453,16 @@ mod tests {
     }
 
     /// Ported from `stage_two_complete_spawns_stage_three_in_parallel`.
+    /// BA giao thiếu Output Figma/MkDocs là CẢNH BÁO, không phải chặn:
+    /// đó là công cụ ngoài app không kiểm chứng được, và người dùng vẫn có
+    /// SPEC.md đủ để stage ② chạy tiếp.
+    #[test]
+    fn a_partially_delivered_ba_still_opens_the_next_stage() {
+        let st = statuses(&[(slot::BA, NodeStatus::DonePartial)]);
+        assert!(is_complete(st.get(slot::BA)));
+        assert!(!is_complete(st.get(slot::TECHLEAD_DESIGN)));
+    }
+
     #[test]
     fn stage_three_is_ready_once_stage_two_is_complete() {
         let st = statuses(&[
@@ -749,7 +774,11 @@ mod tests {
     #[test]
     fn an_unreadable_role_cell_is_reported_as_such_not_as_a_missing_repo() {
         let eco = vec![
-            repo("frontend", "frontend — nơi landing page được implement", true),
+            repo(
+                "frontend",
+                "frontend — nơi landing page được implement",
+                true,
+            ),
             repo("backend", "backend — template residual", true),
         ];
         // Both now resolve, which is the whole point of the fix.

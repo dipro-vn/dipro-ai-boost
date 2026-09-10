@@ -26,4 +26,10 @@ describe("isPreviewableArtifact", () => {
     expect(isPreviewableArtifact("/f/.gitignore")).toBe(true);
     expect(isPreviewableArtifact("/some.dir/README")).toBe(true);
   });
+
+  /** BA Output 4 — không có `html` trong whitelist thì prototype hiện xám,
+   * không bấm được. */
+  it("treats the BA HTML prototype as previewable", () => {
+    expect(isPreviewableArtifact("/docs/features/login/prototype/index.html")).toBe(true);
+  });
 });

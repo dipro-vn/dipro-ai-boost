@@ -17,7 +17,7 @@ use crate::domain::config_file::{self, AgentConfig, ProjectConfig};
 use crate::domain::contract_lock::{ContractLockRecord, ContractLockStatus, LockedFile};
 use crate::domain::design_ref::DesignRef;
 use crate::domain::gate_state::{GateState, GateStatus};
-use crate::domain::pipeline_def::{AgentSlot, PipelineDef, gate, slot};
+use crate::domain::pipeline_def::{gate, slot, AgentSlot, PipelineDef};
 use crate::domain::pipeline_expand;
 use crate::domain::project::{EcosystemRepo, ProjectInitStatus, ProjectPaths};
 use crate::domain::run_summary::{RunOutcome, RunSummary};
@@ -164,6 +164,10 @@ fn resolved_figma_server(agents_root: &Path) -> Option<String> {
 ///
 /// An agent with no `tools:` key at all is unrestricted, so the resolved
 /// server passes through untouched.
+///
+/// NOT used for `ba-agent` any more: BA needs a server that can WRITE the
+/// canvas, and config presence proves neither liveness nor capability. Its
+/// server comes from `ba_figma_gate` over `claude mcp list` instead.
 fn figma_server_for_slot(
     agents_root: &Path,
     ecosystem: &[EcosystemRepo],
@@ -219,7 +223,12 @@ fn figma_mcp_available(agents_root: &Path) -> bool {
 fn unreadable_role_message(role: &str, entries: &[readiness::UnreadableRole]) -> String {
     let listed = entries
         .iter()
-        .map(|entry| format!("\"{}\" (vai trò: \"{}\")", entry.repo_name, entry.declared_role))
+        .map(|entry| {
+            format!(
+                "\"{}\" (vai trò: \"{}\")",
+                entry.repo_name, entry.declared_role
+            )
+        })
         .collect::<Vec<_>>()
         .join(", ");
     format!(
@@ -241,12 +250,8 @@ fn contract_is_violated(
     let dir = orchestrator_dir::contract_lock_dir(agents_root, feature);
     let previous_lock = crate::store::contract_lock::read_latest_lock(&dir);
     let skip = crate::store::contract_lock::read_skip(&dir);
-    let state = contract_lock_rules::infer_contract_lock_state(
-        feature_dir,
-        ecosystem,
-        previous_lock,
-        skip,
-    );
+    let state =
+        contract_lock_rules::infer_contract_lock_state(feature_dir, ecosystem, previous_lock, skip);
     state.status == crate::domain::contract_lock::ContractLockStatus::Violated
 }
 
@@ -580,6 +585,73 @@ fn run_to_completion(
         return;
     }
 
+    // BA draws Outputs 1-3 through `use_figma`, which only Figma's REMOTE
+    // MCP serves. Everything above this point is filesystem work costing
+    // microseconds, so this is deliberately the LAST gate: never pay ~10s of
+    // `claude mcp list` to discover something a free check would have caught.
+    //
+    // Asked from `feature_dir` — the agent's own cwd (`SpawnParams.cwd`
+    // below) — because `claude mcp list` resolves `.mcp.json` upward from
+    // cwd. Asking from `agents_root` can report a server the BA process,
+    // sitting under `docsRoot`, would never resolve (A1: the roots need not
+    // nest).
+    //
+    // A resume is exempt: it carries the user's answer into a live session
+    // and never gets the output contract (see `spawn_prompt` below), so
+    // blocking it on a momentary MCP flap would strand a `waiting-input`
+    // run with no way out.
+    let mut ba_figma_server: Option<String> = None;
+    if slot == slot::BA && resume_session_id.is_none() {
+        // `feature_dir` is normally created by Import Input / create-feature
+        // long before this, but it is not guaranteed here — and
+        // `Command::current_dir` on a missing directory fails at spawn.
+        // Falling back keeps the gate from reporting "could not verify MCP"
+        // for what is really a missing feature folder; the spawn below will
+        // surface that on its own terms.
+        let list_cwd: &Path = if feature_dir.is_dir() {
+            &feature_dir
+        } else {
+            &agents_root
+        };
+        let entries = match crate::store::mcp_status::fetch_mcp_status(list_cwd) {
+            Ok(entries) => entries,
+            Err(err) => {
+                record_pre_spawn_outcome(
+                    &app,
+                    &agents_root,
+                    &feature,
+                    &slot,
+                    RunOutcome::Blocked,
+                    format!(
+                        "Không kiểm tra được MCP Figma trước khi chạy BA: {err}. BA cần MCP Figma ghi được để vẽ Output 1-3 nên run bị chặn thay vì chạy mù.\n\n{FIGMA_INSTALL_HINT}"
+                    ),
+                );
+                recompute_and_emit(&app, &agents_root, &docs_root, &feature);
+                return;
+            }
+        };
+        let declared = agents_reader::declared_mcp_servers(&agents_root, &agent_name);
+        let preferred = std::fs::read_to_string(orchestrator_dir::config_json_path(&agents_root))
+            .ok()
+            .and_then(|raw| serde_json::from_str::<ProjectConfig>(&raw).ok())
+            .and_then(|cfg| cfg.figma_mcp_server);
+        match ba_figma_gate(&entries, declared.as_ref(), preferred.as_deref()) {
+            BaFigmaGate::Ok { server } => ba_figma_server = Some(server),
+            blocked => {
+                record_pre_spawn_outcome(
+                    &app,
+                    &agents_root,
+                    &feature,
+                    &slot,
+                    RunOutcome::Blocked,
+                    ba_figma_block_message(&blocked, &feature_dir),
+                );
+                recompute_and_emit(&app, &agents_root, &docs_root, &feature);
+                return;
+            }
+        }
+    }
+
     let started_at = chrono::Utc::now().to_rfc3339();
     let key = RunKey {
         feature: feature.clone(),
@@ -602,7 +674,16 @@ fn run_to_completion(
     // a project that has never imported anything yet would otherwise hand
     // the CLI a `--add-dir` for a directory that isn't there.
     let _ = std::fs::create_dir_all(orchestrator_dir::inputs_dir(&agents_root));
-    let extra_add_dirs = vec![orchestrator_dir::inputs_dir(&agents_root)];
+    // `ba-agent.md` `Read` `.claude/ba-agent/**`, `.claude/skills/ba-figma-output/`
+    // và `.claude/templates/mkdocs.yml` bằng path tương đối, còn cwd bên dưới là
+    // `feature_dir` — nằm dưới `docsRoot`, không nhất thiết dưới `agentsRoot`.
+    // `ba_output_contract` đổi chúng thành path tuyệt đối, nhưng path tuyệt đối
+    // vẫn cần được grant thì mới đọc được; Output 5 (`mkdocs build`) cũng ghi
+    // ngay tại `agentsRoot`.
+    let mut extra_add_dirs = vec![orchestrator_dir::inputs_dir(&agents_root)];
+    if slot == slot::BA {
+        extra_add_dirs.push(agents_root.clone());
+    }
 
     // The kit's hooks (H01/H03/H05) live in `<agentsRoot>/.claude/settings.json`,
     // but cwd below is the feature dir under `docsRoot` — a directory that need
@@ -619,10 +700,37 @@ fn run_to_completion(
     // Skipped when resuming: that session already got it on its first
     // spawn, and the prompt being delivered is the user's answer.
     let spawn_prompt = if slot == slot::BA && resume_session_id.is_none() {
-        format!("{prompt}{}", ba_output_contract(&feature_dir))
+        // `ba_figma_server` was proved live, Connected and write-capable by
+        // the gate above, in the agent's own cwd — unlike
+        // `figma_server_for_slot`, which reads config files and on a freshly
+        // scaffolded project resolves a server the agent has never had.
+        format!(
+            "{prompt}{}",
+            ba_output_contract(&feature_dir, &agents_root, ba_figma_server.as_deref())
+        )
     } else {
         prompt.clone()
     };
+
+    // `acceptEdits` auto-approves file edits and nothing else, so without
+    // these a write-scoped agent's `Bash` and MCP calls are all refused —
+    // headless has no TTY to answer the prompt. Derived from the agent's own
+    // `tools:` allowlist so the grant can never exceed what the kit already
+    // said that agent may call.
+    //
+    // Only for `WriteScoped`: `Full` is `bypassPermissions` (rules are
+    // moot) and `ReadOnly` is `plan` + read-only tools, neither of which
+    // prompts. `None` — an agent with no `tools:` key — yields nothing on
+    // purpose: there is no declaration to derive from, and inventing `*`
+    // would silently promote it past its own profile.
+    let allowed_tools =
+        if config.permission == crate::domain::config_file::PermissionProfile::WriteScoped {
+            agents_reader::declared_tools(&agents_root, &agent_name)
+                .map(|declared| spawn::allow_rules_from_declared_tools(&declared))
+                .unwrap_or_default()
+        } else {
+            Vec::new()
+        };
 
     let params = SpawnParams {
         agent_name: &agent_name,
@@ -632,6 +740,7 @@ fn run_to_completion(
         resume_session_id: resume_session_id.as_deref(),
         settings_file,
         add_dirs: &extra_add_dirs,
+        allowed_tools: &allowed_tools,
         auth: match (resolved_auth.mode, resolved_auth.api_key.as_deref()) {
             (crate::domain::config_file::ClaudeAuthMode::CliDefault, _) => {
                 spawn::SpawnAuth::CliDefault
@@ -778,6 +887,7 @@ fn run_to_completion(
         feature_dir: &feature_dir,
         runs_dir: &runs_dir,
         permission: config.permission,
+        agent_name: &agent_name,
     };
     let summary = match run_log::finalize_run(
         &ctx,
@@ -1067,6 +1177,166 @@ fn build_slot_prompt(
     }
 }
 
+/// Why a BA run may not start: the Figma MCP the agent would get cannot
+/// draw, is not signed in, or is not there at all.
+///
+/// `ba-agent` produces Outputs 1-3 with a single `use_figma` call carrying
+/// the Figma Plugin API JS for a whole frame. Figma serves that tool only
+/// from its REMOTE server; the desktop server at `127.0.0.1:3845` and every
+/// read bridge expose `get_*`/`export_*` and nothing else. So "Figma MCP is
+/// connected" is not the question worth asking — "can it write" is.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum BaFigmaGate {
+    Ok {
+        server: String,
+    },
+    NoFigmaServer,
+    /// `(name, detail)` of every Figma server present, all read-only.
+    OnlyReadOnly {
+        servers: Vec<(String, String)>,
+    },
+    NeedsAuth {
+        server: String,
+        raw: String,
+    },
+    Failed {
+        server: String,
+        raw: String,
+    },
+    ToolsNotDeclared {
+        server: String,
+        prefix: String,
+    },
+}
+
+/// Decides the gate from what `claude mcp list` reported, the `tools:`
+/// allowlist of `ba-agent.md`, and the user's Settings → MCP choice.
+///
+/// Pure on purpose: `fetch_mcp_status` spawns a process, so the decision
+/// lives here where it can be tested over hand-built entries, and the
+/// caller owns the I/O. A `fetch_mcp_status` failure is NOT a variant of
+/// this enum — "could not verify" must never quietly become "no Figma".
+fn ba_figma_gate(
+    entries: &[crate::store::mcp_status::McpStatusEntry],
+    declared: Option<&std::collections::BTreeSet<String>>,
+    preferred: Option<&str>,
+) -> BaFigmaGate {
+    use crate::store::mcp_config::{figma_role, FigmaRole};
+    use crate::store::mcp_status::McpConnectionStatus;
+
+    let role_of = |e: &crate::store::mcp_status::McpStatusEntry| figma_role(&e.name, &e.detail);
+
+    let write: Vec<_> = entries
+        .iter()
+        .filter(|e| role_of(e) == FigmaRole::WriteCapable)
+        .collect();
+
+    if write.is_empty() {
+        let read_only: Vec<(String, String)> = entries
+            .iter()
+            .filter(|e| role_of(e) == FigmaRole::ReadOnly)
+            .map(|e| (e.name.clone(), e.detail.clone()))
+            .collect();
+        return if read_only.is_empty() {
+            BaFigmaGate::NoFigmaServer
+        } else {
+            BaFigmaGate::OnlyReadOnly { servers: read_only }
+        };
+    }
+
+    // Two write-capable servers can both be installed (`figma` from the
+    // official command AND the `claude.ai Figma` connector). Settings → MCP
+    // is the user's tie-break; otherwise prefer the one that actually works
+    // over the one that merely exists, so a stale un-authed entry cannot
+    // mask a healthy server sitting after it in the CLI's output.
+    let pick = preferred
+        .and_then(|name| write.iter().find(|e| e.name == name).copied())
+        .or_else(|| {
+            write
+                .iter()
+                .find(|e| e.status == McpConnectionStatus::Connected)
+                .copied()
+        })
+        .or_else(|| {
+            write
+                .iter()
+                .find(|e| e.status == McpConnectionStatus::NeedsAuth)
+                .copied()
+        })
+        .unwrap_or(write[0]);
+
+    match pick.status {
+        McpConnectionStatus::NeedsAuth => {
+            return BaFigmaGate::NeedsAuth {
+                server: pick.name.clone(),
+                raw: pick.raw_status.clone(),
+            }
+        }
+        McpConnectionStatus::Failed => {
+            return BaFigmaGate::Failed {
+                server: pick.name.clone(),
+                raw: pick.raw_status.clone(),
+            }
+        }
+        McpConnectionStatus::Connected => {}
+    }
+
+    // No `tools:` key at all means unrestricted (`agents_reader`), so only
+    // an explicit allowlist that omits this server's prefix is a problem.
+    let prefix = crate::store::mcp_config::mcp_tool_prefix(&pick.name);
+    if declared.is_some_and(|set| !set.contains(&prefix)) {
+        return BaFigmaGate::ToolsNotDeclared {
+            server: pick.name.clone(),
+            prefix,
+        };
+    }
+
+    BaFigmaGate::Ok {
+        server: pick.name.clone(),
+    }
+}
+
+/// Every blocking message ends with this. A block the user cannot act on is
+/// just a dead end, and the one action that fixes every case here is
+/// installing the remote server.
+const FIGMA_INSTALL_HINT: &str = "Cài MCP Figma ghi được bằng lệnh:\n\
+claude mcp add --scope user --transport http figma https://mcp.figma.com/mcp\n\
+rồi mở Claude Code chạy `/mcp` để đăng nhập, sau đó chạy lại.";
+
+fn ba_figma_block_message(gate: &BaFigmaGate, feature_dir: &Path) -> String {
+    let body = match gate {
+        // Not reachable from the caller, which only formats non-Ok gates —
+        // but returning a lie here would be worse than an unused arm.
+        BaFigmaGate::Ok { server } => {
+            return format!("MCP Figma \"{server}\" sẵn sàng — không có gì bị chặn.")
+        }
+        BaFigmaGate::NoFigmaServer => format!(
+            "BA cần MCP Figma GHI được để vẽ Output 1-3 (`use_figma`), nhưng `claude mcp list` chạy tại {} không thấy MCP Figma nào.",
+            feature_dir.display()
+        ),
+        BaFigmaGate::OnlyReadOnly { servers } => {
+            let listed = servers
+                .iter()
+                .map(|(name, detail)| format!("\"{name}\" ({detail})"))
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!(
+                "BA cần MCP Figma GHI được để vẽ Output 1-3, nhưng project chỉ có MCP Figma CHỈ ĐỌC: {listed}. Figma desktop server (127.0.0.1:3845) và các bridge chỉ đọc/export canvas — không có `use_figma`/`create_new_file` nên không vẽ được Output 1-3."
+            )
+        }
+        BaFigmaGate::NeedsAuth { server, raw } => format!(
+            "MCP Figma ghi được \"{server}\" đã cài nhưng CHƯA đăng nhập — `claude mcp list` báo \"{raw}\". Mọi lời gọi `use_figma` sẽ bị từ chối. Mở Claude Code, chạy `/mcp` và đăng nhập \"{server}\", rồi chạy lại."
+        ),
+        BaFigmaGate::Failed { server, raw } => format!(
+            "MCP Figma ghi được \"{server}\" không kết nối được — `claude mcp list` báo \"{raw}\". Sửa kết nối (mạng/proxy/đăng nhập lại) rồi chạy lại."
+        ),
+        BaFigmaGate::ToolsNotDeclared { server, prefix } => format!(
+            "Project dùng MCP Figma ghi được \"{server}\", nhưng .claude/agents/ba-agent.md chưa khai tool \"mcp__{prefix}__*\" trong `tools:` — agent sẽ không gọi được server này. Thêm `mcp__{prefix}__use_figma` và `mcp__{prefix}__create_new_file` (cùng các tool đọc) vào `tools:`, hoặc cài server dưới đúng tên đã khai."
+        ),
+    };
+    format!("{body}\n\n{FIGMA_INSTALL_HINT}")
+}
+
 /// The output contract appended to `ba-agent`'s prompt at spawn time.
 ///
 /// BA is the one slot whose prompt is built in the frontend
@@ -1084,15 +1354,58 @@ fn build_slot_prompt(
 /// said `Idle` — the node sits on "waiting-input" with the SPEC sitting in
 /// a directory the Board never looks at.
 ///
-/// The closing instruction is what actually ends the `claude` session on time:
-/// left to its own workflow the agent keeps going after the file is written
-/// (Bước 1.5 rescans, closing summary tables), so the run runs well past the
-/// point the artifact is complete.
-fn ba_output_contract(feature_dir: &Path) -> String {
+/// The second half pins the KIT root. `ba-agent.md` lazy-loads its own
+/// workflow body with relative `Read('.claude/ba-agent/…')` calls, but cwd
+/// is `feature_dir` under `docsRoot` — which need not sit under
+/// `agentsRoot` at all. Those reads resolved to
+/// `<feature_dir>/.claude/ba-agent/…` and simply failed, so every step the
+/// kit lazy-loads (the SPEC template, the three Figma output specs, the
+/// visual recheck) was silently skipped. `--add-dir agents_root` (set at
+/// the call site) grants the access; this names the paths.
+///
+/// It no longer tells the agent to end the turn after SPEC.md. That
+/// instruction predates the kit's 6-output Definition of Done and made
+/// Outputs 1-5 unreachable by construction — the turn now ends after the
+/// `## Output` status table, which is the point at which the artifacts
+/// really are complete.
+fn ba_output_contract(
+    feature_dir: &Path,
+    agents_root: &Path,
+    figma_server: Option<&str>,
+) -> String {
+    let kit = agents_root.join(".claude");
+    let figma = match figma_server {
+        // A pre-spawn check cannot see one thing: the signed-in Figma
+        // account may not have EDIT access to this particular file
+        // ("you don't have edit access to this file" —
+        // `design-analyst-agent.md` records exactly that). So even the happy
+        // branch carries a refusal fallback; without it the agent's own
+        // workflow stops and asks the user twice, and headless has nobody to
+        // answer.
+        Some(_) => format!(
+            "{}\n\nNếu tool Figma vẫn bị từ chối (vd tài khoản Figma liên kết với Claude chưa được share file): ghi `❌ Skipped — <lý do>` vào đúng 3 row đó của `## BA Deliverables`, rồi CHẠY TIẾP Output 4, Output 5 và Bước 5.6. TUYỆT ĐỐI KHÔNG dừng lại để hỏi.",
+            figma_server_note(figma_server)
+        ),
+        // Reachable only on a resume: a fresh BA run without a live,
+        // write-capable Figma MCP is blocked before it ever gets here
+        // (`ba_figma_gate`).
+        None => "\n\nRun này không xác định được MCP Figma ghi được. Nếu tool Figma bị từ chối: BỎ QUA Output 1-3, ghi `❌ Skipped — không có MCP Figma ghi được` vào đúng 3 row đó của `## BA Deliverables`, rồi CHẠY TIẾP Output 4 và Output 5 và Bước 5.6. TUYỆT ĐỐI KHÔNG dừng lại để hỏi."
+            .to_string(),
+    };
+
     format!(
-        "\n\nGhi SPEC.md vào ĐÚNG đường dẫn tuyệt đối sau, KHÔNG tự chọn đường dẫn khác và KHÔNG tự đặt lại tên feature:\n{}\n(Feature folder: {})\n\nViết xong file đó thì in block `## Output` của bạn rồi KẾT THÚC lượt ngay — không rà thêm SPEC khác, không hỏi thêm.",
-        feature_dir.join("SPEC.md").display(),
-        feature_dir.display()
+        "\n\nGhi SPEC.md vào ĐÚNG đường dẫn tuyệt đối sau, KHÔNG tự chọn đường dẫn khác và KHÔNG tự đặt lại tên feature:\n{spec}\n(Feature folder: {feature})\n\nKit root của project này là:\n{agents}\nMọi lệnh `Read('.claude/...')` trong ba-agent.md nghĩa là đọc dưới kit root đó, KHÔNG phải dưới thư mục hiện tại:\n- {ba_agent}/ — spec-template.md, recheck.md, self-feedback.md, post-meeting-workflow.md, figma-outputs/*\n- {skill}/ — skill ba-figma-output (SKILL.md + examples/*.png)\n- {mkdocs_tpl} — template mkdocs.yml\n\nĐịnh nghĩa hoàn thành là ĐỦ 6 outputs của ba-agent.md, KHÔNG dừng ở SPEC.md: chạy hết chuỗi Bước 4 → 4.5 → 4.6 → 5 → 5.5 → 5.6.\n`FIGMA_OUTPUT_URL` và `TARGET_PLATFORM` đã có sẵn trong prompt ở trên — dùng đúng giá trị đó, KHÔNG hỏi lại, KHÔNG tự chọn file Figma khác, KHÔNG tự tạo page mới, KHÔNG tự suy diễn platform.\nOutput 5: dò mkdocs theo HAI bước rồi mới kết luận. Bước 1 `command -v mkdocs` → chạy `cd {agents} && mkdocs build --clean`. Bước 1 trượt thì bước 2 `python3 -m mkdocs --version` → chạy `cd {agents} && python3 -m mkdocs build --clean` (pip --user đặt binary ngoài PATH nên bước 2 thường mới là bước chạy được — bước 1 trượt KHÔNG có nghĩa là chưa cài). TUYỆT ĐỐI KHÔNG chạy `mkdocs serve` (server không bao giờ thoát, run sẽ bị tính là treo). CHỈ khi CẢ HAI bước đều trượt mới được ghi `❌ Skipped`, kèm lệnh cài cho user: `python3 -m pip install --user -r {mkdocs_req}` — KHÔNG tự cài.\nOutput nào không giao được thì vẫn giữ nguyên row trong `## BA Deliverables` và ghi `❌ Skipped — <lý do>` — không xoá row, không dừng lại để hỏi.\n\nIn block `## Output` (bảng trạng thái 6 row) rồi KẾT THÚC lượt ngay — không rà thêm SPEC khác, không hỏi thêm.{figma}",
+        spec = feature_dir.join("SPEC.md").display(),
+        feature = feature_dir.display(),
+        agents = agents_root.display(),
+        ba_agent = kit.join("ba-agent").display(),
+        skill = kit.join("skills").join("ba-figma-output").display(),
+        mkdocs_tpl = kit.join("templates").join("mkdocs.yml").display(),
+        mkdocs_req = kit
+            .join("templates")
+            .join("mkdocs-requirements.txt")
+            .display(),
+        figma = figma,
     )
 }
 
@@ -1665,7 +1978,12 @@ pub fn skip_run(
 /// always wins on the next recompute, so persisting `Done` here would
 /// silently do nothing.
 #[tauri::command]
-pub fn force_done_run(app: AppHandle, state: State<AppState>, feature: String, slot: String) -> AppResult<()> {
+pub fn force_done_run(
+    app: AppHandle,
+    state: State<AppState>,
+    feature: String,
+    slot: String,
+) -> AppResult<()> {
     orchestrator_dir::validate_run_ids(&feature, &slot)?;
     if !slot_targets_repo(&slot) {
         return Err(AppError::Invalid {
@@ -2430,7 +2748,10 @@ mod tests {
         // qc-design's real agent_name is "qc-agent" — the naming-convention
         // guess `format!("{slot}-agent")` would wrongly produce
         // "qc-design-agent", which doesn't exist in the kit.
-        assert_eq!(resolve_agent_name(tmp.path(), &[], slot::QC_DESIGN), "qc-agent");
+        assert_eq!(
+            resolve_agent_name(tmp.path(), &[], slot::QC_DESIGN),
+            "qc-agent"
+        );
         assert_eq!(resolve_agent_name(tmp.path(), &[], slot::BA), "ba-agent");
     }
 
@@ -2673,23 +2994,309 @@ mod tests {
         );
     }
 
+    fn status_entry(
+        name: &str,
+        detail: &str,
+        status: crate::store::mcp_status::McpConnectionStatus,
+    ) -> crate::store::mcp_status::McpStatusEntry {
+        let raw_status = match &status {
+            crate::store::mcp_status::McpConnectionStatus::Connected => "✔ Connected",
+            crate::store::mcp_status::McpConnectionStatus::NeedsAuth => "! Needs authentication",
+            crate::store::mcp_status::McpConnectionStatus::Failed => "✘ Failed to connect",
+        }
+        .to_string();
+        crate::store::mcp_status::McpStatusEntry {
+            name: name.to_string(),
+            detail: detail.to_string(),
+            status,
+            raw_status,
+        }
+    }
+
+    fn connected(name: &str, detail: &str) -> crate::store::mcp_status::McpStatusEntry {
+        status_entry(
+            name,
+            detail,
+            crate::store::mcp_status::McpConnectionStatus::Connected,
+        )
+    }
+
+    const REMOTE: &str = "https://mcp.figma.com/mcp";
+    const DESKTOP: &str = "http://127.0.0.1:3845/mcp";
+
+    #[test]
+    fn ba_figma_gate_accepts_a_connected_write_capable_server() {
+        let entries = vec![
+            connected("codegraph", "codegraph serve --mcp"),
+            connected("claude.ai Figma", REMOTE),
+        ];
+        assert_eq!(
+            ba_figma_gate(&entries, None, None),
+            BaFigmaGate::Ok {
+                server: "claude.ai Figma".to_string()
+            }
+        );
+    }
+
+    #[test]
+    fn ba_figma_gate_reports_no_figma_when_none_is_configured() {
+        let entries = vec![connected("codegraph", "codegraph serve --mcp")];
+        assert_eq!(
+            ba_figma_gate(&entries, None, None),
+            BaFigmaGate::NoFigmaServer
+        );
+    }
+
+    /// The whole point of this gate. Figma Desktop and the read bridges
+    /// connect happily and cannot draw a single frame — treating "connected"
+    /// as "ready" is the false green it exists to prevent.
+    #[test]
+    fn ba_figma_gate_rejects_a_connected_but_read_only_figma() {
+        let entries = vec![
+            connected("figma", DESKTOP),
+            connected("figma-bridge", "npx -y mcp-figma-bridge"),
+        ];
+        assert_eq!(
+            ba_figma_gate(&entries, None, None),
+            BaFigmaGate::OnlyReadOnly {
+                servers: vec![
+                    ("figma".to_string(), DESKTOP.to_string()),
+                    (
+                        "figma-bridge".to_string(),
+                        "npx -y mcp-figma-bridge".to_string()
+                    ),
+                ]
+            }
+        );
+    }
+
+    #[test]
+    fn ba_figma_gate_surfaces_the_cli_wording_for_auth_and_failure() {
+        let needs_auth = vec![status_entry(
+            "figma",
+            REMOTE,
+            crate::store::mcp_status::McpConnectionStatus::NeedsAuth,
+        )];
+        assert!(matches!(
+            ba_figma_gate(&needs_auth, None, None),
+            BaFigmaGate::NeedsAuth { ref raw, .. } if raw.contains("Needs authentication")
+        ));
+
+        let failed = vec![status_entry(
+            "figma",
+            REMOTE,
+            crate::store::mcp_status::McpConnectionStatus::Failed,
+        )];
+        assert!(matches!(
+            ba_figma_gate(&failed, None, None),
+            BaFigmaGate::Failed { ref raw, .. } if raw.contains("Failed to connect")
+        ));
+    }
+
+    /// A server the agent's `tools:` allowlist omits has every call refused
+    /// — worse than having none, because nothing names the cause.
+    #[test]
+    fn ba_figma_gate_blocks_a_server_the_agent_never_declared() {
+        let entries = vec![connected("figma", REMOTE)];
+        let declared: std::collections::BTreeSet<String> =
+            ["figma-bridge".to_string(), "claude_ai_Figma".to_string()]
+                .into_iter()
+                .collect();
+        assert_eq!(
+            ba_figma_gate(&entries, Some(&declared), None),
+            BaFigmaGate::ToolsNotDeclared {
+                server: "figma".to_string(),
+                prefix: "figma".to_string(),
+            }
+        );
+
+        // No `tools:` key at all is unrestricted — must not block.
+        assert!(matches!(
+            ba_figma_gate(&entries, None, None),
+            BaFigmaGate::Ok { .. }
+        ));
+    }
+
+    #[test]
+    fn ba_figma_gate_prefers_a_connected_write_server_over_needs_auth_and_read_only() {
+        let entries = vec![
+            connected("figma-bridge", "npx -y mcp-figma-bridge"),
+            status_entry(
+                "figma",
+                REMOTE,
+                crate::store::mcp_status::McpConnectionStatus::NeedsAuth,
+            ),
+            connected("claude.ai Figma", REMOTE),
+        ];
+        assert_eq!(
+            ba_figma_gate(&entries, None, None),
+            BaFigmaGate::Ok {
+                server: "claude.ai Figma".to_string()
+            },
+            "một entry chưa đăng nhập đứng trước không được che server đang chạy tốt"
+        );
+    }
+
+    #[test]
+    fn ba_figma_gate_honours_the_settings_choice_when_two_write_servers_are_connected() {
+        let entries = vec![
+            connected("claude.ai Figma", REMOTE),
+            connected("figma", REMOTE),
+        ];
+        assert_eq!(
+            ba_figma_gate(&entries, None, Some("figma")),
+            BaFigmaGate::Ok {
+                server: "figma".to_string()
+            }
+        );
+    }
+
+    /// A block the user cannot act on is a dead end. Every arm must carry
+    /// the one command that fixes it.
+    #[test]
+    fn every_ba_figma_block_message_carries_the_install_command() {
+        let feature_dir = Path::new("/docs/features/login");
+        let gates = [
+            BaFigmaGate::NoFigmaServer,
+            BaFigmaGate::OnlyReadOnly {
+                servers: vec![("figma".to_string(), DESKTOP.to_string())],
+            },
+            BaFigmaGate::NeedsAuth {
+                server: "figma".to_string(),
+                raw: "! Needs authentication".to_string(),
+            },
+            BaFigmaGate::Failed {
+                server: "figma".to_string(),
+                raw: "✘ Failed to connect".to_string(),
+            },
+            BaFigmaGate::ToolsNotDeclared {
+                server: "figma".to_string(),
+                prefix: "figma".to_string(),
+            },
+        ];
+        for gate in &gates {
+            let msg = ba_figma_block_message(gate, feature_dir);
+            assert!(
+                msg.contains(
+                    "claude mcp add --scope user --transport http figma https://mcp.figma.com/mcp"
+                ),
+                "{gate:?} thiếu lệnh cài"
+            );
+        }
+
+        // The offending server is named where one exists, so the user knows
+        // which of several entries to fix.
+        assert!(ba_figma_block_message(&gates[1], feature_dir).contains(DESKTOP));
+        assert!(ba_figma_block_message(&gates[2], feature_dir).contains("Needs authentication"));
+        assert!(
+            ba_figma_block_message(&gates[0], feature_dir).contains("/docs/features/login"),
+            "phải nêu cwd đã hỏi, vì câu trả lời phụ thuộc thư mục"
+        );
+    }
+
+    fn ba_contract_probe() -> (tempfile::TempDir, PathBuf, PathBuf) {
+        let tmp = tempfile::tempdir().unwrap();
+        let agents_root = tmp.path().join("kit");
+        let feature_dir = tmp.path().join("docs").join("features").join("user-login");
+        std::fs::create_dir_all(&feature_dir).unwrap();
+        std::fs::create_dir_all(&agents_root).unwrap();
+        (tmp, agents_root, feature_dir)
+    }
+
     /// The BA prompt is assembled in the frontend and names only the copied
     /// input folder, so the one thing that pins SPEC.md to the path the
     /// Board actually inspects is this suffix. A run whose SPEC lands
     /// elsewhere classifies as `WaitingInput` and the node never leaves it.
     #[test]
-    fn ba_output_contract_names_the_exact_spec_path_and_tells_the_agent_to_stop() {
-        let tmp = tempfile::tempdir().unwrap();
-        let feature_dir = tmp.path().join("docs").join("features").join("user-login");
-        std::fs::create_dir_all(&feature_dir).unwrap();
+    fn ba_output_contract_names_the_exact_spec_path_and_stops_after_the_status_table() {
+        let (_tmp, agents_root, feature_dir) = ba_contract_probe();
 
-        let contract = ba_output_contract(&feature_dir);
+        let contract = ba_output_contract(&feature_dir, &agents_root, None);
 
         assert!(contract.contains(&feature_dir.join("SPEC.md").display().to_string()));
         assert!(contract.contains(&feature_dir.display().to_string()));
-        // Without this the agent keeps working past the finished artifact
-        // (Bước 1.5 rescans) and the session runs on long after SPEC.md.
+        // Without this the agent keeps working past the finished artifacts
+        // (Bước 1.5 rescans) and the session runs on long after them.
         assert!(contract.contains("KẾT THÚC lượt ngay"));
+    }
+
+    /// `ba-agent.md` lazy-loads its workflow with relative
+    /// `Read('.claude/ba-agent/…')`, but cwd is the feature dir under
+    /// `docsRoot`. Absolute kit paths are the only thing that makes those
+    /// reads resolve.
+    #[test]
+    fn ba_output_contract_pins_the_kit_root_for_the_lazy_loaded_workflow() {
+        let (_tmp, agents_root, feature_dir) = ba_contract_probe();
+
+        let contract = ba_output_contract(&feature_dir, &agents_root, None);
+
+        let kit = agents_root.join(".claude");
+        assert!(contract.contains(&kit.join("ba-agent").display().to_string()));
+        assert!(contract.contains(
+            &kit.join("skills")
+                .join("ba-figma-output")
+                .display()
+                .to_string()
+        ));
+        assert!(contract.contains(
+            &kit.join("templates")
+                .join("mkdocs.yml")
+                .display()
+                .to_string()
+        ));
+    }
+
+    /// `mkdocs serve` never exits — issuing it inside an orchestrated run
+    /// burns the whole timeout and lands in `RunOutcome::Timeout`.
+    ///
+    /// The `python3 -m` half matters just as much: `pip install --user`
+    /// puts the binary in a directory that is typically NOT on PATH, so an
+    /// agent that only knows the bare command reports "not installed" for a
+    /// machine where mkdocs is installed perfectly well.
+    #[test]
+    fn ba_output_contract_asks_for_a_mkdocs_build_and_never_a_serve() {
+        let (_tmp, agents_root, feature_dir) = ba_contract_probe();
+
+        let contract = ba_output_contract(&feature_dir, &agents_root, None);
+
+        assert!(contract.contains("mkdocs build --clean"));
+        assert!(contract.contains("python3 -m mkdocs --version"));
+        assert!(
+            contract.contains("python3 -m pip install --user -r"),
+            "a skip must come with the command that fixes it"
+        );
+        assert!(contract.contains("mkdocs-requirements.txt"));
+        // `serve` chỉ được nhắc tới như một lệnh CẤM, không bao giờ như
+        // lệnh để chạy.
+        assert!(contract.contains("KHÔNG chạy `mkdocs serve`"));
+    }
+
+    /// Regression: the old contract ended the turn right after SPEC.md,
+    /// which made Outputs 1-5 of the kit's Definition of Done unreachable
+    /// by construction.
+    #[test]
+    fn ba_output_contract_does_not_stop_the_agent_at_spec_md() {
+        let (_tmp, agents_root, feature_dir) = ba_contract_probe();
+
+        let contract = ba_output_contract(&feature_dir, &agents_root, None);
+
+        assert!(contract.contains("ĐỦ 6 outputs"));
+        assert!(!contract.contains("Viết xong file đó thì"));
+    }
+
+    /// No Figma server: BA must be told to skip Outputs 1-3 and carry on.
+    /// Its own workflow otherwise stops and asks the user twice — and a
+    /// headless run has nobody to answer.
+    #[test]
+    fn ba_output_contract_degrades_instead_of_asking_when_figma_is_unknown() {
+        let (_tmp, agents_root, feature_dir) = ba_contract_probe();
+
+        let without = ba_output_contract(&feature_dir, &agents_root, None);
+        assert!(without.contains("❌ Skipped"));
+        assert!(without.contains("KHÔNG dừng lại để hỏi"));
+
+        let with = ba_output_contract(&feature_dir, &agents_root, Some("claude.ai Figma"));
+        assert!(with.contains("mcp__claude_ai_Figma__*"));
     }
 
     /// G4/B22 — the Figma URL typed in the UI must reach the agent, so it

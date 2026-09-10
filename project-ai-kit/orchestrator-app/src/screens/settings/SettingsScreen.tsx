@@ -318,7 +318,17 @@ export function SettingsScreen() {
                     <TableRow key={server.name}>
                       <TableCell className="font-mono text-xs">{server.name}</TableCell>
                       <TableCell>{server.kind}</TableCell>
-                      <TableCell className="font-mono text-xs">{server.detail}</TableCell>
+                      <TableCell className="font-mono text-xs">
+                        {server.detail}
+                        {server.source === "claude-settings" && (
+                          <span
+                            className="ml-2 font-sans text-muted-foreground"
+                            title="Claude Code không đọc `mcpServers` trong .claude/settings.json — agent sẽ không gọi được server khai ở đây. Khai trong .mcp.json hoặc dùng `claude mcp add --scope user`."
+                          >
+                            (Claude Code không nạp)
+                          </span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         {figmaCandidates.length > 1 && server.figmaCandidate && config ? (
                           <label className="flex items-center gap-1 text-xs">
@@ -333,8 +343,10 @@ export function SettingsScreen() {
                             />
                             dùng cho stage Design
                           </label>
-                        ) : server.figmaCandidate ? (
-                          <Badge variant="secondary">Figma</Badge>
+                        ) : server.figmaRole === "write-capable" ? (
+                          <Badge variant="secondary">Figma (ghi được)</Badge>
+                        ) : server.figmaRole === "read-only" ? (
+                          <Badge variant="outline">Figma (chỉ đọc)</Badge>
                         ) : null}
                       </TableCell>
                     </TableRow>
@@ -353,7 +365,10 @@ export function SettingsScreen() {
               {figmaReadiness?.resolvedServer && (
                 <p className="text-xs text-muted-foreground">
                   Stage Design và Build sẽ dùng MCP{" "}
-                  <code className="font-mono">{figmaReadiness.resolvedServer}</code>.
+                  <code className="font-mono">{figmaReadiness.resolvedServer}</code>. BA (Output
+                  1-3) cần MCP <strong>ghi được</strong> (
+                  <code className="font-mono">https://mcp.figma.com/mcp</code>) — server chỉ đọc
+                  sẽ bị chặn ngay trước khi spawn.
                 </p>
               )}
               {figmaReadiness?.resolvedServer &&

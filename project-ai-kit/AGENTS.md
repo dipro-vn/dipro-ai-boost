@@ -76,7 +76,7 @@ _(Điền qua `/init-kit` — feature nào đụng ≥ 2 repo. Ví dụ: Payment
 | Phase | Agent | Command | Output |
 |---|---|---|---|
 | 0 Setup | `init-agent` | `/init-kit` | `AGENTS.md` + context |
-| 1 Discovery | `ba-agent` | `/create-spec` | `SPEC.md` |
+| 1 Discovery | `ba-agent` | `/create-spec` | 6 outputs — `SPEC.md` (11 sections, có `## BA Deliverables`) · 3 Figma frame · `prototype/index.html` · MkDocs site |
 | 2 Design (parallel) | `techlead-design-agent` · `qc-agent` · `designer-agent` | `/create-design` · `/test/analyze-req`→`plan-tcs`→`gen-tcs` · `/create-ui-design` | `DESIGN.md` · TC files · Figma URL |
 | 3 Planning | `techlead-tasks-agent` | `/create-tasks` | `tasks/task-*.md` |
 | 4 Build | `backend-agent` → `frontend-agent` ‖ `mobile-agent` | BE Phase 1→2 (migration + API + Contract) → copy Contract → FE/Mobile Phase 3 (song song, 3 sub-steps) → Phase 4 integration | Code + API Contract table |

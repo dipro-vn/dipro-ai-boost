@@ -52,7 +52,7 @@ Ngoài quan sát, E3 còn phải trả lời được câu hỏi "artifact này 
 
 | Stage | Tín hiệu `done` |
 |---|---|
-| ① Input | `<feature>/SPEC.md` tồn tại và có đủ 7 section bắt buộc |
+| ① Input | `<feature>/SPEC.md` tồn tại và có đủ các section bắt buộc |
 | ② Design — Tech Lead | Có ít nhất một `<feature>/<repo>/DESIGN.md` |
 | ② Design — Design-Analyst | `<feature>/design-analysis.md` tồn tại |
 | ② Design — QC | `<feature>/test-cases/<module>/test-cases.md` tồn tại |

@@ -7,6 +7,8 @@ BMAD feature docs — SPEC → DESIGN → tasks. Long-memory của dự án, sin
 ```
 features/<feature-name>/
 ├── SPEC.md              ← BA — nghiệp vụ, actors, flow, AC, Screens
+│                          (## BA Deliverables liệt kê cả 6 output của BA)
+├── prototype/index.html ← BA — HTML prototype, mở thẳng bằng `open`
 └── <repo>/
     ├── DESIGN.md         ← Tech Lead — thiết kế kỹ thuật per repo
     └── tasks/task-*.md   ← Task chi tiết cho Dev implement

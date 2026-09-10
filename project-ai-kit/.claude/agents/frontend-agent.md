@@ -29,6 +29,14 @@ tools:
   - mcp__tilth__tilth_files
   - mcp__tilth__tilth_deps
   # Connector `claude.ai Figma` — đọc design theo URL selection.
+  # `figma` — cùng server remote nhưng cài bằng lệnh chính thức
+  # (`claude mcp add --scope user --transport http figma https://mcp.figma.com/mcp`).
+  # `tools:` là allowlist: thiếu tên này thì cài kiểu đó là mất Figma, im lặng.
+  # CHỈ tool đọc — không bao giờ thêm `use_figma`/`create_new_file` vào đây.
+  - mcp__figma__get_design_context
+  - mcp__figma__get_metadata
+  - mcp__figma__get_variable_defs
+  - mcp__figma__get_screenshot
   - mcp__claude_ai_Figma__get_design_context
   - mcp__claude_ai_Figma__get_metadata
   - mcp__claude_ai_Figma__get_variable_defs

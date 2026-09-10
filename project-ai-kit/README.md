@@ -143,7 +143,9 @@ Mở `AGENTS.md` → xác nhận bảng Ecosystem/Actors đã điền đúng đ�
 
 Nếu dùng Dipro AI Boost, quay lại app và bấm **Đã chạy init, kiểm tra lại**. App chỉ cho chạy agent sau khi nhận diện `AGENTS.md` đã được init.
 
-### Bước 5b — (optional) Setup MkDocs site để duyệt docs
+### Bước 5b — Setup MkDocs site để duyệt docs
+
+> BA agent coi MkDocs site là **Output 5 — bắt buộc**, không skip được (xem bảng "Definition of Done" trong `.claude/agents/ba-agent.md`). Làm bước này một lần cho project, sau đó mọi run BA chỉ cần `mkdocs build --clean`. BA **không tự cài dependency** — nếu thiếu `mkdocs` nó sẽ báo lệnh cài rồi ghi `❌ Skipped` vào `## BA Deliverables`.
 
 Kit có sẵn template MkDocs để render `<DOCS_ROOT>/features/<feature>/` (SPEC/DESIGN/tasks) thành 1 site duyệt được bằng browser — không cần sửa `mkdocs.yml` mỗi khi thêm feature mới (nav tự sinh từ cấu trúc thư mục qua plugin `awesome-pages`).
 
@@ -159,15 +161,19 @@ cp .claude/templates/docs-index.md <đích>/docs/index.md
 Cài dependency và chạy site:
 
 ```bash
-pip install -r .claude/templates/mkdocs-requirements.txt
-mkdocs serve   # mở http://localhost:8000
+python3 -m pip install --user -r .claude/templates/mkdocs-requirements.txt
+python3 -m mkdocs serve   # mở http://localhost:8000 — dev server, chạy tay trong terminal của bạn
 ```
+
+> Gọi qua `python3 -m` chứ không phải `mkdocs` trần: `pip install --user` đặt binary vào thư mục kiểu `~/Library/Python/3.x/bin`, thường **không có trong `PATH`** — cài xong mà gõ `mkdocs` vẫn ra `command not found`. BA agent cũng dò đúng hai bước này trước khi kết luận là chưa cài.
+
+> Trong run do Dipro AI Boost điều phối, BA chạy `mkdocs build --clean` chứ không phải `mkdocs serve`: `serve` là server không bao giờ thoát nên app sẽ đợi tới hết timeout rồi tính là run treo.
 
 ### Bước 6 — Bắt đầu vòng đời feature đầu tiên
 "hãy là BA, làm SPEC cho \<requirement\>". Từ đây pipeline BMAD tự dẫn dắt qua "Bước tiếp theo" ở cuối mỗi output — không cần nhớ thứ tự lệnh:
 
 ```
-/create-spec        (BA)         → SPEC.md
+/create-spec        (BA)         → 6 outputs: SPEC.md + 3 Figma frame + prototype + MkDocs
 /create-design       (Tech Lead)  → DESIGN.md per repo         ┐ chạy song song
 /create-ui-design     (Designer)   → Figma frames + URL         ┤ (2b, 2c, 2d)
 /test/analyze-req → /test/plan-tcs → /test/gen-tcs (QC)         ┘  → analysis/plan/test-cases.md per module
@@ -207,7 +213,7 @@ flowchart TB
 
         BA["🟦 BA Agent"]
 
-        SPEC["📄 SPEC.md"]
+        SPEC["📄 SPEC.md + 3 Figma frame<br/>+ HTML prototype + MkDocs"]
 
         INPUT --> TRIGGER
         TRIGGER --> NL
@@ -372,7 +378,7 @@ project-ai-kit/
     ├── rules/        ← coding-style, security, git-workflow, stack-constraints, SECURITY.md (files cấm đọc), POLICY.md (IP protection), RELIABILITY.md (no guessing)...
     ├── scripts/      ← md_to_xlsx.py — Python script convert TC .md → .xlsx theo template Web/App
     ├── workflows/    ← bmad-plan-phase.js/bmad-build-phase.js (dùng bởi /create-feature) + pipeline reference + db-connect templates
-    └── templates/    ← mkdocs.yml + docs-index.md + mkdocs-requirements.txt (Bước 5b, optional)
+    └── templates/    ← mkdocs.yml + docs-index.md + mkdocs-requirements.txt (Bước 5b — BA Output 5 cần)
 ```
 
 **Nguyên tắc cốt lõi** (chi tiết trong `POLICIES.md`): không đoán mò · đọc trước hành động sau · stateless (mọi context đọc từ `.md`) · tool-first (tilth thay grep/cat/find) · blast radius check trước khi đổi public interface · phân quyền persona nghiêm ngặt (chỉ Dev sửa source code).

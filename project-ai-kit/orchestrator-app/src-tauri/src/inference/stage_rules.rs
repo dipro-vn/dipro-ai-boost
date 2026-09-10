@@ -195,7 +195,6 @@ fn repo_has_task_files(feature_dir: &Path, repo_name: &str) -> bool {
     !task_files_in_dir(&feature_dir.join(repo_name)).is_empty()
 }
 
-
 fn task_files_in_dir(repo_dir: &Path) -> Vec<PathBuf> {
     std::fs::read_dir(repo_dir.join("tasks"))
         .into_iter()
@@ -298,7 +297,10 @@ fn any_run_has_file(runs_dir: &Path, feature: &str, filename: &str) -> bool {
 /// and its ~15 test call sites keeps this an internal detail of the
 /// `runs_dir` scoping, not a public signature change.
 fn feature_slug(feature_dir: &Path) -> &str {
-    feature_dir.file_name().and_then(|n| n.to_str()).unwrap_or("")
+    feature_dir
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("")
 }
 
 fn infer_ba(feature_dir: &Path) -> NodeState {
@@ -307,10 +309,24 @@ fn infer_ba(feature_dir: &Path) -> NodeState {
         return NodeState::idle();
     };
     let missing = spec_sections::missing_sections(&content);
-    if missing.is_empty() {
-        NodeState::done()
-    } else {
-        NodeState::done_incomplete(format!("Thiếu section: {}", missing.join(", ")))
+    if !missing.is_empty() {
+        return NodeState::done_incomplete(format!("Thiếu section: {}", missing.join(", ")));
+    }
+    // Output 4 là output duy nhất ngoài SPEC.md mà kit tuyên bố KHÔNG skip
+    // được VÀ app tự kiểm chứng được trên đĩa của mình — thiếu nó là thiếu
+    // thật, chặn được.
+    if !feature_dir.join("prototype").join("index.html").is_file() {
+        return NodeState::done_incomplete("Thiếu Output 4 — prototype/index.html");
+    }
+    // Output 1-3 (Figma) và 5 (MkDocs) sống ở URL/công cụ ngoài, app không
+    // kiểm chứng được. Nguồn sự thật là bảng `## BA Deliverables` BA tự ghi.
+    match spec_sections::skipped_deliverables(&content) {
+        skipped if skipped.is_empty() => NodeState::done(),
+        skipped => NodeState::done_partial(format!(
+            "BA khai thiếu {}/6 output: {}",
+            skipped.len(),
+            skipped.join(", ")
+        )),
     }
 }
 
@@ -428,12 +444,20 @@ pub fn artifact_paths_for_slot(feature_dir: &Path, runs_dir: &Path, slot_id: &st
     let feature = feature_slug(feature_dir);
     match slot_id {
         s if s == slot::BA => {
-            let path = feature_dir.join("SPEC.md");
-            if path.is_file() {
-                vec![path]
-            } else {
-                vec![]
+            // SPEC.md TRƯỚC: `AgentStepPanel` tự mở `artifacts[0]`, và
+            // SPEC.md mới là thứ người dùng vào đây để đọc. Output 1-3
+            // (Figma) và 5 (MkDocs) không phải file nên không xuất hiện ở
+            // đây — chúng nằm trong bảng `## BA Deliverables` của SPEC.md.
+            let mut paths = Vec::new();
+            let spec = feature_dir.join("SPEC.md");
+            if spec.is_file() {
+                paths.push(spec);
             }
+            let prototype = feature_dir.join("prototype").join("index.html");
+            if prototype.is_file() {
+                paths.push(prototype);
+            }
+            paths
         }
         s if s == slot::TECHLEAD_DESIGN => files_in_repos(feature_dir, "DESIGN.md"),
         s if s == slot::DESIGN_ANALYST => {
@@ -498,8 +522,6 @@ mod tests {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(path, content).unwrap();
     }
-
-    const COMPLETE_SPEC: &str = "## Mô tả nghiệp vụ\nx\n## Actors & Preconditions\nx\n## Happy Path\nx\n## Alternative Flows & Edge Cases\nx\n## Acceptance Criteria\nx\n## Out of Scope\nx\n## Screens\nx\n";
 
     /// Guards against slot-id drift between this module and
     /// `pipeline_def::PipelineDef::default()` — if someone adds/renames a
@@ -661,7 +683,11 @@ mod tests {
         let feature_dir = tmp.path().join("f");
         touch(&feature_dir.join("mystery/tasks/task-1-1.md"));
 
-        let ecosystem = eco(&[("backend", "backend"), ("frontend", "frontend"), ("mobile", "mobile")]);
+        let ecosystem = eco(&[
+            ("backend", "backend"),
+            ("frontend", "frontend"),
+            ("mobile", "mobile"),
+        ]);
         assert!(slots_without_work_in_feature(&feature_dir, &ecosystem).is_empty());
     }
 
@@ -802,16 +828,94 @@ mod tests {
         assert!(nodes.values().all(|n| n.status == NodeStatus::Idle));
     }
 
-    #[test]
-    fn ba_done_when_spec_has_all_7_sections() {
+    /// Bảng `## BA Deliverables` với cả 6 row đã giao — khác
+    /// `complete_spec_fixture` ở chỗ bảng có nội dung thật, không chỉ có
+    /// heading.
+    fn spec_with_all_deliverables() -> String {
+        crate::inference::spec_sections::complete_spec_fixture().replace(
+            "## BA Deliverables\ntext",
+            "## BA Deliverables\n\n| 1 | **Flow Tổng Quan** | [Mở Figma](https://f/1) |\n",
+        )
+    }
+
+    fn ba_probe() -> (tempfile::TempDir, PathBuf, PathBuf) {
         let tmp = tempfile::tempdir().unwrap();
         let feature_dir = tmp.path().join("feature");
-        write(&feature_dir.join("SPEC.md"), COMPLETE_SPEC);
         let runs_dir = tmp.path().join("runs");
         std::fs::create_dir_all(&runs_dir).unwrap();
+        (tmp, feature_dir, runs_dir)
+    }
+
+    #[test]
+    fn ba_done_when_spec_is_complete_and_the_prototype_exists() {
+        let (_tmp, feature_dir, runs_dir) = ba_probe();
+        write(&feature_dir.join("SPEC.md"), &spec_with_all_deliverables());
+        write(&feature_dir.join("prototype").join("index.html"), "<html>");
 
         let nodes = infer_feature_state(&feature_dir, &runs_dir, &[]);
         assert_eq!(nodes[slot::BA].status, NodeStatus::Done);
+    }
+
+    /// Output 4 là output không-skip-được duy nhất ngoài SPEC.md mà app tự
+    /// kiểm chứng được — thiếu nó thì stage ② phải đợi.
+    #[test]
+    fn ba_done_incomplete_when_the_html_prototype_is_missing() {
+        let (_tmp, feature_dir, runs_dir) = ba_probe();
+        write(&feature_dir.join("SPEC.md"), &spec_with_all_deliverables());
+
+        let nodes = infer_feature_state(&feature_dir, &runs_dir, &[]);
+        assert_eq!(nodes[slot::BA].status, NodeStatus::DoneIncomplete);
+        assert!(nodes[slot::BA]
+            .detail
+            .as_deref()
+            .unwrap()
+            .contains("prototype/index.html"));
+    }
+
+    /// Figma không cấu hình được thì BA tự ghi `❌ Skipped` — node cảnh báo
+    /// nhưng KHÔNG chặn stage ②, vì đó là công cụ ngoài app không kiểm
+    /// chứng được.
+    #[test]
+    fn ba_done_partial_when_ba_declared_skipped_deliverables() {
+        let (_tmp, feature_dir, runs_dir) = ba_probe();
+        write(
+            &feature_dir.join("SPEC.md"),
+            &crate::inference::spec_sections::complete_spec_fixture().replace(
+                "## BA Deliverables\ntext",
+                "## BA Deliverables\n\n| 1 | **Flow Tổng Quan** | ❌ Skipped — không có MCP Figma |\n",
+            ),
+        );
+        write(&feature_dir.join("prototype").join("index.html"), "<html>");
+
+        let nodes = infer_feature_state(&feature_dir, &runs_dir, &[]);
+        assert_eq!(nodes[slot::BA].status, NodeStatus::DonePartial);
+        assert!(nodes[slot::BA]
+            .detail
+            .as_deref()
+            .unwrap()
+            .contains("Flow Tổng Quan"));
+    }
+
+    #[test]
+    fn ba_artifacts_are_the_spec_then_the_prototype() {
+        let (_tmp, feature_dir, runs_dir) = ba_probe();
+        write(&feature_dir.join("SPEC.md"), "x");
+
+        // Prototype chưa có: chỉ liệt kê thứ tồn tại.
+        assert_eq!(
+            artifact_paths_for_slot(&feature_dir, &runs_dir, slot::BA),
+            vec![feature_dir.join("SPEC.md")]
+        );
+
+        write(&feature_dir.join("prototype").join("index.html"), "<html>");
+        assert_eq!(
+            artifact_paths_for_slot(&feature_dir, &runs_dir, slot::BA),
+            vec![
+                feature_dir.join("SPEC.md"),
+                feature_dir.join("prototype").join("index.html"),
+            ],
+            "SPEC.md phải đứng đầu — AgentStepPanel tự mở artifacts[0]"
+        );
     }
 
     #[test]
@@ -1081,7 +1185,10 @@ mod tests {
     fn artifact_paths_match_what_made_the_node_done() {
         let tmp = tempfile::tempdir().unwrap();
         let feature_dir = tmp.path().join("feature");
-        write(&feature_dir.join("SPEC.md"), COMPLETE_SPEC);
+        write(
+            &feature_dir.join("SPEC.md"),
+            &crate::inference::spec_sections::complete_spec_fixture(),
+        );
         write(&feature_dir.join("backend-repo/DESIGN.md"), "x");
         write(&feature_dir.join("backend-repo/tasks/task-1-1.md"), "x");
         let runs_dir = tmp.path().join("runs");
@@ -1124,7 +1231,10 @@ mod tests {
     fn all_artifact_paths_unions_every_slot_without_duplicates() {
         let tmp = tempfile::tempdir().unwrap();
         let feature_dir = tmp.path().join("feature");
-        write(&feature_dir.join("SPEC.md"), COMPLETE_SPEC);
+        write(
+            &feature_dir.join("SPEC.md"),
+            &crate::inference::spec_sections::complete_spec_fixture(),
+        );
         write(&feature_dir.join("backend-repo/DESIGN.md"), "x");
         write(&feature_dir.join("backend-repo/tasks/task-1-1.md"), "x");
         let runs_dir = tmp.path().join("runs");

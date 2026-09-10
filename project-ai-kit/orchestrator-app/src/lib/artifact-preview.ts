@@ -27,6 +27,11 @@ const PREVIEWABLE_EXTENSIONS = [
   "dart",
   "sql",
   "log",
+  // BA Output 4 — `<feature>/prototype/index.html`. Đọc như text (xem
+  // source), không render: `read_artifact` trả UTF-8 và panel chỉ liệt
+  // kê/hiển thị, không execute.
+  "html",
+  "htm",
 ];
 
 /** True when `read_artifact` can be expected to return text for this path. */

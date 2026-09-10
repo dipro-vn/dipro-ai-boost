@@ -1,22 +1,4 @@
 {
-  "mcpServers": {
-    "tilth": {
-      "command": "tilth",
-      "args": ["--mcp"]
-    },
-    "figma": {
-      "type": "http",
-      "url": "http://127.0.0.1:3845/mcp"
-    },
-    "backlog": {
-      "command": "npx",
-      "args": ["-y", "@nulab/backlog-mcp-server"],
-      "env": {
-        "BACKLOG_DOMAIN": "",
-        "BACKLOG_API_KEY": ""
-      }
-    }
-  },
   "hooks": {
     "PreToolUse": [
       {

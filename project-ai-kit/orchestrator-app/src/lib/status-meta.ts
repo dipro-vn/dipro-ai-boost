@@ -66,6 +66,15 @@ export const STATUS_META: Record<NodeStatus, StatusMeta> = {
     colorClass: "text-warning",
     reachableInMvp1: true,
   },
+  // Khác `done-incomplete` ở chỗ stage kế tiếp VẪN mở: output còn thiếu
+  // nằm ở công cụ ngoài (Figma MCP, mkdocs) mà app không kiểm chứng được,
+  // nên đây là cảnh báo chứ không phải chặn. Detail của node nói rõ thiếu gì.
+  "done-partial": {
+    label: "Hoàn thành (thiếu output)",
+    icon: CircleAlert,
+    colorClass: "text-warning",
+    reachableInMvp1: true,
+  },
   failed: {
     label: "Lỗi",
     icon: CircleX,

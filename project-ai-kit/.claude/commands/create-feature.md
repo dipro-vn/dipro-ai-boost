@@ -5,8 +5,11 @@ description: Chạy toàn bộ BMAD pipeline để tạo ra 1 feature hoàn ch�
 Parse `$ARGUMENTS`: token đầu là `<feature>` (kebab-case). Nếu token cuối là đúng chữ `build` → đây là lệnh chạy tiếp sau gate; phần còn lại (nếu có) là `<mô tả>`.
 
 **Nếu KHÔNG có `build` (Planning phase):**
-Xác nhận feature chưa có đủ `<DOCS_ROOT>/features/<feature>/SPEC.md` + `DESIGN.md` + `tasks/*.md` (nếu đã có rồi, hỏi lại user có chắc muốn chạy lại Planning phase không — `<DOCS_ROOT>` xem trong AGENTS.md section Ecosystem). Gọi tool Workflow `name: "bmad-plan-phase"`, `args: { feature: "<feature>", description: "<mô tả>" }`.
-Sau khi xong: liệt kê file đã tạo (SPEC.md, DESIGN.md từng repo, test-cases, Figma URL, tasks/*.md) và dừng lại — nhắc user:
+Xác nhận feature chưa có đủ `<DOCS_ROOT>/features/<feature>/SPEC.md` + `DESIGN.md` + `tasks/*.md` (nếu đã có rồi, hỏi lại user có chắc muốn chạy lại Planning phase không — `<DOCS_ROOT>` xem trong AGENTS.md section Ecosystem). Gọi tool Workflow `name: "bmad-plan-phase"`, `args: { feature: "<feature>", description: "<mô tả>", figmaUrl: "<Figma Design page URL, hỏi user nếu chưa có>", targetPlatform: "<Mobile app | Web app | Website | iPad/Tablet>" }`.
+
+> `figmaUrl` và `targetPlatform` là hai câu hỏi BẮT BUỘC của BA (`ba-agent.md` Bước 2b câu 0 / 0.5). Workflow chạy tự động nên phải hỏi user TRƯỚC khi gọi, không được tự đoán platform. Thiếu `figmaUrl` thì vẫn chạy được — BA bỏ qua 3 Figma frame và ghi `❌ Skipped`.
+
+Sau khi xong: liệt kê file đã tạo — 6 outputs của BA (SPEC.md, 3 Figma frame, `prototype/index.html`, MkDocs site — xem `## BA Deliverables` trong SPEC.md), DESIGN.md từng repo, test-cases, Figma URL của Designer, tasks/*.md — và dừng lại; nhắc user:
 → Review xong thì gõ `/create-feature <feature> build` để tiếp tục sang Dev/QC. Đây là gate bắt buộc, KHÔNG tự động chạy tiếp dù không có tham số `build`.
 
 **Nếu CÓ `build` (Build phase):**

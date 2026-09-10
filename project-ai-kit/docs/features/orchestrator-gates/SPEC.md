@@ -52,7 +52,7 @@ Ngoài hai gate cứng còn một gate mềm: Memory Update Gate. Kit yêu cầu
 
 1. `ba-agent` chạy xong, ghi `SPEC.md`. Pipeline **tự dừng** — stage ② không được spawn.
 2. Node stage ① chuyển `blocked-by-gate`. App hiện thông báo có gate đang chờ duyệt.
-3. PM mở **Gate Review — Trigger** (`OR_GATE_001`): nội dung `SPEC.md` render đầy đủ, kèm checklist tự động về việc SPEC có đủ 7 section bắt buộc hay không.
+3. PM mở **Gate Review — Trigger** (`OR_GATE_001`): nội dung `SPEC.md` render đầy đủ, kèm checklist tự động về việc SPEC có đủ các section bắt buộc hay không.
 4. PM đọc thấy phần Acceptance Criteria còn mơ hồ → bấm **Request changes**, gõ nhận xét cụ thể.
 5. App gửi nhận xét vào **cùng session** của `ba-agent`, agent chạy tiếp và sửa `SPEC.md`.
 6. Gate mở lại với `SPEC.md` đã sửa. Lần này màn hình có thêm **diff** so với phiên bản PM đã từ chối.
@@ -106,7 +106,7 @@ Ngoài hai gate cứng còn một gate mềm: Memory Update Gate. Kit yêu cầu
 **Trigger gate ①**
 
 - **AC-E4-01** — Sau khi `ba-agent` kết thúc với trạng thái `done`, pipeline **tự động dừng**: không agent nào của stage ② được spawn cho tới khi gate được duyệt.
-- **AC-E4-02** — Màn hình Gate Review — Trigger hiển thị toàn bộ nội dung `SPEC.md` đã render, kèm checklist tự động cho biết `SPEC.md` có đủ 7 section bắt buộc hay không.
+- **AC-E4-02** — Màn hình Gate Review — Trigger hiển thị toàn bộ nội dung `SPEC.md` đã render, kèm checklist tự động cho biết `SPEC.md` có đủ các section bắt buộc hay không.
 - **AC-E4-03** — Nút **Request changes** yêu cầu nhập nhận xét; để trống thì không gửi được.
 - **AC-E4-04** — Nhận xét khi Request changes được gửi vào **cùng session** của `ba-agent`; agent giữ nguyên ngữ cảnh, không chạy lại từ đầu.
 - **AC-E4-05** — Session của `ba-agent` không resume được thì app báo rõ và cho phép chạy lại agent từ đầu với nhận xét kèm theo — app không im lặng bỏ qua.
@@ -176,7 +176,7 @@ Ngoài hai gate cứng còn một gate mềm: Memory Update Gate. Kit yêu cầu
 
 | Screen Code | Screen | Actor | App | Screen Type | Mô tả ngắn | Figma Link |
 |---|---|---|---|---|---|---|
-| `OR_GATE_001` | Gate Review — Trigger | PM | E01* | Detail | Xem `SPEC.md` render + checklist 7 section, nút Approve / Request changes kèm ô nhận xét, diff sau mỗi vòng sửa | |
+| `OR_GATE_001` | Gate Review — Trigger | PM | E01* | Detail | Xem `SPEC.md` render + checklist section bắt buộc, nút Approve / Request changes kèm ô nhận xét, diff sau mỗi vòng sửa | |
 | `OR_GATE_002` | Gate Review — Contract Lock | PM | E01* | Detail | Bảng API Contract (REST · WebSocket · Push), danh sách file + checksum, 5 ô xác nhận vai trò, nút Lock / Re-lock, diff khi có vi phạm | |
 
 > `*` Cột **App** = Epic code của repo đích. Bảng Ecosystem trong `AGENTS.md` của kit hiện còn placeholder, nên `E01` là giá trị **tạm** cho repo desktop app — cần xác nhận lại khi khởi tạo repo thật.

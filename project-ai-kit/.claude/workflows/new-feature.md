@@ -12,7 +12,8 @@ Quy trình chuẩn để đưa một feature mới từ yêu cầu đến produc
 User requirement
       │
       ▼ [ba-agent]
-   SPEC.md  ←── /create-spec <feature>
+6 outputs: SPEC.md + 3 Figma frame + prototype/index.html + MkDocs
+   (SPEC.md ## BA Deliverables liệt kê cả 6)  ←── /create-spec <feature>
       │
       ▼ [techlead-design-agent + qc-agent + designer-agent song song]
 DESIGN.md per repo  ←── /create-design <SPEC.md>
@@ -65,7 +66,16 @@ tasks/task-*.md  ←── /create-tasks <feature-folder/>
 - `.claude/context/doc-structure.md` — cấu trúc folder
 - Các SPEC hiện có trong `<DOCS_ROOT>/features/`
 
-**Output (path duy nhất):** `<DOCS_ROOT>/features/<feature-name>/SPEC.md`
+**Output — 6 outputs bắt buộc** (bảng "Definition of Done" trong `ba-agent.md`):
+
+| # | Output | Nơi lưu |
+|---|---|---|
+| 0 | `SPEC.md` — 11 sections, có `## BA Deliverables` | `<DOCS_ROOT>/features/<feature-name>/SPEC.md` |
+| 1-3 | 3 Figma frame — Flow Tổng Quan · Screen Flow · Screens + Items | Figma page do user cung cấp |
+| 4 | HTML prototype | `<DOCS_ROOT>/features/<feature-name>/prototype/index.html` |
+| 5 | MkDocs site | `mkdocs build` tại `<PROJECT_ROOT>` |
+
+> `## BA Deliverables` trong SPEC.md liệt kê cả 6 với path/URL — đó là **entry point duy nhất** downstream (Tech Lead Design / Designer / QC) cần, không phải pass thêm Figma URL hay HTML path.
 
 > Single-actor vs cross-repo phân biệt qua section Actors trong SPEC, không qua path.
 

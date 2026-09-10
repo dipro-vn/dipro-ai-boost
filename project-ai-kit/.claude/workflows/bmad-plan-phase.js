@@ -14,11 +14,17 @@ if (!args?.feature) {
 
 phase('BA')
 const spec = await agent(
-  `Đọc .claude/agents/ba-agent.md rồi đóng vai BA, tạo SPEC.md cho feature "${args.feature}". ` +
+  `Đọc .claude/agents/ba-agent.md rồi đóng vai BA cho feature "${args.feature}". ` +
+  `Định nghĩa hoàn thành là ĐỦ 6 outputs (SPEC.md 11 sections có ## BA Deliverables, 3 Figma frame, prototype/index.html, MkDocs) — không dừng ở SPEC.md. ` +
+  // Bước 2b câu 0 / 0.5 của ba-agent.md là hai câu hỏi BẮT BUỘC; workflow
+  // này chạy tự động nên phải truyền câu trả lời vào, nếu không agent sẽ
+  // dừng lại hỏi hoặc (tệ hơn) tự đoán platform.
+  `FIGMA_OUTPUT_URL: ${args.figmaUrl || '(chưa có — bỏ qua Output 1-3, ghi ❌ Skipped vào ## BA Deliverables, vẫn làm Output 0/4/5)'}. ` +
+  `TARGET_PLATFORM: ${args.targetPlatform || '(chưa có — hỏi lại, KHÔNG tự suy diễn)'}. ` +
   `Mô tả thêm: ${args.description || '(không có — nếu thiếu thông tin bắt buộc để hoàn thành SPEC thì hỏi lại, không tự giả định)'}`,
   { agentType: 'ba-agent', label: 'ba-agent' }
 )
-log('BA xong: SPEC.md đã tạo')
+log('BA xong: 6 outputs (xem ## BA Deliverables trong SPEC.md)')
 
 phase('Design')
 const [design, testcases, ui] = await parallel([

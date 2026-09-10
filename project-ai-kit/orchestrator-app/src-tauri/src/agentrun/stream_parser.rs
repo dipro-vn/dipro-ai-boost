@@ -57,9 +57,10 @@ pub enum StreamEvent {
     ToolResult {
         tool_use_id: String,
         content: String,
-        /// Only the success shape (no `is_error` key at all) has been
-        /// observed for real — this defaults to `false` for that case but
-        /// has NOT been verified against an actual tool-error response.
+        /// The success shape omits the key entirely, so this defaults to
+        /// `false`. The error shape IS real — see
+        /// `tests/fixtures/stream_json_permission_denied.jsonl`, captured
+        /// from a run whose Figma calls were refused.
         is_error: bool,
     },
     RunFinished {
@@ -67,6 +68,13 @@ pub enum StreamEvent {
         total_cost_usd: f64,
         session_id: String,
         stop_reason: Option<String>,
+        /// Tools the CLI refused for want of permission, in wire order and
+        /// WITHOUT de-duplication — the raw count is information (a real
+        /// run had 7 denials across 2 distinct tools). Note the result line
+        /// carrying these still reports `is_error: false` and
+        /// `subtype: "success"`, which is why a run can look clean while
+        /// half its work was blocked.
+        denied_tools: Vec<String>,
     },
     /// Any `type`/`subtype` not modeled above — every `hook_*` system
     /// event, `rate_limit_event`, and anything a future CLI version adds.
@@ -167,6 +175,18 @@ struct RawResult {
     total_cost_usd: f64,
     session_id: String,
     stop_reason: Option<String>,
+    /// `default` because older CLI versions — and the checked-in fixtures
+    /// captured from them — omit the key entirely.
+    #[serde(default)]
+    permission_denials: Vec<RawPermissionDenial>,
+}
+
+/// Only the tool name is kept. `tool_input` carries whole Bash command
+/// lines and Figma plugin JS, which would bloat the persisted `log.jsonl`
+/// for nothing a user can act on.
+#[derive(Deserialize)]
+struct RawPermissionDenial {
+    tool_name: String,
 }
 
 fn raw_type_of(trimmed: &str) -> String {
@@ -268,6 +288,11 @@ pub fn parse_line(line: &str) -> Vec<StreamEvent> {
             total_cost_usd: result.total_cost_usd,
             session_id: result.session_id,
             stop_reason: result.stop_reason,
+            denied_tools: result
+                .permission_denials
+                .into_iter()
+                .map(|d| d.tool_name)
+                .collect(),
         }],
         RawLine::Other => vec![StreamEvent::Unrecognized {
             raw_type: raw_type_of(trimmed),
@@ -291,6 +316,70 @@ mod tests {
         let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("tests/fixtures/stream_json_tool_run.jsonl");
         std::fs::read_to_string(path).expect("fixture must exist")
+    }
+
+    /// A second real capture: the BA run whose Figma calls and `mkdocs`
+    /// commands were all refused for want of permission. Redacted (paths,
+    /// session id, Figma file key) but otherwise verbatim — and the only
+    /// fixture carrying `is_error: true` tool results.
+    fn denied_fixture() -> String {
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/fixtures/stream_json_permission_denied.jsonl");
+        std::fs::read_to_string(path).expect("fixture must exist")
+    }
+
+    fn denied_events() -> Vec<StreamEvent> {
+        denied_fixture().lines().flat_map(parse_line).collect()
+    }
+
+    #[test]
+    fn permission_denials_are_parsed_from_the_result_line() {
+        let denied = denied_events()
+            .into_iter()
+            .find_map(|e| match e {
+                StreamEvent::RunFinished { denied_tools, .. } => Some(denied_tools),
+                _ => None,
+            })
+            .expect("fixture ends with a result line");
+
+        // Verbatim and in wire order: 5 Bash + 2 Figma, not de-duplicated.
+        assert_eq!(denied.len(), 7);
+        assert_eq!(denied.iter().filter(|t| *t == "Bash").count(), 5);
+        assert!(denied.contains(&"mcp__claude_ai_Figma__use_figma".to_string()));
+        assert!(denied.contains(&"mcp__claude_ai_Figma__get_metadata".to_string()));
+    }
+
+    /// The run that produced those denials still reported success. That is
+    /// the whole reason the app has to read `permission_denials` — nothing
+    /// else in the payload says the work was blocked.
+    #[test]
+    fn a_denied_run_still_reports_itself_as_not_an_error() {
+        let finished = denied_events()
+            .into_iter()
+            .find_map(|e| match e {
+                StreamEvent::RunFinished { is_error, .. } => Some(is_error),
+                _ => None,
+            })
+            .unwrap();
+        assert!(!finished);
+    }
+
+    #[test]
+    fn an_error_tool_result_is_parsed_with_is_error_true() {
+        let errors: Vec<_> = denied_events()
+            .into_iter()
+            .filter(|e| matches!(e, StreamEvent::ToolResult { is_error: true, .. }))
+            .collect();
+        assert_eq!(errors.len(), 3, "2 Figma + 1 Bash tool_result đều is_error");
+    }
+
+    #[test]
+    fn a_result_line_without_permission_denials_parses_as_empty() {
+        let line = r#"{"type":"result","is_error":false,"total_cost_usd":0.1,"session_id":"s"}"#;
+        assert!(matches!(
+            parse_line(line).as_slice(),
+            [StreamEvent::RunFinished { denied_tools, .. }] if denied_tools.is_empty()
+        ));
     }
 
     fn events() -> Vec<StreamEvent> {
@@ -503,6 +592,7 @@ mod tests {
             total_cost_usd: 1.5,
             session_id: "sess".to_string(),
             stop_reason: None,
+            denied_tools: vec![],
         };
         let value = serde_json::to_value(&finished).unwrap();
         assert_eq!(value["totalCostUsd"], 1.5);
