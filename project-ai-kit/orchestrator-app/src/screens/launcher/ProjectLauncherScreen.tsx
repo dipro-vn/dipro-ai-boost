@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,10 +25,17 @@ import { ThreePathForm } from "@/screens/launcher/ThreePathForm";
 import { EcosystemRepoTable } from "@/screens/launcher/EcosystemRepoTable";
 import { ProjectInitHandoff } from "@/screens/launcher/ProjectInitHandoff";
 import { CreateProjectForm } from "@/screens/launcher/CreateProjectForm";
-import {
-  InitKitTerminalDialog,
-  type InitKitPhase,
-} from "@/screens/launcher/InitKitTerminalDialog";
+import type { InitKitPhase } from "@/screens/launcher/InitKitTerminalDialog";
+
+/** Lazy vì file này kéo theo `@xterm/xterm` + addon-fit + css (~424KB sau khi
+ * pre-bundle). Launcher là screen mở đầu, mà terminal init-kit chỉ dùng khi
+ * project chưa init — nạp tĩnh nghĩa là mọi lần mở app đều trả giá cho xterm.
+ * `import type` ở trên bị xoá lúc compile nên không tạo cạnh runtime. */
+const InitKitTerminalDialog = lazy(() =>
+  import("@/screens/launcher/InitKitTerminalDialog").then((m) => ({
+    default: m.InitKitTerminalDialog,
+  })),
+);
 
 const EMPTY_PATHS: ProjectPaths = {
   agentsRoot: "",
@@ -81,6 +88,12 @@ export function ProjectLauncherScreen() {
   const [refreshingInit, setRefreshingInit] = useState(false);
   const [createdProject, setCreatedProject] = useState(false);
   const [initDialogOpen, setInitDialogOpen] = useState(false);
+  /** Bật một chiều ở lần mở dialog đầu tiên rồi giữ nguyên. Chunk xterm vì thế
+   * chỉ tải khi thật sự cần, nhưng khi đã mount thì component ở lại mãi — vòng
+   * đời terminal phải bám `sessionId` chứ không bám `open` (xem chú thích trong
+   * `InitKitTerminalDialog`: Claude Code là TUI alt-screen, dựng lại instance
+   * rồi phát lại ANSI không khôi phục được khung hình hiện tại). */
+  const [initDialogMounted, setInitDialogMounted] = useState(false);
   const [initProjectName, setInitProjectName] = useState("");
   const [initSessionId, setInitSessionId] = useState<string | null>(null);
   /** Output của PTY init-kit. `chunks` bị cắt trần để không phình vô hạn, nên
@@ -150,6 +163,10 @@ export function ProjectLauncherScreen() {
   useEffect(() => {
     void refreshRecent();
   }, []);
+
+  useEffect(() => {
+    if (initDialogOpen) setInitDialogMounted(true);
+  }, [initDialogOpen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -832,41 +849,45 @@ export function ProjectLauncherScreen() {
           </Card>
         )}
 
-        <InitKitTerminalDialog
-          open={initDialogOpen}
-          projectName={initProjectName}
-          sessionId={initSessionId}
-          output={initOutput.chunks}
-          outputTotal={initOutput.total}
-          phase={initPhase}
-          stopped={initStopped}
-          errorMessage={initError}
-          pendingReasons={initPendingReasons}
-          onOpenChange={setInitDialogOpen}
-          onStop={() => {
-            // Đánh dấu trước, gọi backend sau: phiên có thể chưa tồn tại (nút
-            // này bấm được ngay từ lúc phase "starting"), và dù chưa có gì để
-            // giết thì vẫn phải mở khoá terminal — nó không còn đường đóng nào
-            // khác. `startInitKit` đọc cờ này để giết phiên về muộn.
-            initStopRequestedRef.current = true;
-            initLaunchingRef.current = false;
-            setInitPhase("finished");
-            setInitStopped(true);
-            // Đọc lại project sau khi dừng. Vòng poll chỉ chạy lúc phase
-            // "running" nên nó vừa tắt cùng lúc này, mà `summary` thì vẫn là
-            // bản đọc lúc mở project. Thiếu bước này thì dừng init lúc
-            // AGENTS.md đã đủ vẫn để `initStatus` cũ, nút "Vào Pipeline Board"
-            // vẫn khoá và alert còn mời chạy init-kit thêm lần nữa — dừng
-            // xong vẫn không đi đâu được.
-            void refreshCurrentProject();
-            const sessionId = initSessionRef.current;
-            if (!sessionId) return;
-            void commands
-              .stopInitKit(sessionId)
-              .catch((err) => setInitError(extractErrorMessage(err)));
-          }}
-          onRetry={() => void startInitKit(initProjectName)}
-        />
+        {initDialogMounted && (
+          <Suspense fallback={null}>
+            <InitKitTerminalDialog
+              open={initDialogOpen}
+              projectName={initProjectName}
+              sessionId={initSessionId}
+              output={initOutput.chunks}
+              outputTotal={initOutput.total}
+              phase={initPhase}
+              stopped={initStopped}
+              errorMessage={initError}
+              pendingReasons={initPendingReasons}
+              onOpenChange={setInitDialogOpen}
+              onStop={() => {
+                // Đánh dấu trước, gọi backend sau: phiên có thể chưa tồn tại (nút
+                // này bấm được ngay từ lúc phase "starting"), và dù chưa có gì để
+                // giết thì vẫn phải mở khoá terminal — nó không còn đường đóng nào
+                // khác. `startInitKit` đọc cờ này để giết phiên về muộn.
+                initStopRequestedRef.current = true;
+                initLaunchingRef.current = false;
+                setInitPhase("finished");
+                setInitStopped(true);
+                // Đọc lại project sau khi dừng. Vòng poll chỉ chạy lúc phase
+                // "running" nên nó vừa tắt cùng lúc này, mà `summary` thì vẫn là
+                // bản đọc lúc mở project. Thiếu bước này thì dừng init lúc
+                // AGENTS.md đã đủ vẫn để `initStatus` cũ, nút "Vào Pipeline Board"
+                // vẫn khoá và alert còn mời chạy init-kit thêm lần nữa — dừng
+                // xong vẫn không đi đâu được.
+                void refreshCurrentProject();
+                const sessionId = initSessionRef.current;
+                if (!sessionId) return;
+                void commands
+                  .stopInitKit(sessionId)
+                  .catch((err) => setInitError(extractErrorMessage(err)));
+              }}
+              onRetry={() => void startInitKit(initProjectName)}
+            />
+          </Suspense>
+        )}
       </div>
     </div>
   );

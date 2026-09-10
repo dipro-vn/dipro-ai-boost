@@ -77,6 +77,14 @@ pnpm tauri dev
 
 `pnpm tauri dev` mở cửa sổ desktop và hot-reload cả frontend (Vite) lẫn backend (Rust tự rebuild + restart). Lần chạy đầu Cargo phải build từ đầu — **mất vài phút**, lần sau nhanh hơn nhiều.
 
+> **Vì sao đôi lúc `pnpm tauri dev` lại build lâu dù không đụng gì tới Rust?**
+> `src-tauri/src/store/kit_template.rs` nhúng thẳng `project-ai-kit/.claude/` vào
+> binary bằng `include_dir!` (để app tự dựng được khung kit). Cargo coi cả thư mục
+> đó là input của crate, nên **sửa bất kỳ file `.md` nào trong `.claude/` cũng ép
+> rebuild + relink ở lần `pnpm tauri dev` kế tiếp** — máy sẽ nặng vài phút. Đây là
+> đánh đổi có chủ đích, không phải app bị treo. Khi chỉ sửa UI thì dùng `pnpm dev`
+> để khỏi đụng tới Cargo.
+
 Build bản cài đặt được (`.dmg` trên macOS) — xem [mục 10](#10-đóng-gói--phát-cho-máy-khác-macos) để biết cách phát cho máy khác:
 
 ```bash

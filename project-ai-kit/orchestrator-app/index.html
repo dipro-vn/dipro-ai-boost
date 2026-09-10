@@ -1,14 +1,90 @@
 <!doctype html>
-<html lang="en">
+<html lang="vi">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/png" href="/logo_dipro.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tauri + React + Typescript</title>
+    <title>Dipro AI Boost</title>
+    <script>
+      // Chạy trước cả stylesheet lẫn bundle: đặt sẵn class `.dark` để Tailwind
+      // lên đúng theme ngay frame đầu, không nháy light->dark. Cùng key với
+      // THEME_STORAGE_KEY trong `src/lib/theme-provider.tsx`.
+      (function () {
+        try {
+          if (localStorage.getItem("dipro-theme") === "dark") {
+            document.documentElement.classList.add("dark");
+          }
+        } catch (e) {
+          /* localStorage bị chặn — cứ để mặc định light */
+        }
+      })();
+    </script>
+    <style>
+      /* Giá trị lấy từ `--background` trong `src/index.css` (light: oklch(1 0 0),
+         dark: oklch(0.145 0 0)). Hard-code vì Tailwind chưa nạp ở thời điểm này. */
+      html { background: oklch(1 0 0); }
+      html.dark { background: oklch(0.145 0 0); }
+      /* Khung chờ tĩnh: React ghi đè #root ở commit đầu nên không cần dọn tay.
+         Bố cục bám theo `SplashScreen.tsx` để lúc React tiếp quản không thấy
+         đường nối. Dùng inline CSS vì stylesheet của app chưa tồn tại. */
+      #boot {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      #boot-logo {
+        display: flex;
+        align-items: center;
+        border-radius: 1rem;
+        background: #013a63;
+        padding: 1.25rem 1.5rem;
+        max-width: 78vw;
+      }
+      #boot-logo img { width: 18rem; max-width: 100%; height: auto; }
+      #boot-text {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: oklch(0.145 0 0);
+      }
+      html.dark #boot-text { color: oklch(0.985 0 0); }
+      #boot-bar {
+        width: 12rem;
+        height: 3px;
+        border-radius: 999px;
+        overflow: hidden;
+        background: color-mix(in oklab, #013a63 25%, transparent);
+      }
+      #boot-bar::after {
+        content: "";
+        display: block;
+        width: 40%;
+        height: 100%;
+        border-radius: inherit;
+        background: #0a7ea4;
+        animation: boot-slide 1.1s ease-in-out infinite;
+      }
+      @keyframes boot-slide {
+        0%   { transform: translateX(-100%); }
+        100% { transform: translateX(350%); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #boot-bar::after { animation: none; width: 100%; }
+      }
+    </style>
   </head>
-
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="boot">
+        <span id="boot-logo"><img src="/logo_dipro.png" alt="Dipro AI Boost" /></span>
+        <p id="boot-text">Chào mừng đến với Dipro AI Boost</p>
+        <div id="boot-bar"></div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

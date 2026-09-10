@@ -15,6 +15,31 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
+/** Bản sao theme trong `localStorage`, đọc được **đồng bộ** ngay frame đầu.
+ * Rust (`get_theme`/`set_theme` → `settings.json` trong AppData) vẫn là nguồn
+ * sự thật; đây chỉ là cache read-through để không phải chờ một vòng IPC mới
+ * vẽ được gì. Cùng key với đoạn script inline trong `index.html` — sửa ở đây
+ * thì phải sửa cả ở đó. */
+const THEME_STORAGE_KEY = "dipro-theme";
+
+function readCachedTheme(): Theme {
+  try {
+    const cached = localStorage.getItem(THEME_STORAGE_KEY);
+    if (cached === "light" || cached === "dark") return cached;
+  } catch {
+    // localStorage có thể throw (private mode, storage bị chặn) — rơi về default.
+  }
+  return "light";
+}
+
+function cacheTheme(theme: Theme) {
+  try {
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
+  } catch {
+    // Ghi cache hỏng không ảnh hưởng gì: Rust vẫn giữ giá trị thật.
+  }
+}
+
 /**
  * Not `next-themes` — that library targets Next.js SSR and is unnecessary
  * for a Vite SPA. This is the same class-toggle mechanism shadcn/ui and
@@ -23,19 +48,22 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
  * AC-E1-31/32).
  */
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  // Default light until the persisted value loads (AC-E1-29).
-  const [theme, setThemeState] = useState<Theme>("light");
-  const [loaded, setLoaded] = useState(false);
+  // Seed đồng bộ từ cache để paint đúng theme ngay frame đầu; mặc định "light"
+  // khớp DEFAULT_THEME phía Rust (AC-E1-29).
+  const [theme, setThemeState] = useState<Theme>(readCachedTheme);
 
   useEffect(() => {
     let cancelled = false;
-    commands
+    void commands
       .getTheme()
       .then((persisted) => {
-        if (!cancelled) setThemeState(persisted);
+        if (cancelled) return;
+        setThemeState(persisted);
+        cacheTheme(persisted);
       })
-      .finally(() => {
-        if (!cancelled) setLoaded(true);
+      .catch(() => {
+        // Không có backend Tauri (chạy `pnpm dev` thuần trong trình duyệt) thì
+        // giữ nguyên giá trị cache — không còn gì chặn việc render nữa.
       });
     return () => {
       cancelled = true;
@@ -48,16 +76,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const setTheme = (next: Theme) => {
     setThemeState(next);
+    cacheTheme(next);
     // Fire-and-forget: theme already applied optimistically to the DOM;
     // a persistence failure shouldn't block the UI from reflecting the choice.
     void commands.setTheme(next);
   };
 
   const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
-
-  // Avoid a light->dark flash: don't render children until the persisted
-  // theme has been read once.
-  if (!loaded) return null;
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>

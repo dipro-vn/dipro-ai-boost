@@ -1,8 +1,15 @@
-@import "tailwindcss";
+/* `source(none)` tắt auto-detect của Tailwind v4: mặc định nó quét từ Vite root
+ * (cả thư mục orchestrator-app/), nuốt luôn `src-tauri/target` 14 GB / 110k file
+ * và tốn ~63 s cho lượt "Scan for candidates" đầu tiên — đó là nguyên nhân màn
+ * hình trắng + đứng máy lúc `pnpm tauri dev`. Khai `@source` tường minh để chỉ
+ * quét đúng nơi có class Tailwind. Thêm thư mục mới có JSX thì khai thêm ở đây. */
+@import "tailwindcss" source(none);
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
 @plugin "@tailwindcss/typography";
+@source "./";
+@source "../index.html";
 
 @custom-variant dark (&:is(.dark *));
 

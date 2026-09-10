@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
-const VISIBLE_MS = 1400; // thời gian hiện rõ trước khi bắt đầu tắt
+const VISIBLE_MS = 350; // đủ để không nháy; app đã sẵn sàng trước mốc này
 const EXIT_MS = 300; // phải khớp duration-* dùng cho animate-out bên dưới
 
 interface SplashScreenProps {
@@ -10,10 +10,12 @@ interface SplashScreenProps {
 
 /** Overlay chào mừng lúc khởi động — mount đè lên `AppShell` (vốn đã render
  * bình thường phía dưới), tự fade-in rồi fade-out theo timer, gọi `onDone`
- * để cha unmount nó. Không tự xử lý theme: luôn mount sau khi `ThemeProvider`
- * đã resolve xong (`theme-provider.tsx`'s `if (!loaded) return null`), nên
- * class Tailwind ngữ nghĩa (`bg-background`, `bg-primary`...) tự lên đúng
- * theme từ frame đầu. */
+ * để cha unmount nó. Tiếp nối liền mạch khối `#boot` tĩnh trong `index.html`
+ * (cùng logo, cùng nền), nên đổi bố cục ở đây thì đổi cả bên đó.
+ *
+ * Không tự xử lý theme: nằm trong `ThemeProvider`, mà provider seed theme
+ * đồng bộ từ `localStorage` nên class Tailwind ngữ nghĩa (`bg-background`,
+ * `text-foreground`...) đã đúng theme ngay frame đầu. */
 export function SplashScreen({ onDone }: SplashScreenProps) {
   const [exiting, setExiting] = useState(false);
 

@@ -46,3 +46,14 @@ portable-pty = "0.9.0"
 
 [target."cfg(unix)".dependencies]
 libc = "0.2.189"
+
+# `tauri dev` rebuild lại crate này mỗi lần bất kỳ file nào trong
+# `../../.claude/` đổi (xem các macro `include_dir!` ở `store/kit_template.rs`),
+# mà kit là thứ được sửa liên tục. Debuginfo đầy đủ cho toàn bộ cây phụ thuộc
+# là phần đắt nhất của lượt link đó và gần như không dùng tới — backtrace vẫn
+# đọc được với `line-tables-only`.
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
