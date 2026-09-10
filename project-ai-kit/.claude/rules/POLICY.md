@@ -74,7 +74,7 @@ Xem thêm: `SECURITY.md` (danh sách file cụ thể) + `security-rules.md` (bes
 
 ---
 
-## 4. THIRD_PARTY_CODE_&_LICENSE — Code ngoài & bản quyền
+## 4. THIRD*PARTY_CODE*&\_LICENSE — Code ngoài & bản quyền
 
 **MUST NOT:**
 
@@ -90,7 +90,7 @@ Xem thêm: `SECURITY.md` (danh sách file cụ thể) + `security-rules.md` (bes
 
 ---
 
-## 5. CLIENT_DATA_&_PRIVACY — Dữ liệu client & quyền riêng tư
+## 5. CLIENT*DATA*&\_PRIVACY — Dữ liệu client & quyền riêng tư
 
 **MUST NOT:**
 
@@ -121,7 +121,7 @@ Xem thêm: `SECURITY.md` (danh sách file cụ thể) + `security-rules.md` (bes
 
 ---
 
-## 7. REPOSITORY_&_BRANCH_PROTECTION
+## 7. REPOSITORY\_&_BRANCH_PROTECTION
 
 **MUST:**
 
@@ -143,7 +143,7 @@ Xem thêm: `SECURITY.md` (danh sách file cụ thể) + `security-rules.md` (bes
 **MUST:**
 
 - Chỉ bàn giao qua **kênh được thỏa thuận** với client (repo client, file server được duyệt)
-- Xóa secret / config nội bộ khỏi bản bàn giao (SPEC.md / DESIGN.md sanitize trước khi share ra ngoài)
+- Xóa secret / config nội bộ khỏi bản bàn giao (SPEC.md / Design-Technical.md / PLAN.md sanitize trước khi share ra ngoài)
 - Deliverable (SRS, source, doc) chỉ gửi đúng người có thẩm quyền phía client
 
 **MUST NOT:**
@@ -185,14 +185,14 @@ Xem thêm: `SECURITY.md` (danh sách file cụ thể) + `security-rules.md` (bes
 
 ## Bảng tóm tắt MUST NOT (đọc nhanh)
 
-| # | Tuyệt đối KHÔNG |
-|---|---|
-| 1 | Clone / crawl / push code ra public repo, git cá nhân, cloud cá nhân |
-| 2 | Paste secret / data thật / code độc quyền vào AI chưa duyệt |
-| 3 | Hardcode / commit secret |
-| 4 | Dùng code/package không rõ license hoặc license không tương thích |
-| 5 | Copy data production thật về local |
-| 6 | Share account / tắt 2FA |
-| 7 | Đổi repo private → public, force-push nhánh chung |
-| 8 | Gửi deliverable client qua kênh cá nhân/public |
-| 9 | Giấu sự cố bảo mật |
+| #   | Tuyệt đối KHÔNG                                                      |
+| --- | -------------------------------------------------------------------- |
+| 1   | Clone / crawl / push code ra public repo, git cá nhân, cloud cá nhân |
+| 2   | Paste secret / data thật / code độc quyền vào AI chưa duyệt          |
+| 3   | Hardcode / commit secret                                             |
+| 4   | Dùng code/package không rõ license hoặc license không tương thích    |
+| 5   | Copy data production thật về local                                   |
+| 6   | Share account / tắt 2FA                                              |
+| 7   | Đổi repo private → public, force-push nhánh chung                    |
+| 8   | Gửi deliverable client qua kênh cá nhân/public                       |
+| 9   | Giấu sự cố bảo mật                                                   |

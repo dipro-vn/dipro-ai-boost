@@ -4,22 +4,22 @@
 
 ## BMAD Core
 
-| Command | Chức năng | Agent |
-|---|---|---|
-| `/init-kit` | Setup kit cho dự án mới (chạy 1 lần) | `init-agent.md` |
-| `/create-feature <feature> [mô tả]` \| `/create-feature <feature> build` | **Standalone** — chạy toàn bộ BMAD pipeline: Planning (BA→Design→Tasks) dừng ở gate, sau đó `build` chạy Dev→QC Automation | `bmad-plan-phase` / `bmad-build-phase` workflow |
-| `/create-spec <feature>` | 6 outputs của BA: SPEC.md (11 sections) + 3 Figma frame + HTML prototype + MkDocs site | `ba-agent.md` |
-| `/create-design <SPEC.md>` | Tạo DESIGN.md per repo | `techlead-design-agent.md` |
-| `/create-ui-design <SPEC.md>` | Tạo Figma screens + URL vào SPEC.md ## Screens | `designer-agent.md` |
-| `/create-tasks <feature/>` | Phân rã DESIGN → task files | `techlead-tasks-agent.md` |
-| `/review-code [path]` | Review code trên branch | repo-specific |
-| `/generate-api <module>` | Scaffold NestJS module | `backend-agent` |
-| `/create-component <Name> [variant]` | Scaffold React component | `frontend-agent` |
+| Command                                                                  | Chức năng                                                                                                                     | Agent                                           |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| `/init-kit`                                                              | Setup kit cho dự án mới (chạy 1 lần)                                                                                          | `init-agent.md`                                 |
+| `/create-feature <feature> [mô tả]` \| `/create-feature <feature> build` | **Standalone** — chạy toàn bộ BMAD pipeline (không PM): Planning (BA→Design→Tasks) dừng ở gate, sau đó `build` chạy Dev→QA→QC | `bmad-plan-phase` / `bmad-build-phase` workflow |
+| `/create-spec <feature>`                                                 | Tạo SPEC.md                                                                                                                   | `ba-agent.md`                                   |
+| `/create-design <SPEC.md>`                                               | Tạo Design-Technical.md per repo                                                                                              | `techlead-design-agent.md`                      |
+| `/create-ui-design <SPEC.md>`                                            | Tạo Figma screens + URL vào SPEC.md ## Screens                                                                                | `designer-agent.md`                             |
+| `/create-tasks <feature/>`                                               | Phân rã DESIGN → task files                                                                                                   | `techlead-tasks-agent.md`                       |
+| `/review-code [path]`                                                    | Review code trên branch                                                                                                       | repo-specific                                   |
+| `/generate-api <module>`                                                 | Scaffold NestJS module                                                                                                        | `backend-agent`                                 |
+| `/create-component <Name> [variant]`                                     | Scaffold React component                                                                                                      | `frontend-agent`                                |
 
 ## QC Automation Testing
 
-| Command | Chức năng | Agent |
-|---|---|---|
+| Command                                                                | Chức năng                                                               | Agent                    |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------ |
 | `/qc-automation <feature-path> <figma-url> <target-app> <website-url>` | Sinh Playwright `.spec.ts` + chạy E2E test + xuất `execution-report.md` | `qc-automation-agent.md` |
 
 > Prefer trigger tự nhiên: **"Hãy là QC Automation, test feature: `<path>`, Figma: `<url>`, app: `<app>`, website: `<url>`"**
@@ -30,24 +30,24 @@
 
 ### Pipeline chính — sinh TC cho 1 module (bắt buộc theo thứ tự)
 
-| # | Command | Chức năng | Input → Output | Skill |
-|---|---|---|---|---|
-| 1 | `/test/analyze-req <feature> <module>` | Phân tích requirements → Q&A + AC + Screen Inventory | SPEC.md → `analysis.md` | `rbt_manual_testing` + `requirements_analyzer` |
-| 2 | `/test/plan-tcs <feature> <module>` | TC Implementation Plan (Screen → Archetype + Strategy → Component, Risk, Technique) | `analysis.md` → `plan-tcs.md` | `rbt_manual_testing` + `screen_strategy` |
-| 3 | `/test/gen-tcs <feature> <module>` | Sinh TC chi tiết (bao gồm Test Scenario + Visual + Validation) | `plan-tcs.md` + `analysis.md` → `test-cases.md` | `rbt_manual_testing` + `testing_dimensions` + `component_checklist` |
-| 4 | `/test/review-tcs <feature> <module>` (optional) | Deep review 8 tiêu chí (Critical/Major/Minor) | `test-cases.md` → `review_report.md` | `rbt_manual_testing` |
-| 5 | `/test/export-xlsx <path.md> [web\|app]` | Export ra `.xlsx` theo template Web/App (giữ dropdown) | `.md` → `.xlsx` | — (Python script) |
+| #   | Command                                          | Chức năng                                                                           | Input → Output                                  | Skill                                                               |
+| --- | ------------------------------------------------ | ----------------------------------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------- |
+| 1   | `/test/analyze-req <feature> <module>`           | Phân tích requirements → Q&A + AC + Screen Inventory                                | SPEC.md → `analysis.md`                         | `rbt_manual_testing` + `requirements_analyzer`                      |
+| 2   | `/test/plan-tcs <feature> <module>`              | TC Implementation Plan (Screen → Archetype + Strategy → Component, Risk, Technique) | `analysis.md` → `plan-tcs.md`                   | `rbt_manual_testing` + `screen_strategy`                            |
+| 3   | `/test/gen-tcs <feature> <module>`               | Sinh TC chi tiết (bao gồm Test Scenario + Visual + Validation)                      | `plan-tcs.md` + `analysis.md` → `test-cases.md` | `rbt_manual_testing` + `testing_dimensions` + `component_checklist` |
+| 4   | `/test/review-tcs <feature> <module>` (optional) | Deep review 8 tiêu chí (Critical/Major/Minor)                                       | `test-cases.md` → `review_report.md`            | `rbt_manual_testing`                                                |
+| 5   | `/test/export-xlsx <path.md> [web\|app]`         | Export ra `.xlsx` theo template Web/App (giữ dropdown)                              | `.md` → `.xlsx`                                 | — (Python script)                                                   |
 
 **Output path:** `<DOCS_ROOT>/features/<feature>/test-cases/<module>/{analysis.md,plan-tcs.md,test-cases.md,review_report.md,*.xlsx}`
 
 ### Standalone / độc lập
 
-| Command | Chức năng | Skill |
-|---|---|---|
+| Command                                   | Chức năng                                                                                     | Skill                 |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------- |
 | `/test/gen-automation <feature> [module]` | Sinh Playwright script từ `test-cases.md` — Playwright MCP recon DOM thật, auto-heal khi FAIL | `automation_engineer` |
-| `/test/gen-bug-report` | Chuẩn hóa bug report cho Backlog (severity/priority/repro) | `bug_reporter` |
-| `/test/generate_regression_suite` | Chọn TC chạy lại sau code change — **on-demand**, không thuộc phase-gate | `rbt_manual_testing` |
-| `/test/generate_test_execution_checklist` | Checklist ưu tiên trước release — **on-demand**, không thuộc phase-gate | `rbt_manual_testing` |
+| `/test/gen-bug-report`                    | Chuẩn hóa bug report cho Backlog (severity/priority/repro)                                    | `bug_reporter`        |
+| `/test/generate_regression_suite`         | Chọn TC chạy lại sau code change — **on-demand**, không thuộc phase-gate                      | `rbt_manual_testing`  |
+| `/test/generate_test_execution_checklist` | Checklist ưu tiên trước release — **on-demand**, không thuộc phase-gate                       | `rbt_manual_testing`  |
 
 > **thin entry** = command chỉ load agent, không chứa workflow. **standalone** = command có workflow riêng.
 >

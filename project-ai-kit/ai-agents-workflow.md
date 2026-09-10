@@ -10,20 +10,20 @@
 
 ## 1. Bảng tổng quan — Phase-Gate
 
-| # | Phase | Agent | Trigger | Song song với |
-|---|---|---|---|---|
-| 0 | Setup | `init-agent` | `/init-kit` (1 lần) | — |
-| 1 | Discovery | `ba-agent` | `/create-spec <feature>` | — (6 outputs — xem §3.1) |
-| 2a | Design | `techlead-design-agent` | `/create-design <SPEC.md>` | 2b, 2c |
-| 2b | Design | `qc-agent` (manual TC lần 1) | Pipeline: `/test/analyze-req` → `/test/plan-tcs` → `/test/gen-tcs` | 2a, 2c |
-| 2c | Design | `designer-agent` | `/create-ui-design <SPEC.md>` | 2a, 2b |
-| 3 | Planning | `techlead-tasks-agent` | `/create-tasks <feature/>` | — |
-| 4a | Build | `backend-agent` | Implement task Phase 1 → 2 | — |
-| 4b | Build | (manual) copy API Contract → task-3-x | — | — |
-| 4c | Build | `frontend-agent` | Implement task Phase 3 | 4d |
-| 4d | Build | `mobile-agent` | Implement task Phase 3 | 4c |
-| 4e | Integration | BE + FE + Mobile | task-4-x integration test | — |
-| 5 | Test | `qc-automation-agent` | `"Hãy là QC Automation, test feature: ..."` | — |
+| #   | Phase       | Agent                                 | Trigger                                                            | Song song với            |
+| --- | ----------- | ------------------------------------- | ------------------------------------------------------------------ | ------------------------ |
+| 0   | Setup       | `init-agent`                          | `/init-kit` (1 lần)                                                | —                        |
+| 1   | Discovery   | `ba-agent`                            | `/create-spec <feature>`                                           | — (6 outputs — xem §3.1) |
+| 2a  | Design      | `techlead-design-agent`               | `/create-design <SPEC.md>`                                         | 2b, 2c                   |
+| 2b  | Design      | `qc-agent` (manual TC lần 1)          | Pipeline: `/test/analyze-req` → `/test/plan-tcs` → `/test/gen-tcs` | 2a, 2c                   |
+| 2c  | Design      | `designer-agent`                      | `/create-ui-design <SPEC.md>`                                      | 2a, 2b                   |
+| 3   | Planning    | `techlead-tasks-agent`                | `/create-tasks <feature/>`                                         | —                        |
+| 4a  | Build       | `backend-agent`                       | Implement task Phase 1 → 2                                         | —                        |
+| 4b  | Build       | (manual) copy API Contract → task-3-x | —                                                                  | —                        |
+| 4c  | Build       | `frontend-agent`                      | Implement task Phase 3                                             | 4d                       |
+| 4d  | Build       | `mobile-agent`                        | Implement task Phase 3                                             | 4c                       |
+| 4e  | Integration | BE + FE + Mobile                      | task-4-x integration test                                          | —                        |
+| 5   | Test        | `qc-automation-agent`                 | `"Hãy là QC Automation, test feature: ..."`                        | —                        |
 
 > **On-demand (không thuộc phase-gate):** `/test/review-tcs` (deep review khi ≥2 QC) · `/test/export-xlsx <path> web\|app` (Excel bàn giao) · `/test/gen-bug-report` (bug template) · `/test/generate_test_execution_checklist` (checklist trước release) · `/test/generate_regression_suite` (regression suite).
 >
@@ -35,14 +35,14 @@
 
 ## 2. Nguyên tắc chung
 
-| Rule | Áp dụng cho |
-|---|---|
-| Bước 1 = đọc context + skill trước khi hành động | Mọi agent |
-| Chỉ tạo/sửa `.md` (trừ Dev) | BA, Tech Lead, QC, Designer, QC-Auto |
-| `tilth_deps` blast radius BẮT BUỘC trước khi đổi public interface | Tech Lead Design, Tech Lead Tasks, Backend, Frontend, Mobile |
-| Không tự đoán khi thiếu context — phải hỏi user | Mọi agent |
-| Handover message = natural language + slash command song song | Mọi agent |
-| Không commit / push khi user không yêu cầu rõ ràng | Mọi agent (đặc biệt Dev) |
+| Rule                                                              | Áp dụng cho                                           |
+| ----------------------------------------------------------------- | ----------------------------------------------------- |
+| Bước 1 = đọc context + skill trước khi hành động                  | Mọi agent                                             |
+| Chỉ tạo/sửa `.md` (trừ Dev)                                       | BA, PM, Tech Lead, QC, QA, Designer, QC-Auto          |
+| `tilth_deps` blast radius BẮT BUỘC trước khi đổi public interface | Tech Lead, Tech Lead Tasks, Backend, Frontend, Mobile |
+| Không tự đoán khi thiếu context — phải hỏi user                   | Mọi agent                                             |
+| Handover message = natural language + slash command song song     | Mọi agent                                             |
+| Không commit / push khi user không yêu cầu rõ ràng                | Mọi agent (đặc biệt Dev)                              |
 
 ---
 
@@ -86,16 +86,8 @@ flowchart TD
     F --> G{Đủ thông tin?}
     G -- Không --> H[Hỏi user - KHÔNG tự đoán]
     H --> F
-    G -- Đủ --> I["Output 0 — Viết SPEC.md 11 sections:<br/>Mô tả nghiệp vụ · BA Deliverables · Actors ·<br/>Flow Tổng Quan · Happy/Alt/Edge · AC ·<br/>Out of Scope · Screens table · Screen Details ·<br/>Responsive Requirements"]
-    I --> I2[Bước 4.5 UX Self-Review +<br/>Bước 4.6 Completeness Self-Check]
-    I2 --> K1["Output 1 — Figma: Flow Tổng Quan<br/>(Business Flow + Tech Table + Sitemap)"]
-    K1 --> K2["Output 2 — Figma: Screen Flow<br/>(N group khớp N business flow + Bảng Index)"]
-    K2 --> K3["Output 3 — Figma: Screens + Items<br/>(mockup + Bảng ITEMS + ERROR SCENARIOS)"]
-    K3 --> K4["Output 4 — prototype/index.html"]
-    K4 --> K5["Output 5 — mkdocs build"]
-    K5 --> L[Bước 5.5 Visual Recheck 5 tiêu chí/frame +<br/>Bước 5.6 AI Self-Feedback]
-    L --> M["Điền đủ 6 row vào SPEC.md<br/>## BA Deliverables<br/>(row skip ghi ❌ Skipped + lý do)"]
-    M --> J[Bàn giao SONG SONG:<br/>Tech Lead Design 2a +<br/>Designer 2c +<br/>QC 2b<br/>chỉ pass SPEC.md path]
+    G -- Đủ --> I["Viết SPEC.md:<br/>Mô tả nghiệp vụ · Actors ·<br/>Happy/Alt/Edge · AC ·<br/>Out of Scope · Screens table<br/>(Code+Screen+Actor+App+Type+Figma Link)"]
+    I --> J[Bàn giao SONG SONG:<br/>Tech Lead 2a +<br/>Designer 2c +<br/>QC 2b]
 ```
 
 > Output 1 → 2 → 3 là **tuần tự, không parallel**: Output 1 quyết định N business flows, Output 2 và 3 phải khớp đúng N đó.
@@ -104,7 +96,7 @@ flowchart TD
 
 ---
 
-### 3.2 `techlead-design-agent` — Tech Lead Design
+### 3.2 `techlead-design-agent` — Tech Lead
 
 ```mermaid
 flowchart TD
@@ -118,7 +110,7 @@ flowchart TD
     G --> H{SPEC mơ hồ?}
     H -- Có --> I[Hỏi user - KHÔNG tự đoán]
     I --> H
-    H -- Không --> J[Viết DESIGN.md per repo — 7 sections:<br/>1 Tổng quan · 2 Database Changes ·<br/>3 API Definition Contract Lock ·<br/>4 Service Layer · 5 Interface cross-repo ·<br/>6 Luồng xử lý · 7 Non-Regression Risks]
+    H -- Không --> J[Viết Design-Technical.md per repo — 7 sections:<br/>1 Tổng quan · 2 Database Changes ·<br/>3 API Definition Contract Lock ·<br/>4 Service Layer · 5 Interface cross-repo ·<br/>6 Luồng xử lý · 7 Non-Regression Risks]
     J --> K[Bàn giao Tech Lead Tasks<br/>sau khi Designer có Figma URL]
 ```
 
@@ -169,7 +161,7 @@ flowchart TD
     H --> I["Update SPEC.md ## Screens<br/>điền cột Figma Link"]
     I --> J{Phát hiện gap?}
     J -- Có --> K["Append [Design] notes<br/>vào SPEC ## Open Questions"]
-    J -- Không --> L[Bàn giao Tech Lead Tasks<br/>chờ DESIGN.md xong<br/>FE/Mobile đọc Figma URL từ task]
+    J -- Không --> L[Bàn giao Tech Lead Tasks<br/>chờ Design-Technical.md xong<br/>FE/Mobile đọc Figma URL từ task]
     K --> L
 ```
 
@@ -181,7 +173,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A["/create-tasks &lt;feature/&gt;"] --> B["Đọc tilth_files */DESIGN.md +<br/>doc-structure.md +<br/>skill task-decomposition +<br/>SPEC ## Screens (Code + Figma URL)"]
+    A["/create-tasks &lt;feature/&gt;"] --> B["Đọc tilth_files */Design-Technical.md +<br/>doc-structure.md +<br/>skill task-decomposition +<br/>SPEC ## Screens (Code + Figma URL)"]
     B --> C{Cần estimate complexity?}
     C -- Có --> D[get_metadata + get_screenshot]
     C -- Không --> E[tilth_search + tilth_read +<br/>tilth_deps blast radius]
@@ -299,33 +291,33 @@ flowchart TD
 
 ## 4. Điểm audit thường gặp
 
-| # | Điểm cần check | Cách verify |
-|---|---|---|
-| 1 | BA có scan SPEC cũ trước khi tạo mới không? | `ba-agent.md` Bước 1.5 phải có `business-flow-index.md` + outline SPEC + hỏi user related feature |
-| 2 | Tech Lead có `tilth_deps` blast radius không? | DESIGN.md ## 7 Non-Regression Risks phải có nội dung thật, không placeholder |
-| 3 | Task có Unit Test không? | Mỗi task-x-y.md phải có section "Unit Tests (BẮT BUỘC)" với coverage target |
-| 4 | FE có tự đoán endpoint không? | task-3-x.md ## API Contract phải copy từ BE task-2-X, không tự viết |
-| 5 | Designer có vẽ wireframe hay không? | Verify: mỗi frame Figma phải dùng component instance, không rectangle + text |
-| 6 | QC Automation có headed mode không? | `execution-report.md` phải có screenshot; command có `--headed` |
-| 7 | Memory Update Gate có bị skip không? | Sau mỗi dev task, output phải liệt kê `api-catalog.md` / `erd.md` / `patterns.md` — updated hay skipped |
-| 8 | Handover message có natural language không? | Output cuối mỗi agent phải có `"Hãy là <role>, ..."` để user copy-paste |
-| 9 | Agent có commit tự động không? | KHÔNG được — chỉ commit khi user yêu cầu rõ ràng |
-| 10 | QC có chạy `/plan-tcs` trước `/gen-tcs` không? | `/gen-tcs` sẽ tự dừng nếu module chưa có `plan-tcs.md` — verify không skip bằng cách gọi thẳng `/gen-tcs` |
-| 11 | QC có handle TBD ACs đúng không? | `/gen-tcs` phải hỏi user chọn A/B/C khi phát hiện TBD AC, không tự đoán |
+| #   | Điểm cần check                                 | Cách verify                                                                                               |
+| --- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| 1   | BA có scan SPEC cũ trước khi tạo mới không?    | `ba-agent.md` Bước 1.5 phải có `business-flow-index.md` + outline SPEC + hỏi user related feature         |
+| 2   | Tech Lead có `tilth_deps` blast radius không?  | Design-Technical.md ## 7 Non-Regression Risks phải có nội dung thật, không placeholder                    |
+| 3   | Task có Unit Test không?                       | Mỗi task-x-y.md phải có section "Unit Tests (BẮT BUỘC)" với coverage target                               |
+| 4   | FE có tự đoán endpoint không?                  | task-3-x.md ## API Contract phải copy từ BE task-2-X, không tự viết                                       |
+| 5   | Designer có vẽ wireframe hay không?            | Verify: mỗi frame Figma phải dùng component instance, không rectangle + text                              |
+| 6   | QC Automation có headed mode không?            | `execution-report.md` phải có screenshot; command có `--headed`                                           |
+| 7   | Memory Update Gate có bị skip không?           | Sau mỗi dev task, output phải liệt kê `api-catalog.md` / `erd.md` / `patterns.md` — updated hay skipped   |
+| 8   | Handover message có natural language không?    | Output cuối mỗi agent phải có `"Hãy là <role>, ..."` để user copy-paste                                   |
+| 9   | Agent có commit tự động không?                 | KHÔNG được — chỉ commit khi user yêu cầu rõ ràng                                                          |
+| 10  | QC có chạy `/plan-tcs` trước `/gen-tcs` không? | `/gen-tcs` sẽ tự dừng nếu module chưa có `plan-tcs.md` — verify không skip bằng cách gọi thẳng `/gen-tcs` |
+| 11  | QC có handle TBD ACs đúng không?               | `/gen-tcs` phải hỏi user chọn A/B/C khi phát hiện TBD AC, không tự đoán                                   |
 
 ---
 
 ## 5. Common failure modes
 
-| Failure | Nguyên nhân | Cách phòng |
-|---|---|---|
-| BA sinh SPEC trùng lặp | Bỏ qua Bước 1.5 SPEC scan | Enforce trong `ba-agent.md` — không skip được |
-| Tech Lead design conflict với code hiện có | Không chạy `tilth_deps` | Rule cứng trong POLICIES.md — vi phạm phải rollback |
-| FE code với endpoint không tồn tại | Không đọc BE task-2-X ## API Contract | Frontend Agent Bước 2 BẮT BUỘC đọc BE task |
-| QC Automation sinh selector CSS class | Không đọc Figma labels | qc-automation-agent Bước 3 đọc Figma trước khi viết spec |
-| Task quá lớn, dev không xong trong session | techlead-tasks-agent ước lượng sai | Enforce 4-8h/task, chia nhỏ nếu > 8h |
-| QC gọi thẳng `/gen-tcs` khi chưa có `plan-tcs.md` | Skip pipeline steps | Command tự dừng + hướng dẫn quay lại `/plan-tcs` |
-| Test data placeholder ("email hợp lệ") lọt vào TC | `/gen-tcs` self-check yếu | Self-check tự grep placeholder, tự fix trước khi lưu |
+| Failure                                           | Nguyên nhân                           | Cách phòng                                               |
+| ------------------------------------------------- | ------------------------------------- | -------------------------------------------------------- |
+| BA sinh SPEC trùng lặp                            | Bỏ qua Bước 1.5 SPEC scan             | Enforce trong `ba-agent.md` — không skip được            |
+| Tech Lead design conflict với code hiện có        | Không chạy `tilth_deps`               | Rule cứng trong POLICIES.md — vi phạm phải rollback      |
+| FE code với endpoint không tồn tại                | Không đọc BE task-2-X ## API Contract | Frontend Agent Bước 2 BẮT BUỘC đọc BE task               |
+| QC Automation sinh selector CSS class             | Không đọc Figma labels                | qc-automation-agent Bước 3 đọc Figma trước khi viết spec |
+| Task quá lớn, dev không xong trong session        | techlead-tasks-agent ước lượng sai    | Enforce 4-8h/task, chia nhỏ nếu > 8h                     |
+| QC gọi thẳng `/gen-tcs` khi chưa có `plan-tcs.md` | Skip pipeline steps                   | Command tự dừng + hướng dẫn quay lại `/plan-tcs`         |
+| Test data placeholder ("email hợp lệ") lọt vào TC | `/gen-tcs` self-check yếu             | Self-check tự grep placeholder, tự fix trước khi lưu     |
 
 ---
 

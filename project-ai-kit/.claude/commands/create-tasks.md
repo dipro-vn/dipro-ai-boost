@@ -1,5 +1,5 @@
 ---
-description: Phân rã DESIGN.md thành task files theo Tech Lead Tasks workflow. Dùng: /create-tasks <path/to/feature-folder>
+description: Phân rã Design-Technical.md thành task files theo Tech Lead Tasks workflow. Dùng: /create-tasks <path/to/feature-folder>
 ---
 
 Đọc `.claude/agents/techlead-tasks-agent.md` rồi đóng vai **Tech Lead (Tasks)** để tạo task files từ: **$ARGUMENTS**

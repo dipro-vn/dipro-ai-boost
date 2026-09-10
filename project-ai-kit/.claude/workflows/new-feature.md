@@ -16,7 +16,7 @@ User requirement
    (SPEC.md ## BA Deliverables liệt kê cả 6)  ←── /create-spec <feature>
       │
       ▼ [techlead-design-agent + qc-agent + designer-agent song song]
-DESIGN.md per repo  ←── /create-design <SPEC.md>
+Design-Technical.md per repo  ←── /create-design <SPEC.md>
       │
       ▼ [techlead-tasks-agent]
 tasks/task-*.md  ←── /create-tasks <feature-folder/>
@@ -83,7 +83,7 @@ tasks/task-*.md  ←── /create-tasks <feature-folder/>
 
 ---
 
-## Bước 2 — Thiết kế kỹ thuật (Tech Lead Design)
+## Bước 2 — Thiết kế kỹ thuật (Tech Lead)
 
 **Agent:** `techlead-design-agent`
 **Command:** `/create-design <path/to/SPEC.md>`
@@ -92,12 +92,12 @@ tasks/task-*.md  ←── /create-tasks <feature-folder/>
 - `<DOCS_ROOT>/backend/<backend-repo>/overview/patterns.md`
 - `<DOCS_ROOT>/backend/<backend-repo>/overview/erd.md`
 
-**BẮT BUỘC trước khi viết DESIGN:**
+**BẮT BUỘC trước khi viết Design-Technical:**
 ```
 tilth_deps(path: "<file sẽ thay đổi>")
 ```
 
-**Output:** `DESIGN.md` per repo (cùng folder với SPEC.md)
+**Output:** `Design-Technical.md` per repo (cùng folder với SPEC.md)
 
 ---
 
@@ -122,18 +122,18 @@ tilth_deps(path: "<file sẽ thay đổi>")
 
 ## CONTRACT LOCK ⚠️ (trước Phase 3)
 
-**Nguồn tham chiếu:** `DESIGN.md ## 3. API Definition` (per repo vai trò backend) — bảng này phải có trước khi sign-off.
+**Nguồn tham chiếu:** `Design-Technical.md ## 3. API Definition` (per repo vai trò backend) — bảng này phải có trước khi sign-off.
 
 Phải confirm đầy đủ trước khi FE/Mobile bắt đầu implement:
 
-- [ ] `DESIGN.md ## 3. API Definition` đã có bảng đủ cột: Method / Endpoint / Auth / Request / Response / Error codes
+- [ ] `Design-Technical.md ## 3. API Definition` đã có bảng đủ cột: Method / Endpoint / Auth / Request / Response / Error codes
 - [ ] WebSocket events: tên event, payload schema (nếu có)
 - [ ] Push notification: payload format, trigger condition (nếu có)
-- [ ] FE/Mobile đã đọc và hiểu DESIGN.md — không có câu hỏi chưa giải đáp
+- [ ] FE/Mobile đã đọc và hiểu Design-Technical.md — không có câu hỏi chưa giải đáp
 
 **Ai confirm:** Backend dev + Frontend dev + Mobile dev (nếu có) + PM
 
-> Nếu DESIGN.md chưa có `## 3. API Definition` → yêu cầu `techlead-design-agent` bổ sung trước khi lock.
+> Nếu Design-Technical.md chưa có `## 3. API Definition` → yêu cầu `techlead-design-agent` bổ sung trước khi lock.
 
 ---
 

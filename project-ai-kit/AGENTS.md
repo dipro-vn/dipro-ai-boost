@@ -6,8 +6,8 @@
 
 ## Repos
 
-| Repo | Đường dẫn | Vai trò | Stack |
-|---|---|---|---|
+| Repo         | Đường dẫn                                      | Vai trò                             | Stack                              |
+| ------------ | ---------------------------------------------- | ----------------------------------- | ---------------------------------- |
 | _(tên repo)_ | _(đường dẫn tương đối so với Repository root)_ | backend / frontend / mobile / other | _(NestJS / React / Flutter / ...)_ |
 
 Mỗi repo có 1 **Epic code** ngắn (`E01`, `E02`...) tham chiếu xuyên suốt SPEC/DESIGN/task/Screen Code.
@@ -44,8 +44,8 @@ Rules đọc-on-demand khác (context role, doc path, per-layer coding/git/desig
 _(Điền qua `/init-kit` — feature nào đụng ≥ 2 repo. Ví dụ: Payment (backend + FE/mobile callback), Auth JWT (backend + tất cả client), Real-time WS (server + subscribers).)_
 
 | Tính năng | Repos liên quan |
-|---|---|
-| _(điền)_ | _(điền)_ |
+| --------- | --------------- |
+| _(điền)_  | _(điền)_        |
 
 </red_line_rules>
 
@@ -57,7 +57,7 @@ _(Điền qua `/init-kit` — feature nào đụng ≥ 2 repo. Ví dụ: Payment
 
 **Agent vs Command:** Agent (`.claude/agents/*.md`) = canonical workflow (single source of truth). Command (`.claude/commands/*.md`) = thin entry point 5–8 dòng, trỏ về agent. Sửa quy trình → chỉ sửa file agent. User trigger 2 cách: slash command (`/create-spec login`) hoặc natural language ("hãy là BA, làm SPEC cho login") — cùng load agent.
 
-**Bước 2 song song 3 agent** — 2a Tech Lead Design · 2b QC (pipeline 3 bước) · 2c Designer. **QC chạy 1 lần trong pipeline** — sau SPEC, sinh bộ test case (`qc-agent`). Bước test sau Build do `qc-automation-agent` đảm nhiệm (Playwright E2E).
+**Bước 2 song song 3 agent** — 2a Tech Lead · 2b QC (pipeline 3 bước) · 2c Designer. **QC chạy 3 lần** — lần 1 sau SPEC (sinh TC), lần 2 sau dev (execute + bug report), lần 3 song song 7a (Playwright E2E qua `qc-automation-agent`).
 
 **QC vs QC-Automation:** qc-agent = manual TC (artifact `.md`, bước 2b); qc-automation-agent = E2E browser (`.spec.ts` + execution report, bước 5). Bổ sung nhau, không thay thế.
 
@@ -73,14 +73,14 @@ _(Điền qua `/init-kit` — feature nào đụng ≥ 2 repo. Ví dụ: Payment
 
 ## BMAD Workflow — Phase Skeleton
 
-| Phase | Agent | Command | Output |
-|---|---|---|---|
-| 0 Setup | `init-agent` | `/init-kit` | `AGENTS.md` + context |
-| 1 Discovery | `ba-agent` | `/create-spec` | 6 outputs — `SPEC.md` (11 sections, có `## BA Deliverables`) · 3 Figma frame · `prototype/index.html` · MkDocs site |
-| 2 Design (parallel) | `techlead-design-agent` · `qc-agent` · `designer-agent` | `/create-design` · `/test/analyze-req`→`plan-tcs`→`gen-tcs` · `/create-ui-design` | `DESIGN.md` · TC files · Figma URL |
-| 3 Planning | `techlead-tasks-agent` | `/create-tasks` | `tasks/task-*.md` |
-| 4 Build | `backend-agent` → `frontend-agent` ‖ `mobile-agent` | BE Phase 1→2 (migration + API + Contract) → copy Contract → FE/Mobile Phase 3 (song song, 3 sub-steps) → Phase 4 integration | Code + API Contract table |
-| 5 Test | `qc-automation-agent` | `"Hãy là QC Automation…"` | Playwright `.spec.ts` + execution report |
+| Phase               | Agent                                                   | Command                                                                                                                      | Output                                       |
+| ------------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| 0 Setup             | `init-agent`                                            | `/init-kit`                                                                                                                  | `AGENTS.md` + context                        |
+| 1 Discovery         | `ba-agent`                                              | `/create-spec`                                                                                                               | `SPEC.md`                                    |
+| 2 Design (parallel) | `techlead-design-agent` · `qc-agent` · `designer-agent` | `/create-design` · `/test/analyze-req`→`plan-tcs`→`gen-tcs` · `/create-ui-design`                                            | `Design-Technical.md` · TC files · Figma URL |
+| 3 Planning          | `techlead-tasks-agent` · `pm-agent`                     | `/create-tasks` · `/create-plan` (+ `/create-backlog`)                                                                       | `tasks/task-*.md` · `PLAN.md`                |
+| 4 Build             | `backend-agent` → `frontend-agent` ‖ `mobile-agent`     | BE Phase 1→2 (migration + API + Contract) → copy Contract → FE/Mobile Phase 3 (song song, 3 sub-steps) → Phase 4 integration | Code + API Contract table                    |
+| 5 Test              | `qc-automation-agent`                                   | `"Hãy là QC Automation…"`                                                                                                    | Playwright `.spec.ts` + execution report     |
 
 **Contract Lock** trước Phase 3 (Build FE/Mobile): REST + WebSocket + Push — confirm bởi BE+FE+Mobile+PM+QC.
 

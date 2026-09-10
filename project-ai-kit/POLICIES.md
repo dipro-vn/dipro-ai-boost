@@ -5,6 +5,7 @@
 > File này là **kit default** — áp dụng cho mọi dự án dùng `project-ai-kit` mà không cần chỉnh sửa, trừ khi ghi chú rõ "điền qua `/init-kit`" hoặc "ví dụ".
 >
 > **Companion rules** (đọc on-demand khi cần chi tiết):
+>
 > - `.claude/rules/SECURITY.md` — danh sách file/pattern tuyệt đối không đọc/expose (env, keystore, .p8, .p12, fastlane, Expo credentials…)
 > - `.claude/rules/POLICY.md` — Code exfiltration + AI tool usage + IP protection (9 sections MUST/MUST NOT)
 > - `.claude/rules/RELIABILITY.md` — No guessing / no hallucination / truthful output
@@ -15,13 +16,13 @@
 
 ## 1. Nguyên tắc cốt lõi (5 principles)
 
-| Policy | Nội dung | Vi phạm sẽ |
-|---|---|---|
-| **Không đoán mò** | Khi thiếu thông tin → hỏi user, không tự bịa | Sinh ra docs/code sai → user phải sửa lại |
-| **Đọc trước, hành động sau** | Luôn đọc docs liên quan + dùng `tilth_*` trước khi generate code/đề xuất | Đoán mò pattern, conflict với code hiện có |
-| **Stateless** | Mỗi session độc lập — mọi context phải đọc từ file `.md` (không nhớ session trước) | Mất context, sai assumption |
-| **Tool-first** | Bắt buộc dùng `tilth_search` / `tilth_read` / `tilth_files` thay vì grep/cat/find thủ công | Miss context, sai file |
-| **Blast radius check** | BẮT BUỘC `tilth_deps` trước khi thay đổi bất kỳ interface/method public nào | Phá vỡ consumer khác, regression bug |
+| Policy                       | Nội dung                                                                                   | Vi phạm sẽ                                 |
+| ---------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------ |
+| **Không đoán mò**            | Khi thiếu thông tin → hỏi user, không tự bịa                                               | Sinh ra docs/code sai → user phải sửa lại  |
+| **Đọc trước, hành động sau** | Luôn đọc docs liên quan + dùng `tilth_*` trước khi generate code/đề xuất                   | Đoán mò pattern, conflict với code hiện có |
+| **Stateless**                | Mỗi session độc lập — mọi context phải đọc từ file `.md` (không nhớ session trước)         | Mất context, sai assumption                |
+| **Tool-first**               | Bắt buộc dùng `tilth_search` / `tilth_read` / `tilth_files` thay vì grep/cat/find thủ công | Miss context, sai file                     |
+| **Blast radius check**       | BẮT BUỘC `tilth_deps` trước khi thay đổi bất kỳ interface/method public nào                | Phá vỡ consumer khác, regression bug       |
 
 > Nếu dự án không cài tilth MCP, thay `tilth_search`/`tilth_read`/`tilth_files`/`tilth_deps` bằng `Grep`/`Read`/`Glob` chuẩn — nguyên tắc tool-first và blast radius check vẫn giữ nguyên, chỉ đổi tool cụ thể.
 
@@ -29,15 +30,15 @@
 
 ## 2. Phân quyền Action theo Persona
 
-| Action | BA | Tech Lead (Design/Tasks) | PM | QC | QA | Designer | Dev (BE/FE/Mobile) |
-|---|---|---|---|---|---|---|---|
-| Tạo / sửa file `.md` | ✅ | ✅ | ✅ | ✅ | ✅ (chỉ QA Report) | ✅ (chỉ SPEC.md ## Screens — điền Figma Link) | ✅ |
-| Tạo file HTML | ✅ (chỉ `<feature>/prototype/` — Output 4) | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ (trong scope task) |
-| Sửa source code | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ (trong scope task) |
-| Chạy test suite | ❌ | ❌ | ❌ | ✅ (manual TC) | ✅ (unit + coverage) | ❌ | ✅ |
-| Commit code | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌* |
-| Push remote | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Sửa migration / linter / test config | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌** |
+| Action                               | BA                                         | Tech Lead (Design/Tasks) | PM  | QC             | QA                   | Designer                                      | Dev (BE/FE/Mobile)    |
+| ------------------------------------ | ------------------------------------------ | ------------------------ | --- | -------------- | -------------------- | --------------------------------------------- | --------------------- |
+| Tạo / sửa file `.md`                 | ✅                                         | ✅                       | ✅  | ✅             | ✅ (chỉ QA Report)   | ✅ (chỉ SPEC.md ## Screens — điền Figma Link) | ✅                    |
+| Tạo file HTML                        | ✅ (chỉ `<feature>/prototype/` — Output 4) | ❌                       | ❌  | ❌             | ❌                   | ❌                                            | ✅ (trong scope task) |
+| Sửa source code                      | ❌                                         | ❌                       | ❌  | ❌             | ❌                   | ❌                                            | ✅ (trong scope task) |
+| Chạy test suite                      | ❌                                         | ❌                       | ❌  | ✅ (manual TC) | ✅ (unit + coverage) | ❌                                            | ✅                    |
+| Commit code                          | ❌                                         | ❌                       | ❌  | ❌             | ❌                   | ❌                                            | ❌\*                  |
+| Push remote                          | ❌                                         | ❌                       | ❌  | ❌             | ❌                   | ❌                                            | ❌                    |
+| Sửa migration / linter / test config | ❌                                         | ❌                       | ❌  | ❌             | ❌                   | ❌                                            | ❌\*\*                |
 
 > \* Dev chỉ commit khi user yêu cầu rõ ràng.
 > \*\* Dev không tự sửa migration / linter / test config — phải đề xuất với Tech Lead trước.
@@ -62,7 +63,7 @@
 
 ## 3.5. Bảo mật source code — tuyệt đối không public ra ngoài
 
-> Mọi source code, config, secret của dự án là tài sản nội bộ. Chi tiết đầy đủ 9 sections (NO_CODE_EXFILTRATION, AI_TOOL_USAGE, SECRETS_MANAGEMENT, THIRD_PARTY_CODE_&_LICENSE, CLIENT_DATA_&_PRIVACY, ACCESS_CONTROL, REPOSITORY_PROTECTION, DELIVERABLE_HANDOFF, INCIDENT_REPORTING) → xem **`.claude/rules/POLICY.md`**.
+> Mọi source code, config, secret của dự án là tài sản nội bộ. Chi tiết đầy đủ 9 sections (NO*CODE_EXFILTRATION, AI_TOOL_USAGE, SECRETS_MANAGEMENT, THIRD_PARTY_CODE*&_LICENSE, CLIENT_DATA_&\_PRIVACY, ACCESS_CONTROL, REPOSITORY_PROTECTION, DELIVERABLE_HANDOFF, INCIDENT_REPORTING) → xem **`.claude/rules/POLICY.md`**.
 
 **Tóm tắt bắt buộc:**
 
@@ -90,7 +91,7 @@
 Mỗi persona có checklist câu hỏi riêng trước khi hành động:
 
 - **BA**: checklist câu hỏi trong `.claude/agents/ba-agent.md` Bước 2
-- **Tech Lead Design**: Hỏi nếu SPEC không đủ rõ về AC, data model, integration
+- **Tech Lead**: Hỏi nếu SPEC không đủ rõ về AC, data model, integration
 - **Tech Lead Tasks**: Hỏi nếu DESIGN còn mơ hồ về scope/file
 - **Dev**: Hỏi nếu task không đủ context để implement trong 4–8h
 
@@ -100,11 +101,12 @@ Mỗi persona có checklist câu hỏi riêng trước khi hành động:
 
 ## 4.5. AI Self-Feedback — BẮT BUỘC sau khi hoàn thành output (áp dụng MỌI agent)
 
-> Sau khi hoàn thành output (SPEC.md, DESIGN.md, task files, source code, Figma, test cases...), agent **KHÔNG được báo user "đã xong" mà không tự review lại**.
+> Sau khi hoàn thành output (SPEC.md, Design-Technical.md, task files, source code, Figma, test cases...), agent **KHÔNG được báo user "đã xong" mà không tự review lại**.
 
 ### Quy trình bắt buộc 3 bước
 
 **Bước 1 — Chụp/đọc lại output vừa tạo:**
+
 - Docs (.md): đọc lại toàn bộ file
 - Figma frames: `get_screenshot` từng frame
 - Code: `Read` lại các file vừa write/edit
@@ -152,16 +154,16 @@ hoặc
 
 ### Áp dụng per-persona
 
-| Persona | Trọng tâm self-feedback |
-|---|---|
-| **BA** | Đủ 6 outputs chưa (`## BA Deliverables` có đủ 6 row, row skip có ghi lý do)? Flow đủ bước? Non-happy đủ? Screens có Figma URL? Figma frames không chồng đè? Prototype mở được? `mkdocs build` không lỗi? |
-| **Tech Lead Design** | DB schema đủ column? API contract đủ endpoint? Có xung đột giữa DESIGN các repo? |
-| **Tech Lead Tasks** | Có task nào >8h chưa cắt nhỏ? Task dependencies đúng? |
-| **Designer** | Đủ screens theo SPEC ## Screens? Text annotation kèm đủ? |
+| Persona                         | Trọng tâm self-feedback                                                            |
+| ------------------------------- | ---------------------------------------------------------------------------------- |
+| **BA**                          | Flow đủ bước? Non-happy đủ? Screens có Figma URL? Figma frames không chồng đè?     |
+| **Tech Lead**                   | DB schema đủ column? API contract đủ endpoint? Có xung đột giữa DESIGN các repo?   |
+| **Tech Lead Tasks**             | Có task nào >8h chưa cắt nhỏ? Task dependencies đúng?                              |
+| **Designer**                    | Đủ screens theo SPEC ## Screens? Text annotation kèm đủ?                           |
 | **Backend/Frontend/Mobile Dev** | Edge case đã handle? Test đã pass? Regression không? Memory Update Gate đã update? |
-| **QC** | Đủ TC theo AC? Priority phân bổ hợp lý? Missing platform-specific case? |
-| **QA** | Coverage report đủ? Non-regression passed? |
-| **QC Automation** | Test scripts pass local + CI? Screenshot verification? |
+| **QC**                          | Đủ TC theo AC? Priority phân bổ hợp lý? Missing platform-specific case?            |
+| **QA**                          | Coverage report đủ? Non-regression passed?                                         |
+| **QC Automation**               | Test scripts pass local + CI? Screenshot verification?                             |
 
 ### Anti-patterns — KHÔNG được làm
 
@@ -182,15 +184,15 @@ hoặc
 
 ## 5. Stack constraints (kit default — không thương lượng trừ khi đổi qua `/init-kit`)
 
-| Layer | Bắt buộc | Tuyệt đối không |
-|---|---|---|
-| Database | PostgreSQL + TypeORM | MySQL, MongoDB, SQLite, Prisma |
-| API style | REST | GraphQL, gRPC, tRPC |
-| Payment | _(điền qua `/init-kit` — ví dụ kit: elepay · Alipay · WeChat Pay)_ | Gateway ngoài danh sách đã chọn của dự án |
-| Mobile state | `hooks_riverpod` 3.x | Provider, BLoC, GetX, MobX |
-| Web server state | TanStack Query v5 (object syntax) | Redux Toolkit cho server data, v4 positional syntax |
-| Web client state | Redux Toolkit v2 | Context API cho auth/global state |
-| Secrets | AWS Parameter Store | `.env` production, hard-code |
+| Layer            | Bắt buộc                                                           | Tuyệt đối không                                     |
+| ---------------- | ------------------------------------------------------------------ | --------------------------------------------------- |
+| Database         | PostgreSQL + TypeORM                                               | MySQL, MongoDB, SQLite, Prisma                      |
+| API style        | REST                                                               | GraphQL, gRPC, tRPC                                 |
+| Payment          | _(điền qua `/init-kit` — ví dụ kit: elepay · Alipay · WeChat Pay)_ | Gateway ngoài danh sách đã chọn của dự án           |
+| Mobile state     | `hooks_riverpod` 3.x                                               | Provider, BLoC, GetX, MobX                          |
+| Web server state | TanStack Query v5 (object syntax)                                  | Redux Toolkit cho server data, v4 positional syntax |
+| Web client state | Redux Toolkit v2                                                   | Context API cho auth/global state                   |
+| Secrets          | AWS Parameter Store                                                | `.env` production, hard-code                        |
 
 Chi tiết version pinning → `.claude/rules/stack-constraints.md`.
 
@@ -223,23 +225,24 @@ Khi user phát hiện AI vi phạm → user có quyền yêu cầu **undo + writ
 
 Kit vận hành trên **2 lớp** enforce, bổ sung nhau (không thay thế):
 
-| Lớp | Nội dung | Ai đọc | Khi tác động |
-|---|---|---|---|
-| **Rules** (`.claude/rules/*.md` + file này) | WHY + judgement + ngoại lệ + hành vi con người | LLM (soft) + dev/PM/QC | Trước hành động, qua reasoning |
-| **Hooks** (`.claude/hooks/*.js` + `.claude/settings.json`) | Chặn cứng syntactic tại tool layer | Node script (hard) | Ngay tại tool call, ngoài LLM |
+| Lớp                                                        | Nội dung                                       | Ai đọc                 | Khi tác động                   |
+| ---------------------------------------------------------- | ---------------------------------------------- | ---------------------- | ------------------------------ |
+| **Rules** (`.claude/rules/*.md` + file này)                | WHY + judgement + ngoại lệ + hành vi con người | LLM (soft) + dev/PM/QC | Trước hành động, qua reasoning |
+| **Hooks** (`.claude/hooks/*.js` + `.claude/settings.json`) | Chặn cứng syntactic tại tool layer             | Node script (hard)     | Ngay tại tool call, ngoài LLM  |
 
 **Hooks đang active** (chi tiết trong từng rule file tương ứng):
 
-| Hook | Enforce rule | Rule file |
-|---|---|---|
-| **H01** | Không đọc secret files (`.env`, keystore, `.p12`, `.pem`...) | `rules/SECURITY.md` |
-| **H02** | Không `git push --force` lên protected branch | `rules/git-workflow.md` |
-| **H03** | Không `--no-verify` / `--no-gpg-sign` | `rules/git-workflow.md` |
-| **H04** | Không `rm -rf` trên root/home/wildcard | `rules/POLICY.md` |
-| **H05** | Không hardcode API key/JWT/private key trong Write/Edit | `rules/security-rules.md` |
+| Hook    | Enforce rule                                                 | Rule file                 |
+| ------- | ------------------------------------------------------------ | ------------------------- |
+| **H01** | Không đọc secret files (`.env`, keystore, `.p12`, `.pem`...) | `rules/SECURITY.md`       |
+| **H02** | Không `git push --force` lên protected branch                | `rules/git-workflow.md`   |
+| **H03** | Không `--no-verify` / `--no-gpg-sign`                        | `rules/git-workflow.md`   |
+| **H04** | Không `rm -rf` trên root/home/wildcard                       | `rules/POLICY.md`         |
+| **H05** | Không hardcode API key/JWT/private key trong Write/Edit      | `rules/security-rules.md` |
 
 **Quy tắc khi rule và hook conflict:**
+
 - Rule = intent gốc (source of truth về nghiệp vụ)
 - Hook = enforcement mechanism — nếu chặn nhầm hoặc miss case → sửa hook, không sửa rule
 - Danh sách data chung (VD restricted paths) đặt ở `.claude/config/*.json` — sửa 1 chỗ, sync cả 2 lớp
-</content>
+  </content>

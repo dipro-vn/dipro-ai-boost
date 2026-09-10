@@ -45,10 +45,10 @@ src/
 ├── SPEC.md                  ← BA (11 sections, ## BA Deliverables liệt kê cả 6 output)
 ├── prototype/index.html     ← BA (Output 4 — mở bằng `open`, không cần build)
 ├── <backend-repo>/
-│   ├── DESIGN.md            ← Tech Lead
+│   ├── Design-Technical.md            ← Tech Lead
 │   └── tasks/task-X-Y.md
 ├── <web-repo-a>/            ← nếu repo này liên quan
-│   ├── DESIGN.md
+│   ├── Design-Technical.md
 │   └── tasks/task-X-Y.md
 ├── <web-repo-b>/            ← nếu repo này liên quan
 └── <mobile-repo>/           ← nếu Mobile liên quan

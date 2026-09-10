@@ -26,29 +26,32 @@ claude --version
 claude    # chạy tại thư mục bất kỳ
 ```
 
-Lần chạy đầu tiên CLI sẽ mở browser để login bằng Anthropic account (hoặc API key nếu tổ chức dùng key riêng). Sau khi login → thoát bằng `/exit` hoặc `Ctrl+D`, quay lại làm Bước 1.
-
-**Cách dùng cơ bản (ghi nhớ 3 lệnh):**
-
-| Lệnh | Tác dụng |
-|---|---|
-| `claude` | Mở session interactive tại thư mục hiện tại (default) |
-| `/<command>` | Chạy slash command trong session — ví dụ `/init-kit`, `/create-spec`, `/test/gen-tcs` |
-| `/exit` | Thoát session (hoặc `Ctrl+D`) |
-
-Trong session có thể trigger agent bằng **natural language** ("hãy là BA, làm SPEC cho login") hoặc **slash command** (`/create-spec login`) — cùng kết quả.
-> **Alternative:** Nếu công ty đã cấp Claude Code qua IDE extension (VS Code / JetBrains) hoặc desktop app thì cũng dùng được — chỉ cần mở đúng thư mục `<ten-du-an>` là kit hoạt động. Các bước bên dưới giả định dùng CLI.
-
 ---
 
 ### Bước 1 — Chuẩn bị thư mục dự án mới
 
-```bash
-mkdir <ten-du-an> && cd <ten-du-an>
-git init   # nếu chưa có git repo
+Tạo folder chứa dự án
+
+![alt text](template/assets/step1.png)
+
+### Bước 2 — Chuẩn bị thư mục dự án mới
+
+Tạo folder requirements và chia tài liệu theo từng Feature / Flow.
+
+```
+•	ESKitchen/
+•	└── requirements/
+•	    ├── feature_A/ → feature_A.docs
+•	    ├── feature_B/ → feature_B.docs
+•	    ├── flow_C/    → feature_C.docs
+•	    └── overview/  → file_eta.xlsx
 ```
 
-### Bước 2 — Copy kit vào dự án
+![alt text](template/assets/step2.png)
+
+### Bước 3 — Copy kit vào dự án
+
+Cách 1:
 
 ```bash
 # Từ thư mục chứa project-ai-kit (đổi <path-to-kit> cho đúng)
@@ -57,54 +60,56 @@ cp -r <path-to-kit>/project-ai-kit/template ./template    # Excel templates cho 
 cp <path-to-kit>/project-ai-kit/CLAUDE.md <path-to-kit>/project-ai-kit/POLICIES.md <path-to-kit>/project-ai-kit/AGENTS.md ./
 ```
 
-Sau bước này, dự án mới có:
+Cách 2: Tải từ Google Drive: https://drive.google.com/drive/folders/1sgT97wFsHa3elb9cOkFsjN9ldt8wsm4Q?usp=sharing
+
+Sau khi tải:
 
 ```
-<ten-du-an>/
-├── CLAUDE.md          ← always-loaded, chỉ import 2 file dưới
-├── POLICIES.md         ← AI behavior policy chung (không sửa trừ khi cần đổi rule tổ chức)
-├── AGENTS.md           ← project rules — CHƯA điền, sẽ điền ở Bước 4
-├── template/           ← Excel templates cho QC test cases (Web/App V3.0)
-└── .claude/
-    ├── agents/ commands/ skills/ context/ rules/ scripts/ workflows/ settings.json
+•	{project_name}/
+•	├── requirements/
+•	├── CLAUDE.md
+•	├── POLICIES.md
+•	├── AGENTS.md
+•	├── template/
+•	└── .claude/
+•	    ├── agents/  commands/  skills/  context/
+•	    ├── rules/   scripts/   workflows/
+•	    └── settings.json
 ```
 
-### Bước 3 — Bỏ repo source code vào
+![alt text](template/assets/step3.png)
 
-Kit **không giả định số lượng hay tên repo cố định** — 1 repo (monorepo) hay N repo (backend + nhiều web + mobile) đều được. Có 2 cách tổ chức, chọn 1:
+### Bước 3.1 — Bỏ repo source code vào (Optional) : Nếu chưa có bỏ qua
 
-**Cách A — Nhiều repo con nằm cùng cấp trong dự án** (khuyến nghị nếu có backend + nhiều frontend + mobile):
-
-```
-<ten-du-an>/
-├── CLAUDE.md / POLICIES.md / AGENTS.md / .claude/    ← kit (Bước 2)
-├── <ten-du-an>-repository/       ← thư mục chứa toàn bộ source code
-│   ├── <backend-repo>/           ← git clone repo backend vào đây
-│   ├── <web-repo-a>/             ← git clone repo web #1 vào đây
-│   ├── <web-repo-b>/             ← git clone repo web #2 vào đây (nếu có)
-│   └── <mobile-repo>/            ← git clone repo mobile vào đây (nếu có)
-└── <ten-du-an>-docs/             ← (optional) repo docs riêng, xem Bước 4 câu 2
-    └── docs/features/
-```
-
-**Cách B — Kit nằm ngay trong 1 repo duy nhất** (phù hợp dự án nhỏ/monorepo):
+Trong {project_name}, tạo folder repositories/ và đưa toàn bộ source GIT code của dự án vào đó.
 
 ```
-<ten-du-an>/                       ← chính là git repo source code
-├── CLAUDE.md / POLICIES.md / AGENTS.md / .claude/    ← kit (Bước 2)
-├── src/ ...                       ← source code dự án
-└── docs/features/                 ← docs ngay trong repo, không cần repo riêng
+ {project_name}/
+ ├── requirements/
+ ├── CLAUDE.md
+ ├── POLICIES.md
+ ├── AGENTS.md
+ ├── template/
+ ├── .claude/
+ └── repositories/          ← MỚI (optional)
+     ├── frontend/    (Git)
+     ├── backend/     (Git)
+     └── mobile/      (Git)
 ```
 
-`git clone` (hoặc `git submodule add`) từng repo vào đúng vị trí đã chọn — dùng đường dẫn tương đối này khi trả lời câu hỏi ở Bước 4.
+![alt text](template/assets/step3.1.png)
 
 ### Bước 4 — Chạy setup 1 lần: `/init-kit`
 
 Mở Claude Code tại thư mục chứa `AGENTS.md` và `.claude/` (`agentsRoot`), sau đó nhập trong session:
 
 ```
-/init-kit
+•	/init-kit <link tới folder requirements>
+•	Ví dụ: /init-kit C:\ESKitchen\requirements
+
 ```
+
+Lưu ý: Sử dụng đường dẫn thực tế tới folder requirements trên máy.
 
 (hoặc nói tự nhiên: "hãy chạy init kit cho dự án này")
 
@@ -127,72 +132,34 @@ Sau khi Claude Code mở, nhập `/init-kit` hoặc dùng tên project làm ng�
 `init-agent` sẽ hỏi ~8 câu — **trả lời dựa trên cấu trúc thư mục đã tạo ở Bước 3**:
 
 1. Tên dự án + mô tả domain nghiệp vụ 1-2 câu
-2. Docs root — path thật tới nơi chứa SPEC/DESIGN/tasks (ví dụ `<ten-du-an>-docs/docs` nếu dùng Cách A, hoặc `docs` nếu dùng Cách B)
-3. Danh sách repo: tên, **đường dẫn tương đối so với Repository root** (ô thứ 3 khai khi mở project — thư mục *chứa* các repo; Cách A thì đó là `<ten-du-an>-repository/`, nên repo ghi là `<backend-repo>`), vai trò — **đúng một từ** `backend`/`frontend`/`mobile`/`other`, stack (Enter để dùng mặc định kit).
-   Liệt kê **mọi** repo, kể cả nhiều repo cùng vai trò (vd 3 web cho 3 nhóm người dùng) — app dựng một node Build riêng cho từng repo.
-4. Epic code cho mỗi repo (tự đặt hoặc để agent tự đánh số)
-5. Danh sách actor/persona nghiệp vụ (ai dùng hệ thống, dùng repo nào)
-6. Payment/integration đặc thù (nếu có)
-7. Cặp repo/khái niệm dễ nhầm lẫn cần lưu ý
-8. Feature cross-repo nào chắc chắn sẽ có (optional)
+2. Docs root — path thật tới nơi chứa SPEC/DESIGN/PLAN (ví dụ `<ten-du-an>-docs/docs` nếu dùng Cách A, hoặc `docs` nếu dùng Cách B)
+3. Danh sách repo: tên, **đường dẫn tương đối thật** (ví dụ `<ten-du-an>-repository/<backend-repo>`), vai trò (`backend`/`frontend`/`mobile`/`other`), stack (Enter để dùng mặc định kit)
+4. Danh sách actor/persona nghiệp vụ (ai dùng hệ thống, dùng repo nào)
 
+![alt text](template/assets/step4.png)
 
-### Bước 5 — Kiểm tra lại kết quả init
+s
 
-Mở `AGENTS.md` → xác nhận bảng Ecosystem/Actors đã điền đúng đường dẫn repo thật (Bước 3). Sai chỗ nào thì sửa tay hoặc chạy lại `/init-kit` để bổ sung.
+### Bước 5 — Bắt đầu vòng đời feature đầu tiên
 
-Nếu dùng Dipro AI Boost, quay lại app và bấm **Đã chạy init, kiểm tra lại**. App chỉ cho chạy agent sau khi nhận diện `AGENTS.md` đã được init.
-
-### Bước 5b — Setup MkDocs site để duyệt docs
-
-> BA agent coi MkDocs site là **Output 5 — bắt buộc**, không skip được (xem bảng "Definition of Done" trong `.claude/agents/ba-agent.md`). Làm bước này một lần cho project, sau đó mọi run BA chỉ cần `mkdocs build --clean`. BA **không tự cài dependency** — nếu thiếu `mkdocs` nó sẽ báo lệnh cài rồi ghi `❌ Skipped` vào `## BA Deliverables`.
-
-Kit có sẵn template MkDocs để render `<DOCS_ROOT>/features/<feature>/` (SPEC/DESIGN/tasks) thành 1 site duyệt được bằng browser — không cần sửa `mkdocs.yml` mỗi khi thêm feature mới (nav tự sinh từ cấu trúc thư mục qua plugin `awesome-pages`).
-
-```bash
-# Copy 2 file template vào ĐÚNG cấp với docs_dir (thư mục chứa "docs/"):
-# - Cách A (docs repo riêng): root <ten-du-an>-docs/
-# - Cách B (docs ngay trong repo): root <ten-du-an>/
-cp .claude/templates/mkdocs.yml <đích>/mkdocs.yml
-mkdir -p <đích>/docs
-cp .claude/templates/docs-index.md <đích>/docs/index.md
-```
-
-Cài dependency và chạy site:
-
-```bash
-python3 -m pip install --user -r .claude/templates/mkdocs-requirements.txt
-python3 -m mkdocs serve   # mở http://localhost:8000 — dev server, chạy tay trong terminal của bạn
-```
-
-> Gọi qua `python3 -m` chứ không phải `mkdocs` trần: `pip install --user` đặt binary vào thư mục kiểu `~/Library/Python/3.x/bin`, thường **không có trong `PATH`** — cài xong mà gõ `mkdocs` vẫn ra `command not found`. BA agent cũng dò đúng hai bước này trước khi kết luận là chưa cài.
-
-> Trong run do Dipro AI Boost điều phối, BA chạy `mkdocs build --clean` chứ không phải `mkdocs serve`: `serve` là server không bao giờ thoát nên app sẽ đợi tới hết timeout rồi tính là run treo.
-
-### Bước 6 — Bắt đầu vòng đời feature đầu tiên
 "hãy là BA, làm SPEC cho \<requirement\>". Từ đây pipeline BMAD tự dẫn dắt qua "Bước tiếp theo" ở cuối mỗi output — không cần nhớ thứ tự lệnh:
 
 ```
-/create-spec        (BA)         → 6 outputs: SPEC.md + 3 Figma frame + prototype + MkDocs
-/create-design       (Tech Lead)  → DESIGN.md per repo         ┐ chạy song song
-/create-ui-design     (Designer)   → Figma frames + URL         ┤ (2b, 2c, 2d)
-/test/analyze-req → /test/plan-tcs → /test/gen-tcs (QC)         ┘  → analysis/plan/test-cases.md per module
-/create-tasks        (Tech Lead)  → tasks/task-*.md
-"Hãy là Backend/Frontend/Mobile Developer, implement task: <task-x-y.md>"
-"Hãy là QC Automation, test feature: <feature>"                 → Playwright E2E + execution-report.md
-/test/review-tcs (QC, khi có ≥2 QC review chéo)                 → review_report.md
-/test/export-xlsx <test-cases.md> web|app (bàn giao Excel)      → test-cases.xlsx
-/test/generate_test_execution_checklist (QC, on-demand)         → checklist trước khi deploy
+Claude sẽ hỏi thêm một số thông tin để xác định Output mong muốn.
+•	Link FIGMA cần cho Output
+•	Sử dụng cho WebApp, App hay Website
+•	Một số câu hỏi bổ sung khác về user, flow, responsive, UI tham khảo...
+Lưu ý: Cung cấp đầy đủ thông tin để BA Agent tạo Output phù hợp.
 ```
 
+![alt text](template/assets/step5.png)
 
-**Shortcut chạy cả pipeline 1 lệnh:**
+**Shortcut chạy cả pipeline 1 lệnh :**
+
 ```
 /create-feature <feature> [mô tả]     # Planning: BA → Design → Tasks, dừng ở gate để review
 /create-feature <feature> build       # Build: Dev → QC Automation, chạy sau khi đã duyệt Planning
 ```
-
-Dùng khi muốn chạy nhanh cả pipeline mà không gõ từng lệnh.
 
 **Sơ đồ pipeline BMAD — từ yêu cầu đến deploy:**
 
@@ -230,12 +197,12 @@ flowchart TB
 
     subgraph S2["② DESIGN (song song)"]
 
-        TLD["🟦 Tech Lead Design"]
+        TLD["🟦 Tech Lead"]
         DES["🟨 Designer Agent"]
         QCPIPE["🟪 QC Agent — pipeline 3 bước
         analyze-req → plan-tcs → gen-tcs"]
 
-        DESIGN["📄 DESIGN.md per repo"]
+        DESIGN["📄 Design-Technical.md per repo"]
         FIGMA["🎨 Figma URL
         + ## Screens → SPEC"]
         TC["📄 test-cases/<module>/
@@ -355,33 +322,6 @@ flowchart TB
     class TRIGGER,LOCK gate
 ```
 
-
-### Chạy Automation Test (Playwright E2E)
-
-Hướng dẫn setup repo E2E riêng, cài Playwright, chạy `/qc-automation` và đọc report → `Automation_Test.md`.
-
----
-
-## Cấu trúc kit
-
-```
-project-ai-kit/
-├── CLAUDE.md, POLICIES.md, AGENTS.md   ← root docs, always-loaded qua CLAUDE.md
-├── README.md            ← guide này — setup A→Z + quy trình feature
-├── Automation_Test.md   ← guide riêng — setup + chạy Playwright E2E automation test
-├── template/            ← Excel templates cho QC test cases (Web/App V3.0) — dùng bởi /test/export-xlsx
-└── .claude/
-    ├── agents/       ← persona (BMAD core + init-agent)
-    ├── commands/     ← slash command, thin entry point → agent tương ứng (bao gồm QC pipeline /test/analyze-req → plan-tcs → gen-tcs → review-tcs → export-xlsx)
-    ├── skills/       ← technical + process skills, load on-demand (bao gồm rbt_manual_testing, component_checklist, testing_dimensions cho QC pipeline)
-    ├── context/      ← business/technical memory — phần lớn RỖNG, điền dần qua BA/init-agent
-    ├── rules/        ← coding-style, security, git-workflow, stack-constraints, SECURITY.md (files cấm đọc), POLICY.md (IP protection), RELIABILITY.md (no guessing)...
-    ├── scripts/      ← md_to_xlsx.py — Python script convert TC .md → .xlsx theo template Web/App
-    ├── workflows/    ← bmad-plan-phase.js/bmad-build-phase.js (dùng bởi /create-feature) + pipeline reference + db-connect templates
-    └── templates/    ← mkdocs.yml + docs-index.md + mkdocs-requirements.txt (Bước 5b — BA Output 5 cần)
-```
-
-**Nguyên tắc cốt lõi** (chi tiết trong `POLICIES.md`): không đoán mò · đọc trước hành động sau · stateless (mọi context đọc từ `.md`) · tool-first (tilth thay grep/cat/find) · blast radius check trước khi đổi public interface · phân quyền persona nghiêm ngặt (chỉ Dev sửa source code).
-
 ## Tham Khảo
+
 [VIDEO DEMO](https://drive.google.com/file/d/10475WFEabgLh0-yTJkNLjPYNldgKghkC/view?usp=sharing)

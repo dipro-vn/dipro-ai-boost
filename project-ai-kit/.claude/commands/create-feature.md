@@ -9,11 +9,11 @@ Xác nhận feature chưa có đủ `<DOCS_ROOT>/features/<feature>/SPEC.md` + `
 
 > `figmaUrl` và `targetPlatform` là hai câu hỏi BẮT BUỘC của BA (`ba-agent.md` Bước 2b câu 0 / 0.5). Workflow chạy tự động nên phải hỏi user TRƯỚC khi gọi, không được tự đoán platform. Thiếu `figmaUrl` thì vẫn chạy được — BA bỏ qua 3 Figma frame và ghi `❌ Skipped`.
 
-Sau khi xong: liệt kê file đã tạo — 6 outputs của BA (SPEC.md, 3 Figma frame, `prototype/index.html`, MkDocs site — xem `## BA Deliverables` trong SPEC.md), DESIGN.md từng repo, test-cases, Figma URL của Designer, tasks/*.md — và dừng lại; nhắc user:
+Sau khi xong: liệt kê file đã tạo — 6 outputs của BA (SPEC.md, 3 Figma frame, `prototype/index.html`, MkDocs site — xem `## BA Deliverables` trong SPEC.md), DESIGN.md từng repo, test-cases, Figma URL của Designer, tasks/\*.md — và dừng lại; nhắc user:
 → Review xong thì gõ `/create-feature <feature> build` để tiếp tục sang Dev/QC. Đây là gate bắt buộc, KHÔNG tự động chạy tiếp dù không có tham số `build`.
 
 **Nếu CÓ `build` (Build phase):**
-Xác nhận feature đã có SPEC.md + DESIGN.md + tasks/*.md (output của lần chạy Planning trước). Nếu thiếu, dừng lại và báo user chạy `/create-feature <feature>` (không kèm `build`) trước.
+Xác nhận feature đã có SPEC.md + Design-Technical.md + tasks/\*.md (output của lần chạy Planning trước). Nếu thiếu, dừng lại và báo user chạy `/create-feature <feature>` (không kèm `build`) trước.
 Nếu đủ điều kiện, gọi tool Workflow `name: "bmad-build-phase"`, `args: { feature: "<feature>" }`.
 Sau khi xong: tổng hợp báo cáo Dev + QC theo format Memory Update Gate trong AGENTS.md.
 

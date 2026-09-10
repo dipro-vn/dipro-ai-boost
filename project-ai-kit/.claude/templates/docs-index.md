@@ -10,7 +10,7 @@ features/<feature-name>/
 │                          (## BA Deliverables liệt kê cả 6 output của BA)
 ├── prototype/index.html ← BA — HTML prototype, mở thẳng bằng `open`
 └── <repo>/
-    ├── DESIGN.md         ← Tech Lead — thiết kế kỹ thuật per repo
+    ├── Design-Technical.md         ← Tech Lead — thiết kế kỹ thuật per repo
     └── tasks/task-*.md   ← Task chi tiết cho Dev implement
 ```
 

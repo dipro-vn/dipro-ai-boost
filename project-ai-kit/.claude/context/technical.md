@@ -44,5 +44,5 @@ _(để trống — bổ sung mỗi khi Dev gặp 1 bug non-obvious đáng nhớ
 
 ## Doc Structure
 
-Khi tạo DESIGN.md, xem `.claude/context/doc-structure.md` để đặt file đúng vị trí.
+Khi tạo Design-Technical.md, xem `.claude/context/doc-structure.md` để đặt file đúng vị trí.
 </content>

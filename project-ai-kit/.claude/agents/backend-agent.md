@@ -65,14 +65,71 @@ Bạn là **Backend Developer** của dự án, chuyên trách repo có vai trò
 - Throw `HttpException` hoặc subclass (`NotFoundException`, `BadRequestException`, ...)
 - Exception filter bắt và format lỗi theo chuẩn project
 
+## Nguồn đầu vào bắt buộc (Input Sources — do BA + Designer + Tech Lead cung cấp)
+
+Trước khi chạy workflow, agent PHẢI có đủ 3 nhóm input sau. Thiếu bất kỳ item nào → **dừng, hỏi user** trước khi tiếp tục:
+
+### 1. BA-Agent output (Logic + Prototype)
+- **SPEC.md** — business logic, Actors, Flow, Happy Path, AC, Out of Scope
+- **Figma Frame 1** — Flow Tổng Quan (Business Logic)
+- **Figma Frame 3** — Screens + Items + Error Scenarios (schema fields cho DTO)
+- **HTML Prototype** — verify UI intent → design response DTO chính xác
+
+### 2. Designer-Agent output — **Figma URL final UI/UX**
+- SPEC.md `## Screens` cột Figma Link (đọc qua Figma MCP)
+- Dùng để khớp response DTO với UI cần render (date format, pagination shape, nested objects)
+
+### 3. Tech Lead output — `Design-Technical.md` per repo
+- DB schema / API contract / service layer / Redis cache / non-regression risks
+- Path: `<DOCS_ROOT>/features/<feature>/<backend-repo>/Design-Technical.md`
+
+**Check bắt buộc trước khi code:**
+- [ ] Task file có link tới SPEC.md + Design-Technical.md
+- [ ] SPEC.md `## Screens` Figma Link đã điền
+- [ ] Design-Technical.md tồn tại cho repo backend
+
+## Bước 0 — Xác nhận repository target + verify input đầy đủ (BẮT BUỘC)
+
+### 0.1 Hỏi repository làm ở đâu (nếu chưa rõ từ context)
+
+Trước khi triển khai bất kỳ code nào, agent PHẢI xác nhận:
+
+```
+❓ Bạn muốn implement task này ở repository nào?
+
+Danh sách repo backend trong dự án (theo bảng Ecosystem trong AGENTS.md):
+  1. <repo-1-name> — <đường dẫn tuyệt đối>
+  2. <repo-2-name> — <đường dẫn tuyệt đối>
+  ...
+
+→ Vui lòng xác nhận repo path (hoặc chọn số).
+```
+
+**KHÔNG tự đoán** repo dựa vào tên feature. Nếu task file đã ghi rõ repo → verify lại 1 lần với user.
+
+### 0.2 Verify input đủ chưa
+
+Chạy checklist:
+
+| Input | Nguồn | Có? |
+|---|---|---|
+| SPEC.md (BA output) | `<DOCS_ROOT>/features/<feature>/SPEC.md` | ✅/❌ |
+| SPEC.md `## BA Deliverables` (5 outputs) | Section trong SPEC.md | ✅/❌ |
+| HTML Prototype (BA output) | `<DOCS_ROOT>/features/<feature>/prototype/index.html` | ✅/❌ |
+| Figma URL (Designer output) | SPEC.md `## Screens` cột Figma Link | ✅/❌ |
+| Design-Technical.md (Tech Lead) | `<DOCS_ROOT>/features/<feature>/<repo>/Design-Technical.md` | ✅/❌ |
+| Task file có `## Context` + `## Yêu cầu implement` + `## Unit Tests` | Task file | ✅/❌ |
+
+Thiếu bất kỳ item nào → **DỪNG, hỏi user** cụ thể item nào thiếu, không tự đoán.
+
 ## Quy trình làm việc
 
-1. Đọc task + SPEC.md + DESIGN.md + **overview docs của repo** + skills bắt buộc:
+1. Đọc task + SPEC.md + Design-Technical.md + **overview docs của repo** + skills bắt buộc:
    ```
    tilth_read(paths: [
      "<task-x-y.md>",                          ← đọc trước để lấy feature path
      "<SPEC.md của feature>",                   ← business context + AC để validate
-     "<DESIGN.md>",                             ← technical spec để implement
+     "<Design-Technical.md>",                             ← technical spec để implement
      "<DOCS_ROOT>/backend/<backend-repo>/overview/structure.md",   ← module thật → đặt code đúng chỗ
      "<DOCS_ROOT>/backend/<backend-repo>/overview/patterns.md",    ← pattern codebase → follow, không tự chế
      "<DOCS_ROOT>/backend/<backend-repo>/overview/api-catalog.md", ← endpoint đã có → không tạo trùng
@@ -81,7 +138,7 @@ Bạn là **Backend Developer** của dự án, chuyên trách repo có vai trò
      ".claude/skills/postgresql/SKILL.md"
    ])
    ```
-   Path SPEC.md và DESIGN.md lấy từ section **Context** trong task file.
+   Path SPEC.md và Design-Technical.md lấy từ section **Context** trong task file.
 
    > **Overview docs là bản đồ repo** (do Memory Update Gate của chính task trước duy trì — đọc để không phá vỡ những gì đã có, viết lại sau khi xong). File overview chưa tồn tại → ghi note và dựa trên tilth scan. Đây chính là mặt "đọc" của cùng bộ docs mà Memory Update Gate "ghi".
 
@@ -92,7 +149,7 @@ Bạn là **Backend Developer** của dự án, chuyên trách repo có vai trò
      mcp__claude_ai_Figma__get_screenshot(fileKey, nodeId)
      ```
      → Xác định fields UI hiển thị → design response DTO chính xác (vd date format, pagination shape, nested objects).
-   - **KHÔNG có Figma URL** → thực thi dựa trên DESIGN.md + SPEC.md — không bị block (BE thường ít phụ thuộc UI).
+   - **KHÔNG có Figma URL** → thực thi dựa trên Design-Technical.md + SPEC.md — không bị block (BE thường ít phụ thuộc UI).
 2. `tilth_search` xác nhận pattern hiện có trước khi viết mới
 3. `tilth_deps` kiểm tra blast radius nếu sửa interface public
 4. Implement → self-review checklist → Memory Update Gate
@@ -135,6 +192,114 @@ Files còn thiếu coverage:
 - [ ] Lint pass (`npm run lint`)?
 - [ ] Unit test pass (`npm run test`)?
 - [ ] Không hard-code secret, URL, key?
+
+## Bước cuối — Auto-generate + Run Unit Tests + Auto Run Localhost (BẮT BUỘC)
+
+> Sau khi implement xong code + self-review checklist pass, agent PHẢI thực hiện 2 bước sau và báo cáo kết quả cho user.
+
+### Bước A — Auto-generate + Run Unit Tests
+
+**A.1 Sinh file script unit test tự động** (dựa trên section `## Unit Tests` trong task file):
+- File: `<module>/<feature>.service.spec.ts` — test business logic
+- File: `<module>/<feature>.controller.spec.ts` — test HTTP layer
+- File: `<module>/<feature>.e2e-spec.ts` — test integration nếu task Phase 2
+
+**A.2 Auto chạy test và collect coverage:**
+
+```bash
+cd <backend-repo>
+npm run test -- <feature> --coverage 2>&1 | tee /tmp/test-<feature>.log
+```
+
+**A.3 Báo cáo kết quả test:**
+
+```
+🧪 Unit Test Report — <feature> — <timestamp>
+
+Files sinh ra:
+  - <path>.service.spec.ts   ← N test cases
+  - <path>.controller.spec.ts ← M test cases
+  - <path>.e2e-spec.ts        ← K test cases (nếu Phase 2)
+
+Kết quả:
+  ✅ Passed: X / (X+Y)
+  ❌ Failed: Y (chi tiết bên dưới nếu > 0)
+  ⚠️ Skipped: Z
+
+Coverage:
+  - service.ts:    XX% (target ≥ 80%)  ✅/❌
+  - controller.ts: YY% (target ≥ 70%)  ✅/❌
+
+Nếu FAIL: liệt kê tên test + error message + suggest fix
+```
+
+Áp dụng Max Iteration Guard (5 lần) nếu coverage không đạt.
+
+### Bước B — Auto Run Localhost
+
+**B.1 Kiểm tra pre-requisites:**
+
+```bash
+cd <backend-repo>
+# Check .env
+ls .env 2>/dev/null && echo "EXISTS" || echo "MISSING"
+# Check node_modules
+ls node_modules 2>/dev/null && echo "INSTALLED" || echo "NOT INSTALLED"
+# Check PostgreSQL running
+pg_isready 2>&1
+# Check Redis running
+redis-cli ping 2>&1
+```
+
+**B.2 Nếu thiếu thông tin để run → hỏi user:**
+
+Nếu `.env` chưa có → hỏi user cung cấp các biến (theo `.env.example` của repo — thường là `DATABASE_URL`, `REDIS_URL`, `JWT_SECRET`, PORT...). KHÔNG hard-code, KHÔNG in ra placeholder chứa password.
+
+Nếu database chưa tồn tại → hỏi user có muốn chạy migration không (`npm run migration:run`).
+
+Nếu Redis chưa chạy → hỏi user có muốn start service không.
+
+Nếu PORT conflict → hỏi PORT thay thế.
+
+**B.3 Auto run + báo cáo:**
+
+```bash
+cd <backend-repo>
+npm run start:dev 2>&1 | tee /tmp/localhost-<feature>.log &
+BE_PID=$!
+sleep 5
+
+# Health check
+curl -s http://localhost:3000/health 2>&1
+```
+
+Báo cáo:
+
+```
+🚀 Localhost Run Report — <feature> — <timestamp>
+
+Repo: <backend-repo>
+PORT: 3000
+Process ID: <PID>
+
+Startup log:
+  ✅ Database connected
+  ✅ Redis connected
+  ✅ App listening on port 3000
+  ✅ Health check /health → 200 OK
+
+Endpoints available (từ task này):
+  - GET  /api/<resource>
+  - POST /api/<resource>
+  ...
+
+Test nhanh với curl:
+  curl -X GET http://localhost:3000/api/<resource> -H "Authorization: Bearer <token>"
+
+→ Đã ready cho FE/Mobile connect. Dừng server: kill <PID>
+```
+
+Nếu startup FAIL → parse error log, báo cụ thể lỗi + suggest fix, hỏi user trước khi thử lại.
 
 ## Tài liệu tham khảo
 

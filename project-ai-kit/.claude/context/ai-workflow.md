@@ -3,6 +3,7 @@
 # Overview
 
 This document describes a professional AI Agent workflow architecture using Claude AI for:
+
 - Requirement analysis
 - Figma/UI understanding
 - Code generation
@@ -72,6 +73,7 @@ project-root/
 ## Purpose
 
 Context allows AI Agents to understand:
+
 - business logic
 - project architecture
 - coding standards
@@ -107,15 +109,18 @@ Context allows AI Agents to understand:
 Project: AI Metaverse Platform
 
 Frontend:
+
 - ReactJS
 - TypeScript
 - Redux Toolkit
 
 Backend:
+
 - NodeJS
 - MongoDB
 
 Features:
+
 - Meeting
 - Wallet
 - AI Chatbot
@@ -164,6 +169,7 @@ I want to login with Google,
 So that I can access the platform quickly.
 
 Acceptance Criteria:
+
 - OAuth login
 - Save profile
 - Redirect dashboard
@@ -225,11 +231,7 @@ figma/
 ```json
 {
   "login-page": {
-    "components": [
-      "email-input",
-      "password-input",
-      "login-button"
-    ],
+    "components": ["email-input", "password-input", "login-button"],
     "api": "/api/auth/login"
   }
 }
@@ -255,6 +257,7 @@ figma/
 ```
 
 Slash commands (user-facing shortcuts, không thay thế agent files):
+
 ```txt
 .claude/commands/
 ├── init-kit.md          → triggers init-agent workflow
@@ -274,12 +277,14 @@ Slash commands (user-facing shortcuts, không thay thế agent files):
 # Frontend Agent
 
 Responsibilities:
+
 - Build React UI
 - Follow Figma
 - Reuse components
 - Follow coding rules
 
 Stack:
+
 - React
 - TypeScript
 - TailwindCSS
@@ -306,9 +311,11 @@ Stack:
 # Create Component
 
 Input:
+
 - component name
 
 Output:
+
 - TSX
 - SCSS
 - Test file
@@ -322,6 +329,7 @@ Output:
 ## Purpose
 
 Memory allows AI to remember:
+
 - business decisions
 - architecture decisions
 - sprint history
@@ -358,14 +366,14 @@ MCP Server
 
 # 20. Recommended MCP Tools
 
-| Tool | Purpose |
-|---|---|
-| Filesystem | Read/write project |
-| Git | Commit/review changes |
-| Database | Query schemas |
-| Browser | Open websites |
-| Figma API | Read UI design |
-| Swagger | API understanding |
+| Tool       | Purpose               |
+| ---------- | --------------------- |
+| Filesystem | Read/write project    |
+| Git        | Commit/review changes |
+| Database   | Query schemas         |
+| Browser    | Open websites         |
+| Figma API  | Read UI design        |
+| Swagger    | API understanding     |
 
 ---
 
@@ -391,12 +399,12 @@ Claude AI
 
 # 22. Recommended RAG Stack
 
-| Component | Tool |
-|---|---|
-| Embedding | OpenAI / Voyage |
+| Component | Tool              |
+| --------- | ----------------- |
+| Embedding | OpenAI / Voyage   |
 | Vector DB | Pinecone / Chroma |
-| Framework | LlamaIndex |
-| Workflow | LangGraph |
+| Framework | LlamaIndex        |
+| Workflow  | LangGraph         |
 
 ---
 
@@ -408,7 +416,7 @@ Requirement
 ba-agent  →  SPEC.md (11 sections, ## BA Deliverables) + 3 Figma frame + prototype/index.html + MkDocs
 ↓
 [song song]
-  techlead-design-agent  →  DESIGN.md per repo
+  techlead-design-agent  →  Design-Technical.md per repo
   qc-agent               →  test-cases/tc_*.md
   designer-agent         →  Figma frames + URL vào SPEC.md ## Screens
 ↓
@@ -460,16 +468,16 @@ Chi tiết đầy đủ (bảng repo/actor thật của dự án) → `AGENTS.md
 
 # 25. Recommended Technologies
 
-| Purpose | Technology |
-|---|---|
-| AI Model | Claude |
-| Agent Framework | CrewAI |
-| Workflow | LangGraph |
-| RAG | LlamaIndex |
-| Vector DB | Pinecone |
-| MCP | Anthropic MCP |
-| Frontend | React |
-| Backend | NodeJS |
+| Purpose         | Technology    |
+| --------------- | ------------- |
+| AI Model        | Claude        |
+| Agent Framework | CrewAI        |
+| Workflow        | LangGraph     |
+| RAG             | LlamaIndex    |
+| Vector DB       | Pinecone      |
+| MCP             | Anthropic MCP |
+| Frontend        | React         |
+| Backend         | NodeJS        |
 
 ---
 
@@ -493,14 +501,14 @@ context/
 
 ## Priority Order
 
-| Priority | Component |
-|---|---|
-| 1 | Context |
-| 2 | Rules |
-| 3 | Memory |
-| 4 | Tool Access |
-| 5 | Workflow |
-| 6 | Multi-Agent |
+| Priority | Component   |
+| -------- | ----------- |
+| 1        | Context     |
+| 2        | Rules       |
+| 3        | Memory      |
+| 4        | Tool Access |
+| 5        | Workflow    |
+| 6        | Multi-Agent |
 
 ---
 
@@ -513,6 +521,7 @@ Generate an app
 ```
 
 Result:
+
 - random architecture
 - inconsistent code
 - hallucination
@@ -538,6 +547,7 @@ Tool Access
 ```
 
 Result:
+
 - production-quality output
 - consistent architecture
 - reusable patterns
@@ -578,12 +588,14 @@ Generate:
 # 30. Goal
 
 The goal is to transform Claude from:
+
 - simple chatbot
 
 into:
+
 - AI Software Engineer
 - AI PM
 - AI Architect
 - Autonomous Coding Agent
 - Enterprise AI Development System
-</content>
+  </content>
