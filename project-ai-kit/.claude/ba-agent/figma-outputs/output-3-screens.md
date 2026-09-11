@@ -8,6 +8,25 @@
 
 > **⚠️ LAYOUT MỚI (feedback từ user):** Chia thành N groups theo business flow. Trong mỗi group, layout DỌC N mockup rows như cũ.
 
+> **⚠️ Gate B2 BẮT BUỘC — hỏi user TRƯỚC khi vẽ Output 3 (không skip)**
+>
+> Khi bắt đầu Output 3, BA PHẢI đã hỏi Gate B2 ở `shared-rules.md` — user đã confirm 2 thứ:
+>   1. Có muốn tạo Output 3 không? (nếu KHÔNG → skip Output 3, ghi vào bảng status "❌ Skipped — user quyết không cần")
+>   2. Scope Output 3: TOÀN BỘ N flows / CHỈ 1 flow / BATCH M screens
+>
+> **Ứng xử theo lựa chọn:**
+>
+> | User chọn ở Gate B2 | Áp dụng vào Output 3 |
+> |---|---|
+> | `[A] TOÀN BỘ N flows` | Vẽ đủ N groups tương ứng N business flows Output 2. Coverage Rule bên dưới BẮT BUỘC pass. |
+> | `[B] CHỈ 1 flow "<Tên flow>"` | Vẽ 1 group cho flow user chỉ định. Các flow còn lại → KHÔNG vẽ. Ghi vào bảng status Output 3: "⚠️ Partial — user chọn vẽ 1/N flows: `<Tên flow>`. Flows còn lại: [list N-1 flows] — chờ user quyết định vẽ tiếp." |
+> | `[C] BATCH M screens/lượt` | Vẽ batch đầu tiên gồm M screens (theo thứ tự Happy Path). Sau mỗi batch DỪNG hỏi user "vẽ tiếp batch kế không?" trước khi tiếp tục. |
+>
+> **NGHIÊM CẤM:**
+> - ❌ Tự vẽ toàn bộ N flows khi user chưa confirm scope
+> - ❌ Tự chọn 1 flow "quan trọng nhất" thay user
+> - ❌ Vẽ Output 3 trước khi hỏi Gate B2 (dù thấy Output 2 chỉ có 1 flow — vẫn phải hỏi "có muốn tạo Output 3 không")
+
 **Bố cục frame Output 3:**
 
 ```
@@ -119,7 +138,7 @@ Trên màn hình có bao nhiêu item hiển thị thì liệt kê hết bấy nh
 
 | # | Title (Tên item) | Mô tả | Mục đích |
 |---|---|---|---|
-| ① | Nút "Gọi ngay" | Nút chính màu xanh ở dưới cùng | Kích hoạt cuộc gọi tới Company Admin |
+| ① | Nút "Gọi ngay" | Nút chính màu xanh ở dưới cùng | Kích hoạt cuộc gọi tới Actor B (Receiver) |
 | ② | Avatar company | Ảnh tròn với chữ đầu tên cty | Nhận biết trực quan công ty đang xem |
 | ③ | Badge trạng thái | Pill hiển thị Online/Offline/Busy | Cho biết CA có sẵn sàng nhận gọi không |
 | ④ | Row "Địa chỉ" | Label + giá trị | Hiển thị địa chỉ công ty |
@@ -137,9 +156,9 @@ Trên màn hình có bao nhiêu item hiển thị thì liệt kê hết bấy nh
   3. Tap [Gọi ngay] → Outgoing Call
 
 - **Buttons / Actions:**
-  - [Gọi ngay] → DA_VOIP_003 (disabled khi Offline/Busy + tooltip)
-  - [Xem tất cả →] → DA_VOIP_006
-  - [←] → DA_VOIP_001
+  - [Gọi ngay] → AX_FEAT_003 (disabled khi Offline/Busy + tooltip)
+  - [Xem tất cả →] → AX_FEAT_006
+  - [←] → AX_FEAT_001
 
 - **⚠ Non-Happy:**
   - CA Offline → Nút disabled + tooltip "Không online"
@@ -160,9 +179,9 @@ Xem mockup HiFi (do Designer tạo) hoặc SPEC.md `## Screen Details`, đánh s
 **Ví dụ ĐÚNG (logic-focused):**
 ```
 BUTTONS:
-• [Gọi ngay] → DA_VOIP_003 (Outgoing Call)
-• [Gọi ngay] disabled khi: Company Admin đang Offline hoặc Busy
-  → tooltip: "Company Admin hiện không thể nhận cuộc gọi"
+• [Gọi ngay] → AX_FEAT_003 (Outgoing Call)
+• [Gọi ngay] disabled khi: Actor B (Receiver) đang Offline hoặc Busy
+  → tooltip: "Actor B (Receiver) hiện không thể nhận cuộc gọi"
 ```
 
 **Ví dụ SAI (design-focused — KHÔNG làm):**

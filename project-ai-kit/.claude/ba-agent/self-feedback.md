@@ -40,15 +40,15 @@ Kết quả: PASS ✅ → Sẵn sàng bàn giao
 
 ⚠️ Phát hiện 2 vấn đề:
 
-[THIẾU] Non-happy "Company Admin đăng xuất giữa cuộc gọi" chưa cover
+[THIẾU] Non-happy "Actor B (Receiver) đăng xuất giữa cuộc gọi" chưa cover
   → SPEC ## Alternative Flows thiếu case này
   → Figma Output 2 Non-Happy zone chưa có luồng tương ứng
   → Đề xuất: bổ sung case + toast "Người dùng đăng xuất" → Call Ended
 
 [SAI] Screen count không khớp
-  → ## Screens ghi 8, nhưng ## Screen Details có 9 blocks (DA_VOIP_007 dư)
-  → Figma bảng Index đếm 15 (không có DA_VOIP_007)
-  → Đề xuất: xoá block DA_VOIP_007 khỏi ## Screen Details
+  → ## Screens ghi 8, nhưng ## Screen Details có 9 blocks (AX_FEAT_007 dư)
+  → Figma bảng Index đếm 15 (không có AX_FEAT_007)
+  → Đề xuất: xoá block AX_FEAT_007 khỏi ## Screen Details
 
 → Có cho phép BA fix ngay không? (Yes/No)
 ```

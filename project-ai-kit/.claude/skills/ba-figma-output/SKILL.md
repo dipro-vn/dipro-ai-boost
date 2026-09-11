@@ -34,9 +34,9 @@ const BGL     = cv(246,248,250);     // background xám nhạt
 const BGDK    = cv(26,31,46);        // dark screen bg (call screens)
 
 // Actor colors
-const BLUE    = cv(9,105,218);       // Dipro Admin
+const BLUE    = cv(9,105,218);       // Actor A (Caller)
 const BLUELT  = cv(229,246,255);
-const GREEN   = cv(26,127,55);       // Company Admin
+const GREEN   = cv(26,127,55);       // Actor B (Receiver)
 const GREENLT = cv(237,253,240);
 const GREENDOT= cv(26,127,55);
 const ORANGE  = cv(216,97,7);        // Hệ thống / Trigger / Function
@@ -62,8 +62,8 @@ const INP     = cv(234,238,242);     // input background
 
 | Ý nghĩa | Fill | Stroke/Text | Dùng cho |
 |---|---|---|---|
-| **Dipro Admin** (actor caller) | `BLUELT` | `BLUE` | Node/screen thuộc DA |
-| **Company Admin** (actor receiver) | `GREENLT` | `GREEN` | Node/screen thuộc CA |
+| **Actor A (Caller)** (actor caller) | `BLUELT` | `BLUE` | Node/screen thuộc DA |
+| **Actor B (Receiver)** (actor receiver) | `GREENLT` | `GREEN` | Node/screen thuộc CA |
 | **Hệ thống / Function / Trigger** | `ORANGELT` | `ORANGE` | Nghiệp vụ auto, quyết định |
 | **Error / Non-happy** | `REDLT` | `RED` | Toast/Error screen (dashed) |
 | **Popup / Modal / Cross-actor** | `PURPLT` | `PURP` | Popup screen (dashed), same-session |
@@ -213,7 +213,7 @@ BOTTOM (từ y=560): PHẦN B — SITEMAP WBS TREE
 y=572   Title "SITEMAP — WBS TREE (Actor + Hành động)"
 y=592   Subtitle 4 levels
 y=620   Legend box (320×50px)
-y=700   Root node (In-App VoIP Call, xanh full)
+y=700   Root node (Sample Feature, xanh full)
 y=810   Level 2: N actors ngang
 y=910+  Level 3+4: Hành động → Screen (verticals)
 ```
@@ -238,7 +238,7 @@ C = [130, 360, 610, 870, 1130, 1400, 1660]
 el(78, BLUELT, C[0]-39, R1-39, frame, BLUE);
 el(20, BLUE, C[0]-10, R1-24, frame);       // head
 r(28, 18, BLUE, C[0]-14, R1-2, frame, 10);  // body
-t("Dipro Admin", 11, true, TH, C[0]-30, R1+50, frame, 120);
+t("Actor A (Caller)", 11, true, TH, C[0]-30, R1+50, frame, 120);
 t("Mobile App", 10, false, TL, C[0]-30, R1+64, frame, 120);
 ```
 (y=R1=180)
@@ -250,7 +250,7 @@ box('Tap "Gọi ngay"', 'Company Detail screen', BLUELT, BLUE, C[1]-70, R1-36, 1
 
 **Function/Technology box 160-180×96, radius:8, fill ORANGELT stroke ORANGE:**
 ```js
-box('VoIP SDK', 'Tạo call session\n+ generate token', ORANGELT, ORANGE, C[2]-80, R1-48, 160, 96, frame);
+box('Real-time Comm SDK', 'Tạo call session\n+ generate token', ORANGELT, ORANGE, C[2]-80, R1-48, 160, 96, frame);
 ```
 
 **Arrow ngang giữa 2 nodes:**
@@ -307,10 +307,10 @@ t("Danh sách công nghệ đề xuất — Tech Lead sẽ chốt lại trong De
 t("BA chỉ liệt kê để user hình dung stack tổng quan.", 9, false, TH, TX+12, TY+48, frame, 436);
 ```
 
-**Danh sách tech tối thiểu cho VoIP-like feature (9 tech):**
+**Danh sách tech tối thiểu cho multi-actor real-time feature (9 tech):**
 - Flutter — Framework mobile app đa nền tảng
 - NestJS — Backend API framework
-- Agora / Twilio SDK — VoIP Engine (WebRTC)
+- Real-time Comm SDK (vendor of choice) — Real-time Comm Engine (WebRTC)
 - APNs (iOS) — Apple Push Notification
 - FCM (Android) — Firebase Cloud Messaging
 - PostgreSQL — Database call log
@@ -330,13 +330,13 @@ t("BA chỉ liệt kê để user hình dung stack tổng quan.", 9, false, TH, 
 ```js
 // Rectangle 200×50, fill BLUE, cornerRadius 8, text white 13px Bold
 r(200, 50, BLUE, cx-100, rootY, frame, 8);
-t("In-App VoIP Call", 13, true, WHITE, cx-w/2, rootY+16, frame);
+t("Sample Feature", 13, true, WHITE, cx-w/2, rootY+16, frame);
 ```
 
 **Actor node (Level 2) — 200×54, radius:8, fill nhạt actor stroke đậm:**
 ```js
 r(200, 54, actorBg, ax-100, L2_Y+30, frame, 8, actorColor);
-t("👤 Dipro Admin", 12, true, actorColor, ax-w/2, L2_Y+40, frame);
+t("👤 Actor A (Caller)", 12, true, actorColor, ax-w/2, L2_Y+40, frame);
 t("Caller", 10, false, TM, ax-w/2, L2_Y+58, frame);
 ```
 
@@ -365,8 +365,8 @@ LEGEND
 ```
 
 **Ba actor tối thiểu:**
-1. `👤 Dipro Admin` (Caller) — BLUE
-2. `👤 Company Admin` (Receiver) — GREEN
+1. `👤 Actor A (Caller)` (Caller) — BLUE
+2. `👤 Actor B (Receiver)` (Receiver) — GREEN
 3. `⚙️ Hệ thống` (Auto process) — ORANGE
 
 ---
@@ -494,7 +494,7 @@ t("← same session →", 9, true, PURP, midX-45, mid-14, frame);
 Description                                ← 9px Regular TM
 ```
 
-**Các luồng non-happy điển hình (5 luồng mẫu cho VoIP-like feature):**
+**Các luồng non-happy điển hình (5 luồng mẫu cho multi-actor real-time feature):**
 1. ⚠ Timeout 30s
 2. ⚠ Network Lost (đang gọi)
 3. ⚠ Mic Permission Denied
@@ -773,12 +773,12 @@ y+80  Data rows (dynamic 48-88px based on Action length):
 
 **Ví dụ ĐÚNG:**
 ```
-✅ "TAP → DA_VOIP_003 Outgoing Call. Happy: chuyển màn + phát signal push tới CA.
+✅ "TAP → AX_FEAT_003 Outgoing Call. Happy: chuyển màn + phát signal push tới CA.
    Error nếu Offline/Busy → disabled + tooltip"
 
 ✅ "TAP toggle mute mic. Happy: đổi active state, CA không nghe thấy DA"
 
-✅ "Swipe down → dismiss + về DA_VOIP_002"
+✅ "Swipe down → dismiss + về AX_FEAT_002"
 ```
 
 ### 6.5b. Bảng ERROR SCENARIOS (BẮT BUỘC — dưới bảng ITEMS)
@@ -826,7 +826,7 @@ y+80  Data rows (68-88px dynamic):
 
 **Ví dụ cột "Message + Action tiếp theo":**
 ```
-✅ "Text: 'Không có phản hồi'. Action: auto về DA_VOIP_002 Company Detail, log 'Missed'"
+✅ "Text: 'Không có phản hồi'. Action: auto về AX_FEAT_002 Company Detail, log 'Missed'"
 ✅ "Text: 'Cần quyền microphone để gọi VoIP' + Nút [Mở Cài đặt] deep-link tới Settings"
 ✅ "Text: 'Không có kết nối mạng. Vui lòng thử lại.' + Nút [Retry] retry gọi"
 ```
@@ -863,7 +863,7 @@ y+80  Data rows (68-88px dynamic):
 |---|---|---|
 | Title (Tên item) | Tên gọi element hiển thị trên UI | "Nút [Gọi ngay]", "Avatar tròn (initial)" |
 | Mô tả | Element trông ntn, có gì | "Circle với chữ đầu tên cty" |
-| Action / Behavior | Tương tác + Happy/Error case | "TAP → DA_VOIP_003. Disabled nếu Offline" hoặc "—" nếu visual only |
+| Action / Behavior | Tương tác + Happy/Error case | "TAP → AX_FEAT_003. Disabled nếu Offline" hoặc "—" nếu visual only |
 
 **KHÔNG viết design spec (px/hex/font) trong Mô tả** — Description tập trung "trông thế nào" chứ không phải "spec bao nhiêu px". Ví dụ:
 - ✅ "Circle xanh với icon 🔊, có label bên dưới"
@@ -1002,7 +1002,7 @@ Sau khi hoàn thành mỗi Output, **PHẢI** chụp screenshot và tự đánh 
 
 | Vấn đề | Ví dụ | Cách phát hiện |
 |---|---|---|
-| CA node đè Non-Happy zone | CA_VOIP_001 tràn sang vùng Timeout | X-coord của CA node > Zone 2 boundary |
+| CA node đè Non-Happy zone | AY_FEAT_001 tràn sang vùng Timeout | X-coord của CA node > Zone 2 boundary |
 | Cross-arrow đè lên In-Call node | "same session" line đè text | Line Y == node Y range |
 | Numbered badge đè border Zone trước | Badge số 7 CA đè divider zone 1/2 | Badge X < divider X |
 | Decision label đè "Yes/No" | "Accept?" text đè "Yes ↓" | Text Y overlap |
@@ -1033,7 +1033,7 @@ hoặc:
 
 ✅ Tiêu chí 1: Đủ nội dung
 ❌ Tiêu chí 2: Có chồng đè
-   → Vấn đề: CA_VOIP_001 đè lên push notification label
+   → Vấn đề: AY_FEAT_001 đè lên push notification label
    → Fix: dời CA column sang phải, mở frame width từ 1700 → 2100
 ✅ ...
 

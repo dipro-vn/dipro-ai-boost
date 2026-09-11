@@ -32,7 +32,7 @@
 
 **Group N — Screen-flow (Happy + Non-Happy trong cùng group):**
 
-Mỗi group có tiêu đề group ở đầu (label business flow, VD "Flow 1 — Doctor Application"):
+Mỗi group có tiêu đề group ở đầu (label business flow, VD "Flow 1 — User Application"):
 
 ```
 ┌─── Flow N: <Tên business flow> ────────────────────┐
@@ -47,14 +47,14 @@ Mỗi group có tiêu đề group ở đầu (label business flow, VD "Flow 1 �
 - Happy sub-zone: chỉ luồng chính, decision chỉ đi nhánh Yes/Happy
 - Non-Happy sub-zone: các trigger + luồng lỗi tương ứng flow đó
 
-Ví dụ Output 2 cho feature medical-platform (5 business flows từ Output 1):
+Ví dụ Output 2 cho feature sample-multi-flow-feature (5 business flows từ Output 1):
 
 ```
-Group 1 — Application (Doctor tìm & ứng tuyển Job)
-  Happy: DR_JOB_001 → DR_JOB_002 → DR_APPL_001 → HO_APPL_001 → DR_CONT_001
-  Non-Happy: ⚠ Doctor bị block → ⚠ Billing chưa active → ⚠ PDF chưa ready
+Group 1 — Application (User tìm & ứng tuyển Job)
+  Happy: A1_MOD_001 → A1_MOD_002 → A1_APPL_001 → A2_APPL_001 → A1_CONT_001
+  Non-Happy: ⚠ User bị block → ⚠ Billing chưa active → ⚠ PDF chưa ready
 
-Group 2 — Scout (Hospital chủ động scout Doctor)
+Group 2 — Scout (Admin chủ động scout User)
   ...
 
 Group 3 — Contract (Ký & quản lý hợp đồng)
@@ -73,9 +73,9 @@ BẮT BUỘC — bảng liệt kê TẤT CẢ màn hình (kể cả Popup) với
 
 | # | Màn hình | Loại | Mô tả chức năng màn hình |
 |---|---|---|---|
-| 1 | DA_VOIP_001 — Company List | List | Hiển thị danh sách công ty, cho phép chọn để gọi |
-| 2 | DA_VOIP_002 — Company Detail | Detail | Xem thông tin + khởi tạo cuộc gọi |
-| 3 | DA_VOIP_003 — Outgoing Call | Modal | Chờ Company Admin nhận máy (30s) |
+| 1 | AX_FEAT_001 — Company List | List | Hiển thị danh sách công ty, cho phép chọn để gọi |
+| 2 | AX_FEAT_002 — Company Detail | Detail | Xem thông tin + khởi tạo cuộc gọi |
+| 3 | AX_FEAT_003 — Outgoing Call | Modal | Chờ Actor B (Receiver) nhận máy (30s) |
 | ... | ... | ... | ... |
 | 9 | [Popup] Mic Permission | **Popup** | Yêu cầu quyền microphone khi tap Gọi |
 | 10 | [Popup] Confirm Cancel | **Popup** | Xác nhận hủy cuộc gọi giữa chừng |
@@ -105,7 +105,7 @@ BẮT BUỘC — bảng liệt kê TẤT CẢ màn hình (kể cả Popup) với
 **Format mỗi screen node — PHẢI có 1 dòng mục đích:**
 ```
 ┌─────────────────────────────────────┐
-│ ① DA_VOIP_001  Company List   List  │
+│ ① AX_FEAT_001  Company List   List  │
 │    Hiển thị DS công ty, chọn để gọi │  ← mục đích 1 dòng
 └─────────────────────────────────────┘
 ```

@@ -30,7 +30,7 @@ For each frame in [Output 1, Output 2, Output 3]:
 ✅ Tiêu chí 1: Đủ nội dung        (đã đủ 4 zones + Tech Stack)
 ✅ Tiêu chí 2: Không chồng đè      (đã zoom check 5 điểm giao)
 ✅ Tiêu chí 3: Text đầy đủ         (tất cả nodes readable)
-❌ Tiêu chí 4: Đúng vùng           (CA_VOIP_001 tràn sang Non-Happy zone)
+❌ Tiêu chí 4: Đúng vùng           (AY_FEAT_001 tràn sang Non-Happy zone)
    → Fix: dời CA column sang phải 200px, mở rộng frame width
 ✅ Tiêu chí 5: N/A cho Output này
 

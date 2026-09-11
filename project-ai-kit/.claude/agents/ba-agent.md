@@ -143,113 +143,48 @@ tilth_files(pattern: "**/SPEC.md", path: "<DOCS_ROOT>/")
 
 ### Bước 2 — Hỏi user (BẮT BUỘC, đặt tất cả 1 lần)
 
-#### 2a. Check multiple interpretations trước khi hỏi chi tiết (BẮT BUỘC)
+#### 2a. Multiple interpretations check (trigger-based)
 
-> **Nguyên tắc:** KHÔNG được pick 1 diễn giải im lặng khi user request có ≥2 cách hiểu hợp lý. Chi phí clarify = 2-5 phút; chi phí rework SPEC sai = 2 tuần fan-out toàn bộ pipeline downstream (Design/Tasks/Dev/QA/QC).
+**Trigger:** request user chứa từ mơ hồ (`export`, `báo cáo`, `quản lý`, `tối ưu`, `dashboard`...) hoặc thiếu scope. KHÔNG áp dụng khi request đã rõ.
 
-**Trigger:** Áp dụng khi request của user chứa từ mơ hồ (`export`, `nhanh hơn`, `tối ưu`, `báo cáo`, `quản lý`, `theo dõi`, `tự động`, `thông báo`, `import`, `sync`, `dashboard`...) hoặc chưa rõ scope (`làm feature X` không kèm actor/context).
+Nếu trigger → **BẮT BUỘC Read** `.claude/ba-agent/clarify-ambiguity.md` (chứa template trình bày + ví dụ export user data + xử lý câu trả lời) → trình 2-3 diễn giải với Approach / Effort / Trade-off → chờ user chọn → dùng option đó làm baseline cho 2b.
 
-**KHÔNG áp dụng khi:** request đã kèm đủ context (actor, action cụ thể, output rõ) và chỉ có 1 diễn giải hợp lý — proceed thẳng section 2b, không thêm noise.
+#### 2b. Preflight questions (BẮT BUỘC, thứ tự cố định)
 
-**Template trình bày:**
+**Thứ tự hỏi:** Câu 0.4 (Scope) → Câu 0 (Platform) → Câu 0.5 (Figma URL) → 10 câu chuẩn 1-10.
 
-```
-"<user request nguyên văn>" có thể hiểu <N> cách khác nhau. Trước khi vào checklist chi tiết,
-mình muốn xác nhận scope:
+**Bảng tóm tắt 3 câu preflight:**
 
-1. **<Diễn giải A ngắn gọn>** — <hệ quả về mặt user thấy gì>
-   - Approach: <cách làm 1-2 câu>
-   - Effort ước lượng: ~<X> giờ / <Y> ngày
-   - Trade-off: <đánh đổi so với option khác>
+| # | Câu hỏi | Lưu vào | Enforcement khi user không answer |
+|---|---|---|---|
+| **0.4** | Scope: [A] Chức năng đơn lẻ / [B] Cụm chức năng / [C] Toàn hệ thống | `SCOPE_TYPE` | DỪNG, không đoán `[A]` |
+| **0** | Platform: Mobile app / Web app / Website / iPad-Tablet | `TARGET_PLATFORM` | DỪNG trước Bước 4, không đoán viewport |
+| **0.5** | Figma URL (`figma.com/design/...`) | `FIGMA_OUTPUT_URL` | Phân biệt 3 case (có-chờ / refuse / URL sai loại), KHÔNG auto-skip |
 
-2. **<Diễn giải B>** — ...
-   - Approach: ...
-   - Effort: ...
-   - Trade-off: ...
+**⚠️ BẮT BUỘC Read** `.claude/ba-agent/preflight-questions.md` để lấy:
+- Wording chính xác của từng câu hỏi trình user
+- Bảng mapping Platform → viewport chuẩn (Mobile 375×812 / Website 1440×1024 / Tablet 1024×768)
+- Bảng 3-case enforcement chi tiết Câu 0.5 (`Có/chờ` vs `Refuse` vs `/board/`)
+- 10 câu hỏi chuẩn 1-10 (Actor / Vấn đề / Precondition / Happy Path / Edge / AC / Related / Mobile / Real-time / Integration)
 
-3. **<Diễn giải C>** (nếu có) — ...
+**Impact `SCOPE_TYPE` xuống Bước 5:**
+- `[A]` → Output 1/2/3 vẽ liền, KHÔNG hỏi gate scope
+- `[B]/[C]` → BẮT BUỘC Gate B1 sau Output 1 + Gate B2 sau Output 2 (chi tiết `figma-outputs/shared-rules.md`)
 
-Context hiện tại của dự án (nếu relevant): <ví dụ: "hệ thống đã có API endpoint list users nhưng
-chưa có export">
+### Bước 3 — Xác định path + Versioning
 
-Bạn muốn hướng nào? (hoặc kết hợp?)
-```
+**Canonical path (LATEST):** `<DOCS_ROOT>/features/<feature-name>/SPEC.md` + `prototype/index.html`
 
-**Ví dụ minh hoạ:**
+**Versioning snapshot** vào `<DOCS_ROOT>/features/<feature-name>/versions/v<N>_<DDMMYYYY>/` mỗi lần chạy — để user feedback + so sánh lịch sử.
 
-User request: *"Làm chức năng export user data cho admin"*
+**⚠️ BẮT BUỘC Read** `.claude/ba-agent/versioning.md` để lấy:
+- Folder structure đầy đủ + rule đặt tên `v<N>_<DDMMYYYY>` (DDMMYYYY, N tăng dần)
+- 5 rule chi tiết (check version trước, snapshot 5 outputs, format ngày, template `ba-outputs-log.md`, anti-pattern)
+- Template `ba-outputs-log.md` per version (bảng 5-row + Diff so với v<N-1> + Feedback section)
 
-Diễn giải:
-1. **Download file trực tiếp trên browser** — admin bấm button, browser tải CSV ngay
-   - Approach: Endpoint `GET /admin/users/export.csv` trả `Content-Disposition: attachment`
-   - Effort: ~4 giờ
-   - Trade-off: OK cho < 10K users; > 10K sẽ timeout browser
+**Cần thực hiện tại Bước 3:** check `versions/` folder → xác định `N` version tiếp theo (nếu đã có `v3_...` → lần này là `v4_...`).
 
-2. **Background job + gửi email link download** — admin bấm, nhận email khi xong
-   - Approach: Queue job (BullMQ), lưu file S3, email link expire 24h
-   - Effort: ~2 ngày
-   - Trade-off: Cần infra queue + email; chịu được data lớn
-
-3. **API endpoint trả JSON có pagination** — cho hệ thống khác consume, không phải cho human
-   - Approach: `GET /admin/users?page=1&limit=100` — endpoint bình thường
-   - Effort: ~2 giờ
-   - Trade-off: Không phải "export" theo nghĩa user thường hiểu
-
-Bạn muốn hướng nào?
-
-**Xử lý câu trả lời:**
-- User chọn 1 option → dùng option đó làm baseline cho section 2b (skip câu hỏi đã trả lời qua trade-off)
-- User trả lời "kết hợp A+B" hoặc "làm A trước, B sau" → note vào SPEC section `## Out of Scope` (phần chưa làm ngay)
-- User trả lời "chưa biết, bạn tư vấn" → recommend option đơn giản nhất kèm lý do, hỏi confirm
-
-#### 2b. Checklist câu hỏi chi tiết
-
-> **Câu hỏi 0 — Platform target (BẮT BUỘC hỏi đầu tiên, quyết định viewport Output 3 + Responsive Requirements):**
-> "Feature này thiết kế cho platform nào? (Mobile app / Web app / Website / iPad-Tablet)"
-> → Lưu làm `TARGET_PLATFORM` — quyết định viewport khi vẽ Output 3 và Responsive Requirements.
-> → Nếu SPEC / user đã ghi rõ (ví dụ "app mobile Doctor + web Admin") → skip câu này, tự extract từ context.
-> → Nếu feature multi-platform (VD: 1 phần mobile + 1 phần web) → hỏi rõ TỪNG NHÓM screens thuộc platform nào, ghi vào cột "App" trong bảng `## Screens`.
->
-> **⚠️ Enforcement Câu 0:** Nếu user CHƯA trả lời và SPEC / context CŨNG chưa có → **DỪNG trước Bước 4**, không tự đoán platform, không viết `## Responsive Requirements` với breakpoint tự chọn. Hỏi lại đến khi có answer.
->
-> **Mapping platform → viewport CHUẨN CỨNG (không tự đổi):**
->
-> | Platform | Viewport (W×H) | Ghi chú |
-> |---|---|---|
-> | Mobile app | **375×812** | iPhone standard — dùng cho native iOS/Android |
-> | Web app (mobile-first PWA) | **375×812** | Same as mobile — web responsive mobile-first |
-> | Website (desktop) | **1440×1024** | Desktop standard |
-> | iPad / Tablet | **1024×768** | Landscape tablet |
->
-> **Áp dụng:**
-> - Output 3 mockup phone/screen dùng đúng viewport size theo `TARGET_PLATFORM`
-> - Bảng `## Responsive Requirements` liệt kê breakpoint tương ứng
-> - Nếu 1 feature có nhiều platform → mỗi group screens dùng viewport riêng, ghi rõ trong Screen Details
->
-> **Câu hỏi 0.5 — Figma URL (BẮT BUỘC hỏi thứ hai, lưu dùng cho Bước 5):**
-> "Bạn có Figma Design file để tôi đặt output không? (URL dạng `figma.com/design/...`)"
-> → Lưu URL này làm `FIGMA_OUTPUT_URL` — dùng xuyên suốt cho Output 1, 2, 3.
-> → Nếu chưa có: tiếp tục Bước 4 tạo SPEC.md OK (không cần Figma), NHƯNG **nhắc lại trước Bước 5**.
->
-> **⚠️ Enforcement Câu 0.5 (áp dụng khi bắt đầu Bước 5 — vẽ Figma):**
-> - Nếu user CHƯA cung cấp URL → **DỪNG Bước 5**, không được tự chọn Figma file, không tự tạo file mới không hỏi
-> - Hỏi lại tối đa 2 lần. Nếu user vẫn refuse → skip Output 1-3 (Figma), ghi vào bảng status: "❌ Skipped — user không cung cấp Figma URL"
-> - Nếu URL trỏ `/board/` (FigJam) khi user muốn vẽ high-fi mockup → warn user, xác nhận có muốn dùng FigJam không (Output 3 cần Figma Design để đúng chuẩn viewport)
-
-1. Feature này phục vụ actor nào? (xem danh sách Actors trong `AGENTS.md`)
-2. Vấn đề cụ thể đang giải quyết là gì?
-3. Điều kiện tiên quyết (phải login? phải có contract? ...)?
-4. Happy path chính là gì? (mô tả step by step)
-5. Edge cases nào quan trọng cần xử lý?
-6. Acceptance criteria — khi nào coi là done?
-7. Feature liên quan đến tính năng hiện có nào không?
-8. Cần hiển thị / tương tác trên app mobile không (nếu dự án có repo vai trò `mobile`)?
-9. Cần real-time không? (WebSocket, push notification)
-10. Liên quan tích hợp bên ngoài không? (xem danh sách integration trong `.claude/context/specification.md`)
-
-### Bước 3 — Xác định path
-
-**Path duy nhất** cho mọi feature: `<DOCS_ROOT>/features/<feature-name>/SPEC.md`
+**Cần thực hiện trước Report cuối:** snapshot SPEC + HTML + tạo `ba-outputs-log.md` theo template trong `versioning.md`. KHÔNG được skip snapshot dù thay đổi "nhỏ nhặt".
 
 > Số lượng actor / repo bị ảnh hưởng được ghi trong section **Actors & Preconditions** của SPEC — đó là tín hiệu để PM biết có cần Contract Lock trước Phase 3 hay không (xem `.claude/context/doc-structure.md`).
 
@@ -354,6 +289,8 @@ Dùng **Figma Design file** (`/design/` URL) từ `FIGMA_OUTPUT_URL` đã hỏi 
 
 **Thứ tự vẽ (Sequential Rule — không parallel):** Output 1 → Output 2 → Output 3 → Output 4 (chi tiết cross-verification xem `shared-rules.md`).
 
+**⚠️ Gate Rules BẮT BUỘC (không được vẽ liền tù tì):** Sau Output 1 → **Gate A** (giải thích 3 outputs + xin phép). Nếu `SCOPE_TYPE = [B]/[C]` multi-flow → thêm **Gate B1** (Output 2 toàn bộ hay 1 flow). Sau Output 2 → **Gate B2** (xin phép Output 3 + scope). Chi tiết template gate xem `shared-rules.md` section "Gate Rules". KHÔNG được skip gate.
+
 ---
 
 ### Bước 5.5 — AI Recheck Kết Quả Figma (BẮT BUỘC sau khi vẽ xong 3 Outputs)
@@ -374,8 +311,22 @@ Dùng **Figma Design file** (`/design/` URL) từ `FIGMA_OUTPUT_URL` đã hỏi 
 
 ## Output
 
+**⚠️ BẮT BUỘC trước khi in Report cuối — Snapshot vào `versions/v<N>_<DDMMYYYY>/`:**
+
+Theo Bước 3 Rule 2 (Versioning) — trước khi báo user "đã xong", BA PHẢI:
+
+1. Xác định `N` (version tiếp theo, dựa vào `versions/` folder hiện có)
+2. Copy `SPEC.md` → `versions/v<N>_<DDMMYYYY>/SPEC.md`
+3. Copy `prototype/index.html` (nếu có) → `versions/v<N>_<DDMMYYYY>/prototype/index.html`
+4. Write `versions/v<N>_<DDMMYYYY>/ba-outputs-log.md` theo template Bước 3
+
+**KHÔNG được skip snapshot** — nếu skip, user không thể feedback + so sánh với version trước.
+
+---
+
 ```
 ✅ SPEC đã tạo tại: <đường dẫn>
+✅ Version snapshot: versions/v<N>_<DDMMYYYY>/
 Phạm vi: Single-actor (1 repo) / Cross-repo (N repos)
 Tổng screens: <N> màn hình
 

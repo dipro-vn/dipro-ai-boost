@@ -18,6 +18,117 @@ Cross-verification bắt buộc:
 
 ---
 
+## ⚠️ Gate Rules — BẮT BUỘC hỏi user giữa các output (không được chạy liền tù tì)
+
+> **Nguyên tắc:** BA không được tự động chạy tất cả Output 1→2→3 liền không hỏi. Sau mỗi output PHẢI có gate để user review + quyết định tiếp. Chi phí gate = 1-2 câu hỏi; chi phí không gate = user phát hiện Output 2 sai định hướng khi đã vẽ xong Output 3 → refactor toàn bộ.
+
+### Gate A — Sau Output 1 (BẮT BUỘC — mọi SCOPE_TYPE)
+
+Sau khi vẽ Output 1 xong + PASS visual verify (Bước 5.5 mini-check), BA PHẢI DỪNG và hiển thị block dưới đây trước khi bắt đầu Output 2:
+
+```
+✅ Output 1 — Flow Tổng Quan đã vẽ xong: <Figma node URL>
+
+Screenshot verify: <✅ N business flows rõ ràng, gap 100px đủ, không đè>
+Số business flows detected: N = <số>
+
+3 outputs BA sẽ tạo (giải thích ngắn):
+  📊 Output 1 (VỪA XONG) — Flow Tổng Quan
+     Mục đích: cho stakeholder thấy Actor → Trigger → Function → Technology → Outcome + Sitemap WBS
+     Ai dùng: PM/Tech Lead review scope, chốt tech stack
+
+  🔀 Output 2 (KẾ TIẾP) — Screen Flow
+     Mục đích: mỗi business flow → luồng đi qua các screens (Happy + Non-Happy) + Bảng Index tổng
+     Ai dùng: Designer / Dev / QC — biết cần vẽ / build / test những màn nào
+
+  🖼 Output 3 — Screens + Items + Error Scenarios
+     Mục đích: mỗi screen → mockup phone + bảng liệt kê chi tiết items UI + error scenarios
+     Ai dùng: Designer làm HiFi, Dev build UI, QC viết test case
+
+Bạn muốn:
+  [1] Tiếp tục Output 2 → Output 3 (default)
+  [2] Chỉnh Output 1 trước (paste comment cụ thể)
+  [3] Dừng ở Output 1, không cần Output 2/3
+```
+
+Chờ user chọn. KHÔNG được tự chạy tiếp Output 2 khi chưa có confirm.
+
+### Gate B1 — Sau Output 1, chỉ khi SCOPE_TYPE = `[B]/[C]` multi-flow (BẮT BUỘC)
+
+Nếu `SCOPE_TYPE` (từ Câu 0.4 Bước 2b) = `[B]` (cụm) hoặc `[C]` (toàn hệ thống) VÀ Output 1 detect N > 1 business flows → sau Gate A user chọn [1] tiếp tục → BA hỏi thêm:
+
+```
+⚠️ Feature này có N = <số> business flows (scope: <B - cụm / C - toàn hệ thống>).
+
+Output 2 vẽ scope nào?
+  [A] TOÀN BỘ N flows (recommended nếu deliverable cần đủ scope cho stakeholder)
+      Effort: ~<N × 15> phút, Figma frame chiều dài ~<N × 800>px
+
+  [B] CHỈ 1 flow cụ thể — user chỉ định flow name (VD "Flow 2 — Scout")
+      Lưu ý: các flow còn lại → note trong bảng status "⚠️ Partial — user chọn vẽ 1 flow"
+
+  [C] BATCH — vẽ M flows / lượt (M < N), user review từng batch trước khi vẽ tiếp
+```
+
+Chờ user chọn. KHÔNG được tự vẽ toàn bộ hoặc tự chọn 1 flow.
+
+### Gate B2 — Sau Output 2 (BẮT BUỘC — mọi SCOPE_TYPE)
+
+Sau khi vẽ Output 2 xong + verify, BA PHẢI DỪNG hỏi:
+
+```
+✅ Output 2 — Screen Flow đã vẽ xong: <Figma node URL>
+
+Screenshot verify: <✅ N screen-flow groups + Bảng Index đủ N screens>
+Số screens tổng detected trong Bảng Index: M = <số>
+
+Bạn muốn:
+  [1] Tiếp tục Output 3 (mockup + items + error scenarios cho từng screen)
+      Effort: ~<M × 5> phút vẽ, Figma frame chiều dài ~<M × 400>px
+  [2] Chỉnh Output 2 trước (paste comment)
+  [3] Dừng ở Output 2, không cần Output 3 (VD: chỉ cần flow overview cho stakeholder meeting)
+```
+
+**Thêm question nếu SCOPE_TYPE = `[B]/[C]` VÀ Output 2 có N groups:**
+
+```
+Nếu chọn [1] Tiếp tục Output 3:
+
+Output 3 vẽ scope nào?
+  [A] TOÀN BỘ N flows (mọi group Output 2 → tương ứng group Output 3)
+  [B] CHỈ 1 flow cụ thể — user chỉ định flow name
+  [C] BATCH — vẽ M screens / lượt, user review từng batch
+```
+
+Chờ user chọn. KHÔNG được tự vẽ Output 3 khi chưa có confirm scope.
+
+---
+
+### Gate flow summary
+
+```
+Vẽ Output 1
+   ↓
+Gate A (giải thích 3 outputs + xin phép Output 2)  ← MỌI SCOPE
+   ↓ user chọn [1]
+Gate B1 (nếu multi-flow) — Output 2 toàn bộ hay 1 flow?
+   ↓ user chọn scope
+Vẽ Output 2
+   ↓
+Gate B2 (xin phép Output 3 + scope nếu multi-flow)
+   ↓ user chọn [1] + scope
+Vẽ Output 3
+   ↓
+Bước 5.5 Visual Recheck → Bước 5.6 Self-Feedback → Output 4 HTML → Report final
+```
+
+**Anti-pattern NGHIÊM CẤM:**
+- ❌ Vẽ liền Output 1 → 2 → 3 không dừng gate nào
+- ❌ Tự đoán "user chắc muốn toàn bộ" khi SCOPE multi-flow → vẽ hết N flows không hỏi
+- ❌ Skip Gate B2 khi user "trông có vẻ" đã ok Output 2
+
+---
+
 ## Bước 5 preamble — Figma Design Output (BẮT BUỘC sau Bước 4.6)
 
 > Dùng **Figma Design file** (`/design/` URL) từ `FIGMA_OUTPUT_URL` đã hỏi ở Bước 2b.
@@ -75,7 +186,7 @@ Màu sắc và ý nghĩa KHÔNG thay đổi dù dùng FigJam hay Design:
 
 | Element | Màu fill | Màu stroke | Ý nghĩa |
 |---|---|---|---|
-| Actor / người dùng | `#E8F4FD` (Dipro Admin) · `#EDFDF0` (Company Admin) | `#0969DA` · `#1A7F37` | Ai thực hiện |
+| Actor / người dùng | `#E8F4FD` (Actor A — Caller) · `#EDFDF0` (Actor B — Receiver) | `#0969DA` · `#1A7F37` | Ai thực hiện |
 | Trigger / Action | `#E8F4FD` | `#0969DA` | Điều gì kích hoạt |
 | Function / System | `#FFF9EB` | `#F4860C` | Xử lý gì |
 | Technology / SDK | `#FFF9EB` | `#F4860C` | Công nghệ nào |

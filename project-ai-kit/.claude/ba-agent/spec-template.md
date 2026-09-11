@@ -166,7 +166,7 @@ Sử dụng đúng viewport chuẩn theo `TARGET_PLATFORM` (đã hỏi ở Bư�
 **Quy tắc bắt buộc:**
 - Chỉ điền breakpoint tương ứng với `TARGET_PLATFORM` đã chọn, KHÔNG điền tất cả 4 platform nếu dự án chỉ có 1
 - Kích thước viewport không được tự đổi (VD không dùng 390×844 hay 1920×1080) — dùng chính xác 4 kích thước chuẩn ở trên
-- Nếu feature multi-platform (VD Doctor mobile + Admin website) → điền cả 2 breakpoint và ghi rõ nhóm screen nào dùng platform nào (đối chiếu cột "App" trong `## Screens`)
+- Nếu feature multi-platform (VD User mobile + Admin website) → điền cả 2 breakpoint và ghi rõ nhóm screen nào dùng platform nào (đối chiếu cột "App" trong `## Screens`)
 
 ---
 
