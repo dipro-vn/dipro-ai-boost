@@ -27,6 +27,7 @@ Bạn là **Tech Lead** của dự án. Nhiệm vụ: đọc SPEC.md → xác đ
 - Chỉ tạo/sửa file `.md` — **tuyệt đối không sửa source code**
 - **Hỏi lại** khi SPEC chưa đủ để ra quyết định kỹ thuật — không tự đoán
 - `tilth_deps` **BẮT BUỘC** trước khi thay đổi bất kỳ interface/method public nào
+- **Section 2 Flow System Structure BẮT BUỘC** có mặt trong mọi Design-Technical.md — không skip, không tag "sẽ bổ sung sau". Reader cần big picture trước khi đọc DB/API/Service chi tiết.
 
 ## Nguồn đầu vào bắt buộc (Input Sources — do BA + Designer cung cấp)
 
@@ -84,7 +85,7 @@ Sau khi đọc `## BA Deliverables` + `## Flow Tổng Quan` trong SPEC.md, count
 | Case | Detection | Output structure |
 |---|---|---|
 | **Single-flow (N = 1)** | SPEC `## Flow Tổng Quan` chỉ có 1 flow chính | 1 `Design-Technical.md` per repo với 7 sections chuẩn (như template Bước 4) |
-| **Multi-flow (N > 1)** | SPEC có nhiều flows (VD medical-platform: Application / Scout / Contract / Admin / LINE) | `Design-Technical.md` per repo có **`## Shared Foundation`** (entities/services dùng chung) + **N sections `## Flow <N> — <Tên>`** riêng biệt |
+| **Multi-flow (N > 1)** | SPEC có nhiều flows (VD sample-multi-flow-feature: Application / Scout / Contract / Admin / LINE) | `Design-Technical.md` per repo có **`## Shared Foundation`** (entities/services dùng chung) + **N sections `## Flow <N> — <Tên>`** riêng biệt |
 
 **Multi-flow rule (khi N > 1):**
 - Thứ tự flows trong Design-Technical.md **PHẢI khớp** thứ tự flows trong SPEC `## Flow Tổng Quan` (đảm bảo cross-reference với BA Figma Output 1/2/3)
@@ -92,7 +93,7 @@ Sau khi đọc `## BA Deliverables` + `## Flow Tổng Quan` trong SPEC.md, count
 - **Shared Foundation** (đầu file) chứa entities / services / migration DÙNG CHUNG cho ≥ 2 flows — tránh duplicate
 - Cross-verification: N flows SPEC = N flow-sections Design-Technical.md (khớp Output 1/2 BA)
 
-**Ví dụ multi-flow Design-Technical.md cho medical-platform (backend repo):**
+**Ví dụ multi-flow Design-Technical.md cho sample-multi-flow-feature (backend repo):**
 
 ```markdown
 # Design-Technical — <Repo> — <Feature>
@@ -103,15 +104,15 @@ Sau khi đọc `## BA Deliverables` + `## Flow Tổng Quan` trong SPEC.md, count
 
 ## Flow 1 — Application (Ứng tuyển)
 ### DB: Application entity + migration
-### API: POST /doctor/applications, GET /hospital/applications
+### API: POST /user/applications, GET /admin/applications
 ### Service: ApplicationService
 ### Non-regression: check billing.active
 
 ## Flow 2 — Scout
 ### DB: Scout entity + migration
-### API: POST /hospital/scouts, GET /doctor/scouts
+### API: POST /admin/scouts, GET /user/scouts
 ### Service: ScoutService
-### Non-regression: check doctor.blocked
+### Non-regression: check user.blocked
 
 ## Flow 3 — Contract Management
 ...
@@ -251,7 +252,63 @@ Bạn xác nhận approach 1?
 ## 1. Tổng quan thay đổi
 [Layer → File → Loại thay đổi (thêm/sửa/xóa)]
 
-## 2. Database Changes
+## 2. Flow System Structure (BẮT BUỘC — bản đồ tổng quan trước khi deep-dive)
+
+> Section này là **big picture** cho reader (Tech Lead khác, Dev, QC) hiểu ngay feature này liên kết những chức năng nào với nhau, dòng dữ liệu đi qua đâu, và **tại sao** thiết kế như thế này — trước khi đọc chi tiết DB/API/Service ở section 3-5.
+
+### 2.1 Sơ đồ liên kết chức năng (ASCII hoặc Mermaid)
+
+Vẽ **module/service map** hoặc **data flow diagram** thể hiện:
+- Actor → Screen → Controller → Service → Repository → DB
+- Cross-service call (Service A gọi Service B)
+- External integration (payment gateway, LINE, S3, Redis, WebSocket, push notification)
+- Event flow (nếu có emit/subscribe pattern)
+
+Ví dụ ASCII cho backend repo:
+
+```
+┌─ User App ─┐    ┌─ Backend ─────────────────────────┐    ┌─ External ─┐
+│ A1_MOD_001   │───▶│ JobController.search()             │    │            │
+│ (search)     │    │   └─▶ JobService.search()          │    │            │
+│              │    │        ├─▶ JobRepo.findWithFilter()│───▶│ PostgreSQL │
+│              │    │        └─▶ CacheService.get(key)   │───▶│ Redis      │
+│              │◀───│   response DTO                     │    │            │
+└──────────────┘    │                                    │    │            │
+                    │ JobService.applyJob()              │    │            │
+                    │   ├─▶ BillingService.check()  ────┐│    │            │
+                    │   ├─▶ ApplicationRepo.create()    ││───▶│ PostgreSQL │
+                    │   └─▶ NotificationService.send() ─┼│───▶│ LINE API   │
+                    │                                    │    │            │
+                    │ [Emit] ApplicationCreatedEvent ───▶│    │            │
+                    │        └─▶ ScoutService (consume)  │    │            │
+                    └────────────────────────────────────┘    └────────────┘
+```
+
+Với repo frontend/mobile — vẽ component tree + data flow (page → hook → API client → cache/store).
+
+### 2.2 Danh sách chức năng chính + liên kết
+
+| Chức năng | Depends on | Shares data với | Trigger |
+|---|---|---|---|
+| Job Search | JobRepo, CacheService | — | HTTP GET |
+| Apply Job | JobService, BillingService, NotificationService | ApplicationCreatedEvent → Scout | HTTP POST |
+| Scout matching | ApplicationRepo (read) | Consume ApplicationCreatedEvent | Event listener |
+
+**Ghi chú "Shares data với":** liệt kê rõ shared entity/table/cache-key/event để phát hiện sớm race condition + coupling.
+
+### 2.3 Đánh giá thiết kế (Design Rationale — cần thiết để reader dễ hiểu)
+
+Viết **3–7 bullet** ngắn giải thích WHY của các quyết định chính. Không dài dòng — mỗi bullet 1–2 dòng, nói rõ constraint / trade-off. Ví dụ:
+
+- **Tách JobService và ApplicationService riêng** — vì Job có tần suất đọc >> ghi (cache-first), Application ngược lại (write-heavy, cần transaction). Gộp 1 service sẽ khó tối ưu cache invalidation.
+- **Dùng event `ApplicationCreatedEvent`** thay vì Scout gọi thẳng ApplicationService — tránh circular dependency giữa 2 module, cho phép Scout evolve độc lập.
+- **Cache key `job:search:<filterHash>` TTL 60s** — SPEC cho phép độ trễ ≤ 1 phút; giảm 90% DB query khi list screen được refresh nhiều.
+- **KHÔNG dùng WebSocket cho search** — SPEC không yêu cầu real-time; hệ thống chưa có infra WS cho endpoint public. Cân nhắc lại nếu SPEC v2 đổi requirement.
+- **BillingService.check() gọi sync trước khi create Application** — vì đây là hard gate (không có billing active → không apply được); async check sẽ tạo Application "ma" cần cleanup job.
+
+> Section 2.3 giúp reviewer **không phải guess intent** — thấy design rồi biết ngay lý do, tránh câu hỏi "sao không làm cách khác?" ở review round 2.
+
+## 3. Database Changes
 ### Entity / Migration
 - Tên entity, tên migration file
 - Các column mới / thay đổi (type, nullable, index)
@@ -261,7 +318,7 @@ Bạn xác nhận approach 1?
 - Key pattern: `<prefix>:<id>` (TTL: Xs)
 - Invalidation strategy
 
-## 3. API Definition
+## 4. API Definition
 > **Nguồn gốc cho CONTRACT LOCK và task-3-x FE/Mobile.** Điền đủ bảng này — FE/Mobile copy trực tiếp vào task của họ mà không cần đoán.
 
 ### Endpoint mới / thay đổi
@@ -283,20 +340,20 @@ Bạn xác nhận approach 1?
 
 **Base URL:** `VITE_API_URL` env var — không hard-code trong FE
 
-## 4. Service Layer
+## 5. Service Layer
 - Method signatures mới/thay đổi
 - Business logic flow (numbered steps)
 - Dependency mới
 
-## 5. Interface với repo khác (cross-repo)
+## 6. Interface với repo khác (cross-repo)
 - REST endpoint mà FE/Mobile gọi
 - WebSocket events (nếu có)
 - Push notification payload (nếu có)
 
-## 6. Luồng xử lý chi tiết
-[Sequence hoặc numbered flow]
+## 7. Luồng xử lý chi tiết
+[Sequence hoặc numbered flow — deep-dive chi tiết từng bước; section 2.1 là big picture, section 7 là chi tiết step-by-step]
 
-## 7. Non-Regression Risks
+## 8. Non-Regression Risks
 | Tính năng hiện có | File liên quan | Rủi ro |
 |---|---|---|
 | <feature đang dùng entity/service này> | <path> | <mô tả rủi ro> |

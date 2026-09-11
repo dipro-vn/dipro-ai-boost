@@ -90,14 +90,8 @@ Agent tự chọn mode dựa trên scope + complexity. Pipeline mặc định l�
 | 1 | `/test/analyze-req <feature> <module>` | Phân tích SPEC → Q&A + AC + Screen Inventory | `analysis.md` |
 | 2 | `/test/plan-tcs <feature> <module>` | Phân rã Screen → Archetype + Strategy Summary → Component + Risk + Technique | `plan-tcs.md` |
 | 3 | `/test/gen-tcs <feature> <module>` | Sinh TC chi tiết (Visual + Validation + Logic) | `test-cases.md` |
-| 3.5 | `/test/export-xlsx <path/test-cases.md> <web\|app>` | **BẮT BUỘC auto-chain** ngay sau bước 3 — Export test-cases.md → test-cases.xlsx theo template Web/App | `test-cases.xlsx` |
 
 > **Điều kiện tiên quyết:** `/test/plan-tcs` yêu cầu `analysis.md`. `/test/gen-tcs` yêu cầu `plan-tcs.md` — nếu module chưa có `plan-tcs.md` (hoặc cả `analysis.md`), `/test/gen-tcs` sẽ **auto-chain** `/test/analyze-req` → `/test/plan-tcs` trước, vẫn dừng đúng checkpoint Summary/Plan confirm (không silent-generate).
->
-> **Auto-export xlsx (Bước 3.5):** Sau khi `/test/gen-tcs` sinh xong `test-cases.md`, qc-agent PHẢI tự động chạy `/test/export-xlsx` để sinh `test-cases.xlsx` song song. Cần chỉ định `web` hoặc `app`:
-> - **Auto-detect** từ SPEC `## Screens` viewport / actor: `375x812` mobile → `app`; `1440x1024` desktop → `web`; feature mixed (VD Admin desktop + Doctor mobile) → hỏi user chọn theo module chính hoặc chạy 2 lần
-> - Nếu không detect được → **hỏi user 1 câu** "test-cases module này export theo template Web hay App?" rồi mới chạy. Không đoán.
-> - Nếu `/test/export-xlsx` fail (VD `ModuleNotFoundError: openpyxl`) → báo user cài `pip install openpyxl` rồi retry, KHÔNG bỏ qua bước 3.5 âm thầm.
 >
 > **TBD ACs (severity-gated):** Medium/Low → auto-tag `[UNCONFIRMED]`, không hỏi. High (tiền/bảo mật/phân quyền) → dừng hỏi user chọn A/B/C.
 
@@ -106,7 +100,7 @@ Agent tự chọn mode dựa trên scope + complexity. Pipeline mặc định l�
 | Mode | Trigger | Command |
 |---|---|---|
 | **Review chéo** | Có ≥2 QC muốn review deep 8 tiêu chí (Critical/Major/Minor) | `/test/review-tcs <feature> <module>` → `review_report.md` |
-| **Export Excel (on-demand)** | Re-export xlsx sau khi QC sửa `.md` tay, hoặc export các artifact khác (analysis/plan/review) sang xlsx bàn giao. **test-cases.xlsx đã auto-sinh ở Bước 3.5 của pipeline chính** — chỉ chạy tay khi cần regenerate hoặc export artifact khác | `/test/export-xlsx <path.md> [web\|app]` → `.xlsx` |
+| **Export Excel** | Bàn giao TC cho client / cần Excel theo template công ty (giữ dropdown + formula) | `/test/export-xlsx <path.md> [web\|app]` → `.xlsx` |
 | **Automation** | Có `test-cases.md` rồi, muốn sinh Playwright script từ manual TC | `/test/gen-automation <feature> [module]` (skill `automation_engineer`) |
 | **Regression** | Sau code change, cần xác định subset TC chạy lại | `/test/generate_regression_suite` |
 | **Execution** | Trước release, cần checklist ưu tiên + estimate time | `/test/generate_test_execution_checklist` |
@@ -159,7 +153,7 @@ Sau khi đọc `## BA Deliverables` + `## Flow Tổng Quan` trong SPEC.md, count
 | Case | Detection | Test Cases output structure |
 |---|---|---|
 | **Single-flow (N = 1)** | SPEC `## Flow Tổng Quan` chỉ có 1 flow — feature là 1 chức năng đơn (VD Login, Export report) | Chạy pipeline 3 bước sinh **1 bộ test-cases.md** cho toàn feature |
-| **Multi-flow (N > 1)** | SPEC có N flows (VD medical-platform: Application / Scout / Contract / Admin / LINE) | Sinh test cases **CHIA THEO GROUP FLOW**: 1 file test-cases.md có **N sections `## Flow <N> — Test Cases`** HOẶC N files riêng `test-cases-flow-<N>-<slug>.md` |
+| **Multi-flow (N > 1)** | SPEC có N flows (VD sample-multi-flow-feature: Application / Scout / Contract / Admin / LINE) | Sinh test cases **CHIA THEO GROUP FLOW**: 1 file test-cases.md có **N sections `## Flow <N> — Test Cases`** HOẶC N files riêng `test-cases-flow-<N>-<slug>.md` |
 
 **Multi-flow rule (khi N > 1):**
 - **Approach mặc định — 1 file / N sections** (recommended cho feature ≤ 5 flows):
@@ -176,17 +170,17 @@ Sau khi đọc `## BA Deliverables` + `## Flow Tổng Quan` trong SPEC.md, count
 - Multi-flow → chia regression theo flow, mỗi flow có mức priority riêng
 - Khi có code change → xác định flow bị impact → chạy regression chỉ trong flow đó (giảm thời gian test)
 
-**Ví dụ multi-flow test-cases.md cho medical-platform (5 flows):**
+**Ví dụ multi-flow test-cases.md cho sample-multi-flow-feature (5 flows):**
 
 ```markdown
-# Test Cases — medical-platform
+# Test Cases — sample-multi-flow-feature
 
 ## Flow 1 — Application Test Cases
 
 | TC ID | Screen | Scenario | Steps | Expected | Type |
 |---|---|---|---|---|---|
-| TC-F1-001 | DR_JOB_001 | Doctor tìm Job — filter điều kiện | ... | ... | Happy |
-| TC-F1-002 | DR_JOB_001 | Doctor filter không có kết quả | ... | ... | Empty state |
+| TC-F1-001 | A1_MOD_001 | User tìm Job — filter điều kiện | ... | ... | Happy |
+| TC-F1-002 | A1_MOD_001 | User filter không có kết quả | ... | ... | Empty state |
 ...
 
 ## Flow 2 — Scout Test Cases
@@ -209,7 +203,7 @@ Skill `rbt_manual_testing` được tổ chức thành **4 sections** tương �
 | Section 3: TC Implementation Plan | `/test/plan-tcs <feature> <module>` | ✅ User confirm plan (Screen/Archetype/Component/Risk) |
 | Section 4: Test Case Generation | `/test/gen-tcs <feature> <module>` | ⚠️ TBD ACs mức **High** — hỏi user chọn A/B/C trước khi sinh (Medium/Low auto-tag `[UNCONFIRMED]`) |
 
-**Không được** gộp bước, không được skip `/plan-tcs` (yêu cầu bắt buộc trước `/gen-tcs`).
+**Không được** gộp bước, không được skip `/plan-tcs` (yêu cầu bắt buộc trước `/gen-tcs`). Sau khi `/gen-tcs` xong → **auto-chain** `/test/export-xlsx` để sinh `test-cases.xlsx` (xem "Auto-chain export-xlsx" ở section Pipeline). Không dừng ở `.md` khi báo output.
 
 ### Bước 3 — Output đúng path BMAD
 
@@ -217,11 +211,11 @@ Toàn bộ artifacts của pipeline chính lưu trong `<DOCS_ROOT>/features/<fea
 
 ```
 <DOCS_ROOT>/features/<feature>/test-cases/<module>/
-├── analysis.md        ← /test/analyze-req                  (Bước 1)
-├── plan-tcs.md        ← /test/plan-tcs                     (Bước 2)
-├── test-cases.md      ← /test/gen-tcs                      (Bước 3) — source of truth
-├── test-cases.xlsx    ← /test/export-xlsx (auto-chain)     (Bước 3.5) — bàn giao, regen từ test-cases.md
-└── review_report.md   ← /test/review-tcs   (on-demand — xem Mode Routing)
+├── analysis.md        ← /test/analyze-req
+├── plan-tcs.md        ← /test/plan-tcs
+├── test-cases.md      ← /test/gen-tcs
+├── review_report.md   ← /test/review-tcs   (on-demand — xem Mode Routing)
+└── test-cases.xlsx    ← /test/export-xlsx  (on-demand — bàn giao)
 ```
 
 Mỗi Screen là 1 heading `##` trong `test-cases.md` — `/export-xlsx` dựa vào heading `##` để tách sheet-per-Screen trong Excel output.
@@ -267,11 +261,10 @@ Mỗi Screen là 1 heading `##` trong `test-cases.md` — `/export-xlsx` dựa v
 ```
 ## QC Output — <Feature> / <Module> | <Ngày>
 
-### Artifacts đã tạo
+### Artifacts đã tạo (bắt buộc đủ 4 file dưới đây khi chạy pipeline)
 - Analysis:          <DOCS_ROOT>/features/<feature>/test-cases/<module>/analysis.md
 - Plan TCs:          <DOCS_ROOT>/features/<feature>/test-cases/<module>/plan-tcs.md
 - Test cases:        <DOCS_ROOT>/features/<feature>/test-cases/<module>/test-cases.md (N TCs)
-- Excel bàn giao:    <DOCS_ROOT>/features/<feature>/test-cases/<module>/test-cases.xlsx (auto-sinh sau /gen-tcs — Bước 3.5)
 - Review report:     <DOCS_ROOT>/features/<feature>/test-cases/<module>/review_report.md (nếu chạy /review-tcs)
 - Bug reports:       <DOCS_ROOT>/features/<feature>/bug-reports/BUG_XXX.md
 - Regression suite:  <DOCS_ROOT>/features/<feature>/test-cases/regression_<release>.md
@@ -291,8 +284,7 @@ Mỗi Screen là 1 heading `##` trong `test-cases.md` — `/export-xlsx` dựa v
   (slash: /test/review-tcs)
 → Trước release: "Hãy là QC, sinh execution checklist + regression suite cho release: <release name>"
   (slash: /test/generate_test_execution_checklist + /test/generate_regression_suite)
-→ Re-export Excel sau khi sửa .md tay (test-cases.xlsx đã auto-sinh ở Bước 3.5): /test/export-xlsx <path-to-test-cases.md> web|app
-→ Export analysis/plan/review sang xlsx bàn giao: /test/export-xlsx <path-to-artifact.md>
+→ Bàn giao Excel: /test/export-xlsx <path-to-test-cases.md> web|app
 → Automate manual TCs thành Playwright script: /test/gen-automation <feature> [module]
   (yêu cầu có test-cases.md; dùng Playwright MCP recon DOM thật, auto-heal khi FAIL)
 ```
@@ -308,5 +300,3 @@ Mỗi Screen là 1 heading `##` trong `test-cases.md` — `/export-xlsx` dựa v
 - ❌ Tính pairwise thủ công thay vì dùng script `allpairspy`
 - ❌ Lẫn lộn vai trò với qa-agent — qc-agent KHÔNG chạy test suite, KHÔNG đọc coverage
 - ❌ Auto-submit bug lên Backlog mà không qua QC review
-- ❌ **Bỏ qua Bước 3.5 auto-export xlsx** sau `/gen-tcs` — luôn phải sinh `test-cases.xlsx` cùng lúc để bàn giao
-- ❌ **Sửa `test-cases.xlsx` tay** rồi update ngược lại `test-cases.md` — luôn sửa md trước, regenerate xlsx sau

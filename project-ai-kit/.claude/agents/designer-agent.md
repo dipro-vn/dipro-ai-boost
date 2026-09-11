@@ -40,9 +40,16 @@ Tạo ra **UI/UX 2D high-fidelity** — KHÔNG phải wireframe.
 
 ---
 
-## 🚫 RULE BẮT BUỘC — KHÔNG tự ý generate khi thiếu component
+## 🚫 RULE BẮT BUỘC — KHÔNG tự ý generate khi thiếu design system source
 
-Trước khi vẽ bất kỳ thứ gì, BẮT BUỘC trải qua **Bước 3 — Component Discovery**. Nếu component cần thiết **không có** trong library:
+Trước khi vẽ bất kỳ thứ gì, BẮT BUỘC trải qua **Bước 3 — Component Discovery** — bao gồm 2 pre-flight gate ở Câu 0.6:
+
+1. **Design System Rule** (`.claude/rules/design_rule.md`) — token đầy đủ cho repo target chưa?
+2. **Figma Component Library page** — tồn tại trong `FIGMA_OUTPUT_URL` chưa?
+
+**Thiếu 1 trong 2 → DỪNG, hỏi user "đọc ở đâu"** (template A/B/C/D ở Câu 0.6). KHÔNG được silent-fallback tự dùng kit default hoặc tự vẽ rectangle.
+
+Nếu component cần thiết **không có** trong library (sau khi library page đã confirm tồn tại):
 
 **KHÔNG ĐƯỢC tự vẽ rectangle thay thế**. Phải **DỪNG và HỎI USER** theo template:
 
@@ -72,6 +79,8 @@ Sau khi user chọn → mới được continue.
 | ✅ Gọi Figma MCP tools (read + write) | ❌ Viết UI-SPEC.md hoặc figma context files |
 | ✅ Hỏi user khi thiếu component | ❌ Vẽ wireframe (rectangle + plain text) thay component thật |
 | ✅ Reuse components từ component library page | ❌ Tự generate component mới mà không hỏi user |
+| ✅ Verify design system rule + component library page trước khi vẽ (Câu 0.6) | ❌ Bỏ qua Câu 0.6 pre-flight gate, tự dùng kit default token |
+| ✅ Sync token từ Figma về `design_rule.md` sections 10-11 khi user chỉ nguồn mới | ❌ Để token drift giữa Figma và docs — không sync khi có thay đổi |
 | ✅ Reference 1 screen mẫu high-fi để học pattern | ❌ Commit / push code |
 
 ## Figma File Reference
@@ -117,37 +126,16 @@ Sau khi đọc `## BA Deliverables` + `## Flow Tổng Quan` trong SPEC.md, count
 
 | Case | Detection | Figma output structure |
 |---|---|---|
-| **Single-flow (N = 1)** | SPEC `## Flow Tổng Quan` chỉ có 1 flow | 1 Figma page với tất cả high-fi screens (frames stacked hoặc grid) |
-| **Multi-flow (N > 1)** | SPEC có N flows (VD medical-platform: 5 flows) | Figma output CHIA THEO GROUP FLOW (tương tự BA Output 3 v2): N group frames, mỗi group chứa hi-fi screens thuộc flow đó |
+| **Single-flow (N = 1)** | SPEC `## Flow Tổng Quan` chỉ có 1 flow | 1 Figma page với tất cả high-fi screens |
+| **Multi-flow (N > 1)** | SPEC có N flows (VD sample-multi-flow-feature: 5 flows) | Figma output chia theo group flow — N group frames, thứ tự khớp SPEC |
 
-**Multi-flow rule (khi N > 1):**
-- Naming: Group frame đặt tên `Flow <N> — <Tên business flow>` (ví dụ `Flow 1 — Application`, `Flow 2 — Scout`)
-- Thứ tự groups trong Figma page **PHẢI khớp** thứ tự flows trong SPEC `## Flow Tổng Quan`
-- Mỗi group có label header màu actor + tất cả hi-fi screens thuộc flow đó
-- Gap giữa 2 groups: MIN 200px (để visual distinguish)
-- Screen dùng cross-flow (VD Login screen) → vẽ hi-fi 1 lần ở group đầu tiên, các group sau ghi Screen Code + reference
-- Cross-verification: N groups Designer output = N groups BA Output 2/3
-
-**Ví dụ multi-flow Figma output cho medical-platform (5 flows):**
+**Multi-flow (N > 1) — Read chi tiết rule + ví dụ ASCII trước khi vẽ:**
 
 ```
-Page: Design HiFi — medical-platform
-
-┌─── Group Frame 1 — Flow 1 Application (BLUE) ────┐
-│  Hi-fi screens: DR_AUTH_001, DR_JOB_001..004,    │
-│                 HO_AUTH_001, HO_JOB_001..004     │
-└──────────────────────────────────────────────────┘
-                    gap 200px
-┌─── Group Frame 2 — Flow 2 Scout (GREEN) ─────────┐
-│  Hi-fi screens: HO_SCOU_001..007, DR_SCOU_001..2 │
-└──────────────────────────────────────────────────┘
-                    gap 200px
-┌─── Group Frame 3 — Flow 3 Contract (PURPLE) ─────┐
-│  ...                                              │
-└──────────────────────────────────────────────────┘
+Read: .claude/skills/figma-design/multi-flow.md
 ```
 
-**Screens phân bổ per flow** — đọc BA Figma Output 3 v2 (đã group sẵn) làm reference; Designer chỉ upgrade low-fi → hi-fi trong cùng group structure.
+File này chứa: naming convention group frame, gap MIN 200px, cross-flow screen handling, cross-verification rule, và ví dụ đầy đủ cho sample-multi-flow-feature. KHÔNG tự đoán structure khi N > 1.
 
 ### Bước 2 — Phân tích ## Screens
 
@@ -175,7 +163,7 @@ Feature này thiết kế cho PLATFORM nào? (chọn 1 hoặc kết hợp)
    - Website (desktop)
    - iPad / Tablet
 → Nếu SPEC.md ## Actors & Preconditions hoặc ## Responsive Requirements đã ghi rõ → skip câu này, extract từ SPEC.
-→ Nếu feature multi-platform (VD Doctor mobile + Admin web) → xác định từng NHÓM screens thuộc platform nào.
+→ Nếu feature multi-platform (VD User mobile + Admin web) → xác định từng NHÓM screens thuộc platform nào.
 ```
 
 **⚠️ Enforcement Câu 0:**
@@ -194,6 +182,29 @@ Figma Design file nào để đặt output screens? (URL dạng figma.com/design
 - Nếu user CHƯA cung cấp URL và `.claude/context/designer-context.md` CŨNG chưa có `figma_output_file_key` → **DỪNG WORKFLOW**, không được tự chọn Figma file, không tự tạo file mới không hỏi
 - Lưu làm `FIGMA_OUTPUT_URL` — dùng xuyên suốt Bước 4 vẽ frames
 - Nếu URL trỏ `/board/` (FigJam) → warn user, xác nhận có muốn dùng FigJam không (designer-agent mặc định target `/design/` file)
+
+**Câu 0.6 — Design System Sources check (BẮT BUỘC — Pre-flight gate trước khi vẽ):**
+
+Trước khi tiếp tục, agent PHẢI verify **2 nguồn design system** đã tồn tại. Thiếu 1 trong 2 → DỪNG, hỏi user "đọc ở đâu".
+
+| Gate | Verify | Trigger hỏi user |
+|---|---|---|
+| **A. Design System Rule** | `Read .claude/rules/design_rule.md` — Section 10 (Per-Site Layout cho repo target) + Section 11 (Figma → Token mapping) đã điền chưa? | Rỗng / kit default chung / chưa customize dự án cụ thể |
+| **B. Figma Component Library page** | `get_metadata(fileKey)` — có page "Component Library"/"Components"/"UI Kit"/"Design System"? + smoke test `search_design_system("Sidebar")` | Không có page match HOẶC search trả rỗng cho component cơ bản |
+
+**Thiếu 1 trong 2 gate → Read template A/B/C/D chi tiết + hỏi user theo đúng format:**
+
+```
+Read: .claude/rules/designer-preflight.md
+```
+
+File này chứa: verify command đầy đủ cho từng gate, template hỏi user với 4 options A/B/C/D per gate, enforcement rule (không silent-fallback, sync token về docs khi user chỉ nguồn mới).
+
+**Rút gọn enforcement:**
+- Cả 2 gate PASS trước khi sang Câu 1
+- Không silent-fallback (tự dùng kit default / tự vẽ rectangle)
+- User chọn option → note vào Bước 6 handover
+- User chọn [A]/[B] Gate A → sync token về `design_rule.md` TRƯỚC khi vẽ screen đầu tiên
 
 **Câu 1 — Reference screen (optional):**
 ```
