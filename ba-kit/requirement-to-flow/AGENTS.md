@@ -1,96 +1,77 @@
-# \<PROJECT_NAME\> — Project Rules for AI Agents
+# BA Kit — Requirement to Flow
 
-> **Chưa init?** Chạy `/init-kit` để điền Ecosystem/Actors. Setup A→Z ở `README.md`.
-
-<ecosystem>
-
-## Repos
-
-| Repo | Đường dẫn | Vai trò | Stack |
-|---|---|---|---|
-| _(tên repo)_ | _(đường dẫn tương đối)_ | backend / frontend / mobile / other | _(NestJS / React / Flutter / ...)_ |
-
-Mỗi repo có 1 **Epic code** ngắn (`E01`, `E02`...) tham chiếu xuyên suốt SPEC/DESIGN/task/Screen Code.
-
-- **Domain:** _(1-2 câu, điền qua `/init-kit`)_
-- **`<DOCS_ROOT>`:** single long-memory chứa SPEC/DESIGN/PLAN/tasks/test-cases cho mọi feature (ví dụ `<project>-docs/docs/features/`).
-- **E2E Testing (optional):** repo Playwright riêng nếu có.
-
-</ecosystem>
+> **Kit ad-hoc cho BA** — mỗi lần chạy = 1 requirement do Human đưa vào (file docs / xlsx / md / pdf / meeting note / user chat), KHÔNG gắn với 1 dự án cụ thể. Không cần `/init-kit`, không cần khai báo repo / actor / stack.
 
 ---
 
-<core_rules>
+## BA Agent làm gì
 
-## Nguyên tắc bắt buộc (project-specific)
+**1 agent duy nhất:** [`ba-agent`](.claude/agents/ba-agent.md) — canonical workflow.
 
-> AI behavior policy chung + companion rules → `./POLICIES.md`. Section này chỉ liệt kê rules **đặc thù dự án**.
+**Input** (Human đưa vào lúc chạy):
+- File requirement: `.docx` / `.md` / `.xlsx` / `.pdf` / meeting note
+- Hoặc paste text trực tiếp trong chat
+- Hoặc chỉ nói bằng ngôn ngữ tự nhiên → BA sẽ hỏi thêm
 
-1. _(điền qua `/init-kit` — ví dụ: 2 repo tên gần giống, quy ước đặt tên riêng, business rule hay bị AI đoán sai...)_
-2. **Memory Update Gate** sau mỗi Dev task → xem `<memory_update_gate>` bên dưới.
+**Output** (5 artifacts per lần chạy):
 
-Rules đọc-on-demand khác (context role, doc path, per-layer coding/git/design/tilth) → xem `.claude/rules/` (index đầy đủ ở `POLICIES.md`).
+| # | Output | Path / URL |
+|---|---|---|
+| 0 | `SPEC.md` (14 sections chuẩn) | `<output-folder>/SPEC.md` |
+| 1 | Figma Frame — **Flow Tổng Quan** (Business Logic + Tech Table + Sitemap) | Node trên Figma page user cung cấp |
+| 2 | Figma Frame — **Screen Flow** (N groups + bảng Index) | Node Figma |
+| 3 | Figma Frame — **Screens + Items** (mockup + bảng ITEMS + ERROR SCENARIOS) | Node Figma |
+| 4 | **HTML Prototype** (standalone, mở bằng `open index.html`) | `<output-folder>/prototype/index.html` |
 
-</core_rules>
+**Snapshot:** Mỗi lần chạy tự lưu vào `<output-folder>/versions/v<N>_<DDMMYYYY>/` để user feedback + so sánh version.
 
 ---
 
-<red_line_rules>
+## Trigger
 
-## Cross-repo features (đụng nhiều repo)
+**Cách A — Natural language:**
+```
+Hãy là BA, đọc file <path-to-requirement> và làm SPEC cho <feature>
+```
 
-_(Điền qua `/init-kit` — feature nào đụng ≥ 2 repo. Ví dụ: Payment (backend + FE/mobile callback), Auth JWT (backend + tất cả client), Real-time WS (server + subscribers).)_
+**Cách B — Slash command:**
+```
+/create-spec <feature>
+```
 
-| Tính năng | Repos liên quan |
+---
+
+## 3 câu Preflight (BA sẽ hỏi mỗi lần chạy)
+
+BA **không tự đoán** — luôn hỏi 3 câu trước khi bắt tay vào việc:
+
+1. **Scope** — Chức năng đơn lẻ / Cụm chức năng / Toàn hệ thống?
+2. **Platform** — Mobile app / Web app / Website / iPad-Tablet?
+3. **Figma URL** — paste URL `figma.com/design/...` (nếu có, để BA vẽ Figma frames)
+
+Chi tiết trong `.claude/ba-agent/preflight-questions.md`.
+
+---
+
+## Ràng buộc quan trọng
+
+- BA chỉ tạo/sửa file `.md` + Figma nodes — **tuyệt đối không sửa source code**
+- BA không thiết kế kỹ thuật (DB schema, API contract, coding pattern) — đó là việc Tech Lead
+- Multi-flow feature → BA hỏi Gate B1/B2 để user chọn vẽ toàn bộ hay 1 flow
+- Nếu user "có" Figma URL mà chưa paste → BA DỪNG chờ, KHÔNG tự skip
+- Mọi lần chạy đều snapshot vào `versions/` — không overwrite version cũ
+
+---
+
+## Files quan trọng (đọc khi cần chi tiết)
+
+| File | Vai trò |
 |---|---|
-| _(điền)_ | _(điền)_ |
+| `.claude/agents/ba-agent.md` | Canonical BA workflow — sửa quy trình BA chỉ sửa file này |
+| `.claude/ba-agent/spec-template.md` | Template 14 sections cho SPEC.md |
+| `.claude/ba-agent/preflight-questions.md` | 3 câu Preflight + 10 câu chuẩn |
+| `.claude/ba-agent/clarify-ambiguity.md` | Template hỏi khi request mơ hồ |
+| `.claude/ba-agent/versioning.md` | Rule snapshot `versions/v<N>_<DDMMYYYY>/` |
+| `.claude/ba-agent/figma-outputs/*` | Chi tiết từng Figma output + gate rules |
 
-</red_line_rules>
-
----
-
-<agent_architecture>
-
-## Agent architecture
-
-**Agent vs Command:** Agent (`.claude/agents/*.md`) = canonical workflow (single source of truth). Command (`.claude/commands/*.md`) = thin entry point 5–8 dòng, trỏ về agent. Sửa quy trình → chỉ sửa file agent. User trigger 2 cách: slash command (`/create-spec login`) hoặc natural language ("hãy là BA, làm SPEC cho login") — cùng load agent.
-
-**Bước 2 song song 3 agent** — 2a Tech Lead · 2b QC (pipeline 3 bước) · 2c Designer. **QC chạy 3 lần** — lần 1 sau SPEC (sinh TC), lần 2 sau dev (execute + bug report), lần 3 song song 7a (Playwright E2E qua `qc-automation-agent`).
-
-**QC vs QA vs QC-Automation:** qc-agent = manual TC (artifact `.md`); qa-agent = post-dev verify unit test + coverage (QA Report/task); qc-automation-agent = E2E browser (`.spec.ts` + execution report). Bổ sung nhau, không thay thế.
-
-> **12 sub-agents đầy đủ** (vai trò + slash command mapping) → `.claude/commands/README.md` (command → agent) hoặc `ai-agents-workflow.md` §1 (phase-gate table). Skills → `.claude/skills/README.md`. Context/Workflows → `.claude/context/README.md`.
-
-</agent_architecture>
-
----
-
-<bmad_workflow>
-
-## BMAD Workflow — Phase Skeleton
-
-| Phase | Agent | Command | Output |
-|---|---|---|---|
-| 0 Setup | `init-agent` | `/init-kit` | `AGENTS.md` + context |
-| 1 Discovery | `ba-agent` | `/create-spec` | `SPEC.md` |
-| 2 Design (parallel) | `techlead-design-agent` · `qc-agent` · `designer-agent` | `/create-design` · `/test/analyze-req`→`plan-tcs`→`gen-tcs` · `/create-ui-design` | `Design-Technical.md` · TC files · Figma URL |
-| 3 Planning | `techlead-tasks-agent` · `pm-agent` | `/create-tasks` · `/create-plan` (+ `/create-backlog`) | `tasks/task-*.md` · `PLAN.md` |
-| 4 Build | `backend-agent` → `frontend-agent` ‖ `mobile-agent` | BE Phase 1→2 (migration + API + Contract) → copy Contract → FE/Mobile Phase 3 (song song, 3 sub-steps) → Phase 4 integration | Code + API Contract table |
-| 5 Verify | `qa-agent` | `"Hãy là QA, verify task: <path>"` | QA Report |
-| 6 Test (parallel) | `qc-agent` · `qc-automation-agent` | `/test/generate_test_execution_checklist` (+ `/test/generate_regression_suite`) · `"Hãy là QC Automation…"` | Execution checklist · Playwright `.spec.ts` |
-
-**Contract Lock** trước Phase 3 (Build FE/Mobile): REST + WebSocket + Push — confirm bởi BE+FE+Mobile+PM+QC.
-
-Chi tiết đầy đủ (per-step context, handover, on-demand commands `/test/review-tcs` · `/test/export-xlsx` · `/test/gen-bug-report`) → `.claude/workflows/new-feature.md`. Bảng agent audit + flowchart per agent → `ai-agents-workflow.md`. Danh sách command đầy đủ → `.claude/commands/README.md`.
-
-</bmad_workflow>
-
----
-
-<memory_update_gate>
-
-## Memory Update Gate — sau mỗi Dev task
-
-> Dev agent BẮT BUỘC cập nhật overview docs của repo (`<DOCS_ROOT>/<layer>/<repo>/overview/`) khi task thay đổi endpoint/entity/pattern/structure. Bảng mapping chi tiết per-layer → section "Memory Update Gate" trong `.claude/agents/{backend,frontend,mobile}-agent.md`. Sau Dev xong → handover `qa-agent`; PASS → task kế, FAIL → dev fix loop.
-
-</memory_update_gate>
+AI behavior policy chung + companion rules → `./POLICIES.md`.
