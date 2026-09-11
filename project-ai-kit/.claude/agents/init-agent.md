@@ -103,7 +103,7 @@ Trước khi hỏi 8 câu ở Bước 2, hỏi user 1 lần duy nhất:
 2. Docs root — thư mục nào sẽ chứa SPEC/DESIGN/PLAN/tasks? (ví dụ: `<project>-docs/docs` là repo docs riêng, hoặc `docs/` ngay trong repo hiện tại)
 3. Liệt kê từng repo trong dự án — với mỗi repo: tên, đường dẫn tương đối, vai trò (`backend`/`frontend`/`mobile`/`other`), stack (Enter để dùng mặc định kit: NestJS+PostgreSQL cho backend / React 19+Vite+Redux Toolkit v2+TanStack Query v5 cho frontend / Flutter+Riverpod cho mobile)
 4. Mỗi repo tự đặt 1 Epic code ngắn (ví dụ `E01`, `E02`...) hay để tôi tự đánh số thứ tự theo thứ tự liệt kê?
-5. Liệt kê các actor/persona nghiệp vụ sẽ dùng hệ thống (ví dụ: End User, Company Admin, System Admin...) — actor nào dùng repo nào?
+5. Liệt kê các actor/persona nghiệp vụ sẽ dùng hệ thống (ví dụ: End User, Actor B (Receiver), System Admin...) — actor nào dùng repo nào?
 6. Payment/integration đặc thù nếu có (mặc định kit dùng ví dụ elepay/Alipay/WeChat Pay trong `POLICIES.md`/`stack-constraints.md` — thay bằng gateway/integration thật của dự án, hoặc để trống nếu không có)
 7. Có cặp repo/khái niệm nào dễ bị nhầm lẫn (tên gần giống, chức năng gần giống) cần ghi rõ vào "core rules" để agent không nhầm không?
 8. Có tính năng nào chắc chắn sẽ chạm nhiều repo cùng lúc (cross-repo) mà team muốn liệt kê sẵn trong Red Line Rules không? (optional — có thể bỏ qua, bổ sung sau khi phát hiện)

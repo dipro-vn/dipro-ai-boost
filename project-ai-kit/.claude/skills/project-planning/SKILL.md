@@ -63,7 +63,7 @@ Với mỗi feature, scan qua các category sau và đánh dấu risk nào apply
 ```
 Đọc SPEC → Actors → map actor → repo (theo bảng Ecosystem trong AGENTS.md), ví dụ:
   Actor A (mobile end-user)  → repo mobile
-  Actor B (company admin)    → repo frontend #1 + repo backend
+  Actor B (org admin)        → repo frontend #1 + repo backend
   Actor C (system admin)     → repo frontend #2 + repo backend
   Actor D (supplier)         → repo frontend #3 + repo backend
   Actor E (driver)           → repo frontend #4 + repo backend
