@@ -1,6 +1,6 @@
 ---
 name: tailwind-dark-mode
-description: 
+description: CHỈ dùng khi dự án dùng Tailwind CSS. Hỗ trợ dark mode bằng variant dark:, chiến lược class hay media, token màu semantic thay vì màu cứng. Dùng khi thêm dark mode hoặc thiết kế bảng màu cho theme.
 ---
 
 # Dark Mode

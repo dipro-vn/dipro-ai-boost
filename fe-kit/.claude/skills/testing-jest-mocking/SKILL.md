@@ -1,6 +1,6 @@
 ---
 name: testing-jest-mocking
-description: 
+description: Mock trong Jest đúng ranh giới — jest.mock cho module, jest.fn cho function, fake timer, msw để giả lập HTTP; tránh mock quá sâu vào chi tiết nội bộ. Dùng khi test cần cô lập dependency bên ngoài.
 ---
 
 # Mocking

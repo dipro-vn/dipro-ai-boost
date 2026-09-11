@@ -1,6 +1,6 @@
 ---
 name: react-hooks-pattern
-description: 
+description: Quy tắc viết và dùng React hooks — rules-of-hooks, dependency array đầy đủ, cleanup effect, tách custom hook use*. Dùng khi viết hoặc sửa component có useState, useEffect, useMemo, useCallback, useRef, hoặc khi tách logic tái dùng thành custom hook.
 ---
 
 # Hooks Pattern

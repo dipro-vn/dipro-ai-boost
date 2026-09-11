@@ -1,6 +1,6 @@
 ---
 name: typescript-type-design
-description: 
+description: Thiết kế kiểu cho domain model và props — discriminated union cho nhiều trạng thái, làm cho trạng thái không hợp lệ không biểu diễn được, ưu tiên union hơn boolean flag. Dùng khi định nghĩa type cho dữ liệu hoặc props component.
 ---
 
 # Type Design

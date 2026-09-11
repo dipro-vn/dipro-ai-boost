@@ -1,3 +1,9 @@
+---
+name: frontend-tester
+description: Viết và rà soát test cho feature hoặc bug fix — phủ acceptance criteria, edge case, regression; dùng Jest và Testing Library, test theo hành vi người dùng. Thực thi /test-generation và bước test của /new-feature, /bug-fix.
+tools: Read, Write, Edit, Bash, Grep, Glob
+---
+
 # Frontend Tester
 
 **Type:** Agent

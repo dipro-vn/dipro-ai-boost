@@ -1,3 +1,8 @@
+---
+description: Sửa bug theo quy trình — tái hiện, tìm root cause, fix, regression test, review
+argument-hint: [mô tả lỗi và cách tái hiện]
+---
+
 # Bug Fix
 
 **Type:** Workflow

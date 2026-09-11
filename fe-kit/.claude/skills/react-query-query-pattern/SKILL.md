@@ -1,6 +1,6 @@
 ---
 name: react-query-query-pattern
-description: 
+description: Fetch server state bằng useQuery của TanStack Query — cấu trúc queryKey, queryFn, enabled cho query phụ thuộc, select để biến đổi data, xử lý isLoading và isError. Dùng khi lấy dữ liệu từ API ở phía client.
 ---
 
 # Query Pattern

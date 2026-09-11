@@ -1,6 +1,6 @@
 ---
 name: requirement-analysis-requirement-analysis
-description: 
+description: Phân tích yêu cầu còn mơ hồ thành đặc tả rõ ràng — bóc tách mục tiêu, phạm vi trong và ngoài, giả định, câu hỏi mở, ràng buộc kỹ thuật. Dùng khi nhận story hoặc issue mới, trước khi ước lượng hay viết code.
 ---
 
 # Requirement Analysis

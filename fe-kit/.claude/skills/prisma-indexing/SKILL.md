@@ -1,6 +1,6 @@
 ---
 name: prisma-indexing
-description: 
+description: Thêm index cho Prisma schema — @@index cho cột hay dùng để filter, sort, join; @unique cho ràng buộc duy nhất; index tổ hợp nhiều cột. Dùng khi query chậm hoặc thiết kế model có quan hệ.
 ---
 
 # Prisma Indexing

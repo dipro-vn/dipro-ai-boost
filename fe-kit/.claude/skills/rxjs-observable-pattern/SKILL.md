@@ -1,6 +1,6 @@
 ---
 name: rxjs-observable-pattern
-description: 
+description: Dùng Observable cho luồng bất đồng bộ nhiều giá trị theo thời gian — phân biệt cold và hot, multicast bằng share và shareReplay, luôn có đường hủy. Dùng khi xử lý event stream, websocket, hoặc chuỗi request.
 ---
 
 # Observable Pattern

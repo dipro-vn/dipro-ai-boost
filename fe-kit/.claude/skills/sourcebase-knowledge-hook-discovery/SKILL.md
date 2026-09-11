@@ -1,6 +1,6 @@
 ---
 name: sourcebase-knowledge-hook-discovery
-description: 
+description: Tìm custom hook sẵn có (data, form, UI) trước khi viết hook mới — search theo tiền tố use, xem thư mục hooks dùng chung. Dùng trước khi tạo custom hook mới.
 ---
 
 # Hook Discovery

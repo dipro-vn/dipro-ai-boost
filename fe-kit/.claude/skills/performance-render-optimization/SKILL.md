@@ -1,6 +1,6 @@
 ---
 name: performance-render-optimization
-description: 
+description: Giảm re-render thừa trong React — tách state xuống thấp, ổn định props, virtualize list dài, đọc React DevTools Profiler. Dùng khi UI giật lag, list dài chậm, hoặc component render nhiều lần không cần thiết.
 ---
 
 # Render Optimization

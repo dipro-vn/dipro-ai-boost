@@ -1,6 +1,6 @@
 ---
 name: nextjs-app-router
-description: 
+description: Tổ chức route trong thư mục app/ của Next.js — page.tsx, layout.tsx, loading.tsx, error.tsx, not-found.tsx và cách chúng lồng nhau. Dùng khi tạo route mới hoặc thiết lập cấu trúc app/ cho dự án Next.js.
 ---
 
 # App Router

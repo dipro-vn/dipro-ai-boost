@@ -1,6 +1,6 @@
 ---
 name: rxjs-debugging
-description: 
+description: Gỡ lỗi luồng RxJS — dùng tap để log giá trị emit, kiểm tra thứ tự phát, truy nguồn lỗi, phát hiện subscribe nhiều lần ngoài ý muốn. Dùng khi Observable không emit như mong đợi.
 ---
 
 # Debugging

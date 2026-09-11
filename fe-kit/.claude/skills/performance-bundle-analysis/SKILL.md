@@ -1,6 +1,6 @@
 ---
 name: performance-bundle-analysis
-description: 
+description: Phân tích bundle size — đo bằng bundle analyzer, tìm dependency nặng, phát hiện import cả thư viện thay vì tree-shake. Dùng khi initial load chậm hoặc trước khi quyết định tối ưu bundle.
 ---
 
 # Bundle Analysis

@@ -1,6 +1,6 @@
 ---
 name: typescript-api-typing
-description: 
+description: Type an toàn cho request và response API từ network tới UI — định nghĩa type response, tránh any ở ranh giới, validate runtime bằng zod, tách type DTO khỏi type domain. Dùng khi thêm hoặc sửa lời gọi API.
 ---
 
 # API Typing

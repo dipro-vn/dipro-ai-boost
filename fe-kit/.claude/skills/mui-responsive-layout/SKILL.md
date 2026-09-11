@@ -1,6 +1,6 @@
 ---
 name: mui-responsive-layout
-description: 
+description: CHỈ dùng khi dự án dùng Material UI. Layout responsive bằng MUI Grid và Stack với spacing, breakpoint (xs, sm, md, lg, xl) nhất quán. Dùng khi dựng layout đa màn hình trong dự án MUI.
 ---
 
 # Responsive Layout

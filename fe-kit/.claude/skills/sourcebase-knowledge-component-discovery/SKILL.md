@@ -1,6 +1,6 @@
 ---
 name: sourcebase-knowledge-component-discovery
-description: 
+description: Tìm component sẵn có có thể tái dùng trước khi tạo component mới — search theo tên và theo chức năng, kiểm tra thư mục shared hoặc ui, cân nhắc mở rộng props. Dùng trước khi viết bất kỳ component mới nào.
 ---
 
 # Component Discovery

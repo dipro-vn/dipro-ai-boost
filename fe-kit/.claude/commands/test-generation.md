@@ -1,3 +1,8 @@
+---
+description: Sinh hoặc bổ sung test cho feature, module, bug fix — liệt kê case, viết test, đo coverage
+argument-hint: [file hoặc feature cần sinh test]
+---
+
 # Test Generation
 
 **Type:** Workflow

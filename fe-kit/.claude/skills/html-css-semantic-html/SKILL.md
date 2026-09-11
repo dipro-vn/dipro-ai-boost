@@ -1,6 +1,6 @@
 ---
 name: html-css-semantic-html
-description: 
+description: Dựng markup semantic — header, nav, main, section, article, heading đúng cấp, thay vì div-soup. Dùng khi tạo trang hoặc section mới, hoặc refactor markup toàn div thành cấu trúc có nghĩa.
 ---
 
 # Semantic HTML

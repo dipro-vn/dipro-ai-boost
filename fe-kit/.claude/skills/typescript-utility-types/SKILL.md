@@ -1,6 +1,6 @@
 ---
 name: typescript-utility-types
-description: 
+description: Dùng utility type sẵn có thay vì khai báo lại — Partial, Required, Pick, Omit, Record, ReturnType, Awaited, và template literal type. Dùng khi cần biến đổi hoặc dẫn xuất type từ type đã có.
 ---
 
 # Utility Types

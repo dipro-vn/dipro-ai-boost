@@ -1,6 +1,6 @@
 ---
 name: tailwind-class-organization
-description: 
+description: CHỈ dùng khi dự án dùng Tailwind CSS. Giữ chuỗi class dài có thứ tự nhất quán và dễ review — nhóm theo layout, spacing, typography, màu, state; dùng prettier-plugin-tailwindcss. Dùng khi class list dài khó đọc.
 ---
 
 # Class Organization

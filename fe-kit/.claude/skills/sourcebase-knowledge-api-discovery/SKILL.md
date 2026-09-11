@@ -1,6 +1,6 @@
 ---
 name: sourcebase-knowledge-api-discovery
-description: 
+description: Tìm service hoặc endpoint đã tồn tại trong codebase trước khi viết call API mới — search theo tên resource, xem lớp api client sẵn có, tái dùng type response. Dùng trước khi thêm bất kỳ lời gọi API nào.
 ---
 
 # API Discovery

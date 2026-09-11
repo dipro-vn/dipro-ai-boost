@@ -1,3 +1,8 @@
+---
+description: Review PR hoặc changeset trước khi merge — checklist, bảo mật, hiệu năng, phản hồi phân mức
+argument-hint: [PR number hoặc để trống để review thay đổi hiện tại]
+---
+
 # Code Review
 
 **Type:** Workflow
