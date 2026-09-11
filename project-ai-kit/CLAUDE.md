@@ -1,2 +1,0 @@
-@./POLICIES.md
-@./AGENTS.md
