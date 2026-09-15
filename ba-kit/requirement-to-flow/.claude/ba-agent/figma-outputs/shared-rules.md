@@ -9,7 +9,7 @@
 Output 1, 2, 3 PHẢI vẽ theo thứ tự tuần tự, KHÔNG được vẽ song song:
 
 1. **Output 1** — Flow Tổng Quan phải vẽ XONG trước (đây là source of truth về số business flows N)
-2. **Output 2** — Screen Flow dựa vào Output 1: PHẢI vẽ N screen-flows tương ứng với N business flows từ Output 1 (VD Output 1 có 5 flows → Output 2 có 5 screen-flows). Bảng SCREEN INDEX tổng hợp vẫn giữ. **Ngoại lệ Shared Cluster:** nếu M trong N flows dùng chung 1 cụm màn hình (VD Auth) → gộp thành 1 group duy nhất thay vì lặp lại M lần (chi tiết `output-2-screen-flow.md` + SKILL.md §5B.1) — khi đó "N" ở cross-verification dưới đây tính theo **số cụm màn hình độc lập**, không phải số flow thô.
+2. **Output 2** — Screen Flow dựa vào Output 1: PHẢI vẽ N screen-flows tương ứng với N business flows từ Output 1 (VD Output 1 có 5 flows → Output 2 có 5 screen-flows). Bảng SCREEN INDEX tổng hợp vẫn giữ. **Ngoại lệ Shared Cluster:** nếu M trong N flows dùng chung 1 cụm màn hình (VD Auth) → gộp thành 1 group duy nhất thay vì lặp lại M lần (chi tiết `output-2-screen-flow.md` + SKILL.md §5.1) — khi đó "N" ở cross-verification dưới đây tính theo **số cụm màn hình độc lập**, không phải số flow thô.
 3. **Output 3** — Screens + Items PHẢI group theo cùng cấu trúc groups đó ở Output 2 (mỗi group Output 2 → 1 group Output 3 tương ứng, kể cả group là shared cluster)
 
 Cross-verification bắt buộc:
@@ -255,11 +255,10 @@ BA phải xem example images trong `.claude/skills/ba-figma-output/examples/`:
 | File | Xem để hiểu |
 |---|---|
 | `example_output_1.png` | **Sitemap kiểu WBS tree** — actor icon + hành động, có illustration (icon người/xe/laptop...) |
-| `output2_merged_branch.jpg` | **Output 2 — DEFAULT.** Flow hợp nhất phân nhánh (NHÁNH A/B) + NG inline + System (xanh lá) + Edge/Exceptional Panel riêng bên cạnh. Chọn khi feature single-actor / shared-cluster (đa số trường hợp) — chi tiết SKILL.md §5B |
-| `example_output_2_screen_flow.png` / `final_output_2.png` | **Output 2 — Legacy.** 4 vùng DA/CA/Non-Happy/Index, chỉ dùng khi feature có 2 actor đồng bộ real-time (VD VoIP call) — chi tiết SKILL.md §5A |
+| `final_output_2.png` (= `example_output_2_screen_flow.png`) | **Output 2 — Screen Flow (Merged Branch).** Flow hợp nhất phân nhánh (NHÁNH A/B) + NG inline + System (xanh lá) + Edge/Exceptional Panel riêng bên cạnh — chi tiết SKILL.md §5 |
 | `example_output_3.png` | **Mô tả màn hình** — mỗi item trên UI đều đánh số + text bên cạnh (Title / Mô tả / Mục đích) — KHÔNG lược bỏ item nào |
 
-Load bằng `Read` tool trước khi bắt đầu Output tương ứng. Với Output 2, chỉ đọc ĐÚNG 1 file theo layout đã chọn (xem SKILL.md §5.0) — không đọc cả 2.
+Load bằng `Read` tool trước khi bắt đầu Output tương ứng.
 
 ---
 
@@ -282,7 +281,7 @@ Load bằng `Read` tool trước khi bắt đầu Output tương ứng. Với Ou
 
 ## Visual conventions — NHẤT QUÁN giữa cả 2 tool
 
-Màu sắc và ý nghĩa KHÔNG thay đổi dù dùng FigJam hay Design. Bảng dưới áp dụng cho Output 1, Output 3, và Output 2 layout 5A (multi-actor):
+Màu sắc và ý nghĩa KHÔNG thay đổi dù dùng FigJam hay Design. Bảng dưới áp dụng cho Output 1 và Output 3 (theo actor). Output 2 dùng bảng riêng theo loại node — xem ngay dưới.
 
 | Element | Màu fill | Màu stroke | Ý nghĩa |
 |---|---|---|---|
@@ -297,7 +296,7 @@ Màu sắc và ý nghĩa KHÔNG thay đổi dù dùng FigJam hay Design. Bảng 
 | Arrow error | — | `#CF222E` (dashed) | Luồng lỗi |
 | Arrow cross-actor | — | `#6639BA` | Kết nối 2 actor |
 
-**Output 2 layout 5B (merged branch, default)** dùng biến thể theo LOẠI NODE thay vì theo actor (chi tiết SKILL.md §1 + §5B):
+**Output 2 (Merged Branch)** dùng biến thể theo LOẠI NODE thay vì theo actor (chi tiết SKILL.md §1 + §5):
 
 | Node type | Fill | Stroke | Ý nghĩa |
 |---|---|---|---|

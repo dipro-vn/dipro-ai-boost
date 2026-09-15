@@ -44,36 +44,47 @@
 
 ---
 
-## Output 2 — Screen Flow + Bảng SCREEN INDEX
+## Output 2 — Screen Flow (Merged Branch) + Bảng SCREEN INDEX
 
-**Frame:** `Output 2 — Screen Flow — <Feature>` · width ~2280px (chiều cao dynamic theo N groups)
+**Frame:** `Output 2 — Screen Flow — <Feature>` · width dynamic (đủ chỗ flow chính + Edge/Exceptional Panel bên phải), chiều cao dynamic theo N Group
 
-**Layout tổng:**
+**Layout tổng (1 sơ đồ hợp nhất mỗi Group — KHÔNG tách cột Happy/Non-Happy):**
 
 ```
-┌──────────────────────────────────────┬──────────────────────┐
-│ SCREEN-FLOW GROUP 1 (business flow 1)│                      │
-│ ┌────────────┬────────────────┐      │                      │
-│ │ Happy Case │ Non-Happy Case │      │  BẢNG SCREEN INDEX   │
-│ │ ①→②→③...  │ ⚠→Error1...   │      │  (spanning full      │
-│ └────────────┴────────────────┘      │   height, bên phải)  │
-├──────────────────────────────────────┤                      │
-│ SCREEN-FLOW GROUP 2 ...              │                      │
-├──────────────────────────────────────┤                      │
-│ SCREEN-FLOW GROUP N ...              │                      │
-└──────────────────────────────────────┴──────────────────────┘
+┌──────────────────────────────────────┬─────────────────┬──────────────────────┐
+│ Group 1 — <Tên cụm/flow 1>           │                 │                      │
+│  Start (▶, ghi rõ N flow nguồn nếu   │  EDGE /          │  BẢNG SCREEN INDEX   │
+│  Shared Cluster)                     │  EXCEPTIONAL     │  TERMINAL NODES      │
+│  NHÁNH A ──┐   NHÁNH B ──┐           │  PANEL           │  EXCEPTION MATRIX    │
+│  Screen/System/Decision, NG vẽ inline│  (case chưa rõ,  │  (spanning full      │
+│  ngay tại chỗ lỗi phát sinh          │   tách riêng)    │   height, bên phải)  │
+│  ↓ merge → fan-out N terminal        │                 │                      │
+├──────────────────────────────────────┤                 │                      │
+│ Group 2 ...                          │                 │                      │
+├──────────────────────────────────────┤                 │                      │
+│ Group N ...                          │                 │                      │
+├──────────────────────────────────────┤                 │                      │
+│ Combined Overview (chỉ khi ≥2 Group) │                 │                      │
+│  Gộp N flow → 1 sơ đồ, đủ Decision/  │                 │                      │
+│  System/NG/Edge (superset các Group) │                 │                      │
+└──────────────────────────────────────┴─────────────────┴──────────────────────┘
 ```
 
-**Screen node** (rectangle `200×56` radius 8):
-- Screen thường: fill trắng, stroke `#0969DA` — icon 🖥
-- Popup/Modal: fill `#FBEEFF`, stroke `#6639BA` — icon 💬 — nét đứt
-- Error/Toast: fill `#FFF6F5`, stroke `#CF222E` — icon ⚠ — nét đứt
+**Shared Cluster:** nếu N business flows dùng chung 1 cụm màn hình (VD Auth dùng chung cho 5 flow) → gộp thành 1 Group duy nhất, ghi rõ N flow nguồn ở Start, fan-out N terminal ở cuối — KHÔNG lặp lại N lần.
 
-**Badges** (ellipse 24px + số): Xanh (Screen) / Tím (Popup) / Đỏ (Error)
+**Combined Overview (BẮT BUỘC khi ≥ 2 Group):** thêm 1 section ở **CUỐI frame** (sau Group N) — sơ đồ gộp N flow thành 1, đầy đủ Decision/System/NG/Edge (KHÔNG phải navigation map rút gọn) — mọi NG của từng Group PHẢI xuất hiện lại ở đây, screen dùng chung ≥2 flow chỉ 1 node duy nhất. Numbered badge trùng số đã dùng ở Group bên trên. Chi tiết `figma-outputs/output-2-screen-flow.md` + SKILL.md §5.0.
 
-**Start/End nodes** (ellipse 32px): Start `#0969DA` ▶ · End `#6E7781` ■
+**Node types** (chi tiết SKILL.md §5.4):
+- **Screen** (rectangle `200-260×70` radius 8): fill `#E8F4FD`, stroke `#0969DA` — có numbered badge bên trái, số liên tục toàn cục qua các Group
+- **Decision** (rounded-rect, icon ◇ + rationale 1 dòng): fill `#FFF9EB`, stroke `#F4860C` — label "YES/NO" trên nhánh ra
+- **System** (rectangle, icon ⚙): fill `#EDFDF0`, stroke `#1A7F37` — hành động backend tự động, KHÔNG có badge
+- **NG** (rectangle nét đứt, icon ⚠, vẽ INLINE tại điểm phát sinh): fill `#FFF6F5`, stroke `#CF222E` — chỉ dùng cho lỗi đã ĐỊNH NGHĨA rõ (FACT)
+- **Edge / Exceptional** (rectangle nét đứt, icon ▲, đặt trong panel riêng — KHÔNG inline): fill `#FBEEFF`, stroke `#6639BA` — case UNKNOWN/INFERENCE chưa rõ hành vi
+- **Terminal box** (rectangle ~200×50): fill `#F6F8FA`, stroke `#D0D7DE` — 1 box / flow nguồn ở fan-out cuối Group
 
-**Decision diamond** (44px): fill `#FFF9EB`, stroke `#F4860C` — label "Yes/No"
+**Start node** (ellipse 32px): `#0969DA` ▶ — ghi rõ N flow nguồn nếu là Shared Cluster
+
+**Rule NG vs Edge (BẮT BUỘC phân biệt):** lỗi đã rõ cách xử lý (FACT) → vẽ NG inline; case chưa rõ (UNKNOWN/INFERENCE) → đưa vào Edge/Exceptional Panel riêng, KHÔNG vẽ inline như đã confirm.
 
 **Bảng SCREEN INDEX** (bên phải, DUY NHẤT — không split per group):
 - Header row 32px, fill xanh nhạt
@@ -81,10 +92,13 @@
 - 3 cột: `# | Màn hình | Loại | Mô tả chức năng`
 - Bottom row: `Tổng: N màn hình (trong đó X popup + Y toast)`
 
+Kèm theo (chi tiết `figma-outputs/output-2-screen-flow.md`): **⑥ Terminal Nodes** (mọi flow ≥ 2 terminal: Success + Exit) và **⑤ Exception Matrix** (mọi NG → row `FACT`; mọi Edge/Exceptional → row `UNKNOWN`/`INFERENCE`).
+
 **Áp dụng khi copy sang project mới:**
-- Số screen-flow groups = số business flows Output 1 (cross-verify)
+- Số Group = số cụm màn hình độc lập ở Output 1 (đã gộp Shared Cluster nếu có) — cross-verify
 - Popup/Toast/Banner CŨNG đếm trong Bảng Index — không được lược
-- Nếu SCOPE_TYPE = `[B]/[C]` → hỏi Gate B1 trước khi vẽ (vẽ toàn bộ N flows hay chỉ 1)
+- Badge số liên tục toàn cục qua các Group, không reset mỗi Group
+- Nếu SCOPE_TYPE = `[B]/[C]` → hỏi Gate B1 trước khi vẽ (vẽ toàn bộ N Group hay chỉ 1)
 
 ---
 
@@ -147,5 +161,5 @@
 - [ ] Xác định N = số business flows từ SPEC → chọn single vs multi-flow layout
 - [ ] Copy dimension + màu sắc + font size từ template — KHÔNG tự biến tấu
 - [ ] Nội dung (Actor name, Screen Code, Function name, Technology) thay theo project của mình
-- [ ] Cross-verify sau khi vẽ xong: Output 1 N flows = Output 2 N groups = Output 3 N groups
+- [ ] Cross-verify sau khi vẽ xong: Output 1 N flows = Output 2 N groups = Output 3 N groups (đã tính gộp Shared Cluster nếu có — xem `output-2-screen-flow.md`)
 - [ ] `get_screenshot` mỗi output → so sánh visual với reference PNG (đúng cột, đúng gap, đúng màu chưa)

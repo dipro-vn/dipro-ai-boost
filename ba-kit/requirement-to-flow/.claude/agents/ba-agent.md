@@ -381,7 +381,6 @@ Figma (nếu có URL):
      (Business Logic Flow + Technology Table bên phải + Sitemap WBS Tree)
   ✅ Output 2 — Screen Flow       — <Figma node URL>
      (Merged Branch: NHÁNH A/B + NG inline + Edge/Exceptional Panel — Bảng Index, Popup/Toast/Push đều đếm)
-     [hoặc: 4 vùng DA Happy · CA Happy · Non-Happy · Bảng Index — nếu dùng layout legacy multi-actor]
   ✅ Output 3 — Screens + Items   — <Figma node URL>
      (Layout DỌC: mỗi hàng = 1 phone + 1 bảng đầy đủ item — Title/Mô tả/Mục đích)
      Page: <page user cung cấp>
