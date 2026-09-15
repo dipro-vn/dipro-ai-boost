@@ -167,9 +167,15 @@ Nếu trigger → **BẮT BUỘC Read** `.claude/ba-agent/clarify-ambiguity.md` 
 - Bảng 3-case enforcement chi tiết Câu 0.5 (`Có/chờ` vs `Refuse` vs `/board/`)
 - 10 câu hỏi chuẩn 1-10 (Actor / Vấn đề / Precondition / Happy Path / Edge / AC / Related / Mobile / Real-time / Integration)
 
-**Impact `SCOPE_TYPE` xuống Bước 5:**
-- `[A]` → Output 1/2/3 vẽ liền, KHÔNG hỏi gate scope
-- `[B]/[C]` → BẮT BUỘC Gate B1 sau Output 1 + Gate B2 sau Output 2 (chi tiết `figma-outputs/shared-rules.md`)
+**Impact `SCOPE_TYPE` xuống Bước 5 — chọn Mode gate:**
+
+| SCOPE_TYPE | Mode | Gate summary |
+|---|---|---|
+| `[A]` | **Light Mode** | Gate A (sau O1) + Gate B2 (sau O2) — 2 gate |
+| `[B]` | **Strict Mode** | 5 Human Approval Gate cứng (`WAITING FOR BRSE APPROVAL` sau mỗi output) + Gate B1/B2 vẫn giữ |
+| `[C]` | **Strict Mode** | Same as `[B]` |
+
+Chi tiết template gate + state machine + anti-pattern → `figma-outputs/shared-rules.md` section "Strict Mode" và "Gate Rules".
 
 ### Bước 3 — Xác định path + Versioning
 
@@ -289,15 +295,55 @@ Dùng **Figma Design file** (`/design/` URL) từ `FIGMA_OUTPUT_URL` đã hỏi 
 
 **Thứ tự vẽ (Sequential Rule — không parallel):** Output 1 → Output 2 → Output 3 → Output 4 (chi tiết cross-verification xem `shared-rules.md`).
 
-**⚠️ Gate Rules BẮT BUỘC (không được vẽ liền tù tì):** Sau Output 1 → **Gate A** (giải thích 3 outputs + xin phép). Nếu `SCOPE_TYPE = [B]/[C]` multi-flow → thêm **Gate B1** (Output 2 toàn bộ hay 1 flow). Sau Output 2 → **Gate B2** (xin phép Output 3 + scope). Chi tiết template gate xem `shared-rules.md` section "Gate Rules". KHÔNG được skip gate.
+**⚠️ Gate Rules BẮT BUỘC (không được vẽ liền tù tì):**
+- **Light Mode** (SCOPE_TYPE = [A]): Sau Output 1 → **Gate A**; sau Output 2 → **Gate B2**
+- **Strict Mode** (SCOPE_TYPE = [B]/[C]): 5 Human Approval Gate cứng (`WAITING FOR BRSE APPROVAL` sau mỗi output), + Gate B1 sau O1 và Gate B2 sau O2 vẫn giữ để hỏi scope
+
+BA PHẢI in ra đầu Bước 5: `Mode gate: <Light / Strict> — sẽ có <2 / 5> gate hỏi`.
+
+Chi tiết template gate + state machine + anti-pattern xem `shared-rules.md` sections "Gate Rules" và "Strict Mode". KHÔNG được skip gate.
 
 ---
 
-### Bước 5.5 — AI Recheck Kết Quả Figma (BẮT BUỘC sau khi vẽ xong 3 Outputs)
+### Bước 5.5 — Quality Gate (formal PASS/FAIL) sau mỗi Figma Output
 
-> Sau Bước 5 xong (Output 1 + 2 + 3), BA **phải chụp screenshot từng frame** rồi tự đánh giá theo checklist 5 tiêu chí. KHÔNG được báo user "đã xong" nếu chưa qua bước này.
+> Nâng cấp từ Bước "AI Recheck" cũ: chạy Quality Gate PASS/FAIL formal **sau mỗi output** (không phải chỉ 1 lần cuối). Mục đích: chống drift + cho Strict Mode có evidence để BRSE approve.
 >
-> **BẮT BUỘC Read trước khi thực hiện:** `Read('.claude/ba-agent/recheck.md')`
+> **BẮT BUỘC Read trước khi thực hiện:** `Read('.claude/ba-agent/recheck.md')` (checklist 5 tiêu chí visual chuẩn).
+
+**Quy trình per output:**
+
+1. Vẽ xong Output N
+2. Chụp screenshot node vừa vẽ (`get_screenshot`)
+3. Chạy checklist theo `recheck.md` (5 tiêu chí visual) + verification checks bảng ở đầu file này
+4. Kết luận PASS / FAIL:
+   - **PASS** → in block `Quality Gate O<N>: PASS` + jump gate (Light Mode: Gate A/B2 · Strict Mode: WAITING FOR BRSE APPROVAL)
+   - **FAIL** → in block `Quality Gate O<N>: FAIL — <list issues>` + tự sửa rồi rerun. KHÔNG in block WAITING_APPROVAL khi FAIL.
+
+**Format block PASS bắt buộc:**
+
+```
+✅ Quality Gate O<N>: PASS
+Checked:
+  - [x] <tiêu chí 1 recheck.md>
+  - [x] <tiêu chí 2>
+  - [x] <verification check 1>
+  - [x] <verification check 2>
+Artifacts:
+  - Figma node: <URL>
+  - Screenshot: <verify PASS>
+```
+
+**Format block FAIL bắt buộc:**
+
+```
+❌ Quality Gate O<N>: FAIL
+Issues detected:
+  - <issue 1 cụ thể — VD: "Flow 3 và Flow 4 gap < 100px, arrow đè nhau">
+  - <issue 2>
+Actions:
+  - Sửa <cụ thể> rồi rerun Quality Gate
+```
 
 ---
 
@@ -347,17 +393,10 @@ Local prototype:
   ✅ Output 4 — HTML Prototype    — <DOCS_ROOT>/features/<feature>/prototype/index.html
      Chạy: open index.html (không cần build)
 
-Bước tiếp theo (chạy song song):
-→ "Hãy là Tech Lead, làm Design-Technical.md từ SPEC này: <đường dẫn SPEC.md>"
-→ "Hãy là Designer, tạo Figma từ SPEC này: <đường dẫn SPEC.md>"
-  (hoặc slash command: `/create-ui-design <đường dẫn SPEC.md>`)
-  ⚠️ Designer output: ảnh Figma + text mô tả đặt BÊN CẠNH mỗi screen — dễ comment trực tiếp trên Figma.
-  Designer điền Figma URL vào cột "Figma Link" trong SPEC.md ## Screens.
-
-⚠️ HANDOVER RULE — SPEC.md là single source of truth:
-- Downstream agent (TL/Designer/QC) CHỈ nhận SPEC.md path — KHÔNG cần pass thêm Figma URL / HTML path
-- Vì SPEC.md `## BA Deliverables` đã chứa ĐỦ 5 outputs với path/URL clickable
-- Downstream agent BẮT BUỘC đọc `## BA Deliverables` đầu tiên khi bắt đầu — trước cả `## Actors & Preconditions`, để biết toàn bộ context BA đã produce
-→ "Hãy là QC, sinh test cases từ SPEC này: <đường dẫn SPEC.md>"
-  (hoặc slash command: `/test/analyze-req` → `/test/plan-tcs` → `/test/gen-tcs`)
+💡 HINT — Có feedback? Cứ nói trực tiếp (không cần lệnh đặc biệt), VD:
+   "Sửa AC-05 trong SPEC", "Đổi lại field X ở màn Y", "OQ-03 chốt rồi: ..."
+   → BA sẽ scoped update (chỉ sửa đúng phần liên quan, không regenerate toàn bộ)
+   → Feedback được ghi vào versions/v<N>_<DDMMYYYY>/ba-outputs-log.md (version hiện tại)
+   → Sau khi sửa xong, BA tạo version MỚI versions/v<N+1>_<DDMMYYYY>/ kèm mục
+     "Diff so với version trước" — v<N> cũ vẫn giữ nguyên để so sánh
 ```

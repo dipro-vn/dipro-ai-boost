@@ -110,6 +110,77 @@ BẮT BUỘC — bảng liệt kê TẤT CẢ màn hình (kể cả Popup) với
 └─────────────────────────────────────┘
 ```
 
+**⑥ TERMINAL NODES (BẮT BUỘC — list explicit endpoint mỗi flow):**
+
+> Terminal = điểm kết thúc flow (không có transition đi tiếp). Bảng này list explicit mọi terminal per flow để BA/BRSE/QC verify không sót endpoint nào. Đặt DƯỚI Bảng Screen Index, TRÊN Exception Matrix.
+
+Bảng đặt bên phải frame, cùng width với Bảng Index:
+
+| Flow ID | Terminal ID | Type | Destination sau terminal | Status | Source RQ-ID |
+|---|---|---|---|---|---|
+| AUTH_REGISTER | AUTH_SUCCESS | Success | Redirect ORIGINAL_ENTRY (URL trước khi login) | FACT | RQ-018 |
+| AUTH_REGISTER | AUTH_CANCELED | Exit (user cancel) | Redirect HOME | FACT | RQ-019 |
+| AUTH_REGISTER | AUTH_BLOCKED_EMAIL | Error (blocking) | Show modal + không transition | FACT | RQ-020 |
+| CALL_FLOW | CALL_ENDED_NORMAL | Success | Back to AX_FEAT_002 (Company Detail) + toast "Đã kết thúc" | FACT | RQ-025 |
+| CALL_FLOW | CALL_MISSED | Error (timeout) | Show AX_FEAT_005 (Missed screen) | FACT | RQ-026 |
+| CALL_FLOW | CALL_REJECTED | Error (peer reject) | Toast + back to AX_FEAT_002 | UNKNOWN | RQ-027 ⚠ chờ BRSE confirm |
+
+**Enum cột Type:**
+- `Success` — flow hoàn tất đúng happy path
+- `Exit` — user chủ động thoát (cancel, back button, close)
+- `Error (blocking)` — lỗi chặn user tiếp tục, không có retry
+- `Error (retry)` — lỗi có retry — link về Exception Matrix ID tương ứng
+- `Timeout` — hết thời gian chờ system
+
+**Enum cột Status:**
+- `FACT` — destination + hành vi đã confirmed bởi BRSE
+- `PROPOSAL` — BA đề xuất, chờ approve
+- `UNKNOWN` — chưa rõ destination — BLOCKING cho Phase 3
+
+**Rule bắt buộc:**
+- **Mỗi flow trong Output 1 PHẢI có ≥ 2 terminals**: ít nhất 1 Success + 1 Exit (user có thể luôn cancel/back)
+- Row `UNKNOWN` → PHẢI có tương ứng row trong Exception Matrix (⑤) với classification `UNKNOWN`
+- Cột "Destination sau terminal" KHÔNG được để trống — nếu chưa rõ ghi `UNKNOWN — chờ BRSE`
+- Cross-verification: count terminal = count end node (⏹ ellipse) trong flow diagram Figma — mismatch → refactor
+
+**Downstream impact:**
+- FE Dev đọc bảng này biết đúng redirect logic sau mỗi endpoint
+- QC viết test case cho mỗi terminal (positive + negative)
+- TL Design biết endpoint nào cần API call log/analytics
+
+---
+
+**⑤ EXCEPTION MATRIX (BẮT BUỘC — bổ sung cho Non-Happy sub-zone, đặt dưới Bảng Index):**
+
+> Non-Happy sub-zone hiện tại vẽ các trigger + luồng lỗi VISUAL trên Figma. Exception Matrix bổ sung dạng bảng để **phân loại từng exception** theo status: có rule rõ ràng hay chưa, để BA/BRSE biết cần confirm gì trước Phase 3.
+
+Bảng đặt dưới Bảng Screen Index bên phải frame, cùng width:
+
+| ID | Trigger (nguyên nhân) | Current requirement | Classification | Agent assessment | Need confirm? | Impact nếu bỏ qua |
+|---|---|---|---|---|---|---|
+| EX-01 | Mất mạng khi submit | Chưa có trong SPEC | UNKNOWN | Undefined behavior | ✅ Yes | User double-submit → duplicate record |
+| EX-02 | Email đã tồn tại | Toast "Email đã đăng ký" | FACT | Đã đủ | — | — |
+| EX-03 | Payment timeout 30s | Retry 3 lần rồi báo lỗi | PROPOSAL | BA đề xuất | ✅ Yes | Cần BRSE quyết retry count/interval |
+| EX-04 | Push notification bị deny | Fallback SMS OTP | INFERENCE | Suy từ pattern chung | ✅ Yes | Nếu sai → user không nhận được OTP |
+| EX-05 | Session expired | Redirect Login + toast | FACT | Đã đủ | — | — |
+
+**Enum cột Classification** (giống Source Register):
+- `FACT` — user/BRSE đã confirm rule cụ thể
+- `PROPOSAL` — BA đề xuất, chờ BRSE approve
+- `INFERENCE` — BA suy từ pattern chung, cần verify
+- `UNKNOWN` — chưa có rule, blocking cho Phase 3
+- `CONFLICT` — có ≥ 2 source mâu thuẫn
+
+**Rule bắt buộc:**
+- Mọi Non-Happy trigger vẽ trên Figma PHẢI có 1 row trong Exception Matrix
+- Row `UNKNOWN` / `CONFLICT` KHÔNG được vẽ vào Non-Happy sub-zone như FACT — chỉ vẽ dưới dạng ⚠ UNCLEAR node (dashed border + màu vàng `#FEE28A`) để user biết cần confirm
+- Sau Bảng Index + Exception Matrix, BA in ra count summary: `Tổng: N exceptions (FACT: X · PROPOSAL: Y · INFERENCE: Z · UNKNOWN: W · CONFLICT: V)`
+
+**Downstream impact:**
+- TL Design đọc row `FACT` để design error handling logic
+- QC đọc row `FACT + PROPOSAL` để viết test case
+- Row `UNKNOWN + CONFLICT` → PM tạo ticket hỏi BRSE trước khi Phase 3
+
 **AI Suggestion step — nếu feature có AI:**
 
 Khi flow có bước AI xử lý, vẽ node riêng với icon 🤖:
