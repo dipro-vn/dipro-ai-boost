@@ -180,6 +180,55 @@ hoặc
 
 ---
 
+## 4.6. Scoped Update — Artifact approved là immutable (áp dụng MỌI agent)
+
+> Rule này chống drift + bảo vệ nội dung user đã approve khỏi bị regenerate mà không hay biết. Áp dụng cho BA (SPEC/Figma), TL (Design-Technical), PM (PLAN), QC (test cases), Designer (Figma HiFi).
+
+### Nguyên tắc
+
+- **Default = scoped update**: khi user yêu cầu "sửa X" → chỉ đọc + update phần X + dependencies trực tiếp. KHÔNG regenerate toàn bộ artifact.
+- **Approved artifact ngoài scope = IMMUTABLE**: nếu output đã ở trạng thái `APPROVED` (theo state machine ở `.claude/ba-agent/figma-outputs/shared-rules.md` section "Strict Mode") → tuyệt đối KHÔNG được overwrite mà không có approval mở rộng.
+- **State sau update = `WAITING_APPROVAL`**: mọi scoped update phải reset trạng thái output đó về `WAITING_APPROVAL` (không tự động = `APPROVED` chỉ vì "đã sửa xong").
+- **Upstream change → downstream STALE**: nếu update artifact upstream (VD SPEC.md `## Screens`) → mọi downstream artifact tham chiếu (VD Figma Frame Output 3, HTML Prototype, test cases) tự động đánh dấu `STALE` — user quyết định có regenerate hay không.
+
+### Bảng scope per agent
+
+| Agent | Scope update mặc định | Impact ngoài scope → xử lý |
+|---|---|---|
+| BA | 1 section trong SPEC.md hoặc 1 Figma frame | Nếu ảnh hưởng screen/flow khác → báo `Potential Impact: <list>` + xin approve mở rộng trước khi sửa |
+| TL Design | 1 section trong Design-Technical.md | Nếu ảnh hưởng DB schema / API contract → báo BE task tương ứng cần rerun |
+| TL Tasks | 1 task file | Nếu đổi estimate / dependency → note vào PLAN.md |
+| PM | 1 section trong PLAN.md | Nếu đổi Critical Path → confirm với tất cả assignee |
+| QC | 1 test case module | Nếu ảnh hưởng regression suite → note lại |
+| Designer | 1 Figma frame | Nếu đổi design token → sync về `design_rule.md` |
+| Dev | Code trong scope task | Nếu ảnh hưởng consumer khác → dùng `tilth_deps` + hỏi TL trước |
+
+### Anti-pattern NGHIÊM CẤM
+
+- ❌ User yêu cầu "sửa lỗi typo trong SPEC" → BA regenerate toàn bộ SPEC (kể cả phần đã approve)
+- ❌ Tự động overwrite Figma frame đã approve mà không cảnh báo user
+- ❌ Silent regenerate downstream artifact khi upstream thay đổi (VD sửa `## Screens` mà tự động vẽ lại Figma Output 3 không hỏi)
+- ❌ Sau scoped update, tự set state = `APPROVED` (không hỏi user approve lại)
+- ❌ Reject request "sửa scoped" vì "phải regenerate tất cả cho consistent" — SAI, phải giữ scope tối thiểu
+
+### Đúng flow
+
+```
+User: "Sửa AC-05 trong SPEC.md"
+BA: 
+  1. Read chỉ section ## Acceptance Criteria (scoped)
+  2. Edit AC-05
+  3. Check impact: AC-05 có reference từ Screen Details / Non-Happy Case không?
+     → có 1 reference trong Screen Details of AX_FEAT_003
+  4. In: "Potential Impact: Screen Details AX_FEAT_003 có reference AC-05. Cần update?"
+  5. Chờ user confirm mở rộng scope
+  6. Sau update: reset state SPEC = WAITING_APPROVAL, note "Updated AC-05 + AX_FEAT_003 ref"
+  7. Nếu Figma Output 3 đã có mockup AX_FEAT_003 → note "Figma Output 3 STALE — regenerate mockup AX_FEAT_003?"
+  8. KHÔNG tự regenerate Figma
+```
+
+---
+
 ## 5. Stack constraints (kit default — không thương lượng trừ khi đổi qua `/init-kit`)
 
 | Layer | Bắt buộc | Tuyệt đối không |
