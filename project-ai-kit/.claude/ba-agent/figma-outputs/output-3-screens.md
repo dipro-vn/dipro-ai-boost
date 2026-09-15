@@ -191,3 +191,61 @@ BUTTONS:
 ```
 
 **BA KHÔNG tạo:** px, hex color, font-size, border-radius, component instances → đó là Designer-agent.
+
+---
+
+## Bổ sung 2 bảng mới cạnh Bảng ITEMS + ERROR SCENARIOS (BẮT BUỘC)
+
+> 2 bảng dưới đây bổ sung **CẠNH** bảng ITEMS/ERROR SCENARIOS hiện tại (đặt DƯỚI, cùng width). KHÔNG thay mockup phone. Mục đích: cho TL Design + QC + FE Dev đủ thông tin về states và navigation trace-back.
+
+### Bảng 3 — SCREEN STATES (8 state chuẩn)
+
+> Bắt buộc list mọi state screen có thể ở, không được silent-skip. State nào chưa có evidence → đánh dấu `UNKNOWN`.
+
+| State ID | Trigger | Visible / disabled items | System behavior | Exit condition |
+|---|---|---|---|---|
+| S01-default | Load lần đầu, đủ điều kiện | Tất cả items enabled | — | Tap CTA |
+| S02-loading | Đang fetch data | Skeleton loader thay content; CTA disabled | GET /api/... | Response về |
+| S03-success | Action success | Toast success + navigate | Redirect S1 kế | Auto 2s |
+| S04-empty | Data trống | Empty illustration + "Chưa có..." | — | Tap "Tạo mới" |
+| S05-validation-error | Form field invalid | Inline error dưới field; CTA disabled | — | User sửa field |
+| S06-system-error | API 500 / network | Banner đỏ + "Thử lại"; CTA disabled | Log Sentry | Tap Retry |
+| S07-disabled | Precondition không đủ (VD: chưa verify email) | CTA disabled + tooltip lý do | — | User đi verify |
+| S08-permission-denied | User không đủ role | Overlay + "Không có quyền" | Log audit | Back |
+
+**Rule bắt buộc:**
+- 8 state là **checklist tối đa** — nếu screen không có state nào (VD Detail read-only chỉ có S01 + S06) → xóa row không dùng, ghi note `Chỉ có 2/8 states`
+- State chưa có evidence từ SPEC/user → đánh `UNKNOWN` vào cột System behavior, KHÔNG tự invent
+- Row S05/S06 phải link về Exception Matrix ID trong Output 2 (VD "xem EX-01, EX-03")
+
+### Bảng 4 — NAVIGATION MAPPING (trace về Flow Manifest + Source Register)
+
+> Bảng này cho phép QC + FE Dev trace từng action trên screen về đúng transition trong Flow Output 2 VÀ về requirement gốc trong Source Register (SPEC.md). Chống drift 2 chiều: giữa screen action ↔ flow diagram, và giữa screen action ↔ requirement.
+
+| User/System action | From | Condition | To | Manifest transition ID | Source RQ-ID |
+|---|---|---|---|---|---|
+| Tap [Gọi ngay] | AX_FEAT_002 | CA Online | AX_FEAT_003 | CALL_D01_ONLINE | RQ-012 |
+| Tap [Gọi ngay] | AX_FEAT_002 | CA Offline | (disabled) | — | RQ-015 |
+| Tap [Gọi ngay] | AX_FEAT_002 | CA Busy | Tooltip "Đang bận" | — | RQ-016 |
+| Tap [Xem tất cả →] | AX_FEAT_002 | — | AX_FEAT_006 | HISTORY_NAV | RQ-020 |
+| Tap [←] | AX_FEAT_002 | — | AX_FEAT_001 | BACK_NAV | — (UI convention) |
+| System push arrival | AX_FEAT_003 | Actor B pick up | AX_FEAT_004 | CALL_D02_PICKUP | RQ-013 |
+| System timeout 30s | AX_FEAT_003 | Actor B không pick | AX_FEAT_005 (missed) | CALL_D02_TIMEOUT | RQ-014 |
+
+**Rule bắt buộc:**
+- Mọi button / interactive element trong Bảng ITEMS PHẢI có ≥ 1 row trong Navigation Mapping (kể cả action = `—` cho disabled state)
+- Cột "Manifest transition ID" trace về Flow diagram Output 2 — format `<FLOW>_<DECISION>_<CONDITION>` (VD `CALL_D01_ONLINE`). Nếu Output 2 chưa có transition ID → BA phải quay lại Output 2 thêm ID.
+- **Cột "Source RQ-ID"** trace về row trong `## Source Register` (SPEC.md):
+  - Row có business logic → PHẢI có RQ-ID (VD `RQ-012`) — nếu không có → row Source Register thiếu, BA phải bổ sung trước
+  - Row là UI convention thuần túy (back button, close icon) → để `— (UI convention)` explicit, không được để trống
+  - Row có RQ-ID classification `UNKNOWN` / `PROPOSAL` trong Source Register → thêm badge `⚠ UNKNOWN` / `⚠ PROPOSAL` sau ID (VD `RQ-021 ⚠ UNKNOWN`)
+- Row không có Manifest transition (VD tooltip disabled) → cột ID để `—`, nhưng phải có row để explicit "không navigate đi đâu"
+
+**Cross-verification khi Quality Gate O3:**
+- 100% Source RQ-ID phải tồn tại trong `## Source Register` — grep check
+- Row có Source RQ-ID `UNKNOWN` → phải có tương ứng entry trong Exception Matrix Output 2 (không được silent skip)
+
+**Downstream impact:**
+- FE Dev đọc bảng này biết đúng route + condition
+- QC đọc bảng này viết test case cho từng transition
+- TL Design verify không có action nào bị orphan (button không dẫn đi đâu mà không có lý do rõ ràng)

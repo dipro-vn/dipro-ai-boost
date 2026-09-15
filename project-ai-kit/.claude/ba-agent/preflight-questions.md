@@ -100,6 +100,88 @@ Phân biệt 3 câu trả lời của user + xử lý khác nhau:
 
 ---
 
+## Rules bắt buộc khi phân loại source input (BẮT BUỘC — áp dụng cùng lúc Bước 1.5)
+
+> Trước khi trình 10 câu checklist, BA PHẢI xác định loại input requirement user đưa vào và enforce 2 rule dưới để tránh hallucination navigation.
+
+### Rule R1 — Cấm suy navigation từ Simple Estimate
+
+**Khi input là Simple Estimate** (file `.xlsx` chỉ có function inventory / cost breakdown, không có flow diagram):
+
+- ❌ TUYỆT ĐỐI KHÔNG suy navigation order từ thứ tự dòng trong Estimate
+- ❌ KHÔNG dùng column "Feature Name" → suy Screen Flow
+- ✅ CHỈ dùng Estimate để lấy **scope / function inventory** (Function ID / In-scope / Related flow)
+
+**Bắt buộc:** BA PHẢI hỏi user câu 0.6 dưới trước khi bắt đầu Bước 4:
+
+```
+Input là Simple Estimate — KHÔNG có Business Overview Flow.
+Bạn muốn:
+  [A] Cung cấp Raw Overview Flow (paste text / gửi Figma sketch / vẽ tay)
+      → BA dùng làm source of truth cho navigation
+  [B] BA đề xuất Business Overview Flow từ Function Inventory
+      → mọi node/transition sẽ classify là [PROPOSAL — chờ BRSE approve]
+  [C] Dừng, quay lại thu thập Raw Overview Flow từ BRSE trước
+```
+
+Chờ user chọn 1 trong 3. KHÔNG được tự vẽ flow từ Estimate mà không hỏi. Nếu user chọn `[B]`, BA note rõ trong `## Source Register` mọi row liên quan navigation = `PROPOSAL`.
+
+### Rule R2 — Approved FigJam là navigation source of truth
+
+**Khi input có Approved FigJam** (URL `figma.com/board/...` + user note "đã approve"):
+
+- ✅ FigJam là **navigation source of truth** — mọi flow/transition/screen đặt theo FigJam
+- ✅ Requirement khác (SPEC cũ, meeting note, Estimate) chỉ bổ sung **business rule + validation**, KHÔNG được override navigation
+- ❌ KHÔNG được âm thầm sửa navigation dù thấy source khác nói khác — phải flag vào `## Source Register` với classification `CONFLICT`
+
+**Bắt buộc verify:** đọc FigJam qua `mcp__plugin_figma_figma__get_metadata` + `get_screenshot` trước khi viết Flow Tổng Quan. Nếu FigJam có node/connector không hiểu → ghi `UNKNOWN` vào Source Register, không tự đoán destination.
+
+### Rule R3 — Existing system / source code / Figma cũ là AS-IS, KHÔNG tự thành TO-BE
+
+**Trigger:** input có 1 trong các source sau (thường gặp khi maintain feature cũ hoặc build phiên bản mới):
+
+- Existing Figma file (Design/HiFi của phiên bản trước)
+- Existing source code (screenshot, repo path, exported HTML)
+- Existing production URL / staging URL
+- Screenshot màn hình app đang chạy
+
+**Rule bắt buộc:**
+
+- ✅ Coi các source trên là **AS-IS evidence** (hiện trạng đang có) — chỉ dùng để hiểu context, business rule đang chạy, edge case đã handle
+- ❌ TUYỆT ĐỐI KHÔNG copy AS-IS thành TO-BE mặc định — TO-BE là **đích user muốn đến**, có thể khác AS-IS nhiều
+- ❌ KHÔNG generate Output 1/2/3 y hệt phiên bản cũ mà không hỏi user
+
+**Bắt buộc hỏi user câu 0.7 trước Bước 4:**
+
+```
+Input có existing system / source cũ (Figma / code / screenshot / URL production).
+
+Bạn muốn BA:
+  [A] Dùng AS-IS làm baseline, TO-BE = AS-IS + delta user chỉ định
+      → BA sẽ list phần giữ nguyên vs phần thay đổi trước khi viết SPEC
+  [B] TO-BE khác AS-IS hoàn toàn (redesign) — chỉ dùng AS-IS để hiểu domain
+      → BA chỉ đọc AS-IS làm reference, không copy structure vào Output
+  [C] Delta-only — chỉ document phần THAY ĐỔI so với AS-IS, giữ nguyên phần khác
+      → SPEC focus vào changeset, không viết lại toàn bộ
+```
+
+Chờ user chọn. **KHÔNG được assume `[A]` chỉ vì "có existing → chắc user muốn giữ"**.
+
+**Xử lý theo lựa chọn:**
+
+| User chọn | Ứng xử |
+|---|---|
+| `[A]` AS-IS baseline | Source Register mọi row AS-IS = `FACT — existing`; mọi row delta user chỉ định = `PROPOSAL` hoặc `FACT` tùy nguồn |
+| `[B]` Redesign | Source Register mọi row AS-IS = `INFERENCE — reference only, cần verify TO-BE`; TO-BE viết mới hoàn toàn |
+| `[C]` Delta-only | SPEC chỉ có sections liên quan delta; `## BA Deliverables` note rõ "Delta of `<phiên bản AS-IS>`"; Traceability Matrix chỉ trace row mới/đổi |
+
+**Anti-pattern NGHIÊM CẤM:**
+- ❌ Đọc Figma cũ → tự vẽ Output 1 y hệt → báo "đã xong theo phiên bản cũ"
+- ❌ Screenshot màn hình prod → tự extract items table cho Output 3 → user tưởng đó là TO-BE
+- ❌ Existing source code có route `/users/:id` → tự đưa vào Navigation Mapping mà không hỏi TO-BE có giữ route đó không
+
+---
+
 ## 10 câu hỏi checklist chuẩn (hỏi sau Câu 0.4/0/0.5)
 
 1. Feature này phục vụ actor nào? (xem danh sách Actors trong `AGENTS.md`)

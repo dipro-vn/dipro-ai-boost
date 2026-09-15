@@ -2,11 +2,19 @@
 
 ## Output 2 — Screen Flow (N screen-flows tương ứng N business flows từ Output 1)
 
-> **Reference:** xem `example_output_2_screen_flow.png` — flow dọc + numbered badges tròn xanh, icon phân loại screen, decision diamond, có bảng text mô tả bên cạnh.
+> **⚠️ CHỌN LAYOUT TRƯỚC KHI VẼ** — chi tiết pixel-level đầy đủ nằm ở `.claude/skills/ba-figma-output/SKILL.md` §5.0:
+> - **Merged Branch (DEFAULT)** — single-actor / shared-cluster, phân nhánh gộp Happy·NG·Edge·Exceptional trong 1 sơ đồ. Reference: `.claude/skills/ba-figma-output/examples/output2_merged_branch.jpg`. Dùng cho đa số feature (form, CRUD, auth, checkout...).
+> - **Multi-Actor 4 Vùng (legacy)** — chỉ dùng khi feature có 2 actor tương tác đồng bộ real-time (VD VoIP call). Reference: `example_output_2_screen_flow.png` / `final_output_2.png`.
+>
+> Nội dung phần dưới đây mô tả cấu trúc chung (Bảng Index, Terminal Nodes, Exception Matrix) — áp dụng cho CẢ 2 layout. Cách vẽ flow diagram cụ thể xem SKILL.md §5A hoặc §5B tương ứng.
 
 > **⚠️ Prerequisite:** Output 1 PHẢI vẽ xong trước. Đếm N = số business flows trong Output 1 để làm input cho Output 2.
 
-**Bố cục frame Output 2 — N screen-flow groups (1 per business flow) + Bảng Index tổng:**
+**⚠️ Shared Cluster — khi N business flows dùng chung 1 cụm màn hình:**
+
+Nếu nhiều business flows ở Output 1 đều đi qua CÙNG 1 cụm màn hình dùng chung (VD: 5 flows khác nhau đều cần user Login/Đăng ký trước khi vào) → **KHÔNG lặp lại cụm đó N lần** — gộp thành **1 Group duy nhất**, ghi rõ tất cả N flow nguồn ở Start và fan-out N terminal ở cuối (chi tiết: SKILL.md §5B.1). Khi đó rule "số groups = số business flows" đổi thành **"số groups = số cụm màn hình độc lập"** (1 cụm có thể phục vụ nhiều flow). Ghi rõ trong report: `Group <X> phục vụ N flows: <list>`.
+
+**Bố cục frame Output 2 — N screen-flow groups (1 per business flow, hoặc 1 per shared cluster) + Bảng Index tổng:**
 
 ```
 ┌─────────────────────────────────────────────────────┬────────────────────┐
@@ -98,9 +106,14 @@ BẮT BUỘC — bảng liệt kê TẤT CẢ màn hình (kể cả Popup) với
 | Screen node | Rectangle 200×56px | Fill trắng, stroke `#0969DA` — icon 🖥 |
 | Popup node | Rectangle 200×56px nét đứt | Fill `#FBEEFF`, stroke `#6639BA` — icon 💬 |
 | Error/Toast node | Rectangle 200×56px nét đứt | Fill `#FFF6F5`, stroke `#CF222E` — icon ⚠ |
-| Decision | Diamond 44px | Fill `#FFF9EB`, stroke `#F4860C` — label "Yes/No" |
+| Decision | Diamond 44px (5A) hoặc rounded-rect có icon ◇ + rationale (5B) | Fill `#FFF9EB`, stroke `#F4860C` — label "Yes/No" |
 | Happy arrow | Line 2px solid | `#0969DA` |
 | Error arrow | Line 2px dashed | `#CF222E` |
+| **System node** (chỉ 5B) | Rectangle, icon ⚙ | Fill `#EDFDF0`, stroke `#1A7F37` — hành động backend tự động, KHÔNG phải Actor/Popup |
+| **NG node** (chỉ 5B — thay "Error/Toast" khi dùng Merged Branch) | Rectangle nét đứt, icon ⚠, vẽ INLINE ngay tại điểm phát sinh | Fill `#FFF6F5`, stroke `#CF222E` — chỉ dùng cho lỗi đã ĐỊNH NGHĨA rõ (FACT) |
+| **Edge / Exceptional box** (chỉ 5B) | Rectangle nét đứt, icon ▲, đặt trong panel riêng bên cạnh (KHÔNG inline) | Fill `#FBEEFF`, stroke `#6639BA` — case UNKNOWN/INFERENCE chưa rõ hành vi |
+
+**Rule NG vs Edge (chỉ áp dụng layout 5B — Merged Branch):** lỗi đã rõ cách xử lý (FACT) → vẽ **NG** inline trong flow chính; case chưa rõ hành vi cần BRSE confirm (UNKNOWN/INFERENCE) → **KHÔNG vẽ inline**, đưa vào Edge/Exceptional Panel (SKILL.md §5B.6). Mỗi box trong Edge/Exceptional Panel PHẢI trace được về 1 row trong Exception Matrix (⑤ bên dưới) classification `UNKNOWN`/`INFERENCE`.
 
 **Format mỗi screen node — PHẢI có 1 dòng mục đích:**
 ```
@@ -109,6 +122,79 @@ BẮT BUỘC — bảng liệt kê TẤT CẢ màn hình (kể cả Popup) với
 │    Hiển thị DS công ty, chọn để gọi │  ← mục đích 1 dòng
 └─────────────────────────────────────┘
 ```
+
+**⑥ TERMINAL NODES (BẮT BUỘC — list explicit endpoint mỗi flow):**
+
+> Terminal = điểm kết thúc flow (không có transition đi tiếp). Bảng này list explicit mọi terminal per flow để BA/BRSE/QC verify không sót endpoint nào. Đặt DƯỚI Bảng Screen Index, TRÊN Exception Matrix.
+
+Bảng đặt bên phải frame, cùng width với Bảng Index:
+
+| Flow ID | Terminal ID | Type | Destination sau terminal | Status | Source RQ-ID |
+|---|---|---|---|---|---|
+| AUTH_REGISTER | AUTH_SUCCESS | Success | Redirect ORIGINAL_ENTRY (URL trước khi login) | FACT | RQ-018 |
+| AUTH_REGISTER | AUTH_CANCELED | Exit (user cancel) | Redirect HOME | FACT | RQ-019 |
+| AUTH_REGISTER | AUTH_BLOCKED_EMAIL | Error (blocking) | Show modal + không transition | FACT | RQ-020 |
+| CALL_FLOW | CALL_ENDED_NORMAL | Success | Back to AX_FEAT_002 (Company Detail) + toast "Đã kết thúc" | FACT | RQ-025 |
+| CALL_FLOW | CALL_MISSED | Error (timeout) | Show AX_FEAT_005 (Missed screen) | FACT | RQ-026 |
+| CALL_FLOW | CALL_REJECTED | Error (peer reject) | Toast + back to AX_FEAT_002 | UNKNOWN | RQ-027 ⚠ chờ BRSE confirm |
+
+**Enum cột Type:**
+- `Success` — flow hoàn tất đúng happy path
+- `Exit` — user chủ động thoát (cancel, back button, close)
+- `Error (blocking)` — lỗi chặn user tiếp tục, không có retry
+- `Error (retry)` — lỗi có retry — link về Exception Matrix ID tương ứng
+- `Timeout` — hết thời gian chờ system
+
+**Enum cột Status:**
+- `FACT` — destination + hành vi đã confirmed bởi BRSE
+- `PROPOSAL` — BA đề xuất, chờ approve
+- `UNKNOWN` — chưa rõ destination — BLOCKING cho Phase 3
+
+**Rule bắt buộc:**
+- **Mỗi flow trong Output 1 PHẢI có ≥ 2 terminals**: ít nhất 1 Success + 1 Exit (user có thể luôn cancel/back)
+- Row `UNKNOWN` → PHẢI có tương ứng row trong Exception Matrix (⑤) với classification `UNKNOWN`
+- Cột "Destination sau terminal" KHÔNG được để trống — nếu chưa rõ ghi `UNKNOWN — chờ BRSE`
+- Cross-verification: count terminal = count end node (⏹ ellipse) trong flow diagram Figma — mismatch → refactor
+
+**Downstream impact:**
+- FE Dev đọc bảng này biết đúng redirect logic sau mỗi endpoint
+- QC viết test case cho mỗi terminal (positive + negative)
+- TL Design biết endpoint nào cần API call log/analytics
+
+---
+
+**⑤ EXCEPTION MATRIX (BẮT BUỘC — bổ sung cho Non-Happy sub-zone, đặt dưới Bảng Index):**
+
+> Non-Happy sub-zone hiện tại vẽ các trigger + luồng lỗi VISUAL trên Figma. Exception Matrix bổ sung dạng bảng để **phân loại từng exception** theo status: có rule rõ ràng hay chưa, để BA/BRSE biết cần confirm gì trước Phase 3.
+
+Bảng đặt dưới Bảng Screen Index bên phải frame, cùng width:
+
+| ID | Trigger (nguyên nhân) | Current requirement | Classification | Agent assessment | Need confirm? | Impact nếu bỏ qua |
+|---|---|---|---|---|---|---|
+| EX-01 | Mất mạng khi submit | Chưa có trong SPEC | UNKNOWN | Undefined behavior | ✅ Yes | User double-submit → duplicate record |
+| EX-02 | Email đã tồn tại | Toast "Email đã đăng ký" | FACT | Đã đủ | — | — |
+| EX-03 | Payment timeout 30s | Retry 3 lần rồi báo lỗi | PROPOSAL | BA đề xuất | ✅ Yes | Cần BRSE quyết retry count/interval |
+| EX-04 | Push notification bị deny | Fallback SMS OTP | INFERENCE | Suy từ pattern chung | ✅ Yes | Nếu sai → user không nhận được OTP |
+| EX-05 | Session expired | Redirect Login + toast | FACT | Đã đủ | — | — |
+
+**Enum cột Classification** (giống Source Register):
+- `FACT` — user/BRSE đã confirm rule cụ thể
+- `PROPOSAL` — BA đề xuất, chờ BRSE approve
+- `INFERENCE` — BA suy từ pattern chung, cần verify
+- `UNKNOWN` — chưa có rule, blocking cho Phase 3
+- `CONFLICT` — có ≥ 2 source mâu thuẫn
+
+**Rule bắt buộc:**
+- Mọi Non-Happy trigger vẽ trên Figma PHẢI có 1 row trong Exception Matrix
+- Row `UNKNOWN` / `CONFLICT` KHÔNG được vẽ như FACT trong flow chính:
+  - Layout 5A (multi-actor): vẽ dưới dạng ⚠ UNCLEAR node (dashed border + màu vàng `#FEE28A`) trong Non-Happy sub-zone
+  - Layout 5B (merged branch, default): vẽ thành 1 box trong **Edge/Exceptional Panel** riêng (dashed `#FBEEFF`/`#6639BA`, xem SKILL.md §5B.6) — KHÔNG đặt inline trong flow chính
+- Sau Bảng Index + Exception Matrix, BA in ra count summary: `Tổng: N exceptions (FACT: X · PROPOSAL: Y · INFERENCE: Z · UNKNOWN: W · CONFLICT: V)`
+
+**Downstream impact:**
+- TL Design đọc row `FACT` để design error handling logic
+- QC đọc row `FACT + PROPOSAL` để viết test case
+- Row `UNKNOWN + CONFLICT` → PM tạo ticket hỏi BRSE trước khi Phase 3
 
 **AI Suggestion step — nếu feature có AI:**
 

@@ -8,6 +8,7 @@ Cấu trúc bắt buộc:
 
 ## Mô tả nghiệp vụ
 ## BA Deliverables        ← BẮT BUỘC — entry point cho downstream (TL/Designer/QC), format ở figma-outputs/shared-rules.md
+## Source Register        ← BẮT BUỘC — classify từng requirement (FACT/PROPOSAL/INFERENCE/UNKNOWN/CONFLICT) + evidence
 ## Actors & Preconditions
 ## Flow Tổng Quan
 ## Happy Path
@@ -18,6 +19,32 @@ Cấu trúc bắt buộc:
 ## Screen Details
 ## Responsive Requirements
 ```
+
+**⚠️ `## Source Register` — vị trí + nội dung (BẮT BUỘC):**
+
+- Đặt NGAY SAU `## BA Deliverables`, TRƯỚC `## Actors & Preconditions`
+- Mục đích: **chống hallucination** — mọi kết luận trong SPEC/Flow/Screen PHẢI trace về source. Downstream (TL/QC/Designer) đọc biết chỗ nào là fact vs propose vs inference vs unknown.
+- Bảng bắt buộc:
+
+```markdown
+## Source Register
+
+> Mọi statement trong SPEC này PHẢI trace về 1 row dưới. `FACT` = user/BRSE đã confirm; `PROPOSAL` = BA đề xuất, chờ approve; `INFERENCE` = BA suy luận từ context, cần verify; `UNKNOWN` = chưa rõ, đưa vào Q&A; `CONFLICT` = ≥2 source mâu thuẫn.
+
+| ID | Statement | Classification | Evidence (file + section/timestamp/user turn) | Confidence | Used in flow? |
+|---|---|---|---|---|---|
+| RQ-001 | Actor A phải login trước khi tạo order | FACT | user turn 3 ("phải login trước") | High | Yes — Flow Tổng Quan bước 1 |
+| RQ-002 | Payment gateway là elepay | PROPOSAL | BA đề xuất dựa POLICIES §5 | Medium | No — chờ BRSE approve |
+| RQ-003 | Refund window 7 ngày | INFERENCE | suy từ industry standard, chưa hỏi | Low | No — đưa vào Q&A |
+| RQ-004 | Có SMS OTP hay không? | UNKNOWN | user chưa trả lời | — | No — blocking |
+| RQ-005 | Meeting note nói "1 ngày" nhưng SPEC cũ nói "3 ngày" | CONFLICT | meeting 12/09 vs SPEC v2 | — | No — cần BRSE quyết |
+```
+
+**Rule bắt buộc:**
+- Chỉ `FACT` được đưa vào Happy Path / AC như kết luận chính thức
+- `PROPOSAL` phải có badge `[PROPOSAL — chờ BRSE approve]` trong SPEC body nơi được reference
+- `INFERENCE` phải có badge `[INFERENCE — cần verify]` + list vào `## Alternative Flows & Edge Cases` như giả định
+- `UNKNOWN` và `CONFLICT` KHÔNG được nối vào flow bằng giả định — bắt buộc list vào cuối SPEC section `## Open Questions` (tạo thêm nếu chưa có)
 
 **⚠️ `## BA Deliverables` — vị trí + nội dung:**
 - Đặt NGAY SAU `## Mô tả nghiệp vụ`, TRƯỚC `## Actors & Preconditions`

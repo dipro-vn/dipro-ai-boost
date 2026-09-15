@@ -2,11 +2,19 @@
 
 ## Output 2 — Screen Flow (N screen-flows tương ứng N business flows từ Output 1)
 
-> **Reference:** xem `example_output_2_screen_flow.png` — flow dọc + numbered badges tròn xanh, icon phân loại screen, decision diamond, có bảng text mô tả bên cạnh.
+> **⚠️ CHỌN LAYOUT TRƯỚC KHI VẼ** — chi tiết pixel-level đầy đủ nằm ở `.claude/skills/ba-figma-output/SKILL.md` §5.0:
+> - **Merged Branch (DEFAULT)** — single-actor / shared-cluster, phân nhánh gộp Happy·NG·Edge·Exceptional trong 1 sơ đồ. Reference: `.claude/skills/ba-figma-output/examples/output2_merged_branch.jpg`. Dùng cho đa số feature (form, CRUD, auth, checkout...).
+> - **Multi-Actor 4 Vùng (legacy)** — chỉ dùng khi feature có 2 actor tương tác đồng bộ real-time (VD VoIP call). Reference: `example_output_2_screen_flow.png` / `final_output_2.png`.
+>
+> Nội dung phần dưới đây mô tả cấu trúc chung (Bảng Index, Terminal Nodes, Exception Matrix) — áp dụng cho CẢ 2 layout. Cách vẽ flow diagram cụ thể xem SKILL.md §5A hoặc §5B tương ứng.
 
 > **⚠️ Prerequisite:** Output 1 PHẢI vẽ xong trước. Đếm N = số business flows trong Output 1 để làm input cho Output 2.
 
-**Bố cục frame Output 2 — N screen-flow groups (1 per business flow) + Bảng Index tổng:**
+**⚠️ Shared Cluster — khi N business flows dùng chung 1 cụm màn hình:**
+
+Nếu nhiều business flows ở Output 1 đều đi qua CÙNG 1 cụm màn hình dùng chung (VD: 5 flows khác nhau đều cần user Login/Đăng ký trước khi vào) → **KHÔNG lặp lại cụm đó N lần** — gộp thành **1 Group duy nhất**, ghi rõ tất cả N flow nguồn ở Start và fan-out N terminal ở cuối (chi tiết: SKILL.md §5B.1). Khi đó rule "số groups = số business flows" đổi thành **"số groups = số cụm màn hình độc lập"** (1 cụm có thể phục vụ nhiều flow). Ghi rõ trong report: `Group <X> phục vụ N flows: <list>`.
+
+**Bố cục frame Output 2 — N screen-flow groups (1 per business flow, hoặc 1 per shared cluster) + Bảng Index tổng:**
 
 ```
 ┌─────────────────────────────────────────────────────┬────────────────────┐
@@ -98,9 +106,14 @@ BẮT BUỘC — bảng liệt kê TẤT CẢ màn hình (kể cả Popup) với
 | Screen node | Rectangle 200×56px | Fill trắng, stroke `#0969DA` — icon 🖥 |
 | Popup node | Rectangle 200×56px nét đứt | Fill `#FBEEFF`, stroke `#6639BA` — icon 💬 |
 | Error/Toast node | Rectangle 200×56px nét đứt | Fill `#FFF6F5`, stroke `#CF222E` — icon ⚠ |
-| Decision | Diamond 44px | Fill `#FFF9EB`, stroke `#F4860C` — label "Yes/No" |
+| Decision | Diamond 44px (5A) hoặc rounded-rect có icon ◇ + rationale (5B) | Fill `#FFF9EB`, stroke `#F4860C` — label "Yes/No" |
 | Happy arrow | Line 2px solid | `#0969DA` |
 | Error arrow | Line 2px dashed | `#CF222E` |
+| **System node** (chỉ 5B) | Rectangle, icon ⚙ | Fill `#EDFDF0`, stroke `#1A7F37` — hành động backend tự động, KHÔNG phải Actor/Popup |
+| **NG node** (chỉ 5B — thay "Error/Toast" khi dùng Merged Branch) | Rectangle nét đứt, icon ⚠, vẽ INLINE ngay tại điểm phát sinh | Fill `#FFF6F5`, stroke `#CF222E` — chỉ dùng cho lỗi đã ĐỊNH NGHĨA rõ (FACT) |
+| **Edge / Exceptional box** (chỉ 5B) | Rectangle nét đứt, icon ▲, đặt trong panel riêng bên cạnh (KHÔNG inline) | Fill `#FBEEFF`, stroke `#6639BA` — case UNKNOWN/INFERENCE chưa rõ hành vi |
+
+**Rule NG vs Edge (chỉ áp dụng layout 5B — Merged Branch):** lỗi đã rõ cách xử lý (FACT) → vẽ **NG** inline trong flow chính; case chưa rõ hành vi cần BRSE confirm (UNKNOWN/INFERENCE) → **KHÔNG vẽ inline**, đưa vào Edge/Exceptional Panel (SKILL.md §5B.6). Mỗi box trong Edge/Exceptional Panel PHẢI trace được về 1 row trong Exception Matrix (⑤ bên dưới) classification `UNKNOWN`/`INFERENCE`.
 
 **Format mỗi screen node — PHẢI có 1 dòng mục đích:**
 ```
@@ -173,7 +186,9 @@ Bảng đặt dưới Bảng Screen Index bên phải frame, cùng width:
 
 **Rule bắt buộc:**
 - Mọi Non-Happy trigger vẽ trên Figma PHẢI có 1 row trong Exception Matrix
-- Row `UNKNOWN` / `CONFLICT` KHÔNG được vẽ vào Non-Happy sub-zone như FACT — chỉ vẽ dưới dạng ⚠ UNCLEAR node (dashed border + màu vàng `#FEE28A`) để user biết cần confirm
+- Row `UNKNOWN` / `CONFLICT` KHÔNG được vẽ như FACT trong flow chính:
+  - Layout 5A (multi-actor): vẽ dưới dạng ⚠ UNCLEAR node (dashed border + màu vàng `#FEE28A`) trong Non-Happy sub-zone
+  - Layout 5B (merged branch, default): vẽ thành 1 box trong **Edge/Exceptional Panel** riêng (dashed `#FBEEFF`/`#6639BA`, xem SKILL.md §5B.6) — KHÔNG đặt inline trong flow chính
 - Sau Bảng Index + Exception Matrix, BA in ra count summary: `Tổng: N exceptions (FACT: X · PROPOSAL: Y · INFERENCE: Z · UNKNOWN: W · CONFLICT: V)`
 
 **Downstream impact:**
