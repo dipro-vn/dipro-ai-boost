@@ -9,11 +9,11 @@
 Output 1, 2, 3 PHẢI vẽ theo thứ tự tuần tự, KHÔNG được vẽ song song:
 
 1. **Output 1** — Flow Tổng Quan phải vẽ XONG trước (đây là source of truth về số business flows N)
-2. **Output 2** — Screen Flow dựa vào Output 1: PHẢI vẽ N screen-flows tương ứng với N business flows từ Output 1 (VD Output 1 có 5 flows → Output 2 có 5 screen-flows). Bảng SCREEN INDEX tổng hợp vẫn giữ.
-3. **Output 3** — Screens + Items PHẢI group theo cùng N business flows đó (VD 5 groups, mỗi group chứa mockup rows của screens thuộc flow đó)
+2. **Output 2** — Screen Flow dựa vào Output 1: PHẢI vẽ N screen-flows tương ứng với N business flows từ Output 1 (VD Output 1 có 5 flows → Output 2 có 5 screen-flows). Bảng SCREEN INDEX tổng hợp vẫn giữ. **Ngoại lệ Shared Cluster:** nếu M trong N flows dùng chung 1 cụm màn hình (VD Auth) → gộp thành 1 group duy nhất thay vì lặp lại M lần (chi tiết `output-2-screen-flow.md` + SKILL.md §5B.1) — khi đó "N" ở cross-verification dưới đây tính theo **số cụm màn hình độc lập**, không phải số flow thô.
+3. **Output 3** — Screens + Items PHẢI group theo cùng cấu trúc groups đó ở Output 2 (mỗi group Output 2 → 1 group Output 3 tương ứng, kể cả group là shared cluster)
 
 Cross-verification bắt buộc:
-- Số business flows Output 1 = số screen-flow groups Output 2 = số groups Output 3
+- Số business flows Output 1 = số screen-flow groups Output 2 = số groups Output 3 (đã tính gộp shared cluster nếu có)
 - Nếu không khớp → refactor để khớp, KHÔNG bỏ qua
 
 ---
@@ -129,6 +129,105 @@ Bước 5.5 Visual Recheck → Bước 5.6 Self-Feedback → Output 4 HTML → R
 
 ---
 
+## ⚠️ Strict Mode — Human Approval Gate sau mỗi Output (BẮT BUỘC khi SCOPE_TYPE = [B]/[C])
+
+> **Trigger:** `SCOPE_TYPE = [B]` (cụm chức năng) hoặc `[C]` (toàn hệ thống). Không áp dụng cho `[A]` (đơn lẻ) — dùng Gate A/B1/B2 nhẹ ở trên là đủ.
+>
+> **Mục đích:** cho stakeholder Nhật / BRSE / dự án enterprise — mỗi output phải formal approve trước khi chuyển tiếp. Chống drift + audit trail.
+
+### 5 Approval Gate cứng (Strict Mode)
+
+Sau mỗi output, BA PHẢI in block dưới đây rồi DỪNG hoàn toàn — chỉ chạy tiếp khi user reply `Approve` / `OK` / `Next`. Reply mơ hồ (VD "ok à", "tiếp") → hỏi lại confirm.
+
+```
+✅ Output <N> completed
+Quality Gate: <PASS / FAIL (list issues)>
+Artifacts:
+  - <path/URL 1>
+  - <path/URL 2>
+Status: WAITING FOR BRSE APPROVAL
+
+Reply:
+  - "Approve" hoặc "Next" → BA chuyển sang Output <N+1>
+  - "Reject: <lý do>" → BA sửa output hiện tại rồi lại chờ approve
+  - "Skip Output <N+1>" → BA note vào status + jump gate kế
+```
+
+**Trạng thái state machine per output:**
+
+| State | Ý nghĩa | Transition rules |
+|---|---|---|
+| `DRAFT` | Đang vẽ, chưa xong | → `QUALITY_PASS` khi Bước 5.5 verify pass |
+| `QUALITY_PASS` | Đã qua Bước 5.5 recheck, chờ user approve | → `WAITING_APPROVAL` khi in block gate |
+| `WAITING_APPROVAL` | Đã in block gate, đang chờ user reply | → `APPROVED` khi user Approve · → `DRAFT` khi user Reject |
+| `APPROVED` | User đã reply Approve → chuyển output kế | → `STALE` khi upstream thay đổi · → `WAITING_APPROVAL` khi scoped update |
+| `BLOCKED` | Thiếu prerequisite (VD: Output 2 chờ Output 1 approve) | → `DRAFT` khi prerequisite resolve |
+| `STALE` | Đã `APPROVED` nhưng upstream output đã thay đổi → nội dung hiện tại lỗi thời | → `DRAFT` khi user quyết regenerate · → `APPROVED` khi user note "ignore upstream change, giữ nguyên" |
+
+**Rule state `STALE` (BẮT BUỘC):**
+
+Khi upstream output N thay đổi (VD user request scoped update Output 2), tất cả downstream output đã `APPROVED` tham chiếu N tự động chuyển sang `STALE`:
+
+| Upstream thay đổi | Downstream tự mark `STALE` |
+|---|---|
+| Output 1 (Flow Tổng Quan) | Output 2 + Output 3 + Output 4 + Output 5 |
+| Output 2 (Screen Flow, Bảng Index, Exception Matrix) | Output 3 + Output 4 + Output 5 |
+| Output 3 (Screens, Items, States, Navigation) | Output 4 + Output 5 |
+| Output 4 (HTML Prototype) | Output 5 (Consistency Report) |
+| SPEC.md `## Source Register` | Output 5 `audit/traceability.md` |
+
+BA phải in block sau khi phát hiện `STALE`:
+
+```
+⚠️ Downstream STALE detected sau khi update Output <N>:
+  - Output <N+1>: STALE — <lý do: transition ID xxx đã đổi>
+  - Output <N+2>: STALE — <lý do>
+
+Xử lý:
+  [A] Regenerate downstream (theo scoped update, không phá phần không liên quan)
+  [B] Giữ nguyên downstream — accept gap, note vào Known Gaps
+  [C] Rollback change Output <N>
+```
+
+Chờ user chọn. KHÔNG được silent regenerate hoặc silent ignore.
+
+### Strict Mode gate flow
+
+```
+Vẽ Output 1 → Quality Gate O1 → WAITING_APPROVAL → [user Approve]
+   ↓
+Vẽ Output 2 → Quality Gate O2 → WAITING_APPROVAL → [user Approve]
+   ↓
+Vẽ Output 3 → Quality Gate O3 → WAITING_APPROVAL → [user Approve]
+   ↓
+Vẽ Output 4 (HTML) → Quality Gate O4 → WAITING_APPROVAL → [user Approve]
+   ↓
+Vẽ Output 5 (MkDocs) → Final Consistency Gate → WAITING_FINAL_APPROVAL → [user Final Approve]
+```
+
+**Anti-pattern NGHIÊM CẤM khi Strict Mode:**
+- ❌ Batch 2+ output rồi mới xin approve 1 lần
+- ❌ Tự chạy Output N+1 khi user reply "ok" mà chưa confirm rõ ràng (mơ hồ = chưa approve)
+- ❌ Skip 1 gate vì "output nhỏ, chắc user không quan tâm"
+- ❌ Nếu user không reply trong 2 turn → tự chạy tiếp (KHÔNG được — phải nhắc lại gate mỗi turn cho đến khi có Approve/Reject)
+
+### Chọn mode nhanh
+
+| SCOPE_TYPE | Mode gate |
+|---|---|
+| `[A]` | **Light Mode** — Gate A + B2 (2 gate) |
+| `[B]` | **Strict Mode** — 5 Approval Gate + Gate B1/B2 vẫn giữ |
+| `[C]` | **Strict Mode** — 5 Approval Gate + Gate B1/B2 vẫn giữ |
+
+BA phải in ra đầu Bước 5:
+
+```
+Mode gate: <Light / Strict> (dựa vào SCOPE_TYPE = <A/B/C>)
+Sẽ có <2 / 5> gate hỏi trong quá trình vẽ.
+```
+
+---
+
 ## Bước 5 preamble — Figma Design Output (BẮT BUỘC sau Bước 4.6)
 
 > Dùng **Figma Design file** (`/design/` URL) từ `FIGMA_OUTPUT_URL` đã hỏi ở Bước 2b.
@@ -151,15 +250,16 @@ skill: figma:figma-use   ← đọc trước use_figma (rule quan trọng về f
 
 ## Reference examples — BẮT BUỘC xem trước khi vẽ
 
-BA phải xem 3 example images trong `.claude/skills/ba-figma-output/examples/`:
+BA phải xem example images trong `.claude/skills/ba-figma-output/examples/`:
 
 | File | Xem để hiểu |
 |---|---|
 | `example_output_1.png` | **Sitemap kiểu WBS tree** — actor icon + hành động, có illustration (icon người/xe/laptop...) |
-| `example_output_2_screen_flow.png` | **Screen flow dạng vertical + numbered badges** — icon xanh/hồng/cam theo loại screen, decision diamond, có bảng text bên cạnh |
+| `output2_merged_branch.jpg` | **Output 2 — DEFAULT.** Flow hợp nhất phân nhánh (NHÁNH A/B) + NG inline + System (xanh lá) + Edge/Exceptional Panel riêng bên cạnh. Chọn khi feature single-actor / shared-cluster (đa số trường hợp) — chi tiết SKILL.md §5B |
+| `example_output_2_screen_flow.png` / `final_output_2.png` | **Output 2 — Legacy.** 4 vùng DA/CA/Non-Happy/Index, chỉ dùng khi feature có 2 actor đồng bộ real-time (VD VoIP call) — chi tiết SKILL.md §5A |
 | `example_output_3.png` | **Mô tả màn hình** — mỗi item trên UI đều đánh số + text bên cạnh (Title / Mô tả / Mục đích) — KHÔNG lược bỏ item nào |
 
-Load bằng `Read` tool trước khi bắt đầu Output tương ứng.
+Load bằng `Read` tool trước khi bắt đầu Output tương ứng. Với Output 2, chỉ đọc ĐÚNG 1 file theo layout đã chọn (xem SKILL.md §5.0) — không đọc cả 2.
 
 ---
 
@@ -182,7 +282,7 @@ Load bằng `Read` tool trước khi bắt đầu Output tương ứng.
 
 ## Visual conventions — NHẤT QUÁN giữa cả 2 tool
 
-Màu sắc và ý nghĩa KHÔNG thay đổi dù dùng FigJam hay Design:
+Màu sắc và ý nghĩa KHÔNG thay đổi dù dùng FigJam hay Design. Bảng dưới áp dụng cho Output 1, Output 3, và Output 2 layout 5A (multi-actor):
 
 | Element | Màu fill | Màu stroke | Ý nghĩa |
 |---|---|---|---|
@@ -196,6 +296,16 @@ Màu sắc và ý nghĩa KHÔNG thay đổi dù dùng FigJam hay Design:
 | Arrow happy path | — | `#0969DA` | Luồng chính |
 | Arrow error | — | `#CF222E` (dashed) | Luồng lỗi |
 | Arrow cross-actor | — | `#6639BA` | Kết nối 2 actor |
+
+**Output 2 layout 5B (merged branch, default)** dùng biến thể theo LOẠI NODE thay vì theo actor (chi tiết SKILL.md §1 + §5B):
+
+| Node type | Fill | Stroke | Ý nghĩa |
+|---|---|---|---|
+| Screen | `#E8F4FD` | `#0969DA` | Màn hình user thao tác |
+| Decision | `#FFF9EB` | `#F4860C` | Điểm rẽ nhánh |
+| System | `#EDFDF0` | `#1A7F37` | Hành động backend tự động — KHÔNG phải Actor B |
+| NG | `#FFF6F5` | `#CF222E` (dashed) | Lỗi ĐÃ ĐỊNH NGHĨA rõ (FACT), vẽ inline tại điểm phát sinh |
+| Edge / Exceptional | `#FBEEFF` | `#6639BA` (dashed) | Case CHƯA rõ hành vi (UNKNOWN/INFERENCE), tách panel riêng bên cạnh |
 
 ---
 

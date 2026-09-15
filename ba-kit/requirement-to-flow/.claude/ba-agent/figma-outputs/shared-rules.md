@@ -9,11 +9,11 @@
 Output 1, 2, 3 PHẢI vẽ theo thứ tự tuần tự, KHÔNG được vẽ song song:
 
 1. **Output 1** — Flow Tổng Quan phải vẽ XONG trước (đây là source of truth về số business flows N)
-2. **Output 2** — Screen Flow dựa vào Output 1: PHẢI vẽ N screen-flows tương ứng với N business flows từ Output 1 (VD Output 1 có 5 flows → Output 2 có 5 screen-flows). Bảng SCREEN INDEX tổng hợp vẫn giữ.
-3. **Output 3** — Screens + Items PHẢI group theo cùng N business flows đó (VD 5 groups, mỗi group chứa mockup rows của screens thuộc flow đó)
+2. **Output 2** — Screen Flow dựa vào Output 1: PHẢI vẽ N screen-flows tương ứng với N business flows từ Output 1 (VD Output 1 có 5 flows → Output 2 có 5 screen-flows). Bảng SCREEN INDEX tổng hợp vẫn giữ. **Ngoại lệ Shared Cluster:** nếu M trong N flows dùng chung 1 cụm màn hình (VD Auth) → gộp thành 1 group duy nhất thay vì lặp lại M lần (chi tiết `output-2-screen-flow.md` + SKILL.md §5B.1) — khi đó "N" ở cross-verification dưới đây tính theo **số cụm màn hình độc lập**, không phải số flow thô.
+3. **Output 3** — Screens + Items PHẢI group theo cùng cấu trúc groups đó ở Output 2 (mỗi group Output 2 → 1 group Output 3 tương ứng, kể cả group là shared cluster)
 
 Cross-verification bắt buộc:
-- Số business flows Output 1 = số screen-flow groups Output 2 = số groups Output 3
+- Số business flows Output 1 = số screen-flow groups Output 2 = số groups Output 3 (đã tính gộp shared cluster nếu có)
 - Nếu không khớp → refactor để khớp, KHÔNG bỏ qua
 
 ---
@@ -250,15 +250,16 @@ skill: figma:figma-use   ← đọc trước use_figma (rule quan trọng về f
 
 ## Reference examples — BẮT BUỘC xem trước khi vẽ
 
-BA phải xem 3 example images trong `.claude/skills/ba-figma-output/examples/`:
+BA phải xem example images trong `.claude/skills/ba-figma-output/examples/`:
 
 | File | Xem để hiểu |
 |---|---|
 | `example_output_1.png` | **Sitemap kiểu WBS tree** — actor icon + hành động, có illustration (icon người/xe/laptop...) |
-| `example_output_2_screen_flow.png` | **Screen flow dạng vertical + numbered badges** — icon xanh/hồng/cam theo loại screen, decision diamond, có bảng text bên cạnh |
+| `output2_merged_branch.jpg` | **Output 2 — DEFAULT.** Flow hợp nhất phân nhánh (NHÁNH A/B) + NG inline + System (xanh lá) + Edge/Exceptional Panel riêng bên cạnh. Chọn khi feature single-actor / shared-cluster (đa số trường hợp) — chi tiết SKILL.md §5B |
+| `example_output_2_screen_flow.png` / `final_output_2.png` | **Output 2 — Legacy.** 4 vùng DA/CA/Non-Happy/Index, chỉ dùng khi feature có 2 actor đồng bộ real-time (VD VoIP call) — chi tiết SKILL.md §5A |
 | `example_output_3.png` | **Mô tả màn hình** — mỗi item trên UI đều đánh số + text bên cạnh (Title / Mô tả / Mục đích) — KHÔNG lược bỏ item nào |
 
-Load bằng `Read` tool trước khi bắt đầu Output tương ứng.
+Load bằng `Read` tool trước khi bắt đầu Output tương ứng. Với Output 2, chỉ đọc ĐÚNG 1 file theo layout đã chọn (xem SKILL.md §5.0) — không đọc cả 2.
 
 ---
 
@@ -281,7 +282,7 @@ Load bằng `Read` tool trước khi bắt đầu Output tương ứng.
 
 ## Visual conventions — NHẤT QUÁN giữa cả 2 tool
 
-Màu sắc và ý nghĩa KHÔNG thay đổi dù dùng FigJam hay Design:
+Màu sắc và ý nghĩa KHÔNG thay đổi dù dùng FigJam hay Design. Bảng dưới áp dụng cho Output 1, Output 3, và Output 2 layout 5A (multi-actor):
 
 | Element | Màu fill | Màu stroke | Ý nghĩa |
 |---|---|---|---|
@@ -295,6 +296,16 @@ Màu sắc và ý nghĩa KHÔNG thay đổi dù dùng FigJam hay Design:
 | Arrow happy path | — | `#0969DA` | Luồng chính |
 | Arrow error | — | `#CF222E` (dashed) | Luồng lỗi |
 | Arrow cross-actor | — | `#6639BA` | Kết nối 2 actor |
+
+**Output 2 layout 5B (merged branch, default)** dùng biến thể theo LOẠI NODE thay vì theo actor (chi tiết SKILL.md §1 + §5B):
+
+| Node type | Fill | Stroke | Ý nghĩa |
+|---|---|---|---|
+| Screen | `#E8F4FD` | `#0969DA` | Màn hình user thao tác |
+| Decision | `#FFF9EB` | `#F4860C` | Điểm rẽ nhánh |
+| System | `#EDFDF0` | `#1A7F37` | Hành động backend tự động — KHÔNG phải Actor B |
+| NG | `#FFF6F5` | `#CF222E` (dashed) | Lỗi ĐÃ ĐỊNH NGHĨA rõ (FACT), vẽ inline tại điểm phát sinh |
+| Edge / Exceptional | `#FBEEFF` | `#6639BA` (dashed) | Case CHƯA rõ hành vi (UNKNOWN/INFERENCE), tách panel riêng bên cạnh |
 
 ---
 

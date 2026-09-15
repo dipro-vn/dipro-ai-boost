@@ -118,7 +118,7 @@ Hãy là BA, đọc file requirements/feature_A.docx và làm SPEC cho feature n
 | # | Output | Nội dung chính | Format / Nơi lưu |
 |---|---|---|---|
 | 1 | **Flow Tổng Quan** | Business Logic Flow (Actor → Trigger → Function → Technology → Outcome) + Sitemap WBS Tree + Technology Stack table | Figma Frame (node trên page user cung cấp) |
-| 2 | **Screen Flow** | N vùng theo business logic (Happy per actor + Non-Happy tổng hợp) + Bảng Screen Index (screen code · loại · mô tả) | Figma Frame |
+| 2 | **Screen Flow** | Flow hợp nhất phân nhánh (Happy + NG inline + System + Edge/Exceptional Panel riêng) cho feature single-actor/shared-cluster, hoặc 4 vùng DA/CA cho feature 2-actor real-time + Bảng Screen Index (screen code · loại · mô tả) | Figma Frame |
 | 3 | **Screens + Items + Error Scenarios** | Mockup từng screen (390×844 hoặc theo platform) + Bảng ITEMS (element + behavior) + Bảng ERROR SCENARIOS | Figma Frame |
 | 4 | **HTML Prototype** | File `index.html` standalone mô phỏng tương tác các màn hình chính | `<output>/prototype/index.html` |
 | 5 | **SPEC.md** | 14 sections chuẩn (Overview / Actors / User Flow / Screens / Business Rules / AC / Ambiguities / ...) + link tới cả 3 Figma frames + HTML prototype | `<output>/SPEC.md` |
@@ -140,7 +140,7 @@ Sample thật từ feature **In-App VoIP Call**. Mỗi lần chạy BA agent s�
 ---
 
 ### Output 2 — Screen Flow
-**Nội dung:** Chia flow thành N vùng theo business logic (mỗi Actor Happy Case 1 vùng + 1 vùng Non-Happy Case tổng hợp) + Bảng Screen Index liệt kê tất cả màn hình (screen code · loại · mô tả chức năng).
+**Nội dung (mẫu dưới — layout mặc định "Merged Branch"):** Toàn bộ quá trình vẽ trong 1 sơ đồ hợp nhất — không tách cột Non-Happy. NG (lỗi đã rõ) vẽ ngay tại điểm phát sinh; case chưa rõ (Edge/Exceptional) tách panel riêng bên cạnh kèm phân tích cho BRSE. Nếu nhiều business flow dùng chung 1 cụm màn hình (VD Auth) → gộp thành 1 group, fan-out về đúng luồng gốc ở cuối. Kèm Bảng Screen Index liệt kê tất cả màn hình (screen code · loại · mô tả chức năng). *(Feature có 2 actor tương tác đồng bộ real-time như VoIP call dùng layout legacy 4-vùng thay thế — xem `.claude/skills/ba-figma-output/SKILL.md` §5.0)*
 
 ![Output 2 — Screen Flow](./sample/output2_sample.jpg)
 
