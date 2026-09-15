@@ -1,81 +1,90 @@
 # Ba Agent — Output 2: Screen Flow
 
-## Output 2 — Screen Flow (N screen-flows tương ứng N business flows từ Output 1)
+## Output 2 — Screen Flow (Merged Branch)
 
-> **⚠️ CHỌN LAYOUT TRƯỚC KHI VẼ** — chi tiết pixel-level đầy đủ nằm ở `.claude/skills/ba-figma-output/SKILL.md` §5.0:
-> - **Merged Branch (DEFAULT)** — single-actor / shared-cluster, phân nhánh gộp Happy·NG·Edge·Exceptional trong 1 sơ đồ. Reference: `.claude/skills/ba-figma-output/examples/output2_merged_branch.jpg`. Dùng cho đa số feature (form, CRUD, auth, checkout...).
-> - **Multi-Actor 4 Vùng (legacy)** — chỉ dùng khi feature có 2 actor tương tác đồng bộ real-time (VD VoIP call). Reference: `example_output_2_screen_flow.png` / `final_output_2.png`.
+> **Reference:** `examples/final_output_2.png` (= `example_output_2_screen_flow.png`) — flow hợp nhất phân nhánh (NHÁNH A/B) + NG vẽ inline + System (xanh lá) + Edge/Exceptional Panel riêng bên cạnh. **KHÔNG tách cột Happy/Non-Happy** như style cũ.
 >
-> Nội dung phần dưới đây mô tả cấu trúc chung (Bảng Index, Terminal Nodes, Exception Matrix) — áp dụng cho CẢ 2 layout. Cách vẽ flow diagram cụ thể xem SKILL.md §5A hoặc §5B tương ứng.
+> Chi tiết pixel-level đầy đủ (frame size, x/y offset, code mẫu) nằm ở `.claude/skills/ba-figma-output/SKILL.md` §5. Nội dung file này mô tả cấu trúc chung: Shared Cluster rule, Bảng Screen Index, Terminal Nodes, Exception Matrix.
 
 > **⚠️ Prerequisite:** Output 1 PHẢI vẽ xong trước. Đếm N = số business flows trong Output 1 để làm input cho Output 2.
 
-**⚠️ Shared Cluster — khi N business flows dùng chung 1 cụm màn hình:**
+## Shared Cluster — khi N business flows dùng chung 1 cụm màn hình
 
-Nếu nhiều business flows ở Output 1 đều đi qua CÙNG 1 cụm màn hình dùng chung (VD: 5 flows khác nhau đều cần user Login/Đăng ký trước khi vào) → **KHÔNG lặp lại cụm đó N lần** — gộp thành **1 Group duy nhất**, ghi rõ tất cả N flow nguồn ở Start và fan-out N terminal ở cuối (chi tiết: SKILL.md §5B.1). Khi đó rule "số groups = số business flows" đổi thành **"số groups = số cụm màn hình độc lập"** (1 cụm có thể phục vụ nhiều flow). Ghi rõ trong report: `Group <X> phục vụ N flows: <list>`.
+Nếu nhiều business flows ở Output 1 đều đi qua CÙNG 1 cụm màn hình dùng chung (VD: 5 flows khác nhau đều cần user Login/Đăng ký trước khi vào) → **KHÔNG lặp lại cụm đó N lần** — gộp thành **1 Group duy nhất**:
+- Start node ghi rõ **tất cả N flow nguồn** dẫn vào group này
+- Cuối flow, **fan-out** thành N terminal box — mỗi box = 1 flow nguồn, route user quay lại đúng chỗ
 
-**Bố cục frame Output 2 — N screen-flow groups (1 per business flow, hoặc 1 per shared cluster) + Bảng Index tổng:**
+Khi đó rule "số groups = số business flows" đổi thành **"số groups = số cụm màn hình độc lập"** (1 cụm có thể phục vụ nhiều flow). Ghi rõ trong report: `Group <X> phục vụ N flows: <list>`.
+
+**Đặt tên Group:** `Group <Module>_<Seq> — <Tên cụm chức năng>` (VD `Group U2 — Regist & Đăng nhập`) — KHÔNG dùng tên business flow gốc, vì group này có thể phục vụ nhiều flow cùng lúc. Group không dùng chung (chỉ 1 flow) vẫn vẽ theo cấu trúc chuẩn, chỉ là N=1 ở Start/Terminal.
+
+## Combined Overview (BẮT BUỘC khi Output 2 có ≥ 2 Group)
+
+> Khi Output 2 có từ 2 Group trở lên, BA PHẢI vẽ thêm 1 section **"Combined Overview"** ở **CUỐI frame Output 2** (dưới Group cuối cùng, sau tất cả N Group riêng lẻ) — đây là **sơ đồ gộp TOÀN BỘ N flows thành 1 flow duy nhất**, đúng độ chi tiết như `examples/final_output_2.png` (NHÁNH A/B, System node, NG inline, Edge/Exceptional Panel, terminal fan-out). **Nếu chỉ có 1 Group (N=1) → bỏ qua section này** (vì Group đó tự nó đã là combined view).
+
+> ⚠️ **Đây KHÔNG phải navigation map sơ lược.** Combined Overview PHẢI có đầy đủ Decision/System/NG/Edge — vì mục đích của nó là cho stakeholder thấy TOÀN BỘ bức tranh nghiệp vụ (kể cả Non-Happy Case) khi các flow giao nhau/chia sẻ màn hình, chứ không chỉ đường đi giữa các screen.
+
+**Nội dung — đầy đủ như 1 Group bình thường, nhưng GỘP N flow lại:**
+- **Start** ghi rõ N flow nguồn dẫn vào (VD "Vào từ N luồng: Login · Đăng ký · Reset password")
+- **NHÁNH A / NHÁNH B / …** — mỗi nhánh = 1 flow gốc (hoặc nhóm flow có chung hành vi), vẽ Screen/System/Decision nối tiếp nhau; nơi 2 flow **giao nhau tại cùng 1 screen** (VD cùng quay về Login) → vẽ **1 node duy nhất** cho screen đó, nhiều mũi tên dẫn vào (không vẽ trùng lặp)
+- **NG inline**: mọi lỗi FACT của TỪNG flow con vẫn giữ nguyên — gộp lại tại đúng vị trí phát sinh trong nhánh tương ứng (không được bỏ bớt vì lý do "đã vẽ ở Group riêng")
+- **System node**: hành động backend dùng chung giữa các nhánh (VD gửi email) vẽ 1 lần, mũi tên từ mọi nhánh cần dùng trỏ vào
+- **Edge/Exceptional Panel**: gộp TẤT CẢ case UNKNOWN/INFERENCE của N flow vào 1 panel duy nhất bên cạnh (không tách panel theo từng flow)
+- **Merge → fan-out terminal**: cuối cùng fan-out ra các terminal tương ứng từng flow gốc
+
+**Rule bắt buộc:**
+- Mọi NG box đã vẽ trong từng Group riêng ở trên PHẢI xuất hiện lại ở đây (Combined Overview = superset, không phải bản rút gọn)
+- Mọi screen dùng chung ≥ 2 flow (VD Login) CHỈ vẽ 1 node duy nhất tại đây, nhiều mũi tên vào/ra
+- Numbered badge trùng số đã dùng ở Group bên trên (không đánh số lại)
+- Vị trí: LUÔN ở cuối frame (sau Group N), có khoảng cách MIN 150px với Group phía trên
+
+**Tiêu đề bắt buộc:** `"Combined Overview — Toàn bộ Flow gộp (N flows merged)"` + subtitle `"Sơ đồ hợp nhất N flow trên — bao gồm đầy đủ Non-Happy/NG, xem chi tiết per-flow ở các Group phía trên"`
+
+Chi tiết pixel-level (cách vẽ nhánh gộp, node dùng chung) xem `SKILL.md` §5.0.
+
+## Bố cục frame Output 2 — Combined Overview (nếu ≥2 Group) + N Groups (1 per business flow, hoặc 1 per shared cluster) + Bảng Index tổng
 
 ```
 ┌─────────────────────────────────────────────────────┬────────────────────┐
-│ SCREEN-FLOW GROUP 1 (business flow 1 từ Output 1)  │                    │
-│ ┌────────────┬────────────────┐                    │                    │
-│ │ Happy Case │ Non-Happy Case │                    │                    │
-│ │  ① → ② …  │ ⚠→ Error 1 …  │                    │  ④ BẢNG SCREEN     │
-│ └────────────┴────────────────┘                    │      INDEX         │
+│ Group 1 — <Tên cụm/flow 1>                          │                    │
+│   Start (▶, ghi rõ N flow nguồn nếu Shared Cluster)  │                    │
+│   NHÁNH A ──┐        NHÁNH B ──┐                    │  ④ BẢNG SCREEN     │
+│   Screen/System/Decision, NG   │                    │      INDEX         │
+│   vẽ inline ngay tại chỗ lỗi   │      Edge/          │  ⑥ TERMINAL NODES  │
+│   phát sinh (không tách cột)   │      Exceptional     │  ⑤ EXCEPTION       │
+│   ↓ merge point → fan-out N terminal    Panel        │      MATRIX        │
 ├─────────────────────────────────────────────────────┤  (bên phải,        │
-│ SCREEN-FLOW GROUP 2 (business flow 2)              │   spanning height  │
-│  ...                                                │   toàn frame)      │
+│ Group 2 — <Tên cụm/flow 2>                           │   spanning height  │
+│  ...                                                 │   toàn frame)      │
 ├─────────────────────────────────────────────────────┤                    │
-│ SCREEN-FLOW GROUP N (business flow N)              │                    │
-│  ...                                                │                    │
+│ Group N — <Tên cụm/flow N>                           │                    │
+│  ...                                                 │                    │
+├─────────────────────────────────────────────────────┤                    │
+│ Combined Overview (chỉ khi ≥ 2 Group) — CUỐI frame   │                    │
+│   Gộp N flow thành 1 sơ đồ duy nhất: NHÁNH A/B/…,    │                    │
+│   System, NG inline (đủ như từng Group ở trên),      │                    │
+│   Edge/Exceptional Panel gộp, terminal fan-out       │                    │
 └─────────────────────────────────────────────────────┴────────────────────┘
 ```
 
 **Rule chính:**
-- **Số screen-flow groups = số business flows Output 1** (VD Output 1 có 5 flows → Output 2 phải có đúng 5 groups)
-- Mỗi group đặt vertically stacked, gap MIN 120px giữa 2 groups liên tiếp
-- Mỗi group có 2 sub-zones: Happy Case (bên trái) + Non-Happy Case (bên phải trong cùng group)
-- **Bảng SCREEN INDEX chỉ 1 bảng tổng duy nhất** đặt bên phải toàn frame, spanning height — vì đây là tổng hợp toàn bộ screens/popups cần cho khách hàng (feedback từ user: "GIỮ LẠI ④ BẢNG SCREEN INDEX vì cái này là tổng hợp toàn bộ screen và popup")
+- Số Group = số cụm màn hình độc lập ở Output 1 (đã tính gộp Shared Cluster nếu có)
+- Mỗi Group đặt vertically stacked, gap MIN 150px giữa 2 Group liên tiếp; Combined Overview đặt SAU Group cuối cùng, cách Group N cũng MIN 150px
+- Trong mỗi Group: flow chính (Happy + NG inline) vẽ hợp nhất — KHÔNG tách cột Happy/Non-Happy; case chưa rõ (Edge/Exceptional) tách panel riêng bên cạnh
+- **Bảng SCREEN INDEX chỉ 1 bảng tổng duy nhất** đặt bên phải toàn frame, spanning height — tổng hợp toàn bộ screens/popups cho khách hàng
 
-**Group N — Screen-flow (Happy + Non-Happy trong cùng group):**
-
-Mỗi group có tiêu đề group ở đầu (label business flow, VD "Flow 1 — User Application"):
+Ví dụ Output 2 cho feature có Shared Cluster (Auth dùng chung 5 flow):
 
 ```
-┌─── Flow N: <Tên business flow> ────────────────────┐
-│                                                    │
-│  HAPPY CASE (bên trái)     NON-HAPPY CASE (phải)  │
-│  Start → ① → ② → ③ → End   ⚠ Trigger 1 → ...     │
-│                             ⚠ Trigger 2 → ...     │
-│                             ⚠ Trigger 3 → ...     │
-└────────────────────────────────────────────────────┘
+Group U2 — Regist & Đăng nhập (phân nhánh gộp: Happy · NG · Edge · Exceptional)
+  Vào từ 5 luồng: VAS会員マイページ · IVPエントリー · 無料個別相談 · Lỗi mời sub-account · Lỗi mời seminar
+  NHÁNH A — Mail ĐÃ tồn tại (đăng nhập): US_AUTH_001 → Password check → NG nếu sai
+  NHÁNH B — Mail CHƯA tồn tại (đăng ký mới): System gửi code → US_AUTH_003 → US_AUTH_004
+  Merge: "Luồng gốc đã bắt đầu từ đâu?" → fan-out 5 terminal (US_MYPG_001 / US_ENTR_002 / US_FREE_003 / US_INVT_006 / US_INVT_005)
+  Edge/Exceptional Panel: 4 case chưa rõ (mail giả, account dở, mất mạng, bỏ dở giữa flow)
 ```
 
-- Happy sub-zone: chỉ luồng chính, decision chỉ đi nhánh Yes/Happy
-- Non-Happy sub-zone: các trigger + luồng lỗi tương ứng flow đó
-
-Ví dụ Output 2 cho feature sample-multi-flow-feature (5 business flows từ Output 1):
-
-```
-Group 1 — Application (User tìm & ứng tuyển Job)
-  Happy: A1_MOD_001 → A1_MOD_002 → A1_APPL_001 → A2_APPL_001 → A1_CONT_001
-  Non-Happy: ⚠ User bị block → ⚠ Billing chưa active → ⚠ PDF chưa ready
-
-Group 2 — Scout (Admin chủ động scout User)
-  ...
-
-Group 3 — Contract (Ký & quản lý hợp đồng)
-  ...
-
-Group 4 — Admin (Quản trị nội bộ)
-  ...
-
-Group 5 — LINE (Integration LINE Webhook + Auth)
-  ...
-```
-
-**④ BẢNG SCREEN INDEX (bên phải, spanning toàn frame — DUY NHẤT):**
+## ④ BẢNG SCREEN INDEX (bên phải, spanning toàn frame — DUY NHẤT)
 
 BẮT BUỘC — bảng liệt kê TẤT CẢ màn hình (kể cả Popup) với 3 cột:
 
@@ -83,7 +92,7 @@ BẮT BUỘC — bảng liệt kê TẤT CẢ màn hình (kể cả Popup) với
 |---|---|---|---|
 | 1 | AX_FEAT_001 — Company List | List | Hiển thị danh sách công ty, cho phép chọn để gọi |
 | 2 | AX_FEAT_002 — Company Detail | Detail | Xem thông tin + khởi tạo cuộc gọi |
-| 3 | AX_FEAT_003 — Outgoing Call | Modal | Chờ Actor B (Receiver) nhận máy (30s) |
+| 3 | AX_FEAT_003 — Outgoing Call | Modal | Chờ đối phương nhận máy (30s) |
 | ... | ... | ... | ... |
 | 9 | [Popup] Mic Permission | **Popup** | Yêu cầu quyền microphone khi tap Gọi |
 | 10 | [Popup] Confirm Cancel | **Popup** | Xác nhận hủy cuộc gọi giữa chừng |
@@ -96,24 +105,24 @@ BẮT BUỘC — bảng liệt kê TẤT CẢ màn hình (kể cả Popup) với
 **Loại (cột 2) — enum:**
 `List` · `Detail` · `Form` · `Modal` · `Popup` · `Toast` · `Banner` · `Wizard` · `Dashboard`
 
-**Quy ước visual (áp dụng cho cả Vùng 1 + Vùng 2):**
+## Quy ước visual
 
 | Element | Figma shape | Ghi chú |
 |---|---|---|
 | Start | Ellipse 32px với icon ▶ | Fill `#0969DA` |
-| End | Ellipse 32px với icon ■ | Fill `#6E7781` |
-| Numbered badge | Ellipse 24px + số | Xanh (Screen) / Tím (Popup) / Đỏ (Error) |
-| Screen node | Rectangle 200×56px | Fill trắng, stroke `#0969DA` — icon 🖥 |
-| Popup node | Rectangle 200×56px nét đứt | Fill `#FBEEFF`, stroke `#6639BA` — icon 💬 |
-| Error/Toast node | Rectangle 200×56px nét đứt | Fill `#FFF6F5`, stroke `#CF222E` — icon ⚠ |
-| Decision | Diamond 44px (5A) hoặc rounded-rect có icon ◇ + rationale (5B) | Fill `#FFF9EB`, stroke `#F4860C` — label "Yes/No" |
-| Happy arrow | Line 2px solid | `#0969DA` |
-| Error arrow | Line 2px dashed | `#CF222E` |
-| **System node** (chỉ 5B) | Rectangle, icon ⚙ | Fill `#EDFDF0`, stroke `#1A7F37` — hành động backend tự động, KHÔNG phải Actor/Popup |
-| **NG node** (chỉ 5B — thay "Error/Toast" khi dùng Merged Branch) | Rectangle nét đứt, icon ⚠, vẽ INLINE ngay tại điểm phát sinh | Fill `#FFF6F5`, stroke `#CF222E` — chỉ dùng cho lỗi đã ĐỊNH NGHĨA rõ (FACT) |
-| **Edge / Exceptional box** (chỉ 5B) | Rectangle nét đứt, icon ▲, đặt trong panel riêng bên cạnh (KHÔNG inline) | Fill `#FBEEFF`, stroke `#6639BA` — case UNKNOWN/INFERENCE chưa rõ hành vi |
+| Numbered badge | Ellipse 24-28px + số | Xanh (Screen) — số **liên tục toàn cục** qua các Group, không reset |
+| **Screen** | Rectangle 200-260×70px | Fill `#E8F4FD`, stroke `#0969DA` |
+| **Decision** | Rounded-rect, icon ◇ + rationale 1 dòng | Fill `#FFF9EB`, stroke `#F4860C` — label "YES/NO" trên nhánh ra |
+| **System** | Rectangle, icon ⚙ | Fill `#EDFDF0`, stroke `#1A7F37` — hành động backend tự động, KHÔNG có numbered badge |
+| **NG** | Rectangle nét đứt, icon ⚠, vẽ INLINE ngay tại điểm phát sinh | Fill `#FFF6F5`, stroke `#CF222E` — chỉ dùng cho lỗi đã ĐỊNH NGHĨA rõ (FACT) |
+| **Edge / Exceptional** | Rectangle nét đứt, icon ▲, đặt trong panel riêng bên cạnh (KHÔNG inline) | Fill `#FBEEFF`, stroke `#6639BA` — case UNKNOWN/INFERENCE chưa rõ hành vi |
+| Terminal box | Rectangle 200×~50px | Fill `#F6F8FA`, stroke `#D0D7DE` — 1 box / flow nguồn (fan-out cuối) |
+| Happy/System arrow | Line 2px solid | `#0969DA` |
+| NG arrow | Line 2px dashed, ngắn (route tại chỗ) | `#CF222E` |
 
-**Rule NG vs Edge (chỉ áp dụng layout 5B — Merged Branch):** lỗi đã rõ cách xử lý (FACT) → vẽ **NG** inline trong flow chính; case chưa rõ hành vi cần BRSE confirm (UNKNOWN/INFERENCE) → **KHÔNG vẽ inline**, đưa vào Edge/Exceptional Panel (SKILL.md §5B.6). Mỗi box trong Edge/Exceptional Panel PHẢI trace được về 1 row trong Exception Matrix (⑤ bên dưới) classification `UNKNOWN`/`INFERENCE`.
+**⚠️ Rule NG vs Edge (BẮT BUỘC phân biệt):**
+- Lỗi đã rõ cách xử lý (validation thông thường, đã có trong Function detail/SPEC, classification `FACT` trong Source Register) → vẽ **NG** inline trong flow chính
+- Case CHƯA rõ hành vi, cần BRSE confirm (`UNKNOWN`/`INFERENCE` trong Source Register) → **TUYỆT ĐỐI KHÔNG vẽ inline như NG** — đưa vào **Edge/Exceptional Panel** riêng (SKILL.md §5.6). Vẽ inline sẽ khiến flow chính trông như "đã confirm" trong khi thực ra chưa.
 
 **Format mỗi screen node — PHẢI có 1 dòng mục đích:**
 ```
@@ -123,7 +132,7 @@ BẮT BUỘC — bảng liệt kê TẤT CẢ màn hình (kể cả Popup) với
 └─────────────────────────────────────┘
 ```
 
-**⑥ TERMINAL NODES (BẮT BUỘC — list explicit endpoint mỗi flow):**
+## ⑥ TERMINAL NODES (BẮT BUỘC — list explicit endpoint mỗi flow)
 
 > Terminal = điểm kết thúc flow (không có transition đi tiếp). Bảng này list explicit mọi terminal per flow để BA/BRSE/QC verify không sót endpoint nào. Đặt DƯỚI Bảng Screen Index, TRÊN Exception Matrix.
 
@@ -152,9 +161,10 @@ Bảng đặt bên phải frame, cùng width với Bảng Index:
 
 **Rule bắt buộc:**
 - **Mỗi flow trong Output 1 PHẢI có ≥ 2 terminals**: ít nhất 1 Success + 1 Exit (user có thể luôn cancel/back)
+- Nếu Group là Shared Cluster (N flow nguồn) → số terminal box = N = số flow đã liệt kê ở Start
 - Row `UNKNOWN` → PHẢI có tương ứng row trong Exception Matrix (⑤) với classification `UNKNOWN`
 - Cột "Destination sau terminal" KHÔNG được để trống — nếu chưa rõ ghi `UNKNOWN — chờ BRSE`
-- Cross-verification: count terminal = count end node (⏹ ellipse) trong flow diagram Figma — mismatch → refactor
+- Cross-verification: count terminal box trong flow diagram Figma = count row Terminal Nodes table — mismatch → refactor
 
 **Downstream impact:**
 - FE Dev đọc bảng này biết đúng redirect logic sau mỗi endpoint
@@ -163,9 +173,9 @@ Bảng đặt bên phải frame, cùng width với Bảng Index:
 
 ---
 
-**⑤ EXCEPTION MATRIX (BẮT BUỘC — bổ sung cho Non-Happy sub-zone, đặt dưới Bảng Index):**
+## ⑤ EXCEPTION MATRIX (BẮT BUỘC — bổ sung cho Edge/Exceptional Panel, đặt dưới Bảng Index)
 
-> Non-Happy sub-zone hiện tại vẽ các trigger + luồng lỗi VISUAL trên Figma. Exception Matrix bổ sung dạng bảng để **phân loại từng exception** theo status: có rule rõ ràng hay chưa, để BA/BRSE biết cần confirm gì trước Phase 3.
+> Edge/Exceptional Panel vẽ TRỰC QUAN các case chưa rõ trên Figma. Exception Matrix bổ sung dạng bảng để **phân loại từng exception** theo status: có rule rõ ràng hay chưa, để BA/BRSE biết cần confirm gì trước Phase 3.
 
 Bảng đặt dưới Bảng Screen Index bên phải frame, cùng width:
 
@@ -185,10 +195,9 @@ Bảng đặt dưới Bảng Screen Index bên phải frame, cùng width:
 - `CONFLICT` — có ≥ 2 source mâu thuẫn
 
 **Rule bắt buộc:**
-- Mọi Non-Happy trigger vẽ trên Figma PHẢI có 1 row trong Exception Matrix
-- Row `UNKNOWN` / `CONFLICT` KHÔNG được vẽ như FACT trong flow chính:
-  - Layout 5A (multi-actor): vẽ dưới dạng ⚠ UNCLEAR node (dashed border + màu vàng `#FEE28A`) trong Non-Happy sub-zone
-  - Layout 5B (merged branch, default): vẽ thành 1 box trong **Edge/Exceptional Panel** riêng (dashed `#FBEEFF`/`#6639BA`, xem SKILL.md §5B.6) — KHÔNG đặt inline trong flow chính
+- Mọi NG box (inline trong flow chính) PHẢI có 1 row Exception Matrix classification `FACT`
+- Mọi box trong Edge/Exceptional Panel PHẢI có 1 row Exception Matrix classification `UNKNOWN` hoặc `INFERENCE`
+- Row `UNKNOWN` / `CONFLICT` KHÔNG được vẽ như FACT (không vẽ như NG inline trong flow chính) — luôn đưa vào Edge/Exceptional Panel
 - Sau Bảng Index + Exception Matrix, BA in ra count summary: `Tổng: N exceptions (FACT: X · PROPOSAL: Y · INFERENCE: Z · UNKNOWN: W · CONFLICT: V)`
 
 **Downstream impact:**
@@ -196,7 +205,7 @@ Bảng đặt dưới Bảng Screen Index bên phải frame, cùng width:
 - QC đọc row `FACT + PROPOSAL` để viết test case
 - Row `UNKNOWN + CONFLICT` → PM tạo ticket hỏi BRSE trước khi Phase 3
 
-**AI Suggestion step — nếu feature có AI:**
+## AI Suggestion step — nếu feature có AI
 
 Khi flow có bước AI xử lý, vẽ node riêng với icon 🤖:
 ```
