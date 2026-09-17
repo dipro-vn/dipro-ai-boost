@@ -76,6 +76,19 @@ User → Mở App → Login Screen → Nhập credentials → [OK] → Home Scre
 
 ---
 
+**Xác định độ chi tiết 1 Screen (BẮT BUỘC đọc trước khi điền bảng Screens) — lỗ hổng đã xảy ra thực tế:**
+
+> Tổng quan nguyên tắc granularity chung (cả Flow lẫn Screen) xem `.claude/ba-agent/granularity-principles.md`.
+
+> Agent từng liệt kê Screen Code y hệt số dòng mà tài liệu nguồn (VD Estimate) liệt kê, thay vì tự phán đoán độc lập UI state nào thực sự là 1 màn hình khác biệt. Hệ quả: 4 biến thể checkout được tách thành 4 Screen Code `Wizard` riêng dù định nghĩa `Wizard` bên dưới vốn dành cho "nhiều bước trong 1 màn hình". Không được lặp lại — chạy đủ Test C + Test D dưới đây cho MỌI cặp UI state gần giống nhau trước khi chốt bảng Screens.
+
+1. **Test C — Distinct Layout/Purpose:** 2 UI state là **1 Screen** nếu dùng chung layout khung + chung điểm vào, chỉ khác field hiện/ẩn theo lựa chọn trước đó hoặc khác data hiển thị. Là **2 Screen khác nhau** nếu cấu trúc layout/kiểu tương tác khác hẳn nhau (VD: bản đồ chọn chỗ ngồi vs. form đếm số lượng + toggle thanh toán) — khác biệt phải nằm ở **cấu trúc UI**, không phải chỉ khác nội dung text.
+2. **Test D — Wizard-step reachability:** Nếu 1 UI state chỉ tồn tại tạm thời như 1 bước do 1 lựa chọn trước đó dẫn tới, KHÔNG có lý do cần deep-link/điều hướng riêng tới thẳng nó → đó là **1 step của Screen Type = `Wizard`**, KHÔNG tách Screen Code riêng. Chỉ tách Screen Code riêng khi step đó pass được Test C (khác cấu trúc layout hẳn) VÀ có thể được truy cập/tham chiếu độc lập trong luồng khác.
+
+**Khi nào bảng Screens có nhiều Screen Code "biến thể" của cùng 1 hành động (VD 4 kiểu checkout):** mặc định GỘP thành 1 Screen Type=`Wizard` với các bước mô tả trong `## Screen Details` (section riêng cho từng bước dùng heading phụ `#### Bước <n> — <tên>`), TRỪ KHI Test C xác nhận layout khác hẳn — khi đó giữ tách nhưng PHẢI ghi rõ trong Screen Details lý do tách (`> Tách riêng vì Test C: <lý do cấu trúc layout khác>`).
+
+**Bắt buộc trước khi vẽ Output 2/3 (Figma):** trình bảng Screens đã chốt (kèm lý do gộp/tách theo Test C/D cho các case biến thể) cho user xác nhận — tương tự bước xác nhận N-flow ở Output 1 (`output-1-flow.md`). Không vẽ Figma trước khi user confirm bảng Screens.
+
 **Hướng dẫn điền `## Screens`:**
 
 Bảng index tổng hợp — liệt kê **tổng số màn hình** ở đầu section, sau đó 1 dòng per screen.
@@ -110,7 +123,7 @@ Notation chuyển màn hình (ghi vào cột **Transition To**):
 - `Modal` — popup/dialog overlay (không phải full page)
 - `Card-list` — danh sách dạng card (chủ yếu mobile)
 - `Chat` — giao diện chat/AI
-- `Wizard` — multi-step flow (onboarding, checkout steps)
+- `Wizard` — multi-step flow (onboarding, checkout steps) — **mặc định 1 Wizard = 1 Screen Code duy nhất chứa nhiều bước**, xem Test D ở trên; không tách Screen Code riêng cho mỗi bước trừ khi pass Test C
 - `Calendar` — lịch, schedule view
 - `Report` — biểu đồ, báo cáo, export
 - `Settings` — cài đặt, toggle, configuration

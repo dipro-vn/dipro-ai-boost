@@ -33,6 +33,7 @@ Khi đó rule "số groups = số business flows" đổi thành **"số groups =
 - **Merge → fan-out terminal**: cuối cùng fan-out ra các terminal tương ứng từng flow gốc
 
 **Rule bắt buộc:**
+- ⚠️ **Mọi node (Start/Screen/Decision/System/NG/Edge/Merge/Terminal) PHẢI nối bằng connector vẽ thật (arrow) — KHÔNG được liệt kê dạng chip/card rời rạc chỉ cách nhau bằng gap, không có đường nối.** Nếu N flow lớn khiến vẽ đủ literal NHÁNH A/B tốn công → dùng "compact chip + spine pattern" (SKILL.md §5.0: chip nhỏ + arrow nối trong nhánh + spine trái/phải fan-out/fan-in kiểu comb như Sitemap §4.4), KHÔNG được bỏ connector để tiết kiệm effort — đây là lỗi thực tế đã xảy ra, không lặp lại.
 - Mọi NG box đã vẽ trong từng Group riêng ở trên PHẢI xuất hiện lại ở đây (Combined Overview = superset, không phải bản rút gọn)
 - Mọi screen dùng chung ≥ 2 flow (VD Login) CHỈ vẽ 1 node duy nhất tại đây, nhiều mũi tên vào/ra
 - Numbered badge trùng số đã dùng ở Group bên trên (không đánh số lại)
