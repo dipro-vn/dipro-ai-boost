@@ -408,7 +408,13 @@ y+140+                             NHÁNH A / NHÁNH B / ... (1 nhánh / flow g�
 ```
 
 **Cách dựng nhánh gộp — quan trọng để không vẽ trùng:**
-- Mỗi nhánh (NHÁNH A/B/…) = đi lại đúng trình tự Screen/System/Decision/NG của 1 flow gốc, dùng LẠI style node y hệt §5.4 (Screen 200-260×70, Decision rounded rect, System GREENLT, NG REDLT dashed inline)
+- ⚠️ **BẮT BUỘC: mọi node (Start/Screen/Decision/System/NG/Edge/Merge/Terminal) PHẢI nối với nhau bằng connector vẽ thật** (`hl()`/`vl()`/`arrowHead()` — xem `code-patterns.md`). **KHÔNG được liệt kê node dạng chip/card rời rạc, đặt cạnh nhau chỉ bằng khoảng cách (gap) mà không có đường nối/mũi tên.** Nếu nhìn Combined Overview thấy giống 1 bảng liệt kê hơn là 1 sơ đồ flow có hướng đi → SAI, phải vẽ lại connector. Đây là lỗi đã xảy ra thực tế (agent bỏ qua connector vì N flow lớn, tưởng liệt kê là đủ) — không được lặp lại.
+- **Khi N lớn (> 5-6 flow) — compact chip + spine pattern** (thay vì literal NHÁNH A/B cột song song như ví dụ 2-nhánh ở `examples/final_output_2.png`, vốn không khả thi khi N lớn):
+  - Mỗi node thu nhỏ thành 1 "chip" ngang (~108×28px, font 8px: badge+code cho Screen, icon+text ngắn cho Decision/System/NG/Edge) — vẫn giữ đủ MỌI loại node, chỉ thu nhỏ kích thước
+  - Các NHÁNH xếp CHỒNG DỌC (không cạnh nhau); trong 1 NHÁNH, nối các chip liên tiếp bằng arrow ngang ngắn (`hl()` + `arrowHead()`), tự động xuống dòng (wrap) khi chip vượt quá chiều rộng frame
+  - Nối toàn cục theo pattern "comb/fan" (giống Sitemap WBS Tree §4.4): 1 spine dọc bên TRÁI từ Start fan-out vào đầu mỗi NHÁNH (branch stub + arrow riêng từng nhánh), 1 spine dọc bên PHẢI hội tụ từ cuối mỗi NHÁNH vào Merge Decision (branch stub + arrow riêng từng nhánh) — spine dọc chỉ vẽ 1 lần liên tục, các stub ngang mới lặp theo từng NHÁNH
+  - Terminal fan-out cuối cùng cũng theo pattern comb: 1 bus ngang dưới Merge Decision, vertical drop + arrow xuống từng Terminal box
+- Mỗi nhánh (NHÁNH A/B/…) = đi lại đúng trình tự Screen/System/Decision/NG của 1 flow gốc, dùng LẠI style node y hệt §5.4 (Screen 200-260×70, Decision rounded rect, System GREENLT, NG REDLT dashed inline) — hoặc bản compact chip ở trên nếu N lớn
 - **Screen dùng chung ≥ 2 flow (VD Login là điểm vào lại của cả Register lẫn Reset)** → vẽ **1 node DUY NHẤT** tại vị trí nhánh giao nhau, nhiều mũi tên (từ mỗi nhánh liên quan) trỏ vào node đó — KHÔNG vẽ lặp lại node đó nhiều lần
 - **Mọi NG box** đã xuất hiện ở Group riêng phía trên PHẢI xuất hiện lại ở đây, tại đúng vị trí phát sinh trong nhánh tương ứng — Combined Overview là **superset**, không phải bản lược bớt
 - **System node dùng chung** (VD "Gửi email xác thực" dùng cho cả Register lẫn Reset) → vẽ 1 lần, có ≥ 2 mũi tên vào từ các nhánh cần dùng
@@ -961,6 +967,7 @@ Mỗi row build 3 thành phần qua helper:
 | Vẽ case `UNKNOWN`/`INFERENCE` như NG (đỏ) inline trong flow chính | Đưa vào Edge/Exceptional Panel riêng (§5.6), không lẫn vào flow đã "trông như confirm" |
 | Reset badge số về 1 mỗi Group trong Output 2 | Badge liên tục toàn cục qua các Group trong cùng 1 frame |
 | Lặp lại vẽ Auth/shared-cluster N lần cho N business flows | Gộp thành 1 Group duy nhất (5.1), fan-out N terminal ở cuối |
+| Vẽ Combined Overview dạng chip/badge liệt kê rời rạc cạnh nhau (chỉ cách nhau bằng gap), không có arrow/connector nối giữa các node — kể cả khi N flow lớn khiến layout đầy đủ tốn công | Mọi node nối bằng connector thật (`hl`/`vl`/`arrowHead`), kể cả bản compact chip (§5.0) — dùng spine + branch-stub pattern (giống Sitemap §4.4) để fan-out/fan-in gọn mà vẫn có connector, không bao giờ bỏ connector để "tiết kiệm effort" |
 
 ---
 
