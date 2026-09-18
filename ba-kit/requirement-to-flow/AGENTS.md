@@ -19,7 +19,7 @@
 |---|---|---|
 | 0 | `SPEC.md` (14 sections chuẩn) | `<output-folder>/SPEC.md` |
 | 1 | Figma Frame — **Flow Tổng Quan** (Business Logic + Tech Table + Sitemap) | Node trên Figma page user cung cấp |
-| 2 | Figma Frame — **Screen Flow** (N groups + bảng Index) | Node Figma |
+| 2 | Figma Frame — **Screen Flow** (Master Map + N groups nối bằng **arrow thật** + **Error-Screen Strip** + badge `⚠N` trên mỗi screen + **Combined Overview** + bảng Screen Index + **⑦ Error/Popup Index**) | Node Figma |
 | 3 | Figma Frame — **Screens + Items** (mockup + bảng ITEMS + ERROR SCENARIOS) | Node Figma |
 | 4 | **HTML Prototype** (standalone, mở bằng `open index.html`) | `<output-folder>/prototype/index.html` |
 
@@ -60,6 +60,15 @@ Chi tiết trong `.claude/ba-agent/preflight-questions.md`.
 - Multi-flow feature → BA hỏi Gate B1/B2 để user chọn vẽ toàn bộ hay 1 flow
 - Nếu user "có" Figma URL mà chưa paste → BA DỪNG chờ, KHÔNG tự skip
 - Mọi lần chạy đều snapshot vào `versions/` — không overwrite version cũ
+
+**4 rule cứng khi vẽ Figma (thêm sau khi audit thực tế — chi tiết trong `.claude/`):**
+
+| Rule | Nội dung | File gốc |
+|---|---|---|
+| ⛔ **Gate ảnh mẫu** | Trước MỌI `use_figma`: phải mở ảnh mẫu trong `.claude/skills/ba-figma-output/examples/` **và mô tả lại bố cục bằng lời của mình**. Đọc rule dạng chữ mà không xem ảnh → vẽ sai bố cục (đã xảy ra) | `figma-outputs/shared-rules.md` |
+| 🔗 **Connector thật** | Mọi screen node phải nối nhau bằng arrow vẽ thật. Liệt kê chip/card rời rạc không mũi tên → **FAIL** | `agents/ba-agent.md` |
+| 📊 **Đếm màn lỗi** | `Toast` · `Modal` · `Popup` · `Banner` · `Full screen` · `Empty state` **ĐỀU tính là màn hình**, phải có trong thống kê tổng. Non-Happy bắt buộc dạng **bảng 4 cột** có message thật, cấm văn xuôi | `ba-agent/spec-template.md` |
+| 📐 **Quét bbox** | Kết luận "không chồng đè" phải bằng **script quét toạ độ**, không bằng mắt nhìn screenshot | `ba-agent/recheck.md` Tiêu chí 7 |
 
 ---
 

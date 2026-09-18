@@ -15,6 +15,11 @@
 - Screen Code trong SPEC có khớp với Screen Code trong Figma bảng Index không?
 - Có link Figma nào bị hỏng / chưa điền không?
 - Số liệu trong Output 2 bảng "Tổng: N màn hình" có khớp với `## Screens` không?
+- **Non-Happy đã ở dạng BẢNG 4 cột chưa, hay còn văn xuôi?** Đếm: `số screen có bảng Non-Happy` phải `= tổng số screen` (100%). Còn screen nào ghi kiểu `giống <CODE>` / `theo pattern chuẩn` / `(rút gọn)` → **FAIL**, phải viết bảng thật (xem `spec-template.md` → Rule FORMAT Non-Happy)
+- **Cột `Message` có phải nội dung THẬT user nhìn thấy không**, hay chỉ là mô tả chung chung ("báo lỗi cho user")? Mô tả chung chung → FAIL
+- **Thống kê màn hình đã cộng Toast/Modal/Popup/Banner/Full screen/Empty state chưa?** `TỔNG` trong SPEC `## Screens` phải khớp `TỔNG` in trên Figma Output 2 — lệch → FAIL
+- **Bảng ⑦ ERROR/POPUP INDEX trên Figma có đủ 100% error display của SPEC không** (không rút gọn), và ID `E-xxx` có trace 1-1 về SPEC không?
+- **Error-Screen Strip** đã vẽ đủ các lỗi loại `Full screen` · `Modal` · `Popup` thành node chưa, mỗi node có ghi `◀ màn cha` + message thật chưa?
 - Actor color có nhất quán giữa Output 1/2/3 không?
 - Có bước nào trong `## Flow Tổng Quan` chưa xuất hiện trong Figma Output 1 flow?
 
