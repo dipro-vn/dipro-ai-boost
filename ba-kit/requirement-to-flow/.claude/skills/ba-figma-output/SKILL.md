@@ -1066,7 +1066,7 @@ Sau khi hoàn thành mỗi Output, **PHẢI** chụp screenshot và tự đánh 
 | # | Tiêu chí | PASS khi |
 |---|---|---|
 | 1 | **Đủ nội dung** | Đủ sections theo §4/§5/§6 tương ứng |
-| 2 | **Không chồng đè** | Không node nào overlap: text/box/arrow/badge |
+| 2 | **Không chồng đè** | `overlapCount == 0` từ phép quét bbox — xem `ba-agent/recheck.md` **Tiêu chí 7**. ⚠️ Nhìn screenshot rồi kết luận "không đè" là KHÔNG hợp lệ (đã có tiền lệ bỏ lọt 6 cặp box đè nhau) |
 | 3 | **Text đầy đủ** | Không bị crop, tất cả label readable |
 | 4 | **Đúng vùng** | Node X-coord nằm gọn trong Zone boundary |
 | 5 | **Số badge = số row bảng** (Output 3 only) | Đếm badge phone == đếm rows table |

@@ -116,6 +116,53 @@ Nhóm nào không áp dụng → ghi `N/A — <lý do>`. Nhóm nào chưa có ev
 
 ---
 
+**⚠️ Rule FORMAT Non-Happy — BẮT BUỘC dạng BẢNG, cấm văn xuôi (lỗ hổng đã xảy ra thực tế):**
+
+> Lỗ hổng: agent viết Non-Happy dạng văn xuôi 1 dòng (`**Non-Happy Case (rút gọn):** Empty state → "Chưa có dữ liệu"`) cho phần lớn screen. Hệ quả: (1) không đếm được, (2) không vẽ được lên Figma, (3) không biết message thật hiển thị cho user là gì. Khi audit phát hiện 40/53 screen ở dạng này → phải làm lại toàn bộ.
+
+- ❌ **CẤM** viết Non-Happy dạng câu văn, dạng `giống <SCREEN_CODE>`, dạng `theo pattern chuẩn`, dạng `(rút gọn)`
+- ✅ **MỌI screen** (100%, kể cả màn tĩnh/List/Settings đơn giản) PHẢI có bảng đúng 4 cột:
+
+```markdown
+**Non-Happy Case:**
+| Nhóm | Trigger | Hiển thị | Message |
+|---|---|---|---|
+| 5 Empty | Chưa có thông báo nào được đăng | Empty state | "Chưa có thông báo nào" |
+| 3 Network | Mất mạng khi tải danh sách | Banner | "Không tải được danh sách. Kéo để thử lại." |
+```
+
+| Cột | Bắt buộc chứa gì | Sai ví dụ |
+|---|---|---|
+| `Nhóm` | Số + tên nhóm theo checklist 8 nhóm ở trên (`3 Network`) | để trống, ghi "lỗi mạng" |
+| `Trigger` | Nguyên nhân cụ thể gây lỗi | "lỗi hệ thống" (quá chung) |
+| `Hiển thị` | **1 giá trị enum**: `Toast` · `Modal` · `Popup` · `Banner` · `Full screen` · `Empty state` · `Inline error` · `Button disabled` · `Tooltip` · `Chặn UI` | "Toast, disable button khi đang xử lý" (2 giá trị trong 1 ô) |
+| `Message` | **Nội dung text THẬT user nhìn thấy**, đặt trong `" "` | "báo lỗi cho user" (mô tả, không phải nội dung) |
+
+Screen nào thực sự không có case của 1 nhóm → vẫn giữ 1 dòng, ghi `N/A — <lý do>` ở cột Trigger và `—` ở 2 cột còn lại.
+
+---
+
+**⚠️ Rule THỐNG KÊ màn hình trong `## Screens` — BẮT BUỘC (đồng bộ với `figma-outputs/output-2-screen-flow.md` §④):**
+
+Toast · Modal · Popup · Banner · Full screen · Empty state **ĐỀU LÀ MÀN HÌNH** và PHẢI cộng vào tổng. Inline error · Button disabled · Tooltip · Chặn UI chỉ là **state** của màn hiện tại → KHÔNG cộng.
+
+Đầu section `## Screens` PHẢI có block thống kê dạng:
+
+```markdown
+> **TỔNG: <N> màn hình** = **<A> màn chính** + **<B> màn lỗi/popup**.
+>
+> | Loại | Số lượng | Đếm vào tổng? |
+> |---|---|---|
+> | Màn hình chính | <A> | ✅ |
+> | Toast / Modal / Popup / Banner / Full screen / Empty state | <B> | ✅ |
+> | Inline error / Button disabled / Tooltip / Chặn UI | <C> | ❌ — chỉ là state |
+> | **Tổng error display định nghĩa** | **<B+C>** | |
+```
+
+Mỗi error display được đánh ID `E-001`…`E-<n>` theo thứ tự xuất hiện trong `## Screen Details` để trace 1-1 sang Output 2. **Thiếu block thống kê này → Bước 4.6 FAIL, không được sang Bước 5.**
+
+---
+
 **Hướng dẫn điền `## Screens`:**
 
 Bảng index tổng hợp — liệt kê **tổng số màn hình** ở đầu section, sau đó 1 dòng per screen.

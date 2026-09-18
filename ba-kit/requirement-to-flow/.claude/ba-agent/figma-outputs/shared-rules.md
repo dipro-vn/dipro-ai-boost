@@ -280,6 +280,34 @@ BA phải xem example images trong `.claude/skills/ba-figma-output/examples/`:
 
 Load bằng `Read` tool trước khi bắt đầu Output tương ứng.
 
+### ⛔ GATE ẢNH MẪU — chặn cứng trước MỌI `use_figma` call (BẮT BUỘC)
+
+> **Lỗ hổng đã xảy ra thực tế — nguyên nhân gốc của 1 lần phải vẽ lại toàn bộ Output 2.** Agent đã đọc **đầy đủ** rule dạng chữ (`SKILL.md §5`, `output-2-screen-flow.md`, file này) nhưng **không mở ảnh mẫu**, rồi vẽ screen thành các "chip" xếp lưới **không có một mũi tên nào** — đúng cái anti-pattern mà chính kit đang cấm. Kết luận: rule dạng chữ KHÔNG đủ để agent hình dung ra bố cục; **phải nhìn ảnh**.
+
+**Quy trình bắt buộc, không được rút gọn:**
+
+1. `Read` ảnh mẫu tương ứng Output sắp vẽ (`final_output_1.png` / `final_output_2.png` / `final_output_3.png`)
+2. **IN RA** block xác nhận dưới đây — đây là *điều kiện cần* để được phép gọi `use_figma`:
+
+```
+⛔ GATE ẢNH MẪU — Output <N>
+  [x] Đã mở: .claude/skills/ba-figma-output/examples/final_output_<N>.png
+  Mô tả lại bố cục nhìn thấy trong ảnh (3-5 gạch đầu dòng, bằng lời của mình):
+    - <VD: Start ▶ trên cùng giữa, mũi tên dọc xuống screen đầu tiên>
+    - <VD: Decision ◇ cam, 2 nhánh YES/NO có nhãn ngay trên đường kẻ>
+    - <VD: NG đỏ nét đứt nằm NGAY BÊN PHẢI decision, mũi tên ngắn từ nhánh NO>
+    - <VD: cuối flow merge decision → fan-out N terminal theo kiểu comb>
+  → Bố cục tôi sắp vẽ khớp với ảnh mẫu ở: <liệt kê>
+  → Khác ảnh mẫu ở: <liệt kê + lý do chính đáng>
+```
+
+3. Nếu **không mô tả lại được** bố cục trong ảnh → **chưa được vẽ**, phải mở ảnh lại
+
+**Anti-pattern NGHIÊM CẤM:**
+- ❌ Đọc rule chữ rồi tự suy ra bố cục, bỏ qua ảnh ("đã hiểu rồi, khỏi xem ảnh")
+- ❌ Chỉ ghi "[x] đã xem ảnh" mà không mô tả lại được gì → coi như chưa xem
+- ❌ Xem ảnh Output 1 rồi vẽ luôn Output 2/3 (mỗi Output có ảnh mẫu RIÊNG, bố cục khác hẳn nhau)
+
 ---
 
 ## API khác nhau giữa 2 tool (BẮT BUỘC đọc trước khi code)

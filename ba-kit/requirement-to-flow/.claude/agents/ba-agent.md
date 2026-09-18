@@ -76,6 +76,11 @@ Sau khi hoàn thành 5 outputs, BA agent PHẢI edit `SPEC.md` thêm section **`
 | 0 (SPEC.md) | File tồn tại + đủ 14 sections | Read file, count `^## ` headings |
 | 1 (Figma Flow Tổng Quan) | Đủ 3 phần (Business Flow + Tech Table + Sitemap) + **N business flows có gap MIN 100px** giữa mỗi flow | `get_screenshot` — không có node/arrow của flow M đè lên flow M+1 |
 | 2 (Figma Screen Flow) | **N screen-flow groups = N business flows Output 1** + 1 Bảng Index tổng bên phải | `get_screenshot` verify N groups + count Bảng Index = tổng screens |
+| **2 — Connector** | **Mọi screen node PHẢI nối nhau bằng arrow vẽ thật** (`hl`/`vl`/`arrowHead`) | Nhìn frame: nếu giống bảng liệt kê chip hơn là sơ đồ có hướng đi → **FAIL**, vẽ lại connector (xem `shared-rules.md` → GATE ẢNH MẪU) |
+| **2 — Error coverage** | `số dòng bảng ⑦ ERROR/POPUP INDEX` = `số error display trong SPEC ## Screen Details` | Đếm 2 bên, lệch → FAIL |
+| **2 — Error screen node** | `số node trong Error-Screen Strip` = `số dòng SPEC có Hiển thị ∈ {Full screen, Modal, Popup}` | Đếm 2 bên, lệch → FAIL |
+| **2 — Thống kê tổng** | Con số `TỔNG = A màn chính + B màn lỗi` ở Figma **khớp** block thống kê trong SPEC `## Screens` | So 2 con số, lệch → FAIL |
+| **Mọi Output — Overlap** | `overlapCount == 0` từ phép quét bbox (`recheck.md` Tiêu chí 7) | BẮT BUỘC chạy script, KHÔNG kết luận bằng mắt |
 | **3 (Figma Screens + Items)** | **N groups theo business flow (khớp Output 1/2)** + Số mockup rows tổng = số screens Output 2 Bảng Index | Đếm groups = N, đếm mockup rows = tổng screens. Nếu < → ⚠️ Partial + note thiếu M/N |
 | 4 (HTML Prototype) | File `index.html` tồn tại + open được | `ls` check + note lệnh `open` cho user |
 
