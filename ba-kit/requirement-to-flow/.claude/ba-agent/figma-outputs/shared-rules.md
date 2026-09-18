@@ -16,6 +16,26 @@ Cross-verification bắt buộc:
 - Số business flows Output 1 = số screen-flow groups Output 2 = số groups Output 3 (đã tính gộp shared cluster nếu có)
 - Nếu không khớp → refactor để khớp, KHÔNG bỏ qua
 
+**Cross-verification SỐ HỌC bổ sung (bắt buộc chạy ở Quality Gate mỗi output — chống kết luận "đủ" bằng cảm tính):**
+
+| Output | Phép kiểm | PASS khi | Rule nguồn |
+|---|---|---|---|
+| O1 | Sitemap không mất mục khi gộp flow | `số mục Hành động Sitemap` ≥ `số candidate thô trong Flow Candidate Matrix` | `output-1-flow.md` |
+| O2 | Non-Happy coverage | `số NG node` ≥ `số Non-Happy Case trong SPEC ## Screen Details` | `output-2-screen-flow.md` |
+| O2 | Screen lỗi riêng | `số Screen Code màn hình lỗi` = `số dòng NH cần Screen Code riêng` | `spec-template.md` |
+| O2 | Node coverage (khi tách > 1 Combined Detail) | `distinct node các Group` = `distinct node các Combined Detail` | `SKILL.md` §5.0 |
+| O3 | Item đủ per screen | `số item bảng ITEMS` ≥ `số row Components trong SPEC Screen Details` | `output-3-screens.md` Phép 1 |
+| O3 | Navigation đảo chiều | `số item có Action ≠ "—"` = `số row Navigation Mapping` | `output-3-screens.md` Phép 4 |
+| O1/O2/O3 | **Empty check** (màn hình trống) | `0` screen có `child < 3` hoặc `tổng ký tự = 0` | `recheck.md` Tiêu chí 6 |
+
+**Verdict 3 mức thay cho PASS/FAIL nhị phân** (mượn từ skill *Business Analyst Reviewer* trên marketplace):
+
+| Verdict | Khi nào | Hành động |
+|---|---|---|
+| ✅ `Complete` | Mọi phép kiểm PASS | In block gate, chuyển output kế |
+| ⚠️ `Needs Revision` | FAIL nhưng sửa được trong scope hiện tại | BA tự sửa → rerun Quality Gate. **KHÔNG in block WAITING_APPROVAL** |
+| ❌ `Critical Gaps` | Thiếu **dữ liệu nguồn** (SPEC thiếu Non-Happy, thiếu `ACTOR_LIST`, thiếu tech stack) | **DỪNG hỏi user bổ sung** — không tự bịa để lấp |
+
 ---
 
 ## ⚠️ Gate Rules — BẮT BUỘC hỏi user giữa các output (không được chạy liền tù tì)

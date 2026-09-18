@@ -83,6 +83,26 @@ Sau khi hoàn thành 5 outputs, BA agent PHẢI edit `SPEC.md` thêm section **`
 - N (Output 1 business flows) = N (Output 2 screen-flow groups) = N (Output 3 groups) → nếu mismatch, ⚠️ Partial + refactor
 - Tổng screens Output 2 Bảng Index = tổng mockup rows Output 3 → nếu mismatch, ⚠️ Partial
 
+**Cross-verification SỐ HỌC bắt buộc thêm (chống kết luận "đủ hay chưa" bằng cảm tính):**
+
+| Phép kiểm | Điều kiện PASS | Rule nguồn |
+|---|---|---|
+| Non-Happy coverage | `số NG node Output 2` ≥ `số Non-Happy Case trong SPEC ## Screen Details` | `figma-outputs/output-2-screen-flow.md` |
+| Screen lỗi riêng | `số Screen Code loại màn hình lỗi` = `số dòng NH có cột "Cần Screen Code riêng" = ✅` | `ba-agent/spec-template.md` |
+| Item đủ (per screen) | `số item bảng ITEMS` ≥ `số row Components trong SPEC Screen Details` | `output-3-screens.md` Phép 1 |
+| Navigation đảo chiều | `số item có Action ≠ "—"` = `số row Navigation Mapping có From = screen đó` | `output-3-screens.md` Phép 4 |
+| Node coverage (khi tách > 1 Combined Detail) | `distinct node các Group` = `distinct node các Combined Detail` | `ba-figma-output/SKILL.md` §5.0 |
+| Empty check | `0` screen có `child < 3` hoặc `tổng ký tự = 0` | `ba-agent/recheck.md` Tiêu chí 6 |
+| Sitemap không mất mục | `số mục Hành động Sitemap` ≥ `số candidate thô trong Flow Candidate Matrix` | `output-1-flow.md` |
+
+**Verdict 3 mức thay cho PASS/FAIL nhị phân** (mượn từ skill *Business Analyst Reviewer* trên marketplace — "đủ hay chưa" là phổ liên tục, ép về 2 mức khiến agent thiên về báo PASS):
+
+| Verdict | Khi nào | Hành động |
+|---|---|---|
+| ✅ `Complete` | Mọi phép kiểm PASS | Chuyển gate kế tiếp |
+| ⚠️ `Needs Revision` | Có phép kiểm FAIL nhưng sửa được trong scope hiện tại | BA tự sửa → chạy lại Quality Gate. KHÔNG in block chờ approve khi đang ở mức này |
+| ❌ `Critical Gaps` | Thiếu **dữ liệu nguồn** (SPEC thiếu Non-Happy Case, thiếu `ACTOR_LIST`, thiếu tech stack…) | **DỪNG, hỏi user bổ sung** — TUYỆT ĐỐI không tự bịa để lấp chỗ trống |
+
 Nếu Output 3 vẽ ít hơn N screens **mà không có user approval [B]/[C]** → tự động chạy tiếp cho đủ N, KHÔNG được báo hoàn thành.
 
 **Report cuối BẮT BUỘC dạng bảng 5-row:**
@@ -151,15 +171,21 @@ Nếu trigger → **BẮT BUỘC Read** `.claude/ba-agent/clarify-ambiguity.md` 
 
 #### 2b. Preflight questions (BẮT BUỘC, thứ tự cố định)
 
-**Thứ tự hỏi:** Câu 0.4 (Scope) → Câu 0 (Platform) → Câu 0.5 (Figma URL) → 10 câu chuẩn 1-10.
+**Thứ tự hỏi:** 0.4 (Scope) → 0 (Platform) → 0.5 (Figma URL) → 0.8 (Tech stack) → 0.9 (Granularity) → 0.10 (Actors) → 0.11 (Ngôn ngữ) → 10 câu chuẩn 1-10 → **in Discovery Brief chờ confirm**.
 
-**Bảng tóm tắt 3 câu preflight:**
+**Bảng tóm tắt 7 câu preflight:**
 
 | # | Câu hỏi | Lưu vào | Enforcement khi user không answer |
 |---|---|---|---|
 | **0.4** | Scope: [A] Chức năng đơn lẻ / [B] Cụm chức năng / [C] Toàn hệ thống | `SCOPE_TYPE` | DỪNG, không đoán `[A]` |
 | **0** | Platform: Mobile app / Web app / Website / iPad-Tablet | `TARGET_PLATFORM` | DỪNG trước Bước 4, không đoán viewport |
 | **0.5** | Figma URL (`figma.com/design/...`) | `FIGMA_OUTPUT_URL` | Phân biệt 3 case (có-chờ / refuse / URL sai loại), KHÔNG auto-skip |
+| **0.8** | Tech stack đã chốt chưa: [A] có / [B] chưa → PROPOSAL / [C] không cần bảng Tech | `TECH_STACK` + `TECH_STATUS` | **DỪNG** — TUYỆT ĐỐI không tự bịa Technology Table Output 1 |
+| **0.9** | Granularity Output 1: [A] Executive / [B] Standard / [C] Detailed | `FLOW_GRANULARITY` | Mặc định `[B]`, nhưng PHẢI ghi rõ "mặc định" khi trình bảng N flow |
+| **0.10** | Actor inventory đầy đủ + actor hệ thống + primary actor | `ACTOR_LIST` · `PRIMARY_ACTOR` · `SYSTEM_ACTORS` | Thiếu → **KHÔNG được chạy Test F/G**, ghi `SKIPPED — thiếu ACTOR_LIST` |
+| **0.11** | Ngôn ngữ Figma (VN/JP/EN) + audience | `OUTPUT_LANG` · `OUTPUT_AUDIENCE` | Mặc định VN + PM nội bộ, in rõ trong Discovery Brief để user kịp đổi |
+
+**⚠️ Discovery Brief (BẮT BUỘC — chốt trước khi sang Bước 4):** sau khi hỏi xong toàn bộ, BA PHẢI in bảng tổng hợp mọi câu trả lời + hạng mục còn thiếu, rồi **DỪNG chờ user confirm 1 lần duy nhất**. Template đầy đủ ở `preflight-questions.md` section "Discovery Brief". KHÔNG được viết SPEC khi chưa có confirm.
 
 **⚠️ BẮT BUỘC Read** `.claude/ba-agent/preflight-questions.md` để lấy:
 - Wording chính xác của từng câu hỏi trình user
@@ -259,6 +285,10 @@ Checklist trước khi output SPEC:
 
 - [ ] Mỗi bước trong `## Flow Tổng Quan` có màn hình tương ứng trong `## Screens` không?
 - [ ] Mỗi Non-Happy Case trong `## Screen Details` có AC tương ứng trong `## Acceptance Criteria` không?
+- [ ] **Mỗi Non-Happy Case đã phân loại mức hiển thị (Inline/Toast → state · Modal → tuỳ nội dung · Full screen → Screen Code riêng) theo `spec-template.md` chưa?**
+- [ ] **Mọi Non-Happy Case cần Screen Code riêng đã có dòng tương ứng trong `## Screens` chưa?**
+- [ ] **Mỗi screen có submit/gọi API đã rà đủ checklist 8 nhóm Non-Happy chưa (nhóm không áp dụng ghi `N/A — lý do`, chưa rõ ghi `UNKNOWN`)?**
+- [ ] **Đã in Merge Log cho quyết định gộp/tách flow và verify rule "gộp = đổi tầng" (candidate bị gộp vẫn có mặt ở Sitemap) chưa?**
 - [ ] Tổng screen count trong `## Screens` khớp với số block trong `## Screen Details` không?
 - [ ] `## Responsive Requirements` đã điền breakpoints phù hợp với platform của dự án chưa?
 - [ ] Có actor nào trong `## Actors & Preconditions` chưa xuất hiện trong bất kỳ screen nào không?

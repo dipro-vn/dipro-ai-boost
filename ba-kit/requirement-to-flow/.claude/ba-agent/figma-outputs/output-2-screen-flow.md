@@ -20,7 +20,9 @@ Khi đó rule "số groups = số business flows" đổi thành **"số groups =
 
 ## Combined Overview (BẮT BUỘC khi Output 2 có ≥ 2 Group)
 
-> Khi Output 2 có từ 2 Group trở lên, BA PHẢI vẽ thêm 1 section **"Combined Overview"** ở **CUỐI frame Output 2** (dưới Group cuối cùng, sau tất cả N Group riêng lẻ) — đây là **sơ đồ gộp TOÀN BỘ N flows thành 1 flow duy nhất**, đúng độ chi tiết như `examples/final_output_2.png` (NHÁNH A/B, System node, NG inline, Edge/Exceptional Panel, terminal fan-out). **Nếu chỉ có 1 Group (N=1) → bỏ qua section này** (vì Group đó tự nó đã là combined view).
+> Khi Output 2 có từ 2 Group trở lên, BA PHẢI vẽ thêm phần **Combined** ở **CUỐI frame Output 2** (dưới Group cuối cùng, sau tất cả N Group riêng lẻ) — **sơ đồ gộp các flow lại**, đúng độ chi tiết như `examples/final_output_2.png` (NHÁNH A/B, System node, NG inline, Edge/Exceptional Panel, terminal fan-out). **Nếu chỉ có 1 Group (N=1) → bỏ qua** (Group đó tự nó đã là combined view).
+>
+> ⚠️ **Vẽ 1 hay nhiều Combined — KHÔNG tự quyết bằng cảm tính:** số lượng quyết định theo **2 tầng L0/L1 + ngưỡng node** ở section *"Vẽ 1 hay nhiều Combined?"* ngay bên dưới. Quy mô nhỏ (≤ 40 node) = đúng 1 Combined Detail như mô tả ở đây; quy mô lớn = 1 Master Map + nhiều Combined Detail theo cụm liên thông.
 
 > ⚠️ **Đây KHÔNG phải navigation map sơ lược.** Combined Overview PHẢI có đầy đủ Decision/System/NG/Edge — vì mục đích của nó là cho stakeholder thấy TOÀN BỘ bức tranh nghiệp vụ (kể cả Non-Happy Case) khi các flow giao nhau/chia sẻ màn hình, chứ không chỉ đường đi giữa các screen.
 
@@ -33,7 +35,7 @@ Khi đó rule "số groups = số business flows" đổi thành **"số groups =
 - **Merge → fan-out terminal**: cuối cùng fan-out ra các terminal tương ứng từng flow gốc
 
 **Rule bắt buộc:**
-- ⚠️ **Mọi node (Start/Screen/Decision/System/NG/Edge/Merge/Terminal) PHẢI nối bằng connector vẽ thật (arrow) — KHÔNG được liệt kê dạng chip/card rời rạc chỉ cách nhau bằng gap, không có đường nối.** Nếu N flow lớn khiến vẽ đủ literal NHÁNH A/B tốn công → dùng "compact chip + spine pattern" (SKILL.md §5.0: chip nhỏ + arrow nối trong nhánh + spine trái/phải fan-out/fan-in kiểu comb như Sitemap §4.4), KHÔNG được bỏ connector để tiết kiệm effort — đây là lỗi thực tế đã xảy ra, không lặp lại.
+- ⚠️ **Mọi node (Start/Screen/Decision/System/NG/Edge/Merge/Terminal) PHẢI nối bằng connector vẽ thật (arrow) — KHÔNG được liệt kê dạng chip/card rời rạc chỉ cách nhau bằng gap, không có đường nối.** Nếu N flow lớn khiến vẽ đủ literal NHÁNH A/B tốn công → dùng "compact chip + spine pattern" (SKILL.md §5.0b: chip nhỏ + arrow nối trong nhánh + spine trái/phải fan-out/fan-in kiểu comb như Sitemap §4.4), KHÔNG được bỏ connector để tiết kiệm effort — đây là lỗi thực tế đã xảy ra, không lặp lại.
 - Mọi NG box đã vẽ trong từng Group riêng ở trên PHẢI xuất hiện lại ở đây (Combined Overview = superset, không phải bản rút gọn)
 - Mọi screen dùng chung ≥ 2 flow (VD Login) CHỈ vẽ 1 node duy nhất tại đây, nhiều mũi tên vào/ra
 - Numbered badge trùng số đã dùng ở Group bên trên (không đánh số lại)
@@ -41,7 +43,45 @@ Khi đó rule "số groups = số business flows" đổi thành **"số groups =
 
 **Tiêu đề bắt buộc:** `"Combined Overview — Toàn bộ Flow gộp (N flows merged)"` + subtitle `"Sơ đồ hợp nhất N flow trên — bao gồm đầy đủ Non-Happy/NG, xem chi tiết per-flow ở các Group phía trên"`
 
-Chi tiết pixel-level (cách vẽ nhánh gộp, node dùng chung) xem `SKILL.md` §5.0.
+### ⚠️ Vẽ 1 hay nhiều Combined? — quyết định theo 2 TẦNG, không theo cảm tính
+
+> **Vấn đề gốc:** "đủ mọi item" và "thấy bức tranh tổng thể" là 2 mục tiêu **xung đột trong cùng 1 sơ đồ**. Khi N lớn, ép 1 Combined duy nhất phải là superset đầy đủ → không ai đọc nổi, và đó chính là lúc agent bỏ connector để "tiết kiệm effort" (lỗi đã xảy ra thực tế).
+
+| Tầng | Số lượng | Phục vụ |
+|---|---|---|
+| **L0 — Master Map** | LUÔN 1 cái | Thấy bức tranh tổng thể (mỗi Group = 1 box gộp, không xổ ruột) |
+| **L1 — Combined Detail** | = số **cụm liên thông** (thường 1-3) | Không thiếu sót từng item của từng flow |
+
+**Tiêu chí chia (cơ học):** dựng đồ thị — đỉnh = Group, cạnh = 2 Group dùng chung ≥1 screen. **Số Combined Detail = số thành phần liên thông có ≥2 Group.** Group độc lập không cần Combined riêng.
+
+**Ngưỡng:** tổng node ≤ 40 → 1 Combined Detail (không cần Master Map) · 41-80 → Master Map + 1-2 Combined Detail · > 80 → Master Map + N Combined Detail (mỗi cụm ≤ 40 node).
+
+**Node Coverage Checklist (bắt buộc khi tách > 1 Combined Detail):** `distinct node các Group` = `distinct node các Combined Detail` — mismatch → FAIL.
+
+Chi tiết layout + pixel-level (Master Map, cách vẽ nhánh gộp, node dùng chung) xem `SKILL.md` §5.0 và §5.0b.
+
+---
+
+## ⚠️ Non-Happy Coverage Matrix (BẮT BUỘC — trả lời "số screen đã đủ chưa")
+
+> **Lỗ hổng đã xác định khi audit:** kit có `## Non-Happy Case` trong SPEC và có NG node trong Figma, nhưng **không có bất kỳ phép đối chiếu nào giữa 2 thứ đó**. Bước 4.6 chỉ check *"Non-Happy Case có AC tương ứng"* — không check *"Non-Happy Case có screen/node tương ứng"*. Vì vậy "đủ hay chưa" trước đây hoàn toàn cảm tính.
+
+Bảng đặt cạnh Bảng SCREEN INDEX (cột phải frame). **Mỗi Non-Happy Case trong SPEC = 1 dòng, 100% phải có mặt:**
+
+| NH-ID | Trigger | Screen phát sinh | Cách hiển thị | Cần Screen Code riêng? | NG node ID | Đi đâu sau đó |
+|---|---|---|---|---|---|---|
+| NH-01 | Sai mật khẩu 3 lần | US_AUTH_001 | Modal | ✅ (có nội dung nghiệp vụ: đếm lần + khoá) | NG-03 | US_AUTH_001 (disabled 5 phút) |
+| NH-02 | Mất mạng khi submit | US_AUTH_003 | Toast | ❌ (chỉ là state S06) | NG-05 | Giữ nguyên màn, cho retry |
+| NH-03 | Hết phiên đăng nhập | mọi screen | Full screen | ✅ | NG-08 | US_AUTH_001 |
+
+**Rule bắt buộc:**
+- Cột **"Cần Screen Code riêng"** quyết định theo bảng phân loại mức hiển thị lỗi ở `spec-template.md` (Inline/Toast/Banner → ❌ · Modal → ⚠️ tuỳ nội dung · Full screen → ✅)
+- Dòng nào ✅ mà bảng `## Screens` trong SPEC **chưa có Screen Code tương ứng** → **thiếu screen, phải bổ sung SPEC trước khi vẽ tiếp**
+- Mỗi screen có submit/gọi API phải rà đủ **checklist 8 nhóm Non-Happy** (`spec-template.md`): Validation · Auth/session · Network · Server error · Empty · Conflict · Business rule · External integration. Nhóm không áp dụng → `N/A — lý do`; chưa rõ → `UNKNOWN` → vào Edge/Exceptional Panel
+
+**Cross-check số học ở Quality Gate O2 (FAIL nếu sai):**
+- `số NG node vẽ ra` ≥ `số Non-Happy Case trong SPEC ## Screen Details`
+- `số Screen Code loại màn hình lỗi` = `số dòng có cột "Cần Screen Code riêng" = ✅`
 
 ## Bố cục frame Output 2 — Combined Overview (nếu ≥2 Group) + N Groups (1 per business flow, hoặc 1 per shared cluster) + Bảng Index tổng
 
@@ -61,10 +101,12 @@ Chi tiết pixel-level (cách vẽ nhánh gộp, node dùng chung) xem `SKILL.md
 │ Group N — <Tên cụm/flow N>                           │                    │
 │  ...                                                 │                    │
 ├─────────────────────────────────────────────────────┤                    │
-│ Combined Overview (chỉ khi ≥ 2 Group) — CUỐI frame   │                    │
-│   Gộp N flow thành 1 sơ đồ duy nhất: NHÁNH A/B/…,    │                    │
-│   System, NG inline (đủ như từng Group ở trên),      │                    │
+│ Combined Detail × <số cụm liên thông> (khi ≥ 2 Group) │                    │
+│   Gộp các flow GIAO NHAU: NHÁNH A/B/…, System,       │                    │
+│   NG inline (đủ như từng Group ở trên),              │                    │
 │   Edge/Exceptional Panel gộp, terminal fan-out       │                    │
+│ Master Map (chỉ khi tổng node > 40) — CUỐI frame     │                    │
+│   Mỗi Group = 1 box gộp + shared screen + connector  │                    │
 └─────────────────────────────────────────────────────┴────────────────────┘
 ```
 

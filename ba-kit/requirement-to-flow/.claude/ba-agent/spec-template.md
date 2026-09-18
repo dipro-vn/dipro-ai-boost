@@ -89,6 +89,33 @@ User → Mở App → Login Screen → Nhập credentials → [OK] → Home Scre
 
 **Bắt buộc trước khi vẽ Output 2/3 (Figma):** trình bảng Screens đã chốt (kèm lý do gộp/tách theo Test C/D cho các case biến thể) cho user xác nhận — tương tự bước xác nhận N-flow ở Output 1 (`output-1-flow.md`). Không vẽ Figma trước khi user confirm bảng Screens.
 
+**Rule phân loại mức hiển thị lỗi → có sinh Screen Code mới hay không (BẮT BUỘC — quyết định số screen Non-Happy):**
+
+> Lỗ hổng đã xác định khi audit: kit có `## Non-Happy Case` và có NG node ở Output 2, nhưng KHÔNG có rule nào nói lỗi nào cần 1 màn hình riêng, lỗi nào chỉ là state của màn hiện tại. Vì vậy số screen Non-Happy lúc thừa lúc thiếu, hoàn toàn cảm tính.
+
+| Cách hiển thị lỗi | Sinh Screen Code mới? | Ghi ở đâu |
+|---|---|---|
+| Inline error · Toast · Banner · Tooltip | ❌ **Không** — chỉ là **state** của screen hiện tại | Bảng SCREEN STATES ở Output 3 (`S05-validation-error` / `S06-system-error`) |
+| Modal · Popup · Bottom-sheet | ⚠️ **Có nếu** modal mang nội dung nghiệp vụ riêng (VD modal huỷ đơn + chọn lý do + xác nhận).<br>**Không nếu** chỉ là alert 1 nút OK | Có → 1 dòng trong `## Screens`, Screen Type = `Modal` |
+| Full screen (hết phiên · không có quyền · thanh toán thất bại · maintenance · 404) | ✅ **Bắt buộc** có Screen Code riêng | 1 dòng trong `## Screens` + 1 block `## Screen Details` |
+
+**Checklist 8 nhóm Non-Happy — rà BẮT BUỘC cho MỌI screen có submit / gọi API:**
+
+| # | Nhóm | Ví dụ |
+|---|---|---|
+| 1 | Validation input | field trống, sai định dạng, quá độ dài |
+| 2 | Auth / session / permission | chưa login, hết session, sai role |
+| 3 | Network | mất mạng, timeout, kết nối chập chờn |
+| 4 | Server error | 500, service unavailable, maintenance |
+| 5 | Empty state | không có dữ liệu, kết quả tìm kiếm rỗng |
+| 6 | Conflict | double-submit, bản ghi đã bị người khác sửa/xoá |
+| 7 | Business rule violation | hết hàng, quá hạn, vượt hạn mức, chưa đủ điều kiện |
+| 8 | External integration fail | payment gateway lỗi, SMS/email không gửi được, 3rd-party timeout |
+
+Nhóm nào không áp dụng → ghi `N/A — <lý do>`. Nhóm nào chưa có evidence từ requirement → ghi `UNKNOWN` (sẽ vào Edge/Exceptional Panel ở Output 2), **KHÔNG tự bịa hành vi**.
+
+---
+
 **Hướng dẫn điền `## Screens`:**
 
 Bảng index tổng hợp — liệt kê **tổng số màn hình** ở đầu section, sau đó 1 dòng per screen.
