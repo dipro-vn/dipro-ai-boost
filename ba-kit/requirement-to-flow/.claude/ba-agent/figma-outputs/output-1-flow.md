@@ -12,7 +12,23 @@
 
 **Nguyên tắc gốc:** Output 1 là **bức tranh tổng quan cho PM/Tech Lead/stakeholder nắm scope**, KHÔNG phải bảng liệt kê screen (đó là việc của Output 2). Vì vậy 1 business flow PHẢI là **1 mục tiêu nghiệp vụ trọn vẹn của actor** (trigger → outcome có ý nghĩa độc lập), không phải mọi bước con / mọi biến thể / mọi điểm vào.
 
-**2 phép test bắt buộc chạy cho MỌI ứng viên flow trước khi chốt N:**
+**Bước 0 — Flow Candidate Matrix (BẮT BUỘC lập TRƯỚC khi chạy test):**
+
+> Lỗ hổng cũ: rule chỉ yêu cầu chạy test cho "từng cặp ứng viên **có vẻ liên quan**" — cặp nào agent không thấy "có vẻ" thì không bao giờ được test. Nay bắt buộc lập bảng đầy đủ, để quyết định gộp/tách trở thành **artifact kiểm chứng được**, user review được ngay thay vì tin vào phán đoán ngầm.
+
+Liệt kê **TOÀN BỘ** ứng viên flow thô (từ Function Inventory / requirement gốc) — KHÔNG bỏ sót dòng nào:
+
+| # | Candidate thô | Actor | Trigger | Outcome cuối | Test G | Test A | Test B | Test F | Quyết định | Gộp vào |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | Đăng nhập | User | Tap "Đăng nhập" | Vào được hệ thống | — | cụm Account Access | — | — | GỘP | #3 |
+| 2 | Quên mật khẩu | User | Tap "Quên MK" | Vào được hệ thống | trùng (Actor,Outcome) với #1 | — | không có outcome riêng | — | GỘP | #3 |
+| 3 | Account Access | User | 3 trigger | Vào được hệ thống | — | — | — | — | **GIỮ** | — |
+
+**Rule chạy test:** chạy cho **MỌI cặp cùng Actor HOẶC cùng Outcome cuối** — KHÔNG phải chỉ cặp "có vẻ liên quan".
+
+**5 phép test bắt buộc chạy cho MỌI ứng viên flow trước khi chốt N (thứ tự: G → A → B → F → E):**
+
+0. **Test G — Merge-by-outcome (phép gom CƠ HỌC, chạy ĐẦU TIÊN):** nhóm candidate theo cặp `(Actor, Outcome cuối)`. **Trùng CẢ HAI → GỘP ngay**, không cần tranh luận định tính. Test G lọc sạch các case hiển nhiên trước, để Test A/B/F (vốn định tính, dễ lệch giữa 2 lần chạy) chỉ phải xử lý phần thật sự mơ hồ. Cần `ACTOR_LIST` từ **Câu 0.10** (`preflight-questions.md`) — chưa có thì ghi `Test G: SKIPPED — thiếu ACTOR_LIST` và hỏi user, không tự suy.
 
 1. **Test A — Capability grouping (theo cách PM mô tả sản phẩm; củng cố bởi nguyên tắc Single Responsibility trong Domain-Driven Design):** Nếu phải mô tả sản phẩm trong 1 câu ngắn ("hệ thống có Đăng nhập/Tài khoản, Đặt Seminar, Tra cứu BĐS..."), các ứng viên nào rơi vào CÙNG 1 cụm từ mô tả đó → gộp thành 1 flow, biểu diễn biến thể bằng nhiều Trigger box hoặc 1 Decision node ngay trong flow đó, KHÔNG tách thành flow riêng. 1 flow nên gói gọn đúng 1 nhóm capability gắn kết (single responsibility ở tầng flow), không lẫn 2 capability khác nhau vào 1 flow.
    - *Ví dụ:* Login / Logout / Reset password đều nằm trong cụm "Account Access" mà PM sẽ mô tả chung 1 câu → gộp thành **1 flow "Account Access"** với 3 Trigger box (Login / Logout / Quên mật khẩu) cùng dẫn vào chung Function xử lý auth, rẽ nhánh Outcome khác nhau — KHÔNG vẽ 3 flow riêng.
@@ -24,11 +40,36 @@
 **Khi NÀO giữ tách riêng dù cùng actor/domain:** nếu ứng viên có đủ độ phức tạp/rủi ro nghiệp vụ đáng để stakeholder thấy riêng ngay ở tầng overview (nhiều bước, nhiều Non-happy case quan trọng, tích hợp bên ngoài phức tạp — VD "Seminar Booking" với 4 hình thức checkout + hoàn tiền) → giữ là 1 flow riêng dù cùng domain với flow khác, KHÔNG gộp chung chung tới mức mất tín hiệu quan trọng cho PM.
 
 **Quy trình bắt buộc trước khi vẽ Phần A:**
-1. Liệt kê toàn bộ ứng viên flow thô (từ Function Inventory / requirement gốc)
-2. Chạy Test A → Test B → Test F cho từng cặp ứng viên có vẻ liên quan
-3. Chạy Test E (cardinality sanity-check) trên danh sách đã gộp — nếu N > 8-10, quay lại bước 2
-4. Chốt danh sách N flow đã gộp — **trình bày bảng danh sách N flow (kèm lý do gộp/tách theo Test A/B/F, và giải thích nếu N > 10) cho user xác nhận trước khi vẽ** (đặc biệt khi input là Simple Estimate — kết hợp với Rule R1 ở `preflight-questions.md`)
-5. Chỉ sau khi user confirm N mới bắt đầu vẽ Phần A
+1. Lập **Flow Candidate Matrix** đầy đủ (Bước 0 ở trên) — mọi candidate thô đều có 1 dòng, không bỏ sót
+2. Chạy **Test G** (cơ học) trên mọi cặp trùng `(Actor, Outcome)` → gộp ngay các case hiển nhiên
+3. Chạy **Test A → Test B → Test F** cho mọi cặp còn lại cùng Actor HOẶC cùng Outcome
+4. Chạy **Test E** (cardinality sanity-check) theo ngưỡng của `FLOW_GRANULARITY` (Câu 0.9 `preflight-questions.md`) — vượt ngưỡng → quay lại bước 2
+5. In **Merge Log** (bắt buộc — format bên dưới)
+6. Verify rule **"gộp = đổi tầng"**: mọi candidate bị gộp đã có mặt ở Sitemap WBS Phần C hoặc là Trigger box phụ chưa?
+7. Trình bảng N flow + Merge Log cho user xác nhận (đặc biệt khi input là Simple Estimate — kết hợp Rule R1 ở `preflight-questions.md`)
+8. Chỉ sau khi user confirm N mới bắt đầu vẽ Phần A
+
+**Merge Log — BẮT BUỘC in, không có log thì KHÔNG được vẽ:**
+
+```
+MERGE LOG (N thô: 11 → N chốt: 4 · Granularity: [B] Standard)
+- Gộp "Quên mật khẩu" vào "Account Access"     — Test G: trùng (Actor=User, Outcome=Vào được hệ thống)
+- Gộp "Đăng xuất" vào "Account Access"          — Test A: cùng cụm capability "Account Access"
+- Gộp "Xem BĐS đề xuất" vào "Property Mgmt"     — Test B: không có outcome độc lập, chỉ là lối vào
+- GIỮ TÁCH "Seminar Booking" khỏi "Payment"     — Test F: thuật ngữ cốt lõi khác (Seminar vs Transaction), actor sở hữu khác
+→ Sitemap Phần C giữ đủ 11 mục gốc dưới dạng Hành động (rule "gộp = đổi tầng")
+```
+
+**⚠️ Rule "GỘP = ĐỔI TẦNG HIỂN THỊ, KHÔNG PHẢI XOÁ THÔNG TIN" (BẮT BUỘC):**
+
+> Đây chính là lý do agent hay ngại gộp (sợ mất thông tin của stakeholder) rồi để N phình to.
+
+Mọi candidate bị gộp ở Phần A **PHẢI xuất hiện lại** ở ít nhất 1 trong 2 chỗ:
+- **Phần C — Sitemap WBS level 3 (Hành động)** — mặc định
+- **1 Trigger box phụ** trong flow cha ở Phần A — khi candidate là 1 điểm vào khác
+
+Gộp ở Phần A **không được làm mất bất kỳ mục nào** khỏi Phần C. Verify bằng phép đếm:
+`số mục Hành động ở Sitemap` **≥** `số candidate thô trong Flow Candidate Matrix`
 
 **Gồm 3 phần trong cùng 1 frame (width 2280px):**
 

@@ -64,15 +64,22 @@
 ├──────────────────────────────────────┤                 │                      │
 │ Group N ...                          │                 │                      │
 ├──────────────────────────────────────┤                 │                      │
-│ Combined Overview (chỉ khi ≥2 Group) │                 │                      │
-│  Gộp N flow → 1 sơ đồ, đủ Decision/  │                 │                      │
-│  System/NG/Edge (superset các Group) │                 │                      │
+│ Combined Detail (khi ≥2 Group)       │                 │                      │
+│  Gộp các flow GIAO NHAU → đủ         │                 │                      │
+│  Decision/System/NG/Edge (superset)  │                 │                      │
+│ Master Map (khi tổng node > 40)      │                 │                      │
+│  Mỗi Group = 1 box gộp + shared node │                 │                      │
 └──────────────────────────────────────┴─────────────────┴──────────────────────┘
 ```
 
 **Shared Cluster:** nếu N business flows dùng chung 1 cụm màn hình (VD Auth dùng chung cho 5 flow) → gộp thành 1 Group duy nhất, ghi rõ N flow nguồn ở Start, fan-out N terminal ở cuối — KHÔNG lặp lại N lần.
 
-**Combined Overview (BẮT BUỘC khi ≥ 2 Group):** thêm 1 section ở **CUỐI frame** (sau Group N) — sơ đồ gộp N flow thành 1, đầy đủ Decision/System/NG/Edge (KHÔNG phải navigation map rút gọn) — mọi NG của từng Group PHẢI xuất hiện lại ở đây, screen dùng chung ≥2 flow chỉ 1 node duy nhất. Numbered badge trùng số đã dùng ở Group bên trên. Chi tiết `figma-outputs/output-2-screen-flow.md` + SKILL.md §5.0.
+**Combined — 2 TẦNG (BẮT BUỘC khi ≥ 2 Group):** thêm ở **CUỐI frame** (sau Group N):
+- **L1 — Combined Detail** (số lượng = số **cụm liên thông** của đồ thị "Group dùng chung screen", thường 1-3): sơ đồ gộp các flow giao nhau, đầy đủ Decision/System/NG/Edge (KHÔNG phải navigation map rút gọn) — mọi NG của từng Group PHẢI xuất hiện lại, screen dùng chung ≥2 flow chỉ 1 node duy nhất, badge trùng số đã dùng ở Group bên trên
+- **L0 — Master Map** (chỉ khi tổng node > 40): 1 sơ đồ duy nhất, mỗi Group = 1 box gộp không xổ ruột + shared screen + connector giữa các Group — để thấy bức tranh tổng thể
+- **Node Coverage Checklist** khi tách > 1 Combined Detail: `distinct node các Group` = `distinct node các Combined Detail`
+
+Chi tiết `figma-outputs/output-2-screen-flow.md` + SKILL.md §5.0 (Master Map) và §5.0b (Combined Detail).
 
 **Node types** (chi tiết SKILL.md §5.4):
 - **Screen** (rectangle `200-260×70` radius 8): fill `#E8F4FD`, stroke `#0969DA` — có numbered badge bên trái, số liên tục toàn cục qua các Group

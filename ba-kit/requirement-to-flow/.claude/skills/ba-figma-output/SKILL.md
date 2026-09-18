@@ -391,7 +391,58 @@ LEGEND
 
 > Reference: `examples/final_output_2.png` (= `example_output_2_screen_flow.png`). Toàn bộ quá trình (Happy + NG + System) vẽ trong **1 sơ đồ hợp nhất** — KHÔNG tách cột Happy/Non-Happy riêng. Case chưa rõ (Edge/Exceptional) tách thành panel riêng bên cạnh, không lẫn vào flow chính.
 
-### 5.0. Combined Overview (BẮT BUỘC khi Output 2 có ≥ 2 Group)
+### 5.0. Tổng thể 2 TẦNG — Master Map (L0) + Combined Detail (L1)
+
+> **Vấn đề gốc:** *"đủ mọi item"* và *"thấy được bức tranh tổng thể"* là **2 mục tiêu xung đột trong cùng 1 sơ đồ**. Ép 1 Combined Overview duy nhất vừa phải là superset đầy đủ vừa phải dễ đọc → khi N lớn thì bất khả thi, và đó chính là lúc agent "lười" chuyển sang chip liệt kê không connector (lỗi đã xảy ra thực tế).
+>
+> **Giải pháp: tách 2 tầng zoom** (theo chuẩn C4 model + BPMN *collapsed sub-process*), mỗi tầng phục vụ đúng 1 mục tiêu.
+
+| Tầng | Số lượng | Nội dung | Phục vụ nhu cầu |
+|---|---|---|---|
+| **L0 — Master Map** | **LUÔN 1 cái** | Mỗi Group = 1 box gộp (KHÔNG xổ ruột) + screen dùng chung giữa các Group + connector giữa Group. Số node ≈ N + số shared screen → luôn đọc được kể cả N=15 | **"thấy bức tranh tổng thể"** |
+| **L1 — Combined Detail** | **= số cụm liên thông** (thường 1-3) | Đầy đủ Screen/Decision/System/NG/Edge, nhưng chỉ gộp các flow **thực sự giao nhau** | **"không thiếu sót từng item"** |
+
+**Tiêu chí chia số Combined Detail — CƠ HỌC, không cảm tính:**
+
+> Dựng đồ thị G: **đỉnh** = Group · **cạnh** = 2 Group dùng chung ≥1 screen (hoặc có transition qua lại).
+> **Số Combined Detail = số thành phần liên thông (connected component) có ≥ 2 Group.**
+> Group đứng một mình (không có cạnh nào) → KHÔNG vẽ Combined riêng (Group của nó đã là combined view), chỉ xuất hiện ở Master Map.
+
+*Ví dụ 6 flow:* {Login, Register, Reset} chung màn Login · {Booking, Payment} chung màn Cart · {Report} độc lập
+→ **1 Master Map + 2 Combined Detail** — không phải 1 sơ đồ 6 nhánh khổng lồ, cũng không phải 6 sơ đồ rời rạc.
+
+**Ngưỡng quyết định (rule cứng):**
+
+| Tổng node (Screen+NG+System) của TẤT CẢ Group | Cách vẽ |
+|---|---|
+| **≤ 40** | 1 Combined Detail duy nhất (đúng như §5.0b), KHÔNG cần Master Map |
+| **41-80** | 1 Master Map + 1-2 Combined Detail theo cụm liên thông |
+| **> 80** | 1 Master Map + N Combined Detail (mỗi cụm ≤ 40 node; cụm nào vượt → chia tiếp theo Actor) |
+
+**⚠️ Node Coverage Checklist — BẮT BUỘC khi tách > 1 Combined Detail:**
+
+> `tổng distinct node trong TẤT CẢ Group` **=** `tổng distinct node trong TẤT CẢ Combined Detail`
+
+Mismatch → **FAIL**, không được báo xong. Đây là phép chống thiếu sót khi chia nhỏ — giữ đúng yêu cầu "không thiếu từng item của từng flow".
+
+**Layout Master Map (L0):**
+
+```
+y=<sau Group N, cách MIN 150px>   Title: "Master Map — Bức tranh tổng thể (N flows)"
+y+18                               Subtitle: "Mỗi box = 1 Group; chi tiết bên trong xem Group tương ứng phía trên"
+y+50                               Group box: rect 260×90, fill BLUELT, stroke BLUE, radius 8
+                                     Dòng 1: "Group <ID> — <Tên cụm>"            (11px Bold)
+                                     Dòng 2: "<n> screens · <m> NG · <k> Edge"   (9px TM)
+                                     Dòng 3: "▸ chi tiết: Combined Detail <X>"   (9px TL)
+                                   Shared screen (dùng chung ≥2 Group): rect 200×56 GREENLT/GREEN,
+                                     đặt GIỮA các Group dùng nó, mũi tên từ từng Group trỏ vào
+                                   Connector giữa Group: solid BLUE 2px + label điều kiện chuyển
+```
+
+- Master Map **KHÔNG vẽ** NG/Decision/System chi tiết — đó là việc của tầng L1
+- Master Map **BẮT BUỘC có connector vẽ thật** (`hl`/`vl`/`arrowHead`) như mọi sơ đồ khác — không liệt kê box rời rạc
+
+### 5.0b. Combined Detail (BẮT BUỘC khi Output 2 có ≥ 2 Group)
 
 > Đặt ở **CUỐI frame Output 2** — SAU Group N (Group cuối cùng), KHÔNG phải ở đầu. CHỈ vẽ khi có ≥ 2 Group. Nếu chỉ 1 Group → bỏ qua section này (Group đó đã tự là combined view).
 
@@ -549,7 +600,7 @@ Xếp dọc, gap ~20px giữa các box. Chiều rộng panel ~280-320px, chiều
 
 ### 5.7. Cross-verification khi Quality Gate O2
 
-- Nếu có ≥ 2 Group → Combined Overview (§5.0) PHẢI có mặt ở CUỐI frame (sau Group N), đủ Decision/System/NG/Edge gộp N flow, badge số khớp với Group bên trên
+- Nếu có ≥ 2 Group → Combined Detail (§5.0b) PHẢI có mặt ở CUỐI frame (sau Group N), đủ Decision/System/NG/Edge gộp N flow, badge số khớp với Group bên trên. Nếu tổng node > 40 → PHẢI có thêm **Master Map** (§5.0) và pass **Node Coverage Checklist**
 - Mọi box trong Edge/Exceptional Panel PHẢI có 1 row tương ứng trong Exception Matrix (§⑤) với classification `UNKNOWN` hoặc `INFERENCE`
 - Mọi NG box PHẢI có 1 row Exception Matrix classification `FACT`
 - Nếu Group là Shared Cluster (N>1 flow nguồn) → số terminal box = N = số flow đã liệt kê ở Start note
@@ -967,7 +1018,7 @@ Mỗi row build 3 thành phần qua helper:
 | Vẽ case `UNKNOWN`/`INFERENCE` như NG (đỏ) inline trong flow chính | Đưa vào Edge/Exceptional Panel riêng (§5.6), không lẫn vào flow đã "trông như confirm" |
 | Reset badge số về 1 mỗi Group trong Output 2 | Badge liên tục toàn cục qua các Group trong cùng 1 frame |
 | Lặp lại vẽ Auth/shared-cluster N lần cho N business flows | Gộp thành 1 Group duy nhất (5.1), fan-out N terminal ở cuối |
-| Vẽ Combined Overview dạng chip/badge liệt kê rời rạc cạnh nhau (chỉ cách nhau bằng gap), không có arrow/connector nối giữa các node — kể cả khi N flow lớn khiến layout đầy đủ tốn công | Mọi node nối bằng connector thật (`hl`/`vl`/`arrowHead`), kể cả bản compact chip (§5.0) — dùng spine + branch-stub pattern (giống Sitemap §4.4) để fan-out/fan-in gọn mà vẫn có connector, không bao giờ bỏ connector để "tiết kiệm effort" |
+| Vẽ Combined Overview dạng chip/badge liệt kê rời rạc cạnh nhau (chỉ cách nhau bằng gap), không có arrow/connector nối giữa các node — kể cả khi N flow lớn khiến layout đầy đủ tốn công | Mọi node nối bằng connector thật (`hl`/`vl`/`arrowHead`), kể cả bản compact chip (§5.0b) — dùng spine + branch-stub pattern (giống Sitemap §4.4) để fan-out/fan-in gọn mà vẫn có connector. Khi tổng node > 40 → tách 2 tầng Master Map (§5.0) + Combined Detail thay vì nhồi 1 sơ đồ, KHÔNG bao giờ bỏ connector để "tiết kiệm effort" |
 
 ---
 

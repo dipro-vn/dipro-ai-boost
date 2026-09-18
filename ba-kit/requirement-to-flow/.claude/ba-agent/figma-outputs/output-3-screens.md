@@ -176,6 +176,69 @@ Xem mockup HiFi (do Designer tạo) hoặc SPEC.md `## Screen Details`, đánh s
 **Ví dụ ĐÚNG:** 12 items → bảng có 12 dòng.
 **Ví dụ SAI:** Màn hình có 15 items nhưng bảng chỉ ghi 5 → **thiếu**, phải bổ sung.
 
+---
+
+## ⚠️ 4 phép kiểm "đủ item hay chưa" (BẮT BUỘC — chống thiếu từ gốc)
+
+> **Lỗ hổng đã xác định khi audit:** `recheck.md` Tiêu chí 5 chỉ đối chiếu **NỘI BỘ** (badge trên mockup vs row trong bảng của chính nó). Nếu BA liệt kê thiếu ngay từ đầu thì cả hai cùng thiếu như nhau → **vẫn PASS**. Bắt buộc phải có ít nhất 1 phép đối chiếu với nguồn NGOÀI.
+
+### Phép 1 — Đối chiếu chéo với SPEC (phép kiểm NGOÀI, bắt buộc)
+
+> `số item bảng ITEMS` **≥** `số row bảng Components trong SPEC ## Screen Details` của chính screen đó
+
+- Thiếu → **FAIL**, phải bổ sung trước khi báo xong
+- Thừa là **bình thường và đúng** — Output 3 chi tiết hơn SPEC (divider, section header, badge, status dot mà SPEC không liệt kê)
+
+### Phép 2 — Rà theo VÙNG, không rà theo LOẠI (zone sweep)
+
+> Checklist 10 loại ở trên rà theo **loại**; phép này rà theo **không gian**. Con người và LLM đều quét màn hình theo vùng — rà theo loại rất dễ sót nguyên một vùng (hay sót nhất: overlay và trạng thái phụ).
+
+| # | Vùng | Phải kiểm |
+|---|---|---|
+| 1 | Status bar / Header | back, title, action bên phải |
+| 2 | Navigation | tab bar, drawer, breadcrumb, stepper |
+| 3 | Body — nội dung chính | list / form / detail content |
+| 4 | Body — trạng thái phụ | empty state, loading skeleton, inline error |
+| 5 | Footer / CTA | nút chính, nút phụ, disclaimer |
+| 6 | Overlay | modal, toast, tooltip, bottom-sheet, snackbar |
+
+Mỗi vùng PHẢI có ≥1 dòng trong bảng ITEMS **hoặc** ghi rõ `N/A — <lý do>`.
+
+### Phép 3 — Ngưỡng cảnh báo tối thiểu theo Screen Type
+
+> KHÔNG fail cứng (có màn thật sự đơn giản) — nhưng BẮT BUỘC in cảnh báo và hỏi user. Cùng tinh thần "smoke detector" như Test E (Cardinality Budget) ở Output 1.
+
+| Screen Type | Số item tối thiểu hợp lý |
+|---|---|
+| `Form` | ≥ số field + submit + validation message + back (thường ≥ 6) |
+| `List` | ≥ 6 (header · search/filter · sort · row template · empty state · pagination) |
+| `Detail` | ≥ 5 |
+| `Dashboard` | ≥ 6 |
+| `Modal` | ≥ 3 (title · body · ≥1 action) |
+| `Wizard` | ≥ (số bước × 3) + progress indicator |
+
+Dưới ngưỡng → in: `⚠️ <Screen Code> chỉ có N item — dưới ngưỡng tối thiểu của type <T>. Xác nhận màn này thật sự đơn giản, hay tôi đang liệt kê thiếu?`
+
+### Phép 4 — Đảo chiều check Navigation Mapping
+
+> `số item có cột Action ≠ "—"` **=** `số row Navigation Mapping có From = screen đó`
+
+Rule hiện có chỉ nói "mọi item phải có ≥1 row" (chiều xuôi). Phép đếm ngược này bắt được trường hợp bảng Navigation Mapping bị bỏ sót dòng.
+
+### Câu hỏi bắt buộc trong Self-Feedback Output 3 — *implied items*
+
+> Mượn từ skill **Business Analyst Reviewer** (marketplace): *"Are there implied requirements not captured?"*
+
+Sau khi liệt kê xong, BA PHẢI tự hỏi và trả lời trong self-feedback:
+
+```
+Item nào là IMPLIED — user chắc chắn cần nhưng requirement không bao giờ viết ra — mà tôi chưa liệt kê?
+Nhóm hay thiếu nhất: nút back · loading indicator · empty state · pull-to-refresh ·
+confirm khi thoát form đang nhập dở · disabled state của CTA · error inline dưới field
+```
+
+Đây đúng là nhóm item mà Dev luôn phải hỏi lại khi build nếu BA bỏ sót.
+
 **Ví dụ ĐÚNG (logic-focused):**
 ```
 BUTTONS:

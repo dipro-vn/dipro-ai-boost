@@ -1,8 +1,8 @@
 # BA Agent — Preflight Questions Detail (Bước 2b)
 
-> **Scope:** Chi tiết 3 câu preflight (0.4 Scope / 0 Platform / 0.5 Figma URL) + 10 câu checklist chuẩn.
-> **Dùng ở:** `ba-agent.md` Bước 2b — agent body chỉ giữ bảng 3-row tóm tắt + reference file này khi cần copy enforcement/template chi tiết.
-> **Thứ tự hỏi BẮT BUỘC:** Câu 0.4 → Câu 0 → Câu 0.5 → 10 câu chuẩn 1-10. Không đảo.
+> **Scope:** Chi tiết 7 câu preflight (0.4 Scope · 0 Platform · 0.5 Figma URL · 0.8 Tech stack · 0.9 Granularity · 0.10 Actors · 0.11 Ngôn ngữ) + 10 câu checklist chuẩn + Discovery Brief.
+> **Dùng ở:** `ba-agent.md` Bước 2b — agent body chỉ giữ bảng tóm tắt + reference file này khi cần copy enforcement/template chi tiết.
+> **Thứ tự hỏi BẮT BUỘC:** 0.4 → 0 → 0.5 → 0.8 → 0.9 → 0.10 → 0.11 → 10 câu chuẩn 1-10 → **in Discovery Brief + chờ user confirm**. Không đảo, không skip.
 
 ---
 
@@ -97,6 +97,145 @@ Phân biệt 3 câu trả lời của user + xử lý khác nhau:
 
 - Không được tự chọn Figma file khác. Không được tự tạo file mới không hỏi.
 - Nếu user để trống ≥ 2 turn liên tiếp mà không phản hồi → hỏi thẳng: **"Bạn muốn (a) tiếp tục chờ, (b) skip Figma output, hay (c) tôi tự tạo Figma file mới?"** — chờ chọn 1 trong 3 mới action.
+
+---
+
+## Câu 0.8 — Tech stack cho Technology Table (hỏi thứ TƯ)
+
+> **Lý do BẮT BUỘC:** Output 1 Phần B là **Technology Table 8-10 dòng** (`figma-outputs/output-1-flow.md`). Trước rule này KHÔNG có câu hỏi nào cung cấp dữ liệu tech → BA buộc phải tự bịa tech stack, vi phạm chính `rules/RELIABILITY.md` của kit. Đây là lỗ hổng phát hiện khi audit.
+
+**Câu hỏi trình user:**
+
+```
+Technology Table ở Output 1 cần list 8-10 công nghệ. Dự án đã chốt tech stack chưa?
+  [A] Đã chốt — paste danh sách
+      (framework / DB / cache / storage / auth / payment / push / 3rd-party)
+  [B] Chưa chốt — BA đề xuất, MỌI dòng đánh dấu [PROPOSAL — chờ Tech Lead confirm]
+  [C] Không cần Technology Table (chỉ vẽ Business Flow + Sitemap)
+```
+
+**Lưu:** `TECH_STACK` + `TECH_STATUS` (`FACT` / `PROPOSAL` / `SKIPPED`)
+
+**⚠️ Enforcement:**
+
+| User chọn | Ứng xử khi vẽ Output 1 Phần B |
+|---|---|
+| `[A]` | Mọi dòng = `FACT`, ghi nguồn vào `## Source Register` |
+| `[B]` | Header bảng BẮT BUỘC ghi `⚠ PROPOSAL — chờ Tech Lead chốt trong Design-Technical.md`, MỌI dòng có badge `⚠` |
+| `[C]` | Bỏ Phần B, vẫn vẽ Phần A + C, ghi note trong frame: `Technology Table: skipped theo yêu cầu user` |
+
+- ❌ TUYỆT ĐỐI KHÔNG tự điền tech stack khi user chưa trả lời — kể cả khi "đoán được từ context dự án"
+
+---
+
+## Câu 0.9 — Mức granularity của Output 1 (hỏi thứ NĂM)
+
+> **Lý do:** N business flow hiện do agent tự phán đoán qua Test A/B/F/E — định tính, 2 lần chạy trên cùng 1 requirement có thể ra 2 kết quả khác nhau. Hỏi trực tiếp biến "đoán N" thành "user chọn mức zoom".
+
+**Câu hỏi trình user:**
+
+```
+Output 1 vẽ ở mức chi tiết nào?
+  [A] Executive — 3-5 flow, gộp tối đa theo capability
+      (cho họp stakeholder / báo cáo KH — thấy scope tổng, không sa đà chi tiết)
+  [B] Standard — 1 capability = 1 flow  (recommended)
+      (cho PM + Tech Lead plan sprint)
+  [C] Detailed — 1 use-case = 1 flow
+      (khi cần đối chiếu 1-1 với Function Inventory / Estimate)
+```
+
+**Lưu:** `FLOW_GRANULARITY`
+
+**Impact xuống Test E (Cardinality Budget) ở `output-1-flow.md`:**
+
+| FLOW_GRANULARITY | Ngưỡng N cảnh báo | Ứng xử khi vượt ngưỡng |
+|---|---|---|
+| `[A]` Executive | N > 5 | BẮT BUỘC quay lại gộp tiếp, KHÔNG được vẽ khi chưa gộp |
+| `[B]` Standard | N > 8-10 | Tự vấn lại theo Test E, phải giải trình nếu vẫn giữ |
+| `[C]` Detailed | Không giới hạn cứng | Vẫn phải in Merge Log, nhưng không ép gộp |
+
+**⚠️ Enforcement:** user chưa chọn → mặc định `[B] Standard`, và PHẢI ghi rõ khi trình bảng N flow: `Granularity: [B] Standard (mặc định — bạn có thể đổi sang [A]/[C])`.
+
+---
+
+## Câu 0.10 — Actor inventory + ownership (hỏi thứ SÁU)
+
+> **Lý do:** **Test F — Ubiquitous Language & Ownership Boundary** (`output-1-flow.md`) yêu cầu biết "actor/team nào sở hữu toàn trình" mới chạy được. Trước rule này không câu hỏi nào cung cấp dữ liệu đó → Test F buộc phải đoán, mâu thuẫn với chính nguyên tắc "không đoán mò".
+
+**Câu hỏi trình user:**
+
+```
+Liệt kê đầy đủ Actor của scope này (kể cả actor hệ thống):
+  - Actor người dùng:  <VD User / Admin / CS / Scout / Reviewer>
+  - Actor hệ thống (chạy tự động, không có UI):
+                       <VD Cron job / Webhook / Batch / 3rd-party callback>
+  - Actor nào là PRIMARY của scope lần này?
+```
+
+**Lưu:** `ACTOR_LIST` + `PRIMARY_ACTOR` + `SYSTEM_ACTORS`
+
+**Áp dụng:**
+- Cột ACTOR của Output 1 Phần A + level 2 của Sitemap WBS Phần C
+- Input BẮT BUỘC cho **Test G** và **Test F** (`output-1-flow.md`)
+- Actor hệ thống → Trigger vẽ dạng ⚙ System, KHÔNG vẽ như actor người
+
+**⚠️ Enforcement:** chưa có `ACTOR_LIST` → **KHÔNG được chạy Test F/G**, phải ghi `Test F: SKIPPED — thiếu ACTOR_LIST` và hỏi lại user, tuyệt đối không tự suy ownership.
+
+---
+
+## Câu 0.11 — Ngôn ngữ hiển thị + audience của Figma output (hỏi thứ BẢY)
+
+> **Lý do:** kit nhắc "stakeholder Nhật / BRSE" ở nhiều nơi (Strict Mode, Source Register) nhưng KHÔNG bao giờ hỏi ngôn ngữ label trên Figma. Vẽ xong 3 frame sai ngôn ngữ = vẽ lại từ đầu.
+
+**Câu hỏi trình user:**
+
+```
+Figma output (label node, tiêu đề bảng, mô tả) viết bằng ngôn ngữ nào, cho ai đọc?
+  Ngôn ngữ: [VN] / [JP] / [EN] / [VN + JP song ngữ]
+  Audience: PM nội bộ / BrSE / Khách hàng cuối / Dev-QC
+```
+
+**Lưu:** `OUTPUT_LANG` + `OUTPUT_AUDIENCE`
+
+**Áp dụng:**
+- `[JP]` / `[VN + JP]` → Screen Name + mô tả 1 dòng viết đúng ngôn ngữ đó; **Screen Code giữ nguyên ASCII** (không dịch)
+- Audience = `Khách hàng cuối` → tránh thuật ngữ kỹ thuật trong mô tả node (không viết "API 500", viết "hệ thống lỗi")
+- Audience = `Dev-QC` → được phép giữ thuật ngữ kỹ thuật
+
+**⚠️ Enforcement:** chưa trả lời → mặc định `VN` + audience `PM nội bộ`, in rõ dòng này trong Discovery Brief để user kịp đổi trước khi vẽ.
+
+---
+
+## Discovery Brief — BẮT BUỘC in 1 lần trước khi sang Bước 4
+
+> **Nguồn ý tưởng:** pattern *"collect inputs via interactive Q&A → generate document → update status"* của skill **BMAD Analyst** trên marketplace. Trước rule này, câu trả lời preflight nằm rải rác trong chat, không có artifact nào để đối chiếu về sau — Strict Mode thiếu đúng audit trail này.
+
+Sau khi hỏi xong toàn bộ (0.4 → 0 → 0.5 → 0.8 → 0.9 → 0.10 → 0.11 → 10 câu chuẩn), BA PHẢI in block dưới rồi **DỪNG chờ user confirm 1 lần duy nhất**:
+
+```
+📋 DISCOVERY BRIEF — <Tên feature>
+
+| # | Hạng mục | Giá trị | Nguồn |
+|---|---|---|---|
+| 0.4 | Scope | <A/B/C> | user |
+| 0 | Platform | <...> → viewport <...> | user |
+| 0.5 | Figma URL | <URL / chờ / refuse> | user |
+| 0.8 | Tech stack | <FACT / PROPOSAL / SKIPPED> | user |
+| 0.9 | Granularity | <A/B/C> | user / mặc định B |
+| 0.10 | Actors | <list> · Primary: <...> · System: <...> | user |
+| 0.11 | Ngôn ngữ / Audience | <VN/JP/EN> · <audience> | user / mặc định VN |
+| 1-10 | 10 câu chuẩn | <tóm tắt 1 dòng mỗi câu; câu chưa trả lời ghi ⚠ CHƯA CÓ> | user |
+
+Mode gate dự kiến: <Light / Strict> · Số gate sẽ hỏi: <2 / 5>
+Hạng mục còn thiếu: <list — hoặc "không thiếu">
+
+→ Xác nhận đúng chưa? (reply "OK" để BA bắt đầu viết SPEC, hoặc sửa hạng mục nào sai)
+```
+
+**⚠️ Enforcement:**
+- ❌ KHÔNG được sang Bước 4 khi chưa in Discovery Brief và chưa có confirm của user
+- Hạng mục `⚠ CHƯA CÓ` → ghi thẳng vào `## Source Register` của SPEC với classification `UNKNOWN`, KHÔNG tự điền
+- Discovery Brief copy nguyên văn vào `versions/v<N>_<DDMMYYYY>/ba-outputs-log.md` làm audit trail
 
 ---
 
