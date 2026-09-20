@@ -61,7 +61,7 @@ Chi tiết trong `.claude/ba-agent/preflight-questions.md`.
 - Nếu user "có" Figma URL mà chưa paste → BA DỪNG chờ, KHÔNG tự skip
 - Mọi lần chạy đều snapshot vào `versions/` — không overwrite version cũ
 
-**4 rule cứng khi vẽ Figma (thêm sau khi audit thực tế — chi tiết trong `.claude/`):**
+**5 rule cứng khi vẽ Figma (thêm sau khi audit thực tế — chi tiết trong `.claude/`):**
 
 | Rule | Nội dung | File gốc |
 |---|---|---|
@@ -69,6 +69,7 @@ Chi tiết trong `.claude/ba-agent/preflight-questions.md`.
 | 🔗 **Connector thật** | Mọi screen node phải nối nhau bằng arrow vẽ thật. Liệt kê chip/card rời rạc không mũi tên → **FAIL** | `agents/ba-agent.md` |
 | 📊 **Đếm màn lỗi** | `Toast` · `Modal` · `Popup` · `Banner` · `Full screen` · `Empty state` **ĐỀU tính là màn hình**, phải có trong thống kê tổng. Non-Happy bắt buộc dạng **bảng 4 cột** có message thật, cấm văn xuôi | `ba-agent/spec-template.md` |
 | 📐 **Quét bbox** | Kết luận "không chồng đè" phải bằng **script quét toạ độ**, không bằng mắt nhìn screenshot | `ba-agent/recheck.md` Tiêu chí 7 |
+| 🔢 **Gate FR Coverage** | Mốc đối chiếu "đã đủ" phải là **số dòng chức năng gốc trong nguồn**, không phải số nhóm / số flow do BA tự gom. Kiểm bằng **phép trừ tập hợp** có in `THIẾU: []`, không bằng phép so số lượng. Bảng `## Screens` bắt buộc có cột `FR No.` | `ba-agent/granularity-principles.md` § GATE FR COVERAGE · `recheck.md` Tiêu chí 8 |
 
 ---
 

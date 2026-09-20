@@ -91,3 +91,23 @@ curY += tx.height + gap;       // 4. height giờ mới chính xác
 2. Load skill `figma:figma-use` trước khi gọi `use_figma`
 3. FigJam: `get_metadata` không hoạt động — dùng `use_figma` để đọc `figma.currentPage.children`
 4. Figma Design: `get_metadata` để xác nhận page + lấy nodeId
+
+---
+
+## ⚠️ Toạ độ: `node.x` là TƯƠNG ĐỐI FRAME, không phải tuyệt đối
+
+Lỗi đã xảy ra thật, làm 430 node văng ra ngoài frame mà mọi gate vẫn PASS (xem `recheck.md` Tiêu chí 9).
+
+```js
+const fb = F.absoluteBoundingBox;   // vị trí TUYỆT ĐỐI của frame trên page
+
+// ❌ SAI — cộng offset tuyệt đối vào toạ độ vốn đã tương đối frame
+n.x = fb.x + 1800;  n.y = fb.y + 2100;  F.appendChild(n);
+
+// ✅ ĐÚNG — truyền thẳng toạ độ tương đối frame
+n.x = 1800;  n.y = 2100;  F.appendChild(n);
+```
+
+- `fb.x` / `fb.y` **chỉ** dùng để ĐỌC ngược: `relX = node.absoluteBoundingBox.x - fb.x`.
+- Append vào GROUP nằm trong frame vẫn dùng toạ độ tương đối **frame** — group không tạo hệ toạ độ riêng.
+- Sau mỗi lần vẽ, chạy **Tiêu chí 9** trước khi kết luận PASS.

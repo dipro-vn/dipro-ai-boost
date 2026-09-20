@@ -68,8 +68,21 @@ Mọi candidate bị gộp ở Phần A **PHẢI xuất hiện lại** ở ít n
 - **Phần C — Sitemap WBS level 3 (Hành động)** — mặc định
 - **1 Trigger box phụ** trong flow cha ở Phần A — khi candidate là 1 điểm vào khác
 
-Gộp ở Phần A **không được làm mất bất kỳ mục nào** khỏi Phần C. Verify bằng phép đếm:
-`số mục Hành động ở Sitemap` **≥** `số candidate thô trong Flow Candidate Matrix`
+Gộp ở Phần A **không được làm mất bất kỳ mục nào** khỏi Phần C. Verify bằng **phép trừ tập hợp trên FR Register** (KHÔNG phải phép so số lượng):
+
+```
+set(FR No. trong FR Register)  −  set(FR No. đã gắn tag trên Sitemap)  =  ∅
+```
+
+> ⚠️ **Công thức cũ `số Hành động ở Sitemap ≥ số candidate thô trong Flow Candidate Matrix` đã bị bãi bỏ vì SAI** — Flow Candidate Matrix do chính BA gom từ nguồn, lấy nó làm mốc thì gate tự so với chính mình và luôn PASS. Sự cố thực tế: mốc lấy nhầm 34 nhóm giữa thay vì 58 dòng chức năng → `42 ≥ 34` PASS trong khi 3 chức năng đã biến mất. Chi tiết: `granularity-principles.md` § **GATE FR COVERAGE**.
+
+**Bắt buộc khi vẽ Phần C:** mỗi mục Hành động gắn tag `#N` = FR No. của chức năng nguồn. 1 hành động phủ nhiều FR → ghi `#19,20,21`. Chức năng `SYSTEM — không có màn` → vẽ thành node hệ thống trong Phần A và vẫn gắn tag.
+
+**In trước khi vẽ (THIẾU ≠ [] → dừng, không vẽ):**
+
+```
+FR COVERAGE — Sitemap: <số hành động> mục · phủ <n>/<N> FR · THIẾU: []
+```
 
 **Gồm 3 phần trong cùng 1 frame (width 2280px):**
 
