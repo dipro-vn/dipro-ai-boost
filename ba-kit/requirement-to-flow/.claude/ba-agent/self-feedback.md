@@ -22,6 +22,19 @@
 - **Error-Screen Strip** đã vẽ đủ các lỗi loại `Full screen` · `Modal` · `Popup` thành node chưa, mỗi node có ghi `◀ màn cha` + message thật chưa?
 - Actor color có nhất quán giữa Output 1/2/3 không?
 - Có bước nào trong `## Flow Tổng Quan` chưa xuất hiện trong Figma Output 1 flow?
+- **FR Coverage — đã in `THIẾU: []` chưa?** `set(FR nguồn) − set(FR trong bảng `## Screens`) = ∅`, và mỗi Hành động ở Sitemap Output 1 có tag `#N` chưa? (`recheck.md` Tiêu chí 8). **Đây là phép duy nhất bắt được "chức năng đáng lẽ phải có mà không có" — các phép còn lại chỉ đối chiếu nội bộ giữa các artifact với nhau.**
+
+**Câu 3 — Output 4 có thật sự dùng được không? (không được trả lời bằng cảm tính)**
+
+Phần này KHÔNG tự đánh giá bằng mắt — phải trích số thật từ Bước 5.7
+(`verify-prototype.js`, xem `figma-outputs/output-4-verify.md`):
+
+- `FAIL` có đúng bằng **0** không? Còn FAIL → chưa được PASS self-feedback
+- Có màn nào **cụt đường** / **không tới được** không? (nhóm `REACH`)
+- **Đăng nhập được** vào từng website chưa? Nhiều site → từng tab một
+- Màn `UNKNOWN`/`INFERENCE` có hiện placeholder chờ BRSE chưa? (nhóm `P2`)
+- Prototype là **website bấm được** hay tài liệu cuộn dọc? (nhóm `SHAPE`)
+- Số `SKIPPED` có đúng bằng số error của màn UNKNOWN không? Lệch → đang né FAIL
 
 **Format báo cáo (bắt buộc):**
 

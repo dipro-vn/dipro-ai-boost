@@ -178,6 +178,139 @@ Xem mockup HiFi (do Designer tạo) hoặc SPEC.md `## Screen Details`, đánh s
 
 ---
 
+## ⚠️ 5 rules cứng về MOCKUP (BẮT BUỘC — không được vi phạm)
+
+> Phần trước của tài liệu này quy định rất kỹ 2 bảng ITEMS + ERROR, nhưng **không quy định
+> mockup phải trông ra sao** — và đó là chỗ đã hỏng trong thực tế: mockup bị vẽ thành
+> khung 6 vùng chứa dòng chữ mô tả. Nhìn thì "đủ", nhưng Designer không dùng được,
+> stakeholder không hình dung được màn hình.
+
+### Rule S1 — Mockup phải là UI THẬT, không phải khung mô tả
+
+Trong ô mockup 1440×1024 (hoặc 375×812 với mobile), mỗi item của `## Screen Details` phải
+được vẽ thành **hình dạng của chính nó**, không phải một dòng chữ mô tả nó.
+
+```
+❌ SAI — khung mô tả (đây là bảng ITEMS vẽ lại lần 2, vô ích)
+   ┌─ CONTENT ───────────────────────────────────┐
+   │ ② Input text      ID pháp nhân              │
+   │ ③ Input password  Mật khẩu (có nút hiện/ẩn) │
+   │ ⑥ Button primary  "Đăng nhập"               │
+   └─────────────────────────────────────────────┘
+
+✅ ĐÚNG — UI thật
+   ┌─────────────────────────────────────────────┐
+   │  ID pháp nhân                               │
+   │  ┌───────────────────────────────────────┐  │
+   │  │                                       │  │
+   │  └───────────────────────────────────────┘  │
+   │  Mật khẩu                                   │
+   │  ┌───────────────────────────────────────┐  │
+   │  │ ••••••••                          👁  │  │
+   │  └───────────────────────────────────────┘  │
+   │  ☐ Ghi nhớ đăng nhập      Quên mật khẩu?    │
+   │                        ┌──────────────┐     │
+   │                        │  Đăng nhập   │     │
+   │                        └──────────────┘     │
+   └─────────────────────────────────────────────┘
+```
+
+Số thứ tự ①②③ vẫn giữ, nhưng đặt thành **badge nhỏ cạnh widget thật** để trace về bảng
+ITEMS — không thay thế widget.
+
+**Phép kiểm nhanh:** che phần bảng ITEMS đi, chỉ nhìn mockup — có đoán được đây là màn gì,
+bấm được gì không? Không → FAIL.
+
+---
+
+### Rule S2 — Dùng CHUNG bảng map widget với Output 4
+
+Output 3 (Figma) và Output 4 (HTML) mô tả **cùng 130 màn**. Nếu 2 cái trông khác nhau thì
+ít nhất 1 cái sai, và Designer/Dev sẽ không biết tin cái nào.
+
+→ Bảng map `Title` → widget nằm ở **`output-4-html.md` Rule P7**. Output 3 dùng đúng bảng
+đó, chỉ đổi đích render: `<input>` → rectangle + text, `<table>` → lưới rect + text,
+`<select>` → rect + text + mũi tên ▾.
+
+Quy tắc dữ liệu cũng dùng chung: **tên cột bảng tách từ Mô tả theo dấu `·`**, ô điền dữ
+liệu giả hợp lý theo tên cột (ngày ra ngày, tiền ra tiền, trạng thái ra badge màu).
+
+---
+
+### Rule S3 — Vẽ app shell, phân biệt màn trong hệ thống và màn đứng riêng
+
+- **Màn trong hệ thống**: có app bar trên cùng (logo · tên hệ thống · chuông · avatar),
+  sidebar menu trái theo module, breadcrumb, rồi mới tới nội dung
+- **Màn đứng riêng** (đăng nhập · quên mật khẩu · màn lỗi full screen): **không** vẽ
+  sidebar/breadcrumb — vẽ card căn giữa trên nền trắng, đúng như SPEC `Layout:` mô tả
+- Nhiều hệ thống dùng chung (prefix mã màn khác nhau) → app bar khác màu theo hệ thống,
+  giống Output 4 Rule P6
+
+---
+
+### Rule S4 — Cấm mockup rỗng / mockup placeholder
+
+Mockup chỉ có khung + nhãn vùng (`HEADER` `CONTENT` `FOOTER`) mà không có widget nào bên
+trong → **FAIL**, kể cả khi bảng ITEMS bên cạnh đã đầy đủ.
+
+| Kiểu màn | Tối thiểu trong mockup |
+|---|---|
+| Form · Wizard | mọi field của bảng ITEMS + nút submit |
+| List | thanh lọc + bảng ≥ 4 dòng dữ liệu + phân trang |
+| Detail | khối thông tin key-value + các nút hành động |
+| Dashboard · Report | các thẻ số liệu + ≥ 1 biểu đồ |
+| Calendar | lưới ngày thật, có ô điền |
+| Modal | card overlay có tiêu đề + nội dung + nút |
+| Full screen lỗi | icon + tiêu đề + mô tả + nút thoát |
+
+**Nhãn vùng** (HEADER/TOOLBAR/LEFT/CONTENT/RIGHT/BOTTOM) nếu giữ thì để chữ nhỏ, mờ, ngoài
+mép mockup — là chú thích, không phải nội dung.
+
+---
+
+### Rule S5 — Verify bằng screenshot, không tự tin bằng số node
+
+Số node nhiều không chứng minh mockup dùng được. Sau khi vẽ:
+
+1. `get_screenshot` **ít nhất 5 mockup** trải đều các nhóm (1 Form · 1 List · 1 Detail ·
+   1 Dashboard · 1 màn lỗi)
+2. Với mỗi ảnh tự trả lời: *che bảng ITEMS đi, có nhận ra màn gì không?*
+3. Nếu đã có Output 4 → mở đúng mã màn đó trong prototype, **so 2 ảnh cạnh nhau**. Khác
+   hình dạng → 1 trong 2 sai, phải đồng bộ trước khi báo Done
+4. Đưa ít nhất 2 ảnh vào báo cáo Bước 5.5 làm bằng chứng
+
+**Anti-pattern:** ❌ báo "Output 3 Done · 8.974 node · 0 overlap" mà chưa từng nhìn 1 ảnh
+mockup nào.
+
+---
+
+## Cách vẽ khối lượng lớn (> 30 màn) — kinh nghiệm thực chiến
+
+**Chia batch nhỏ.** 1 lần `use_figma` vẽ **8–12 màn**. Batch to hơn dễ timeout và khi lỗi
+thì không biết đã vẽ tới đâu.
+
+**⚠️ MCP timeout KHÔNG có nghĩa là script chưa chạy.** Đây là bẫy đã mất nhiều giờ:
+script chạy xong bên Figma nhưng response không về được → nếu chạy lại là **vẽ trùng**.
+
+```js
+// TRƯỚC khi vẽ lại batch bị timeout — đếm xem đã có chưa:
+const F = figma.getNodeById("<frame id>");
+const drawn = F.children.filter(n => n.type === "TEXT" &&
+                /^[A-Z]{2}_[A-Z]{2,4}_\d{3}$/.test(n.characters)).map(n => n.characters);
+return { count: drawn.length, has: drawn.includes("<mã màn đầu của batch>") };
+```
+
+**Vẽ lại được (idempotent).** Mỗi batch: xoá node cũ trong vùng y của batch đó rồi mới vẽ,
+để chạy lại nhiều lần vẫn ra đúng 1 bản.
+
+**Tiết kiệm node cho bảng.** Text node đặt `lineHeight` cố định rồi nhồi nhiều dòng bằng
+`\n` → 1 bảng N dòng chỉ tốn vài node thay vì N×số cột.
+
+**Cuối cùng phải đếm lại:** số mockup = số màn trong Output 2 Bảng Index, 0 mã trùng,
+0 node tràn ra ngoài khung.
+
+---
+
 ## ⚠️ 4 phép kiểm "đủ item hay chưa" (BẮT BUỘC — chống thiếu từ gốc)
 
 > **Lỗ hổng đã xác định khi audit:** `recheck.md` Tiêu chí 5 chỉ đối chiếu **NỘI BỘ** (badge trên mockup vs row trong bảng của chính nó). Nếu BA liệt kê thiếu ngay từ đầu thì cả hai cùng thiếu như nhau → **vẫn PASS**. Bắt buộc phải có ít nhất 1 phép đối chiếu với nguồn NGOÀI.
