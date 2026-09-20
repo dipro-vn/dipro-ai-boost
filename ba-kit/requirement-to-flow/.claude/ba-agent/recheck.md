@@ -22,6 +22,8 @@ For each frame in [Output 1, Output 2, Output 3]:
 | 4 | **Đúng vùng (không lệch cột)** | Node của Zone X nằm gọn trong `Z<X>_X` đến `Z<X>_X + Z<X>_W` | Verify X-coordinate của mỗi node ≥ Zone X boundary |
 | 5 | **Số lượng item khớp bảng** (chỉ Output 3) | Số badge trên mockup = số dòng trong bảng | Đếm badge trên phone → đếm rows trong table → phải khớp.<br>⚠️ Phép này chỉ đối chiếu **NỘI BỘ**: `0 badge = 0 row` vẫn "khớp" → BẮT BUỘC chạy kèm Tiêu chí 6 + phép đối chiếu với SPEC ở `figma-outputs/output-3-screens.md` |
 | 6 | **Không có màn hình trống / node rỗng** (BẮT BUỘC — mọi frame) | Mọi screen mockup có `≥3 child node` VÀ `≥1 text node có ký tự` | Read-back cây node bằng `use_figma` — xem quy trình bên dưới. **KHÔNG được kết luận bằng mắt nhìn screenshot** |
+| 9 | **Node nằm trong biên frame** (BẮT BUỘC, chạy TRƯỚC tiêu chí 7) | Mọi node lá trong `[0,W]×[0,H]`, đủ **4 phía** | Script ở **Tiêu chí 9**. ⚠️ Node văng ra ngoài vẫn làm tiêu chí 6/7/8 PASS giả — overlap=0 vì chúng xa nhau |
+| 8 | **Phủ đủ chức năng nguồn (FR Coverage)** (BẮT BUỘC khi nguồn đánh số được) | `set(FR nguồn) − set(FR trong artifact) = ∅` | Script ở **Tiêu chí 8** bên dưới. Đây là tiêu chí DUY NHẤT đối chiếu ngược về tài liệu nguồn — 7 tiêu chí kia chỉ kiểm thứ đã vẽ |
 
 ---
 
@@ -126,5 +128,98 @@ Kết quả: FAIL → tiến hành fix rồi chụp lại
 - Non-happy flow trigger box overlap với error node bên dưới
 - **Output 3 phone đè bảng dưới nếu dùng grid layout** — dùng layout DỌC
 - **Output 1 Tech Stack ngang đè Sitemap** — chuyển Tech thành TABLE bên phải Flow
+
+## ⚠️ Tiêu chí 8 — FR Coverage scan (BẮT BUỘC khi nguồn có danh sách chức năng đánh số)
+
+> Sự cố thực tế: 3 chức năng biến mất khỏi SPEC + cả 3 Figma output, 7 tiêu chí còn lại đều PASS vì không tiêu chí nào đối chiếu ngược về tài liệu nguồn. **Tiêu chí 1-7 chỉ kiểm chất lượng thứ đã vẽ, không kiểm thứ đáng lẽ phải vẽ mà không có.**
+
+**PASS khi:** `set(FR nguồn) − set(FR xuất hiện trong artifact) = ∅`
+
+**Cách chạy — SPEC (cột `FR No.` trong bảng `## Screens`):**
+
+```python
+import re
+s = open('SPEC.md', encoding='utf-8').read()
+TOTAL = 58                      # số dòng chức năng trong nguồn — KHÔNG phải số nhóm
+SYSTEM_ONLY = {24}              # chức năng batch/cron, đã ghi chú trong FR Register
+frs = set()
+for m in re.finditer(r'^\| ([\d, ]+) \| [A-Z]{2}_[A-Z]+_\d{3} \|', s, re.M):
+    frs |= {int(x) for x in m.group(1).split(',')}
+missing = sorted(set(range(1, TOTAL+1)) - frs - SYSTEM_ONLY)
+print(f"FR phủ: {len(frs | SYSTEM_ONLY)}/{TOTAL} · THIẾU: {missing or 'KHÔNG'}")
+assert not missing, f"FAIL — thiếu FR {missing}"
+```
+
+**Cách chạy — Figma Sitemap Output 1 (tag `#N` trên mỗi Hành động):**
+
+```js
+const TOTAL = 58, SYSTEM_ONLY = new Set([24]);   // khai báo mốc TRƯỚC khi dùng
+const txt = F.findAll(n => n.type === 'TEXT').map(n => n.characters || "").join(" ");
+const seen = new Set();
+// ⚠️ PHẢI bắt được cả ô gộp "#19,20,21". KHÔNG dùng /#\d+/g — nó chỉ lấy số ĐẦU TIÊN,
+//    làm 20 và 21 bị báo thiếu oan. Lỗi này đã xảy ra thật và suýt khiến agent "sửa" bản vẽ đang đúng.
+(txt.match(/#\d+(?:\s*,\s*\d+)*/g) || []).forEach(s =>
+  s.slice(1).split(",").forEach(v => {
+    const n = +v.trim();
+    if (n >= 1 && n <= TOTAL) seen.add(n);
+  }));
+const missing = [];
+for (let i = 1; i <= TOTAL; i++) if (!seen.has(i) && !SYSTEM_ONLY.has(i)) missing.push(i);
+return { soFRxuatHien: seen.size, FRthieu: missing,
+         ketLuan: missing.length ? "FAIL" : "PASS — đủ " + TOTAL + " FR" };
+```
+
+**⚠️ Khi gate báo FAIL — XÁC MINH TRƯỚC KHI SỬA BẢN VẼ:**
+
+Checker sai sẽ tạo FAIL giả, và "sửa" theo nó sẽ **phá hỏng artifact đang đúng**. Đã xảy ra 2 lần. Trước khi đụng vào Figma/SPEC, bắt buộc mở đúng 1-2 node/dòng bị báo thiếu và đọc tận mắt:
+
+| Dấu hiệu FAIL giả | Nguyên nhân thường gặp |
+|---|---|
+| Các số thiếu đều là **phần tử thứ 2, 3** của ô gộp (thiếu 20,21 khi có `#19,20,21`) | Regex chỉ bắt số đầu |
+| Số "thiếu" **nhìn thấy rõ trên frame** | Regex/selector sai, không phải artifact sai |
+| `soFRxuatHien` **lớn hơn** TOTAL | Đếm trùng, hoặc cộng nhầm SYSTEM_ONLY vào tập đã chứa nó |
+| Hai screen báo số của nhau | Zip theo thứ tự `findAll` (≠ thứ tự Y) thay vì match theo khoá |
+
+**Chỉ sửa artifact sau khi đã tự mắt xác nhận nó thực sự thiếu.**
+
+**Bắt buộc in danh sách thiếu kể cả khi rỗng** — báo "đã phủ hết" mà không in `THIẾU: []` là không hợp lệ.
+
+⚠️ **KHÔNG được thay bằng phép so số lượng** (`số màn ≥ số nhóm`). Xem `granularity-principles.md` § **GATE FR COVERAGE** để biết vì sao phép so số lượng luôn PASS sai.
+
+---
+
+## ⚠️ Tiêu chí 9 — Node phải NẰM TRONG BIÊN FRAME (BẮT BUỘC mọi frame, chạy TRƯỚC Tiêu chí 7)
+
+> **Sự cố thực tế:** một lần vẽ đặt `n.x = frame.absoluteBoundingBox.x + x` **trước** `appendChild`. Vì `node.x` là toạ độ **tương đối frame**, toàn bộ 430 node bị dịch đúng một lượng bằng vị trí tuyệt đối của frame và văng ra ngoài. Hậu quả nguy hiểm: **Tiêu chí 6, 7, 8 đều báo PASS** — overlap = 0 (vì các node văng ra xa nhau nên không đè nhau), text không rỗng, FR vẫn đủ. Bản vẽ trông "đạt mọi gate" trong khi thực tế trống trơn.
+>
+> Lần chẩn đoán đầu còn sai tiếp: chỉ kiểm tràn **phía dưới** (`y + h > frame.height`), trong khi node bị đẩy lên **y âm** nên lọt lưới. **Phải kiểm đủ 4 phía.**
+
+**PASS khi:** mọi node lá nằm trong `[0, frame.width] × [0, frame.height]`
+
+```js
+const F = await figma.getNodeByIdAsync("<frameId>");
+const fb = F.absoluteBoundingBox;
+const outside = [];
+for (const n of F.findAll(x => (x.type === 'TEXT' || x.type === 'RECTANGLE') && x.absoluteBoundingBox)) {
+  const b = n.absoluteBoundingBox;
+  const x = b.x - fb.x, y = b.y - fb.y;
+  if (x < 0 || y < 0 || x + b.width > F.width || y + b.height > F.height)   // ĐỦ 4 PHÍA
+    outside.push({ t: ('characters' in n ? n.characters : n.name).slice(0,30), x: Math.round(x), y: Math.round(y) });
+}
+return { soNodeNgoaiFrame: outside.length, viDu: outside.slice(0, 8),
+         ketLuan: outside.length ? "FAIL — có node ngoài frame" : "PASS" };
+```
+
+**Cách sửa khi FAIL:** dịch node lá về bằng `n.x -= fb.x; n.y -= fb.y`. **Chỉ dịch node lá (TEXT/RECTANGLE), TUYỆT ĐỐI không dịch GROUP** — group thường chứa cả node đang đúng chỗ, dịch group sẽ làm hỏng phần đang đúng.
+
+**Dấu hiệu nhận biết sớm (không cần chạy script):**
+
+| Dấu hiệu | Ý nghĩa |
+|---|---|
+| `get_screenshot` trả `original_height`/`original_width` **khác** kích thước frame | Có node ngoài biên đang kéo giãn vùng render — KHÔNG được bỏ qua như "artifact của tool" |
+| Bounding box của 1 GROUP phình to bất thường (VD `w` 480 → 2949) | Group đang ôm cả node văng ra ngoài |
+| Đếm node trong 1 vùng toạ độ cụ thể ra **0** dù vừa vẽ xong | Node không nằm ở nơi tưởng là đã đặt |
+
+---
 
 **Khi tất cả 3 Outputs PASS → mới báo user thành công.**

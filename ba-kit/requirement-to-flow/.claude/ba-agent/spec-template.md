@@ -172,10 +172,17 @@ Bảng index tổng hợp — liệt kê **tổng số màn hình** ở đầu s
 
 > Tổng: <N> màn hình
 
-| Screen Code | Screen | Actor | App | Screen Type | Transition To |
-|---|---|---|---|---|---|
-| <XX_FEAT_001> | <Tên màn hình> | <Actor> | <Epic code> | <type> | <Screen Code tiếp theo khi action chính> |
+| FR No. | Screen Code | Screen | Actor | App | Screen Type | Transition To |
+|---|---|---|---|---|---|---|
+| #12,13 | <XX_FEAT_001> | <Tên màn hình> | <Actor> | <Epic code> | <type> | <Screen Code tiếp theo khi action chính> |
 ```
+
+**Cột `FR No.` — BẮT BUỘC khi input có danh sách chức năng đánh số được (Estimate / PRD / backlog):**
+
+- Giá trị = số thứ tự dòng chức năng trong tài liệu nguồn, theo `FR Register` (xem `granularity-principles.md` § **GATE FR COVERAGE**). 1 màn phủ nhiều chức năng → `#19,20,21`.
+- Mục đích: audit "chức năng nào chưa có màn" bằng 1 phép trừ tập hợp, thay vì rà tay N dòng.
+- Chức năng không sinh màn (batch/cron/job) → **không** bỏ im lặng, mà ghi 1 dòng chú thích ngay dưới bảng: `> Chức năng #24 là batch hệ thống, không có màn → xem System node ở Output 1/2.`
+- Thiếu cột này = SPEC chưa đạt Definition of Done khi nguồn có đánh số.
 
 Notation chuyển màn hình (ghi vào cột **Transition To**):
 - Happy path: `→ XX_FEAT_002`
