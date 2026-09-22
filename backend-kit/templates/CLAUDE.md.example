@@ -40,6 +40,12 @@ Agents read this table instead of discovering commands. Keep it exact.
 - Errors: `<ExceptionFilterName>` returns `<shape>`.
 - Cache keys: `<entity>:<scope>:<id>`; invalidate after commit.
 
+## Working Rules
+
+- **Routing:** before backend work, classify the request — new feature, bug, schema change, new endpoint, refactor, tests, review, contract, or question only — state it in one line, then invoke the matching kit command through the Skill tool (`new-feature`, `bug-fix`, `migration`, `generate-api`, `refactoring`, `test-generation`, `code-review`, `db-review`, `api-contract`). If the request could go either way — for example "analyze and investigate" that may end in a change — ask through AskUserQuestion: analysis only, or analysis then the matching command. A question or analysis with no code change needs no workflow.
+- **Code exploration:** when `.codegraph/` exists, call `codegraph_explore` (MCP tool, or `codegraph explore "<symbols or question>"` on the shell) **before** Grep, Glob, or Read. Source it returns counts as read — do not re-open those files. Use `codegraph callers/impact <symbol>` for usages instead of grepping.
+- **Asking the user:** when you need a decision from the user — in a kit command or in plain chat — ask through the AskUserQuestion tool, one question per call, with the recommended option first and marked "(Recommended)". Never end a reply with a text list of open questions. Non-blocking questions become stated assumptions instead.
+
 ## Docs
 
 - API contracts: `<path or link>`

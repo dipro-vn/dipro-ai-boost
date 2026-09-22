@@ -1,5 +1,5 @@
 ---
-description: Add or review a TypeORM migration and keep the entity aligned with the schema change.
+description: Use when the user asks to change the database schema — a table, column, index, or constraint — with its TypeORM migration. Triggers — thêm cột, đổi bảng, thêm index, migration, schema, カラム追加, マイグレーション.
 argument-hint: <schema change description>
 model: sonnet
 ---

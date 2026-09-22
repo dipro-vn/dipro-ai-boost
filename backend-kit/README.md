@@ -106,6 +106,8 @@ All five agents list the MCP tool `mcp__codegraph__codegraph_explore` in `tools:
 | Database review | `/db-review` | Review schema, query, index, transaction, and cache behavior |
 | API contract | `/api-contract` | Produce a handoff-ready REST contract |
 
+You do not have to type the command. Each command's description lists the requests it handles, with trigger words in Vietnamese, English, and Japanese, and the **Routing** rule in the `CLAUDE.md` template tells Claude to classify every backend request, say which workflow it picked, and invoke it — or ask when a request such as "analyze and investigate" could end either as a report or as a change.
+
 Examples:
 
 ```text

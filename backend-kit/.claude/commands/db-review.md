@@ -1,5 +1,5 @@
 ---
-description: Review database-facing backend changes — entities, migrations, queries, indexes, transactions, cache.
+description: Use when the user asks to review database-facing code — entities, migrations, queries, indexes, transactions, or cache. Triggers — review DB, kiểm tra query, index, N+1, DBレビュー.
 argument-hint: [module, migration, or endpoint]
 model: sonnet
 ---

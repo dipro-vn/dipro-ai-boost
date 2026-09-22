@@ -1,5 +1,5 @@
 ---
-description: Add backend tests for a feature, bug fix, module, service, controller, endpoint, or cache behavior.
+description: Use when the user asks to add or improve backend tests or coverage for existing behavior. Triggers — viết test, thêm test, coverage, unit test, e2e, テスト追加.
 argument-hint: [module or behavior to cover]
 model: sonnet
 ---

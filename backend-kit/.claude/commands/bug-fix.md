@@ -1,5 +1,5 @@
 ---
-description: Reproduce, diagnose, and fix incorrect backend behavior, with a regression test proving the fix.
+description: Use when the user reports wrong, broken, slow, or unexpected backend behavior. Triggers — lỗi, bug, không chạy, bị sai, fix, broken, error, 500, バグ, 不具合, エラー. Reproduces with a failing test, fixes the root cause, and reviews.
 argument-hint: <bug description>
 model: sonnet
 ---

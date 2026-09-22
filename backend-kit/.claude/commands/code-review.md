@@ -1,5 +1,5 @@
 ---
-description: Review a backend change set before merge — architecture, security, database, cache, and tests.
+description: Use when the user asks to review a backend change set, branch, or PR before merge. Triggers — review, xem lại code, check PR, レビュー.
 argument-hint: [branch, PR, or paths]
 model: sonnet
 ---

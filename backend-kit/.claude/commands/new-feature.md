@@ -1,5 +1,5 @@
 ---
-description: Build a new backend capability end to end — analysis, design, implementation, tests, review.
+description: Use when the user asks to add or change backend behavior end to end — a new endpoint, flow, entity, business rule, or plan/pricing change. Triggers — thêm, đổi, chuyển sang, làm tính năng, add, build, implement, change, 追加, 変更, 実装. Runs analysis, design, approval, implementation, tests, and review.
 argument-hint: <feature description>
 model: opus
 ---

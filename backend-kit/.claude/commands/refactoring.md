@@ -1,5 +1,5 @@
 ---
-description: Improve backend structure without changing behavior, with tests as the safety net.
+description: Use when the user asks to restructure backend code without changing behavior. Triggers — refactor, tách, gom, dọn code, clean up, restructure, リファクタ.
 argument-hint: <target module or structural problem>
 model: opus
 ---

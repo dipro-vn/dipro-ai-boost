@@ -1,5 +1,5 @@
 ---
-description: Scaffold a NestJS REST resource, or extend an existing module with new endpoint behavior.
+description: Use when the user asks for a new REST resource or a new endpoint on an existing module. Triggers — tạo API, thêm endpoint, CRUD, new route, scaffold, API作成, エンドポイント追加.
 argument-hint: <resource-name>
 model: sonnet
 ---
