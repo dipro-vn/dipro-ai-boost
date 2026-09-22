@@ -25,8 +25,18 @@
       "Bash(git show:*)",
       "Bash(codegraph explore:*)",
       "Bash(codegraph sync:*)",
+      "Bash(codegraph files:*)",
+      "Bash(codegraph status:*)",
+      "Bash(codegraph affected:*)",
+      "Bash(codegraph impact:*)",
+      "Bash(codegraph callees:*)",
+      "Bash(codegraph callers:*)",
+      "Bash(codegraph node:*)",
+      "Bash(codegraph query:*)",
       "Bash(node .claude/validate-kit.mjs)",
-      "Bash(date:*)"
+      "Bash(date:*)",
+      "mcp__codegraph__codegraph_explore",
+      "mcp__codegraph__*"
     ],
     "ask": [
       "Bash(npm run migration:*)",
@@ -45,6 +55,18 @@
       "Read(./.env.local)",
       "Read(./.env.production)",
       "Read(./.env.staging)"
+    ]
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "codegraph prompt-hook"
+          }
+        ]
+      }
     ]
   }
 }

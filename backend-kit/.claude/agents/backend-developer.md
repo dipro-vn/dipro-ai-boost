@@ -1,7 +1,7 @@
 ---
 name: backend-developer
 description: Use when an approved design or clear acceptance criteria exist and NestJS code must be written or changed — controller, service, DTO, entity, migration, or cache behavior. Symptoms — scaffolding a module, adding an endpoint, writing a migration, implementing a root cause already diagnosed. Does not decide scope or API contracts — those come from the analyst and architect.
-tools: Read, Write, Edit, Bash, Grep, Glob
+tools: Read, Write, Edit, Bash, Grep, Glob, mcp__codegraph__codegraph_explore
 model: sonnet
 effort: medium
 ---
@@ -14,11 +14,15 @@ Implement backend changes according to the approved design: NestJS modules, cont
 
 ## Input
 
-The dispatcher passes a **Context Brief**: request, acceptance criteria or design (when they exist), relevant file paths, existing patterns to follow, and project commands. Treat it as already-verified context:
+The dispatcher passes a **Context Brief**: request, acceptance criteria or design (when they exist), a code map, relevant file paths, existing patterns to follow, and project commands. Treat it as already-verified context.
 
-- Read the files it lists; do not re-run broad exploration of the codebase.
-- Search further only for something the brief does not cover, and name what you looked up.
-- If no brief was passed, do a focused search limited to the affected module.
+Look things up in this order — stop at the first step that answers the question:
+
+1. **The Context Brief.** Source shown in its code map counts as already read; do not re-open those files.
+2. **CodeGraph**, when `.codegraph/` exists: call `codegraph_explore` with the symbol or file names you need. It returns the relevant source and call paths in one call — treat that source as read.
+3. **Grep, then Read** — a targeted search, then only the line range you need, not the whole file.
+
+Name anything you looked up beyond the brief. If no brief was passed, start at step 2 and stay within the affected module.
 
 ## Responsibilities
 

@@ -13,7 +13,7 @@ Use this skill before adding or changing backend code in an existing project.
 
 1. Read `CLAUDE.md` and project docs if present.
 2. Check whether a source-map tool is already configured:
-   - `.codegraph/` exists: use `.claude/tools/codegraph.md`.
+   - `.codegraph/` exists: use `.claude/tools/codegraph.md`. Call `codegraph_explore` (MCP tool, or `codegraph explore` on the CLI) with the symbols of the affected flow **before** any Grep or Read. Source it returns counts as read — do not re-open those files.
    - `.understand-anything/` exists: use `.claude/tools/understand-anything.md`.
    - Neither exists: use normal file and text search and report that no source-map setup is present.
 3. Inspect `package.json` scripts and dependencies.
@@ -22,7 +22,7 @@ Use this skill before adding or changing backend code in an existing project.
 6. Reuse naming, folder structure, exception shape, and response shape.
 7. Add a new pattern only when no existing pattern fits.
 
-Run this exploration **once per task**, in the main agent. Stop when you have one similar module, its tests, and the project commands — do not read every module. Hand the result to subagents as a Context Brief so they do not repeat it.
+Run this exploration **once per task**, in the main agent. Put the relevant CodeGraph output into the Context Brief as the code map, so subagents start from symbols and line ranges instead of whole files. Stop when you have one similar module, its tests, and the project commands — do not read every module. Hand the result to subagents as a Context Brief so they do not repeat it.
 
 ## Search Targets
 

@@ -86,6 +86,10 @@ Choose one:
 
 When a target project contains `.codegraph/` or `.understand-anything/`, backend agents should use the matching source-map tool before broad manual search, then verify important findings by reading the source files.
 
+With CodeGraph, every agent looks things up in the same order: the Context Brief, then `codegraph_explore`, then Grep and a targeted Read. The main agent puts one `codegraph_explore` result into the Context Brief as a **code map**, so subagents start from symbols and line ranges instead of reading whole files. The reviewer uses `codegraph impact` / `callers` for the blast radius of a diff, and the verify step uses `codegraph affected` to pick which tests to run.
+
+All five agents list the MCP tool `mcp__codegraph__codegraph_explore` in `tools:`; register the server with `codegraph install --target claude` and confirm with `/mcp`. Without it, agents fall back to Grep and Read.
+
 ## 5. Commands
 
 | Task | Command | Use When |
@@ -195,7 +199,7 @@ Agent models: `backend-architect` and `backend-reviewer` run on `opus` at `high`
 Workflow commands are built to avoid repeated work:
 
 - **Small path.** `/new-feature` and `/bug-fix` classify the task first. A change touching at most 3 production files with no migration, contract, guard, or cache-key change runs in the main agent with no subagents.
-- **Context Brief.** The main agent explores the codebase once and passes the file list, patterns, and commands to every subagent.
+- **Context Brief.** The main agent explores the codebase once and passes a code map (from CodeGraph when available), the file list, patterns, and commands to every subagent. Source in the code map counts as read.
 - **Parallel work.** Tests and implementation are dispatched together when a design exists; the analyst is skipped when acceptance criteria are already clear.
 - **Pinned models and effort.** Every agent and command sets `model:` in its frontmatter, so nothing falls back to the session model (for example Fable). Agents also set `effort:`, so a session running at `xhigh` or `max` does not make every subagent think at that level:
 

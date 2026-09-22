@@ -22,11 +22,12 @@ The approval question of the `backend-clarify-and-approve` skill also picks the 
 
 ## Step 0 — Context Brief (main agent, once)
 
-Invoke the `sourcebase-reuse-first` skill **once**, then write a Context Brief. Every subagent receives this brief, so no subagent repeats the exploration.
+Invoke the `sourcebase-reuse-first` skill **once**, then write a Context Brief. Every subagent receives this brief, so no subagent repeats the exploration. When `.codegraph/` exists, build the code map with one `codegraph_explore` call naming the symbols of the affected flow, and paste its relevant output — subagents then read line ranges, not whole files.
 
 ```markdown
 Request: <one paragraph>
 Acceptance criteria: <given / to be defined>
+Code map: <codegraph_explore output for the affected flow — symbols, call path, file:line ranges; "none" if no .codegraph/>
 Files to read: <paths of similar modules, DTOs, entities, tests>
 Patterns to follow: <guard, pagination DTO, exception shape, response shape, migration location>
 Commands: <focused test, full test, lint, typecheck, migration — from CLAUDE.md or package.json>
@@ -63,7 +64,7 @@ Anything else is **Standard**.
    - **backend-tester** to write tests from the design's contract and acceptance criteria, in test files only.
    - **backend-developer** to implement the design, in production files only.
    Pass both the brief and the approved design.
-5. **Verify (main agent)** — run the new tests. If a test fails, compare it with the approved design: the implementation deviates → send it back to **backend-developer**; the test misreads the design → send it back to **backend-tester**; the design is ambiguous → ask the user. Then run lint, typecheck, and the relevant test suite **once**.
+5. **Verify (main agent)** — run the new tests. When `.codegraph/` exists, pick the relevant suite with `codegraph affected --quiet <changed files>` instead of running the whole module. If a test fails, compare it with the approved design: the implementation deviates → send it back to **backend-developer**; the test misreads the design → send it back to **backend-tester**; the design is ambiguous → ask the user. Then run lint, typecheck, and the relevant test suite **once**.
 6. **Review** — dispatch **backend-reviewer** with the brief, the design, the diff, and the verification result. The reviewer does not re-run passing tests.
 7. Finish (see below).
 

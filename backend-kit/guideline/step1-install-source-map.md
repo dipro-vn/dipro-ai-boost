@@ -17,8 +17,10 @@ Project: https://github.com/colbymchenry/codegraph
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/colbymchenry/codegraph/main/install.sh | sh
-codegraph install
+codegraph install --target claude
 ```
+
+`codegraph install` registers the CodeGraph **MCP server** in Claude Code. This step is required for the kit: `backend-analyst` and `backend-architect` have no Bash, so the MCP tool `codegraph_explore` is their only way to query CodeGraph. Restart Claude Code, then run `/mcp` and confirm `codegraph` is connected.
 
 ### 2. Initialize The Backend Project
 
