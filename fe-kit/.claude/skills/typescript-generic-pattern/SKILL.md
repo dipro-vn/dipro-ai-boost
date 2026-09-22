@@ -1,6 +1,6 @@
 ---
 name: typescript-generic-pattern
-description: 
+description: Viết generic trong TypeScript — type parameter, ràng buộc extends, suy luận kiểu tự động, giữ liên kết giữa kiểu input và output. Dùng khi viết hàm util, hook, hoặc component tái dùng cho nhiều kiểu dữ liệu.
 ---
 
 # Generic Pattern

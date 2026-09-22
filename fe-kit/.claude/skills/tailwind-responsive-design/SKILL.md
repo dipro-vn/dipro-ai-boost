@@ -1,6 +1,6 @@
 ---
 name: tailwind-responsive-design
-description: 
+description: CHỈ dùng khi dự án dùng Tailwind CSS. Layout responsive theo hướng mobile-first với prefix breakpoint sm, md, lg, xl, 2xl; container query khi cần. Dùng khi dựng UI đa màn hình bằng Tailwind.
 ---
 
 # Responsive Design

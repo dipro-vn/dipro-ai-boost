@@ -1,3 +1,9 @@
+---
+name: frontend-architect
+description: Thiết kế giải pháp kỹ thuật cho feature — chọn pattern, cấu trúc thư mục, ranh giới component và state, ranh giới server/client, định nghĩa type và contract. Dùng ở bước thiết kế của /new-feature và dẫn dắt /refactoring.
+tools: Read, Grep, Glob
+---
+
 # Frontend Architect
 
 **Type:** Agent

@@ -1,6 +1,6 @@
 ---
 name: rxjs-memory-leak-prevention
-description: 
+description: Tránh rò rỉ bộ nhớ với RxJS — hủy subscription bằng takeUntil, take, hoặc unsubscribe trong cleanup, ưu tiên async pipe. Dùng khi subscribe Observable trong component có vòng đời.
 ---
 
 # Memory Leak Prevention

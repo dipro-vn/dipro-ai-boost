@@ -1,6 +1,6 @@
 ---
 name: security-auth-pattern
-description: 
+description: Luồng xác thực phía FE — đăng nhập và đăng xuất, bảo vệ route theo trạng thái đăng nhập và quyền, lưu session an toàn, xử lý redirect sau login. Dùng khi làm màn hình login hoặc phân quyền truy cập route.
 ---
 
 # Auth Pattern

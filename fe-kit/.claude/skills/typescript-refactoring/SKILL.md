@@ -1,6 +1,6 @@
 ---
 name: typescript-refactoring
-description: 
+description: Cải thiện kiểu trong code đã có — thu hẹp any, tách type dùng chung, thay type assertion bằng type guard, giữ compile sạch qua từng bước nhỏ. Dùng khi dọn nợ kỹ thuật về type mà không đổi hành vi.
 ---
 
 # Refactoring

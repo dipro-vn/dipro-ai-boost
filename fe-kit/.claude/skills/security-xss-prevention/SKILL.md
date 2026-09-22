@@ -1,6 +1,6 @@
 ---
 name: security-xss-prevention
-description: 
+description: Phòng chống XSS khi render nội dung động — tránh dangerouslySetInnerHTML, sanitize HTML từ người dùng, không nhét dữ liệu chưa kiểm soát vào href hay style. Dùng khi hiển thị nội dung do người dùng hoặc bên thứ ba cung cấp.
 ---
 
 # Xss Prevention

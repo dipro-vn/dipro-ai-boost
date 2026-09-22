@@ -1,6 +1,6 @@
 ---
 name: ui-analysis-ux-risk-analysis
-description: 
+description: Rà soát design tìm rủi ro UX ngoài happy path — trạng thái loading, empty, lỗi, dữ liệu dài tràn layout, thao tác không hoàn tác được, phản hồi sau hành động. Dùng khi review thiết kế trước khi implement.
 ---
 
 # UX Risk Analysis

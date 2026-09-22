@@ -1,6 +1,6 @@
 ---
 name: prisma-query-pattern
-description: 
+description: Truy vấn dữ liệu bằng Prisma Client — findUnique, findMany, select và include để tránh over-fetch, giải quyết N+1, phân trang. Dùng khi viết truy vấn DB trong server component hoặc server action.
 ---
 
 # Prisma Query Pattern

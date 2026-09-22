@@ -1,6 +1,6 @@
 ---
 name: code-review-performance-review
-description: 
+description: Review hiệu năng code — re-render thừa, query lặp hoặc N+1, bundle phình, vòng lặp tốn kém. Dùng khi review PR có list lớn, component nặng, thêm dependency mới, hoặc data fetching.
 ---
 
 # Performance Review

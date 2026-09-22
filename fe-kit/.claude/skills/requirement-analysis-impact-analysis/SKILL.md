@@ -1,6 +1,6 @@
 ---
 name: requirement-analysis-impact-analysis
-description: 
+description: Đánh giá phạm vi ảnh hưởng của một thay đổi trước khi triển khai — module bị chạm, API và contract bị ảnh hưởng, rủi ro hồi quy, thứ tự triển khai. Dùng khi sửa code dùng chung hoặc thay đổi có rủi ro lan rộng.
 ---
 
 # Impact Analysis

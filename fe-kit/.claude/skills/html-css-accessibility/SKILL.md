@@ -1,6 +1,6 @@
 ---
 name: html-css-accessibility
-description: 
+description: Nền tảng accessibility khi dựng UI — alt text, label, contrast, focus visible, ARIA khi thật sự cần. Dùng khi viết markup mới hoặc sửa UI để đảm bảo dùng được bằng bàn phím và screen reader.
 ---
 
 # Accessibility (HTML/CSS)

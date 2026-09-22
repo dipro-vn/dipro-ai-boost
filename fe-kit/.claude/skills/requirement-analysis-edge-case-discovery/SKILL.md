@@ -1,6 +1,6 @@
 ---
 name: requirement-analysis-edge-case-discovery
-description: 
+description: Tìm trường hợp biên dễ bị bỏ sót — dữ liệu rỗng và null, giá trị biên, lỗi mạng, thao tác đồng thời, quyền hạn, chuỗi dài và ký tự đặc biệt. Dùng khi rà soát một feature hoặc liệt kê test case.
 ---
 
 # Edge Case Discovery

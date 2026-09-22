@@ -1,6 +1,6 @@
 ---
 name: react-component-pattern
-description: 
+description: Viết React function component đúng chuẩn — kích thước hợp lý, props rõ ràng, composition thay vì prop drilling, tách container và presentational. Dùng khi tạo mới hoặc refactor một component.
 ---
 
 # Component Pattern

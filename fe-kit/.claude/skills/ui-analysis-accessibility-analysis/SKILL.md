@@ -1,6 +1,6 @@
 ---
 name: ui-analysis-accessibility-analysis
-description: 
+description: Soi design tìm vấn đề accessibility trước khi code — độ tương phản màu, kích thước vùng chạm, thiếu label, thứ tự đọc, chỉ dùng màu để truyền đạt thông tin. Dùng khi review mockup hoặc file thiết kế.
 ---
 
 # Accessibility Analysis

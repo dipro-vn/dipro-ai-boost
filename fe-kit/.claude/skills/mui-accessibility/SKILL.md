@@ -1,6 +1,6 @@
 ---
 name: mui-accessibility
-description: 
+description: CHỈ dùng khi dự án dùng Material UI. Đảm bảo component MUI tiếp cận được — label cho TextField, ARIA cho Dialog và Menu, quản lý focus, độ tương phản theo theme. Dùng khi làm form, modal, hoặc menu bằng MUI.
 ---
 
 # Accessibility

@@ -1,6 +1,6 @@
 ---
 name: security-token-handling
-description: 
+description: Quản lý access token và refresh token an toàn — chọn nơi lưu (cookie httpOnly thay vì localStorage), luồng refresh, xử lý hết hạn và đăng xuất. Dùng khi làm auth hoặc gặp lỗi 401 cần tự động refresh.
 ---
 
 # Token Handling

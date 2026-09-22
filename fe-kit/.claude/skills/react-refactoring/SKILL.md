@@ -1,6 +1,6 @@
 ---
 name: react-refactoring
-description: 
+description: Refactor React component mà không đổi hành vi — tách component quá lớn, rút logic lặp thành custom hook, giảm số prop, làm rõ luồng dữ liệu. Dùng khi component khó đọc hoặc lặp code nhưng hành vi phải giữ nguyên.
 ---
 
 # Refactoring

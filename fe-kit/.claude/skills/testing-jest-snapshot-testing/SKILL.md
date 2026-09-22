@@ -1,6 +1,6 @@
 ---
 name: testing-jest-snapshot-testing
-description: 
+description: Dùng snapshot test có chủ đích — snapshot nhỏ và ổn định, review kỹ diff trước khi cập nhật, tránh snapshot cả cây component lớn. Dùng khi cân nhắc toMatchSnapshot hoặc khi snapshot hay vỡ.
 ---
 
 # Snapshot Testing

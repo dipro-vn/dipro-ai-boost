@@ -1,6 +1,6 @@
 ---
 name: mui-component-usage
-description: 
+description: CHỈ dùng khi dự án dùng Material UI. Dựng UI bằng component MUI sẵn có (Button, TextField, Dialog, Select, Autocomplete) thay vì tự chế từ thẻ HTML thô. Dùng khi implement UI mới trong dự án MUI.
 ---
 
 # Component Usage

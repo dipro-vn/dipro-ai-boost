@@ -1,6 +1,6 @@
 ---
 name: form-zod-validation
-description: 
+description: Validate form bằng zod schema kết hợp React Hook Form qua zodResolver — định nghĩa schema, suy ra type từ schema, thông báo lỗi tiếng Việt. Dùng khi cần validation type-safe cho form hoặc dữ liệu đầu vào.
 ---
 
 # Zod Validation
