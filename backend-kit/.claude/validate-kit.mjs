@@ -50,6 +50,28 @@ function checkScalars(file, raw) {
   }
 }
 
+/**
+ * An unknown model value does not fail loudly — the agent or command just does
+ * not run on the model the kit intends. Accept the aliases and full model IDs.
+ */
+const MODEL_ALIASES = new Set(['opus', 'sonnet', 'haiku', 'inherit']);
+function checkModel(file, model) {
+  if (model === undefined) return;
+  const value = model.replace(/^['"]|['"]$/g, '');
+  if (MODEL_ALIASES.has(value) || /^claude-[a-z0-9-]+$/.test(value)) return;
+  fail(file, `unknown model "${value}" — use opus, sonnet, haiku, inherit, or a full model ID (claude-...)`);
+}
+
+/** Same failure mode as model: a typo is not rejected, it is just not applied. */
+const EFFORT_LEVELS = new Set(['low', 'medium', 'high', 'xhigh', 'max']);
+function checkEffort(file, effort) {
+  if (effort === undefined) return;
+  const value = effort.replace(/^['"]|['"]$/g, '');
+  if (!EFFORT_LEVELS.has(value)) {
+    fail(file, `unknown effort "${value}" — use low, medium, high, xhigh, or max`);
+  }
+}
+
 function listDir(dir, filter) {
   const path = join(KIT, dir);
   if (!existsSync(path)) return [];
@@ -72,6 +94,8 @@ for (const file of listDir('agents', (f) => f.endsWith('.md'))) {
   else if (!/^Use (when|to|before|after)/i.test(fm.fields.description)) {
     fail(rel, 'description should start with "Use when/to/before" — it states WHEN to dispatch, not what the agent is');
   }
+  checkModel(rel, fm.fields.model);
+  checkEffort(rel, fm.fields.effort);
 }
 
 // --- commands: need a description so they show up usefully in the menu -------
@@ -84,6 +108,7 @@ for (const file of listDir('commands', (f) => f.endsWith('.md'))) {
   }
   checkScalars(rel, fm.raw);
   if (!fm.fields.description) fail(rel, 'missing required field: description');
+  checkModel(rel, fm.fields.model);
 }
 
 // --- skills: need name matching the directory, and a trigger description ----
@@ -104,6 +129,8 @@ if (existsSync(skillsDir)) {
     }
     checkScalars(rel, fm.raw);
     if (fm.fields.name !== name) fail(rel, `name "${fm.fields.name}" does not match directory "${name}"`);
+    checkModel(rel, fm.fields.model);
+    checkEffort(rel, fm.fields.effort);
     if (!fm.fields.description) fail(rel, 'missing required field: description');
     else if (!/^Use (when|before|after|to)/i.test(fm.fields.description)) {
       fail(rel, 'description should start with "Use when/before/after" — it states the trigger, not a table of contents');
@@ -132,6 +159,31 @@ for (const dir of ['commands', 'agents']) {
     if (text.includes('.claude/agents/') || text.includes('/SKILL.md')) {
       fail(rel, 'refers to a file path instead of a registered name — paths do not dispatch anything');
     }
+  }
+}
+
+// Skills reference other skills and agents too. Command references are not checked
+// here: skills legitimately mention commands of external tools (e.g. a source-map tool).
+for (const name of skillNames) {
+  const file = join(skillsDir, name, 'SKILL.md');
+  if (!existsSync(file)) continue;
+  const rel = `skills/${name}/SKILL.md`;
+  const text = readFileSync(file, 'utf8');
+  for (const [, ref] of text.matchAll(/\*\*(backend-[a-z]+)\*\*/g)) {
+    if (!agentNames.has(ref)) fail(rel, `references unknown agent: ${ref}`);
+  }
+  for (const [, ref] of text.matchAll(/`([a-z0-9-]+)` skill/g)) {
+    if (!skillNames.has(ref)) fail(rel, `references unknown skill: ${ref}`);
+  }
+}
+
+// --- settings.json: a syntax error disables every permission rule in it -------
+const settingsPath = join(KIT, 'settings.json');
+if (existsSync(settingsPath)) {
+  try {
+    JSON.parse(readFileSync(settingsPath, 'utf8'));
+  } catch (error) {
+    fail('settings.json', `invalid JSON — Claude Code ignores the file: ${error.message}`);
   }
 }
 

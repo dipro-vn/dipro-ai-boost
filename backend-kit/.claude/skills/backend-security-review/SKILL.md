@@ -22,6 +22,19 @@ Use this skill when reviewing backend code or designing endpoints that handle pr
 - Use UUID validation for IDs.
 - Whitelist dynamic sort and filter fields.
 - Validate file metadata and size before processing uploads.
+- Enforce a maximum page size in the DTO (`@Max(100)` on `limit`). An unbounded `limit` lets one request read the whole table.
+
+### Mass Assignment
+
+The global `ValidationPipe` must strip fields the DTO does not declare:
+
+```typescript
+app.useGlobalPipes(
+  new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
+);
+```
+
+Without `whitelist`, a client can send `companyId`, `role`, or `isAdmin` in the body and a spread into the entity (`repo.save({ ...dto })`) writes it. Map DTO fields to the entity explicitly, and set scope and ownership fields from the token, never from the body.
 
 ## Output Shaping
 
@@ -36,6 +49,12 @@ Use this skill when reviewing backend code or designing endpoints that handle pr
 - Logs must not include credential material, session headers, or full request bodies with sensitive fields.
 - Log expected business failures at a lower level than system failures.
 
+## Abuse And Secrets
+
+- Rate-limit login, OTP, password reset, export, and other expensive or guessable endpoints — with `@nestjs/throttler` or the project's existing mechanism.
+- Read secrets and connection strings from configuration, never from code or committed files.
+- Do not read `.env` files during a task; ask for the variable name instead.
+
 ## Data Safety
 
 - Use transactions for multi-table writes.
@@ -48,6 +67,9 @@ Use this skill when reviewing backend code or designing endpoints that handle pr
 - [ ] Guards are present where required.
 - [ ] Ownership or role checks are explicit.
 - [ ] DTO validation covers external input.
+- [ ] `ValidationPipe` uses `whitelist` and `forbidNonWhitelisted`; no DTO is spread into an entity.
+- [ ] List endpoints cap `limit`.
+- [ ] Sensitive or expensive endpoints are rate-limited.
 - [ ] Query sort fields are whitelisted.
 - [ ] Responses are shaped through DTOs.
 - [ ] Logs avoid credential material.

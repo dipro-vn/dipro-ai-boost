@@ -1,6 +1,7 @@
 ---
 description: Produce or review a handoff-ready REST contract — endpoints, DTOs, status codes, pagination, cache notes.
 argument-hint: <endpoint or feature>
+model: sonnet
 ---
 
 # API Contract

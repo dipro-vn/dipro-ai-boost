@@ -1,6 +1,7 @@
 ---
 description: Add backend tests for a feature, bug fix, module, service, controller, endpoint, or cache behavior.
 argument-hint: [module or behavior to cover]
+model: sonnet
 ---
 
 # Test Generation
@@ -13,12 +14,14 @@ Use when adding backend tests for a feature, bug fix, module, service, controlle
 
 ## Steps
 
-1. **Read behavior** - Dispatch **backend-tester** to read acceptance criteria, API contract, and existing tests.
-2. **List cases** - Cover success, validation failure, authorization failure, missing records, transaction failure, cache invalidation, and regression paths where relevant.
-3. **Write tests** - Apply the `nestjs-testing` skill using existing project patterns.
-4. **Run focused tests** - Run the smallest command that exercises the new tests.
-5. **Run relevant suite** - Run the module or project test command that catches regressions.
-6. **Patch gaps** - Add missing cases for meaningful uncovered branches.
+If you are already running as **backend-tester**, do these steps directly. Otherwise do them in the main agent for one module, or dispatch **backend-tester** once when several modules need coverage.
+
+1. **Read behavior** — read acceptance criteria, API contract, the code under test, and one existing test in the same module to copy its style.
+2. **List cases** — cover success, validation failure, authorization failure, missing records, transaction failure, cache invalidation, and regression paths where relevant.
+3. **Write tests** — apply the `nestjs-testing` skill using existing project patterns.
+4. **Run focused tests** — run only the files you wrote (`npx jest <path>`), and fix until they pass.
+5. **Run relevant suite once** — run the module's suite a single time at the end to catch regressions.
+6. **Patch gaps** — add missing cases for meaningful uncovered branches.
 
 ## Definition Of Done
 

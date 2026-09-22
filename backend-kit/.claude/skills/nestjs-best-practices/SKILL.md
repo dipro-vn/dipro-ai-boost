@@ -32,7 +32,7 @@ Use this skill when writing, reviewing, or refactoring NestJS backend code.
 - Keep read flows explicit about relations to avoid N+1 behavior.
 - Throw NestJS exceptions such as `NotFoundException`, `BadRequestException`, and `ForbiddenException`.
 - Keep external side effects behind injectable providers so tests can replace them.
-- Invalidate Redis cache immediately after successful writes.
+- Invalidate Redis cache after the write commits.
 
 ## DTOs And Validation
 
@@ -41,6 +41,12 @@ Use this skill when writing, reviewing, or refactoring NestJS backend code.
 - Prefer explicit optional fields with `@IsOptional()`.
 - Do not accept raw `orderBy` or `sort` fields without whitelisting.
 - Response DTOs must omit sensitive fields and expose only contract fields.
+
+## Configuration
+
+- Read configuration through `ConfigService` (or the project's config provider), not `process.env` scattered through services.
+- Validate environment variables at startup with the project's schema (Joi or `class-validator`). A missing or malformed variable must fail the boot, not the first request that needs it.
+- A new variable is added to the validation schema and to `.env.example` in the same change.
 
 ## TypeORM Integration
 
@@ -72,4 +78,5 @@ Use this skill when writing, reviewing, or refactoring NestJS backend code.
 - [ ] Dynamic sort fields are whitelisted.
 - [ ] Multi-table writes run in a transaction.
 - [ ] Redis cache has TTL and invalidation.
+- [ ] New environment variables are validated at startup and listed in `.env.example`.
 - [ ] Tests cover success and important failure cases.

@@ -1,6 +1,7 @@
 ---
 description: Review database-facing backend changes — entities, migrations, queries, indexes, transactions, cache.
 argument-hint: [module, migration, or endpoint]
+model: sonnet
 ---
 
 # Database Review

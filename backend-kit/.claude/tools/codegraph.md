@@ -21,7 +21,7 @@ Explore a feature or symbol:
 codegraph explore "OrdersModule controller service query flow"
 ```
 
-Sync after code changes:
+Sync once at the end of a task that changed code (not after every edit):
 
 ```bash
 codegraph sync
