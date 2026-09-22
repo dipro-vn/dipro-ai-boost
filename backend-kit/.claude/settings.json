@@ -35,7 +35,6 @@
       "Bash(codegraph query:*)",
       "Bash(node .claude/validate-kit.mjs)",
       "Bash(date:*)",
-      "mcp__codegraph__codegraph_explore",
       "mcp__codegraph__*"
     ],
     "ask": [
@@ -57,16 +56,7 @@
       "Read(./.env.staging)"
     ]
   },
-  "hooks": {
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "codegraph prompt-hook"
-          }
-        ]
-      }
-    ]
-  }
+  "enabledMcpjsonServers": [
+    "codegraph"
+  ]
 }

@@ -90,6 +90,8 @@ With CodeGraph, every agent looks things up in the same order: the Context Brief
 
 All five agents list the MCP tool `mcp__codegraph__codegraph_explore` in `tools:`; register the server with `codegraph install --target claude` and confirm with `/mcp`. Without it, agents fall back to Grep and Read.
 
+`.claude/settings.json` sets `enabledMcpjsonServers: ["codegraph"]`, so a `codegraph` server declared in the project's `.mcp.json` starts without manual approval. `codegraph install` may also add a `UserPromptSubmit` hook (`codegraph prompt-hook`) that injects CodeGraph context into every prompt. The kit leaves it out of the shared settings: it adds several KB of context per message, often unrelated, and fails on machines without the CLI. To use it, add it to your own `.claude/settings.local.json`.
+
 ## 5. Commands
 
 | Task | Command | Use When |
