@@ -373,7 +373,7 @@ Sau khi hoàn thành 5 outputs, BA agent PHẢI edit `SPEC.md` thêm section **`
 
 | # | Output | Path / URL | Note |
 |---|---|---|---|
-| 0 | **SPEC.md** (file này) | `<DOCS_ROOT>/features/<feature>/SPEC.md` | Chính là file bạn đang đọc |
+| 0 | **SPEC.md** (file này) | `<output-folder>/SPEC.md` | Chính là file bạn đang đọc |
 
 ### Figma outputs (Bước 5 — Design output)
 
@@ -390,7 +390,7 @@ Sau khi hoàn thành 5 outputs, BA agent PHẢI edit `SPEC.md` thêm section **`
 
 | # | Output | Path / URL | Cách chạy |
 |---|---|---|---|
-| 4 | **HTML Prototype** | `<DOCS_ROOT>/features/<feature>/prototype/index.html` | `open <DOCS_ROOT>/features/<feature>/prototype/index.html` — standalone, không cần build |
+| 4 | **HTML Prototype** | `<output-folder>/prototype/index.html` | `open <output-folder>/prototype/index.html` — standalone, không cần build |
 
 ### Downstream instructions
 

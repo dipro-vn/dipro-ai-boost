@@ -5,8 +5,8 @@
 **Bước 1 — Tạo document ghi nhận:**
 
 ```
-<DOCS_ROOT>/meetings/customer_feedback_<DDMMYY>.md   ← feedback trực tiếp từ KH
-<DOCS_ROOT>/meetings/meeting_note_<DDMMYY>.md         ← note đầy đủ từ Gemini / ghi tay
+<output-folder>/meetings/customer_feedback_<DDMMYY>.md   ← feedback trực tiếp từ KH
+<output-folder>/meetings/meeting_note_<DDMMYY>.md         ← note đầy đủ từ Gemini / ghi tay
 ```
 
 Template `meeting_note_DDMMYY.md`:

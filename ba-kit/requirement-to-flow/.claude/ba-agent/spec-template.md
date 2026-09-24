@@ -34,7 +34,7 @@ Cấu trúc bắt buộc:
 | ID | Statement | Classification | Evidence (file + section/timestamp/user turn) | Confidence | Used in flow? |
 |---|---|---|---|---|---|
 | RQ-001 | Actor A phải login trước khi tạo order | FACT | user turn 3 ("phải login trước") | High | Yes — Flow Tổng Quan bước 1 |
-| RQ-002 | Payment gateway là elepay | PROPOSAL | BA đề xuất dựa POLICIES §5 | Medium | No — chờ BRSE approve |
+| RQ-002 | Payment gateway là elepay | PROPOSAL | user Câu 0.8 chọn [B] chưa chốt, nêu tên gateway trong chat | Medium | No — chờ BRSE approve |
 | RQ-003 | Refund window 7 ngày | INFERENCE | suy từ industry standard, chưa hỏi | Low | No — đưa vào Q&A |
 | RQ-004 | Có SMS OTP hay không? | UNKNOWN | user chưa trả lời | — | No — blocking |
 | RQ-005 | Meeting note nói "1 ngày" nhưng SPEC cũ nói "3 ngày" | CONFLICT | meeting 12/09 vs SPEC v2 | — | No — cần BRSE quyết |
@@ -189,8 +189,8 @@ Notation chuyển màn hình (ghi vào cột **Transition To**):
 - Conditional: `[OK] → XX_FEAT_002 / [Lỗi] → Modal lỗi`
 - External: `→ Email gửi / → Push notification`
 
-- **Screen Code**: `<Module(2)>_<Feature(4)>_<Seq(3)>` — theo `.claude/context/business-flows/screen-code-rule.md`
-  - Module: prefix lấy từ Epic code của từng repo trong bảng Ecosystem (`AGENTS.md`)
+- **Screen Code**: `<Module(2)>_<Feature(4)>_<Seq(3)>`
+  - Module: 2 chữ hoa viết tắt module/platform (ví dụ `AX`, `DA`, `WB`). Nếu nguồn requirement đã có convention mã màn hình → **dùng đúng convention của nguồn**, không tự đặt mới
   - Feature: 4 chữ hoa viết tắt từ tên feature (ví dụ: `MENU`, `AUTH`, `PAYM`, `DLVR`, `CONT`)
   - Seq: `001`, `002`, `003`... theo thứ tự screen trong feature
   - Unique toàn dự án — không trùng với screen khác

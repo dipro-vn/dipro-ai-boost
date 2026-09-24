@@ -1,8 +1,8 @@
 # BA Agent — Preflight Questions Detail (Bước 2b)
 
-> **Scope:** Chi tiết 7 câu preflight (0.4 Scope · 0 Platform · 0.5 Figma URL · 0.8 Tech stack · 0.9 Granularity · 0.10 Actors · 0.11 Ngôn ngữ) + 10 câu checklist chuẩn + Discovery Brief.
+> **Scope:** Chi tiết 8 câu preflight (0.4 Scope · 0 Platform · 0.5 Figma URL · 0.8 Tech stack · 0.9 Granularity · 0.10 Actors · 0.11 Ngôn ngữ · 0.12 PII) + 10 câu checklist chuẩn + Discovery Brief.
 > **Dùng ở:** `ba-agent.md` Bước 2b — agent body chỉ giữ bảng tóm tắt + reference file này khi cần copy enforcement/template chi tiết.
-> **Thứ tự hỏi BẮT BUỘC:** 0.4 → 0 → 0.5 → 0.8 → 0.9 → 0.10 → 0.11 → 10 câu chuẩn 1-10 → **in Discovery Brief + chờ user confirm**. Không đảo, không skip.
+> **Thứ tự hỏi BẮT BUỘC:** 0.4 → 0 → 0.5 → 0.8 → 0.9 → 0.10 → 0.11 → 0.12 → 10 câu chuẩn 1-10 → **in Discovery Brief + chờ user confirm**. Không đảo, không skip.
 
 ---
 
@@ -206,11 +206,45 @@ Figma output (label node, tiêu đề bảng, mô tả) viết bằng ngôn ng�
 
 ---
 
+## Câu 0.12 — Khai báo PII trong nguồn đầu vào (hỏi CUỐI CÙNG, trước Discovery Brief)
+
+> **Lý do BẮT BUỘC:** hook H06 chỉ bắt được dữ liệu **có hình dạng** (email, SĐT, số thẻ, token). Hai nhóm còn lại — **dữ liệu production** và **dữ liệu KH xác định confidential** — không có hình dạng nào để nhận ra: `orders.csv` trông y hệt `mock_orders.csv`. Chỉ **người** mới biết. Không hỏi ở đây thì không có lớp nào chặn được hai nhóm đó.
+>
+> Xem `.claude/rules/DATA-PRIVACY.md` §7 (4 lớp phát hiện — câu hỏi này là lớp L3).
+
+**Câu hỏi trình user — hỏi cho TỪNG file/nguồn:**
+
+```
+Nguồn `<tên file / URL>` có chứa 秘密情報・個人情報 của khách hàng không?
+  [A] Không — dữ liệu mẫu / tài liệu mô tả thuần
+  [B] Có PII — tên, email, SĐT, địa chỉ, thông tin member/user thực tế
+  [C] Có dữ liệu production — dump, export, log, bản ghi nghiệp vụ thật
+  [D] KH đã đánh dấu confidential / 社外秘 / thuộc NDA
+  [E] Chưa rõ
+```
+
+**Lưu:** `SOURCE_PII[<file>]`
+
+**Xử lý theo câu trả lời:**
+
+| User chọn | BA làm gì |
+|---|---|
+| `[A]` | Dùng bình thường |
+| `[B]` / `[C]` | ✅ Đọc được để hiểu **cấu trúc** và **nghiệp vụ**. ⛔ **Không copy giá trị thật vào bất kỳ output nào** — thay bằng bộ dữ liệu mẫu (`DATA-PRIVACY.md` §4). Ghi vào `## Source Register` cột Note: `PII — chỉ dùng cấu trúc` |
+| `[D]` | ⛔ **DỪNG**, hỏi user đã có phê duyệt của PM/KH chưa. Chưa có → không đọc nguồn đó, ghi `BLOCKED — chờ phê duyệt` |
+| `[E]` | **Mặc định coi là `[D]`** — confidential cho tới khi có câu trả lời rõ |
+
+**⚠️ Enforcement:**
+- Không trả lời → **mặc định `[E]`**, tức là coi như confidential. KHÔNG được assume `[A]` cho nhanh.
+- Kết quả khai báo PHẢI in trong Discovery Brief để user sửa nếu BA hiểu nhầm.
+
+---
+
 ## Discovery Brief — BẮT BUỘC in 1 lần trước khi sang Bước 4
 
 > **Nguồn ý tưởng:** pattern *"collect inputs via interactive Q&A → generate document → update status"* của skill **BMAD Analyst** trên marketplace. Trước rule này, câu trả lời preflight nằm rải rác trong chat, không có artifact nào để đối chiếu về sau — Strict Mode thiếu đúng audit trail này.
 
-Sau khi hỏi xong toàn bộ (0.4 → 0 → 0.5 → 0.8 → 0.9 → 0.10 → 0.11 → 10 câu chuẩn), BA PHẢI in block dưới rồi **DỪNG chờ user confirm 1 lần duy nhất**:
+Sau khi hỏi xong toàn bộ (0.4 → 0 → 0.5 → 0.8 → 0.9 → 0.10 → 0.11 → 0.12 → 10 câu chuẩn), BA PHẢI in block dưới rồi **DỪNG chờ user confirm 1 lần duy nhất**:
 
 ```
 📋 DISCOVERY BRIEF — <Tên feature>
@@ -224,7 +258,14 @@ Sau khi hỏi xong toàn bộ (0.4 → 0 → 0.5 → 0.8 → 0.9 → 0.10 → 0.
 | 0.9 | Granularity | <A/B/C> | user / mặc định B |
 | 0.10 | Actors | <list> · Primary: <...> · System: <...> | user |
 | 0.11 | Ngôn ngữ / Audience | <VN/JP/EN> · <audience> | user / mặc định VN |
+| 0.12 | PII trong nguồn | <xem bảng khai báo dưới> | user |
 | 1-10 | 10 câu chuẩn | <tóm tắt 1 dòng mỗi câu; câu chưa trả lời ghi ⚠ CHƯA CÓ> | user |
+
+Khai báo PII theo từng nguồn (BẮT BUỘC — sửa nếu BA hiểu nhầm):
+
+| File / nguồn | Chứa PII? | Rule áp dụng | Được dùng để lấy |
+|---|---|---|---|
+| <tên file / URL / "chat với user"> | <A Không / B PII / C Production / D Confidential / E Chưa rõ> | <dùng bình thường / chỉ dùng cấu trúc / BLOCKED chờ duyệt> | <scope / rule / navigation / visual> |
 
 Mode gate dự kiến: <Light / Strict> · Số gate sẽ hỏi: <2 / 5>
 Hạng mục còn thiếu: <list — hoặc "không thiếu">
@@ -236,6 +277,7 @@ Hạng mục còn thiếu: <list — hoặc "không thiếu">
 - ❌ KHÔNG được sang Bước 4 khi chưa in Discovery Brief và chưa có confirm của user
 - Hạng mục `⚠ CHƯA CÓ` → ghi thẳng vào `## Source Register` của SPEC với classification `UNKNOWN`, KHÔNG tự điền
 - Discovery Brief copy nguyên văn vào `versions/v<N>_<DDMMYYYY>/ba-outputs-log.md` làm audit trail
+- Nguồn khai `[D]` mà chưa có phê duyệt → **không đọc**, ghi `BLOCKED — chờ phê duyệt` vào `## Source Register`
 
 ---
 
@@ -332,4 +374,4 @@ Chờ user chọn. **KHÔNG được assume `[A]` chỉ vì "có existing → ch
 7. Feature liên quan đến tính năng hiện có nào không?
 8. Cần hiển thị / tương tác trên app mobile không (nếu dự án có repo vai trò `mobile`)?
 9. Cần real-time không? (WebSocket, push notification)
-10. Liên quan tích hợp bên ngoài không? (xem danh sách integration trong `.claude/context/specification.md`)
+10. Liên quan tích hợp bên ngoài không? (payment / push / SSO / API bên thứ ba — user phải nêu, BA không tự suy)

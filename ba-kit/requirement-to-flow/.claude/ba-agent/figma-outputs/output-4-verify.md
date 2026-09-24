@@ -72,10 +72,10 @@ window.fireErr = function (code, i) { /* bắn error thứ i của màn `code` *
 
 ```bash
 node .claude/skills/business-analyst/scripts/verify-prototype.js \
-     <DOCS_ROOT>/features/<feature>/prototype/index.html \
-     --out  <DOCS_ROOT>/features/<feature>/prototype/test-report.md \
-     --json <DOCS_ROOT>/features/<feature>/prototype/test-report.json \
-     --shots <DOCS_ROOT>/features/<feature>/prototype/shots
+     <output-folder>/prototype/index.html \
+     --out  <output-folder>/prototype/test-report.md \
+     --json <output-folder>/prototype/test-report.json \
+     --shots <output-folder>/prototype/shots
 ```
 
 Chuẩn bị 1 lần:
