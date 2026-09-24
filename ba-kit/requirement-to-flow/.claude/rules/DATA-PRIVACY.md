@@ -87,12 +87,14 @@ Có 1 ô chưa tick → **không snapshot, không bàn giao**.
 
 ## 6. Khi lỡ đưa dữ liệu thật vào
 
-> Bảng quyết định đầy đủ (khi nào tự sửa, khi nào phải hỏi user) → **§8**.
+> Đây là **tóm tắt**. Phản ứng đúng phụ thuộc **đã lỡ tới đâu** → bảng 5 mức ở **§8** (và `POLICIES.md` §5).
 
 1. **Dừng ngay**, không dùng tiếp output đó
-2. **Báo PM** theo `INCIDENT_REPORTING` (`.claude/rules/POLICY.md` §9)
-3. **Xoá** artifact đã sinh ra — bao gồm cả node trên Figma và snapshot trong `versions/`
-4. ❌ Không tự xử lý im lặng
+2. **Báo user ngay** — nêu rõ: lỡ cái gì, ở output nào, đã ra ngoài chưa
+3. **Chưa ra ngoài** (còn ở file local) → tự mask/xoá rồi báo 1 dòng, không cần hỏi
+4. **Đã ra ngoài** (Figma cloud / Backlog / Slack / Drive / commit / snapshot `versions/`) → **KHÔNG tự xoá** node hay snapshot; dừng và hỏi cách khắc phục (§8)
+5. Nói rõ với user: nghĩa vụ báo **người phụ trách / PM** theo `INCIDENT_REPORTING` (`.claude/rules/POLICY.md` §9) **vẫn còn nguyên** dù chọn phương án nào
+6. ❌ Không tự xử lý im lặng
 
 ---
 

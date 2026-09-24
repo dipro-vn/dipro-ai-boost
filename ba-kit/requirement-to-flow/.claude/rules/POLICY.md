@@ -122,6 +122,9 @@ Danh sách file cụ thể không được đọc → `SECURITY.md`.
 3. Đánh giá phạm vi ảnh hưởng
 4. Ghi lại sự cố + biện pháp khắc phục
 
+> ⚠️ **Ai làm 4 bước trên:** đây là quy trình của **con người phụ trách**, không phải việc AI tự thực hiện.
+> AI dính incident thì **dừng + báo user + hỏi cách khắc phục** — **KHÔNG tự** rotate secret, **KHÔNG tự** xoá node Figma hay snapshot `versions/` (khó hoàn tác). Xem `POLICIES.md` §5 mức 4.
+
 > Báo sớm **giảm thiệt hại**. Che giấu sự cố là vi phạm nghiêm trọng hơn bản thân lỗi.
 
 ---
