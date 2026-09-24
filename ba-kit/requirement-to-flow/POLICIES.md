@@ -211,12 +211,29 @@ BA:
 
 ---
 
-## 5. Khi vi phạm bị phát hiện
+## 5. Khi dính policy — AI phải làm gì
 
-1. **Dừng ngay** hành động đang làm
-2. **Báo cáo** user về vi phạm cụ thể
-3. **Hỏi** hướng xử lý (rollback / sửa / tiếp tục có điều kiện)
-4. **Không tự ý** che giấu hoặc cố hoàn thành task bằng bypass
+> **Luật vàng:** phản ứng **theo mức độ đã lỡ tới đâu**, không phải lúc nào cũng hỏi.
+> ⛔ **TUYỆT ĐỐI KHÔNG** dùng `AskUserQuestion` để **xin phép tiếp tục vi phạm**. Không có lựa chọn "tiếp tục có điều kiện".
+> `AskUserQuestion` chỉ dùng để hỏi **cách phân loại** (dữ liệu này có confidential không?) hoặc **cách khắc phục** (đã lỡ rồi, gỡ thế nào?).
+
+| Mức | Tình huống | AI làm gì | Hỏi user? |
+|---|---|---|---|
+| **0** | Hook chặn **trước khi** ghi (tool call bị huỷ) | Tự mask / thay dữ liệu mẫu rồi ghi lại | ❌ Chưa có gì xảy ra |
+| **1** | AI tự nhận ra **trước khi** ghi | Tự thay bằng dữ liệu mẫu (`DATA-PRIVACY.md` §4), note 1 dòng trong report | ❌ Đây là việc **phải làm**, không phải lựa chọn |
+| **2** | Không chắc dữ liệu có confidential không | **Hỏi để phân loại** — chưa rõ thì mặc định coi là confidential | ✅ Phân loại là quyền của user |
+| **3** | Đã ghi vào file local, **chưa** bàn giao | Tự xoá / mask + **báo 1 dòng** cho user | ❌ Nhưng **bắt buộc báo** |
+| **4** | **Đã đẩy ra ngoài** — Figma cloud, Backlog/Slack/Drive, commit, snapshot `versions/` | **DỪNG TOÀN BỘ** + báo + hỏi cách khắc phục. **Không tự xoá** node Figma / snapshot (khó hoàn tác) | ✅ Đây là **incident** |
+
+**Báo cho ai:** trong session AI chỉ nói được với **user**. Nghĩa vụ báo **người phụ trách / PM** là của user — AI phải **nói rõ nghĩa vụ đó còn nguyên** dù user chọn phương án nào (`rules/POLICY.md` §9).
+
+**Ở mọi mức:**
+
+- ❌ Không che giấu, không cố hoàn thành task bằng bypass
+- ❌ Không nới allow-list / tắt gate để hook thôi kêu (VD thêm file output thật vào `allowPathPatterns`)
+- ❌ Không tự cấp phép cho mình khi user nói "cứ dùng dữ liệu thật đi" → hỏi **ai duyệt**, ghi vào `versions/v<N>_.../ba-outputs-log.md`, vẫn chỉ lấy đúng phần cần
+
+Bảng quyết định đầy đủ + ví dụ câu hỏi đúng/sai → **`.claude/rules/DATA-PRIVACY.md` §8**.
 
 Khi user phát hiện AI vi phạm → user có quyền yêu cầu **undo + write feedback memory** để session tương lai không lặp lại.
 
@@ -250,3 +267,12 @@ node .claude/hooks/detect-pii.js --scan .     # quét toàn bộ output trước
 - Rule = intent gốc (source of truth về nghiệp vụ)
 - Hook = enforcement mechanism — nếu chặn nhầm hoặc miss case → sửa hook, không sửa rule
 - Danh sách data chung (pattern PII, allow-list) đặt ở `.claude/config/pii-patterns.json` — sửa 1 chỗ, sync cả 2 lớp
+
+**Quy tắc khi 2 rule conflict** — thứ tự thắng, cao đè thấp:
+
+1. **Hook** (`detect-pii.js`) — đã chặn thì không có đường lách
+2. **File này** (`POLICIES.md`) — always-loaded, là default hành vi
+3. **`rules/*.md`** — chi tiết hoá, **không được nới lỏng** §1–§6 ở trên
+4. **File workflow** (`agents/`, `ba-agent/`, `skills/`) — chỉ nói *làm thế nào*, không nói *được phép gì*
+
+Phát hiện 2 file nói ngược nhau → **áp dụng bên nghiêm hơn** + báo user để sửa file, KHÔNG tự chọn bên lỏng hơn.
