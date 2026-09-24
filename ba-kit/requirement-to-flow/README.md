@@ -45,11 +45,11 @@ my-project/
     ├── agents/ba-agent.md
     ├── ba-agent/            ← support docs
     ├── skills/              ← business-analyst + ba-figma-output
-    ├── context/             ← spec-template, versioning...
-    ├── rules/               ← POLICY, RELIABILITY, SECURITY...
-    └── commands/
-        ├── create-spec.md
-        └── create-feature.md
+    ├── rules/               ← DATA-PRIVACY, POLICY, RELIABILITY, SECURITY
+    ├── hooks/               ← detect-pii.js (H06) + selftest
+    ├── config/              ← pii-patterns.json
+    ├── settings.json        ← nối hook vào PreToolUse
+    └── commands/create-spec.md
 ```
 
 ---
@@ -89,11 +89,11 @@ Hãy là BA, đọc file requirements/feature_A.docx và làm SPEC cho feature n
 
 | # | Output | Path / URL |
 |---|---|---|
-| 0 | `SPEC.md` (14 sections chuẩn) | `<DOCS_ROOT>/features/<feature>/SPEC.md` |
+| 0 | `SPEC.md` (14 sections chuẩn) | `<output-folder>/SPEC.md` |
 | 1 | Figma Frame — **Flow Tổng Quan** (Business Logic + Tech Table + Sitemap) | Node trên Figma Design page user chọn |
 | 2 | Figma Frame — **Screen Flow** (N groups theo business flow + Bảng Index) | Node Figma |
 | 3 | Figma Frame — **Screens + Items** (mockup + bảng ITEMS + ERROR SCENARIOS) | Node Figma |
-| 4 | **HTML Prototype** (standalone, mở bằng `open index.html`) | `<DOCS_ROOT>/features/<feature>/prototype/index.html` |
+| 4 | **HTML Prototype** (standalone, mở bằng `open index.html`) | `<output-folder>/prototype/index.html` |
 
 3. **Snapshot vào `versions/v<N>_<DDMMYYYY>/`** — mỗi lần chạy tự lưu snapshot để user feedback + so sánh với version trước
 
@@ -107,7 +107,7 @@ Hãy là BA, đọc file requirements/feature_A.docx và làm SPEC cho feature n
 - Kết thúc, dùng SPEC.md + Figma URL để bàn giao cho stakeholder / Tech Lead / Designer
 
 **Option B — Cần sửa:**
-- Ghi feedback vào `<DOCS_ROOT>/features/<feature>/versions/v<N>_<DDMMYYYY>/ba-outputs-log.md` section "Feedback"
+- Ghi feedback vào `<output-folder>/versions/v<N>_<DDMMYYYY>/ba-outputs-log.md` section "Feedback"
 - Trigger lại BA agent: `"Hãy là BA, review feedback trong versions/v1_11092026/ba-outputs-log.md và tạo v2"`
 - BA sẽ đọc feedback → cập nhật SPEC + Figma → snapshot vào `v2_<DDMMYYYY>/`
 
