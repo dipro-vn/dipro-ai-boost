@@ -53,6 +53,14 @@ interface ApiErrorResponse {
 }
 ```
 
+## OpenAPI Decorators
+
+If the project uses `@nestjs/swagger`, the decorators are part of the contract:
+
+- Every request and response DTO field has `@ApiProperty` or `@ApiPropertyOptional` with the right type and example.
+- Every endpoint declares its success and error responses (`@ApiOkResponse`, `@ApiNotFoundResponse`, ...).
+- A contract change updates the decorators in the same change. Stale Swagger is worse than none — consumers trust it.
+
 ## Contract Checklist
 
 - [ ] Every changed endpoint is listed.
@@ -62,3 +70,4 @@ interface ApiErrorResponse {
 - [ ] Auth requirement is clear.
 - [ ] Cache behavior and invalidation are noted when relevant.
 - [ ] Breaking changes are called out.
+- [ ] Swagger decorators match the DTOs when the project uses `@nestjs/swagger`.

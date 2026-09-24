@@ -55,5 +55,6 @@ Generate English output:
 
 - If `.understand-anything/` does not exist, skip this tool and use normal file search.
 - Do not install or run the initial analysis unless the user asks for setup.
+- Do not run `/understand` automatically after code changes — it is slow. At the end of the task, tell the user the graph may be stale and let them refresh it.
 - Verify important findings by reading the source file before editing.
 - Do not commit generated Understand-Anything output unless the project explicitly tracks it.

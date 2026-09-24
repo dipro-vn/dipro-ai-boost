@@ -13,7 +13,7 @@ Use this skill before adding or changing backend code in an existing project.
 
 1. Read `CLAUDE.md` and project docs if present.
 2. Check whether a source-map tool is already configured:
-   - `.codegraph/` exists: use `.claude/tools/codegraph.md`.
+   - `.codegraph/` exists: use `.claude/tools/codegraph.md`. Call `codegraph_explore` (MCP tool, or `codegraph explore` on the CLI) with the symbols of the affected flow **before** any Grep or Read. Source it returns counts as read — do not re-open those files.
    - `.understand-anything/` exists: use `.claude/tools/understand-anything.md`.
    - Neither exists: use normal file and text search and report that no source-map setup is present.
 3. Inspect `package.json` scripts and dependencies.
@@ -21,6 +21,8 @@ Use this skill before adding or changing backend code in an existing project.
 5. Inspect existing controller, service, DTO, entity, migration, and test patterns.
 6. Reuse naming, folder structure, exception shape, and response shape.
 7. Add a new pattern only when no existing pattern fits.
+
+Run this exploration **once per task**, in the main agent. Put the relevant CodeGraph output into the Context Brief as the code map, so subagents start from symbols and line ranges instead of whole files. Stop when you have one similar module, its tests, and the project commands — do not read every module. Hand the result to subagents as a Context Brief so they do not repeat it.
 
 ## Search Targets
 
@@ -46,10 +48,10 @@ Search for:
 
 ## Source-Map Sync
 
-After code changes, sync the source-map tool when it is configured:
+Sync **once, at the end of the task** — never after each edit or each subagent:
 
 - CodeGraph: run `codegraph sync` when available, or `codegraph init` if sync is not supported.
-- Understand-Anything: run `/understand` to refresh the knowledge graph.
+- Understand-Anything: do not refresh it yourself; the analysis is slow. Tell the user to run `/understand` when convenient.
 
 If no source-map tool is configured, skip this step and note that normal file search was used.
 
@@ -60,5 +62,5 @@ If no source-map tool is configured, skip this step and note that normal file se
 - [ ] Existing DTO and response patterns were followed.
 - [ ] Existing test pattern was followed.
 - [ ] Existing migration location was used.
-- [ ] Source-map tool was synced after code changes when configured.
+- [ ] Source-map tool was synced once at the end when configured (Understand-Anything: user was told to refresh).
 - [ ] No unrelated cleanup was mixed into the task.

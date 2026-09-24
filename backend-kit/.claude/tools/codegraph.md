@@ -13,25 +13,36 @@ Use CodeGraph before broad manual search when you need to:
 - Understand which files are affected by an interface or contract change.
 - Find existing project conventions before generating new code.
 
-## Commands
+## Setup For Agents
 
-Explore a feature or symbol:
-
-```bash
-codegraph explore "OrdersModule controller service query flow"
-```
-
-Sync after code changes:
+The CLI alone is not enough for every agent. `backend-analyst` and `backend-architect` have no Bash, so they reach CodeGraph only through its MCP server. Register it once per machine:
 
 ```bash
-codegraph sync
+codegraph install --target claude
 ```
 
-If sync is unavailable in the installed version, re-run:
+Then confirm with `/mcp` in Claude Code that `codegraph` is connected. Every kit agent lists `mcp__codegraph__codegraph_explore` in its `tools:`.
+
+## What To Use When
+
+| Need | Call | Who |
+| --- | --- | --- |
+| Understand a flow, find symbols, see source before an edit | `codegraph_explore` (MCP) or `codegraph explore "<symbols>"` | Everyone — first, before Grep or Read |
+| One symbol with its callers and callees | `codegraph node <symbol>` | Agents with Bash |
+| Who calls a symbol | `codegraph callers <symbol>` | Reviewer, developer |
+| What a change to a symbol affects | `codegraph impact <symbol>` | Reviewer |
+| Which tests depend on changed files | `codegraph affected --quiet <files>` | Tester, verify step |
+| Refresh the index after code changes | `codegraph sync` | Main agent, once at the end |
+
+`codegraph_explore` returns the verbatim source of the relevant symbols plus the call path between them. Treat that source as already read — re-opening the same files wastes the tokens the tool just saved.
+
+Query with symbol and file names spanning the flow, for example:
 
 ```bash
-codegraph init
+codegraph explore "OrdersController OrdersService OrdersRepository findAll"
 ```
+
+If `codegraph sync` is unavailable in the installed version, re-run `codegraph init`.
 
 ## Rules
 

@@ -1,0 +1,131 @@
+{
+  "_comment": "Nguon duy nhat cho hook detect-pii.js va rules/DATA-PRIVACY.md. Sua 1 cho, dong bo ca 2 lop.",
+  "_scope": "Chi bat duoc nhom (1) PII, (3) Credential, (4) Giao dich co hinh dang van ban. Nhom (2) du lieu production va (5) KH xac dinh confidential KHONG co hinh dang -> chan bang khai bao nguon o Discovery Brief, khong bang regex.",
+  "denyPatterns": [
+    {
+      "id": "email",
+      "group": 1,
+      "re": "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}",
+      "desc": "Dia chi email"
+    },
+    {
+      "id": "phone_vn",
+      "group": 1,
+      "re": "(?:^|[^0-9])(?:\\+?84|0)(?:3[2-9]|5[689]|7[06-9]|8[1-9]|9[0-9])[0-9]{7}(?![0-9])",
+      "desc": "So dien thoai VN"
+    },
+    {
+      "id": "phone_jp",
+      "group": 1,
+      "re": "(?:^|[^0-9])(?:\\+?81[-\\s]?|0)(?:[789]0[-\\s]?[0-9]{4}[-\\s]?[0-9]{4}|[1-9][0-9]{0,3}[-\\s][0-9]{2,4}[-\\s][0-9]{4})(?![0-9])",
+      "desc": "So dien thoai JP"
+    },
+    {
+      "id": "credit_card",
+      "group": 4,
+      "re": "(?:^|[^0-9])(?:4[0-9]{3}|5[1-5][0-9]{2}|3[47][0-9]{2}|6011)[-\\s]?[0-9]{4}[-\\s]?[0-9]{4}[-\\s]?[0-9]{3,4}(?![0-9])",
+      "desc": "So the tin dung"
+    },
+    {
+      "id": "jwt",
+      "group": 3,
+      "re": "eyJ[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}",
+      "desc": "JWT token"
+    },
+    {
+      "id": "api_key",
+      "group": 3,
+      "re": "\\b(?:sk|pk|rk)[-_](?:live|test|proj)?[-_]?[A-Za-z0-9]{16,}\\b",
+      "desc": "API key dang sk-/pk-"
+    },
+    {
+      "id": "github_token",
+      "group": 3,
+      "re": "\\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}\\b",
+      "desc": "GitHub token"
+    },
+    {
+      "id": "slack_token",
+      "group": 3,
+      "re": "\\bxox[baprs]-[A-Za-z0-9-]{10,}\\b",
+      "desc": "Slack token"
+    },
+    {
+      "id": "aws_key",
+      "group": 3,
+      "re": "\\b(?:AKIA|ASIA)[0-9A-Z]{16}\\b",
+      "desc": "AWS access key"
+    },
+    {
+      "id": "private_key",
+      "group": 3,
+      "re": "-----BEGIN (?:RSA |EC |OPENSSH |PGP )?PRIVATE KEY-----",
+      "desc": "Private key block"
+    },
+    {
+      "id": "conn_string",
+      "group": 3,
+      "re": "(?:mysql|postgres(?:ql)?|mongodb(?:\\+srv)?|redis|amqp)://[^\\s:@/]+:[^\\s:@/]+@",
+      "desc": "Connection string co mat khau"
+    },
+    {
+      "id": "password_kv",
+      "group": 3,
+      "re": "(?i)\\b(?:password|passwd|pwd|secret|api[_-]?key)\\s*[:=]\\s*[\"']?(?!\\*{3,}|<|\\$\\{|xxx|your[_-]|change[_-]?me|placeholder|process\\.env|import\\.meta\\.env|os\\.|Deno\\.env|env\\.|config|getenv|ConfigService|@Value|System\\.getenv|[A-Za-z_][\\w.]*\\s*\\(|[A-Za-z_]\\w*(?:\\.\\w+)+\\s*[,;)\\n]?$)[^\\s\"',;]{8,}",
+      "desc": "Gan GIA TRI THAT cho password/secret (bo qua tham chieu env/config)"
+    }
+  ],
+  "allowValues": [
+    "@example.com",
+    "@example.jp",
+    "@example.org",
+    "@test.local",
+    "user_a@example.com",
+    "user_b@example.com",
+    "noreply@example.com",
+    "090-0000-0000",
+    "0900000000",
+    "000-0000-0000",
+    "03-0000-0000",
+    "0000-0000-0000-0000",
+    "4242-4242-4242-4242",
+    "test_user",
+    "test_admin",
+    "SO-0001",
+    "TXN-0001",
+    "@test.com",
+    "@domain.com",
+    "@localhost",
+    "@example.co.jp",
+    "admin@test.com",
+    "test@test.com",
+    "john@test.com",
+    "user@domain.com",
+    "test@gmail.com",
+    "test@admin.com",
+    "AKIAIOSFODNN7EXAMPLE"
+  ],
+  "allowPathPatterns": [
+    "\\.claude/config/pii-patterns\\.json$",
+    "\\.claude/hooks/detect-pii\\.js$",
+    "\\.claude/hooks/selftest-detect-pii\\.js$",
+    "\\.claude/rules/DATA-PRIVACY\\.md$",
+    "\\.claude/rules/SECURITY\\.md$",
+    "\\.claude/rules/security-rules\\.md$",
+    "\\.claude/rules/POLICY\\.md$",
+    "POLICIES\\.md$",
+    "\\.claude/hooks/detect-hardcoded-secret\\.js$"
+  ],
+  "scanToolPatterns": [
+    "^Write$",
+    "^Edit$",
+    "^MultiEdit$",
+    "^NotebookEdit$",
+    "^Bash$",
+    "^mcp__.*figma.*",
+    "^mcp__.*backlog.*",
+    "^mcp__.*slack.*",
+    "^mcp__.*drive.*"
+  ],
+  "_allowPathNote": "Chi them file la TAI LIEU hoac TEST FIXTURE cua chinh kit (co pattern lam vi du). TUYET DOI khong them file output that (SPEC.md, prototype, versions/) de 'cho gate im lang'."
+}

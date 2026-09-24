@@ -17,8 +17,10 @@ Project: https://github.com/colbymchenry/codegraph
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/colbymchenry/codegraph/main/install.sh | sh
-codegraph install
+codegraph install --target claude
 ```
+
+`codegraph install` registers the CodeGraph **MCP server** in Claude Code. This step is required for the kit: `backend-analyst` and `backend-architect` have no Bash, so the MCP tool `codegraph_explore` is their only way to query CodeGraph. Restart Claude Code, then run `/mcp` and confirm `codegraph` is connected.
 
 ### 2. Initialize The Backend Project
 
@@ -88,7 +90,7 @@ When a source-map tool is available:
 1. Use it before broad manual search.
 2. Use it to identify the relevant modules, providers, DTOs, entities, migrations, and tests.
 3. Verify important findings by reading the actual source files before editing.
-4. Sync the source map after code changes when the tool supports syncing.
+4. Sync the source map once at the end of a task that changed code. CodeGraph syncs automatically; Understand-Anything is refreshed by the user, because the analysis is slow.
 
 When no source-map tool is available:
 

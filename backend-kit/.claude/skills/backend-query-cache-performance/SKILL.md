@@ -48,6 +48,16 @@ Better patterns:
 - Do not perform one external call per row in a list response.
 - Move non-critical side effects to an event or queue if the project already has that pattern.
 
+## Investigating A Slow Endpoint
+
+Measure before changing anything.
+
+1. Reproduce with realistic data volume and time the request.
+2. Capture the SQL — enable TypeORM query logging locally (`logging: ['query']`) or call `.getQueryAndParameters()` on the QueryBuilder.
+3. Run `EXPLAIN (ANALYZE, BUFFERS)` on a local or staging database with realistic data. `ANALYZE` executes the statement — never run it for an `UPDATE` or `DELETE` on production.
+4. Read the plan for: a sequential scan on a large table, estimated rows far from actual rows, a sort with no supporting index, a nested loop with thousands of iterations.
+5. Change one thing (index, query shape, pagination, cache), re-run the plan, and record the before and after timing.
+
 ## Checklist
 
 - [ ] List endpoints paginate.
@@ -57,3 +67,4 @@ Better patterns:
 - [ ] Cache has TTL.
 - [ ] Write paths invalidate cache.
 - [ ] Response does not load unnecessary relation data.
+- [ ] A performance fix is backed by a before and after measurement.

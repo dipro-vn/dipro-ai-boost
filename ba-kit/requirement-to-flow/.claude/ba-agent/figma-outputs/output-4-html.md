@@ -4,7 +4,7 @@
 
 > Dựng prototype chạy được trên browser để stakeholder confirm UI trước khi Designer vẽ Figma HiFi.
 
-**Tạo file:** `<DOCS_ROOT>/features/<feature>/prototype/index.html`
+**Tạo file:** `<output-folder>/prototype/index.html`
 
 ---
 
@@ -277,7 +277,7 @@ Bản tham chiếu đầy đủ (parser + bảng map widget + sinh dữ liệu g
 - Viewport width `375px` cố định (giống iPhone 14)
 - Layout free-form theo screen — không ràng buộc 6 regions
 - BẮT BUỘC có: bottom nav / top nav bar theo pattern feature (ví dụ tabbar 4 icon dưới, hoặc back-button trên)
-- Nếu project đã có convention layout mobile (VD `<DOCS_ROOT>/design/mobile-layout.md`) → Read + follow
+- Nếu project đã có convention layout mobile (VD `<output-folder>/design/mobile-layout.md`) → Read + follow
 - Nếu **CHƯA có convention** → hỏi user: **"Mobile prototype này cần layout kiểu nào? Nếu chưa có convention → mô tả pattern (bottom tab / top nav / drawer / full-screen)"**. KHÔNG tự đoán layout.
 
 ### Platform: iPad / Tablet
@@ -302,13 +302,13 @@ Bản tham chiếu đầy đủ (parser + bảng map widget + sinh dữ liệu g
 ## Sau khi tạo:
 
 ```bash
-open <DOCS_ROOT>/features/<feature>/prototype/index.html
+open <output-folder>/prototype/index.html
 ```
 
 Nếu multi-platform → mở lần lượt file mobile/website:
 ```bash
-open <DOCS_ROOT>/features/<feature>/prototype/mobile.html
-open <DOCS_ROOT>/features/<feature>/prototype/website.html
+open <output-folder>/prototype/mobile.html
+open <output-folder>/prototype/website.html
 ```
 
 ---
@@ -322,9 +322,9 @@ open <DOCS_ROOT>/features/<feature>/prototype/website.html
 
 ```bash
 node .claude/skills/business-analyst/scripts/verify-prototype.js \
-     <DOCS_ROOT>/features/<feature>/prototype/index.html \
-     --out  <DOCS_ROOT>/features/<feature>/prototype/test-report.md \
-     --json <DOCS_ROOT>/features/<feature>/prototype/test-report.json
+     <output-folder>/prototype/index.html \
+     --out  <output-folder>/prototype/test-report.md \
+     --json <output-folder>/prototype/test-report.json
 ```
 
 Gate chạy 8 nhóm phép kiểm trên Chromium thật: `STATIC` · `SHAPE` · `NAV` · `REACH` ·

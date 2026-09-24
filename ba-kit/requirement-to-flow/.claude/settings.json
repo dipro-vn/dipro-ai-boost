@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash|mcp__.*figma.*|mcp__.*backlog.*|mcp__.*slack.*|mcp__.*drive.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/detect-pii.js",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

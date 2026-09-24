@@ -7,10 +7,10 @@
 
 ## Folder structure (canonical + versions)
 
-**Canonical path (LATEST)** cho mọi feature: `<DOCS_ROOT>/features/<feature-name>/`
+**Canonical path (LATEST)** cho mọi feature: `<output-folder>/`
 
 ```
-<DOCS_ROOT>/features/<feature-name>/
+<output-folder>/
 ├── SPEC.md                         ← latest (downstream agent Read từ đây)
 ├── prototype/index.html            ← latest HTML prototype
 └── versions/                       ← snapshot mỗi lần BA chạy (feedback + so sánh lịch sử)
@@ -94,8 +94,3 @@ cp "<master.xlsx>" "versions/v<N>_<DDMMYYYY>/basic_design_before.xlsx"
 - ❌ Skip snapshot vì "nhỏ nhặt" — mọi lần chạy đều snapshot
 - ❌ Đặt tên version tự chế (`v-final`, `v-latest`) — chỉ dùng `v<N>_<DDMMYYYY>` với N tăng dần
 
----
-
-## Reference note khác
-
-Số lượng actor / repo bị ảnh hưởng được ghi trong section **Actors & Preconditions** của SPEC — đó là tín hiệu để PM biết có cần Contract Lock trước Phase 3 hay không (xem `.claude/context/doc-structure.md`).

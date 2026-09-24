@@ -1,6 +1,7 @@
 ---
-description: Produce or review a handoff-ready REST contract — endpoints, DTOs, status codes, pagination, cache notes.
+description: Use when the user or a consumer team needs a REST contract for an endpoint or feature — request, response, errors, pagination. Triggers — API spec, contract, tài liệu API, endpoint trả về gì, API仕様.
 argument-hint: <endpoint or feature>
+model: sonnet
 ---
 
 # API Contract

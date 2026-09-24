@@ -1,0 +1,63 @@
+# <Project Name> Backend
+
+<One paragraph: what this service does, who calls it, and which domains it owns.>
+
+## Stack
+
+- Node <version>, NestJS <version>, TypeScript <version>
+- PostgreSQL <version>, TypeORM <version> — `migrationsTransactionMode`: <all | each>
+- Redis via <@nestjs/cache-manager 2 | cache-manager 4 | ioredis> — TTL unit: <milliseconds | seconds>
+- Jest, Supertest — integration tests use <test database | Testcontainers | none yet>
+
+## Commands
+
+Agents read this table instead of discovering commands. Keep it exact.
+
+| Purpose | Command |
+| --- | --- |
+| Install | `npm ci` |
+| Focused test | `npx jest <path>` |
+| Module suite | `npm test -- <module>` |
+| Full suite | `npm test` |
+| Integration / e2e | `npm run test:e2e` |
+| Lint | `npm run lint` |
+| Typecheck | `npx tsc --noEmit` |
+| Build | `npm run build` |
+| Generate migration | `npm run migration:generate -- src/database/migrations/<Name>` |
+| Run / revert migration (local only) | `npm run migration:run` / `npm run migration:revert` |
+
+## Structure
+
+- Feature modules live in `src/modules/<feature>/` — controller, service, DTOs, entity, tests.
+- Migrations live in `<path>`.
+- Shared guards, decorators, filters, and interceptors live in `<path>`.
+
+## Conventions
+
+- Auth: global `<GuardName>`; public routes use `@Public()`. Caller identity from `<@CurrentUser() / request.user>`.
+- Tenant scope: every owned table has `<company_id>`; services take it as a required parameter.
+- Pagination: `<PaginationQueryDto>` in, `<PaginatedResponse<T>>` out, `limit` max <100>.
+- Errors: `<ExceptionFilterName>` returns `<shape>`.
+- Cache keys: `<entity>:<scope>:<id>`; invalidate after commit.
+
+## Working Rules
+
+- **Routing:** before backend work, classify the request — new feature, bug, schema change, new endpoint, refactor, tests, review, contract, or question only — state it in one line, then invoke the matching kit command through the Skill tool (`new-feature`, `bug-fix`, `migration`, `generate-api`, `refactoring`, `test-generation`, `code-review`, `db-review`, `api-contract`). If the request could go either way — for example "analyze and investigate" that may end in a change — ask through AskUserQuestion: analysis only, or analysis then the matching command. A question or analysis with no code change needs no workflow.
+- **Code exploration:** when `.codegraph/` exists, call `codegraph_explore` (MCP tool, or `codegraph explore "<symbols or question>"` on the shell) **before** Grep, Glob, or Read. Source it returns counts as read — do not re-open those files. Use `codegraph callers/impact <symbol>` for usages instead of grepping.
+- **Asking the user:** when you need a decision from the user — in a kit command or in plain chat — ask through the AskUserQuestion tool, one question per call, with the recommended option first and marked "(Recommended)". Never end a reply with a text list of open questions. Non-blocking questions become stated assumptions instead.
+
+## Docs
+
+- API contracts: `<path or link>`
+- Feature specs: `docs/backend/specs/`
+- Change records: `docs/backend/changes/`
+
+## Process Precedence
+
+When a backend-kit command (`/new-feature`, `/bug-fix`, `/generate-api`, `/refactoring`, `/migration`) is running, it is the process for that task:
+
+- Its `backend-clarify-and-approve` skill replaces `superpowers:brainstorming`.
+- Do not run `superpowers:writing-plans` or `superpowers:subagent-driven-development` on top of it.
+- Test-first rules come from the `nestjs-testing` skill.
+
+Outside kit commands, superpowers skills apply as usual.
