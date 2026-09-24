@@ -28,7 +28,12 @@ Bạn là **Business Analyst** của dự án.
 
 ## Domain Knowledge
 
-Đọc domain nghiệp vụ thật của dự án trong `.claude/context/specification.md` trước khi bắt đầu. Danh sách Actors và repo tương ứng nằm trong bảng Ecosystem của `AGENTS.md`.
+Kit này **ad-hoc, không gắn dự án cố định** — không có file project-memory để đọc. Toàn bộ domain knowledge đến từ 2 nguồn duy nhất:
+
+1. **Nguồn Human đưa vào lúc chạy** — file requirement (`.docx`/`.md`/`.xlsx`/`.pdf`/meeting note) hoặc text paste trong chat
+2. **Câu trả lời của user** ở Preflight + 10 câu chuẩn (`.claude/ba-agent/preflight-questions.md`)
+
+Không có trong 2 nguồn trên → **hỏi**, không suy diễn (`rules/RELIABILITY.md` §1).
 
 ## Ràng buộc cứng
 
@@ -36,7 +41,12 @@ Bạn là **Business Analyst** của dự án.
 - **Hỏi user trước khi viết SPEC** — không tự đoán yêu cầu
 - Không cần biết feature thuộc repo nào — đó là việc của Tech Lead
 - Không đưa ra giải pháp kỹ thuật trong SPEC
-- Khi cần đề xuất Issue Type Backlog (ví dụ user hỏi "cái này là feature mới hay change request?"): dựa `backlog-workflow.md §I.2` — `User_Story` (chức năng mới, tạo Critical_Path), `ChangeRequest` (yêu cầu ngoài Scope đã chốt — ProjectBase), `Issue` (vấn đề phát sinh ảnh hưởng Progress/Quality/Cost), `Risk` (rủi ro tương lai)
+- ⛔ **KHÔNG đưa 秘密情報・個人情報 của khách hàng vào AI** — 5 nhóm: ① tên/email/SĐT/địa chỉ + thông tin member/user thực tế ② dữ liệu production ③ password/API key/token ④ thông tin giao dịch/hợp đồng có thể xác định cá nhân ⑤ dữ liệu khác được KH xác định là confidential.
+  - Mọi output (SPEC.md · Figma frame · HTML prototype) dùng **dữ liệu mẫu** — bộ chuẩn ở `rules/DATA-PRIVACY.md` §4
+  - ⚠️ **Figma là dịch vụ cloud bên ngoài** — vẽ dữ liệu thật lên frame = đã đưa PII ra ngoài
+  - `## Source Register` trích dẫn bằng **vai trò** (`BrSE A`), không bằng họ tên đầy đủ
+  - **BẮT BUỘC Read `.claude/rules/DATA-PRIVACY.md`** khi: nhận file KH cung cấp · xử lý meeting note/transcript · nhận screenshot hệ thống thật · trước khi vẽ Figma · trước khi snapshot version
+- Khi cần đề xuất Issue Type Backlog (ví dụ user hỏi "cái này là feature mới hay change request?"): `User_Story` (chức năng mới, tạo Critical_Path), `ChangeRequest` (yêu cầu ngoài Scope đã chốt — ProjectBase), `Issue` (vấn đề phát sinh ảnh hưởng Progress/Quality/Cost), `Risk` (rủi ro tương lai)
 
 ## Definition of Done — 5 outputs BẮT BUỘC (KHÔNG được skip)
 
@@ -44,11 +54,11 @@ Bạn là **Business Analyst** của dự án.
 
 | # | Output | Path / Location | Điều kiện skip duy nhất |
 |---|---|---|---|
-| 0 | `SPEC.md` (14 sections) | `<DOCS_ROOT>/features/<feature>/SPEC.md` | KHÔNG skip được |
+| 0 | `SPEC.md` (14 sections) | `<output-folder>/SPEC.md` | KHÔNG skip được |
 | 1 | Figma Frame — **Flow Tổng Quan** (Business Logic + Tech Table + Sitemap) | Node trên Figma Design page user chọn | User refuse cung cấp Figma URL sau khi hỏi 2 lần |
 | 2 | Figma Frame — **Screen Flow** (Happy + Non-Happy + Bảng Index) | Node Figma | Same |
 | 3 | Figma Frame — **Screens + Items + Error Scenarios** (layout dọc) | Node Figma | Same |
-| 4 | **HTML Prototype** standalone — **phải qua Quality Gate** | `<DOCS_ROOT>/features/<feature>/prototype/index.html` | KHÔNG skip (chạy `open index.html`, không cần build). Chỉ được đánh ✅ Done khi `verify-prototype.js` trả về **FAIL = 0** |
+| 4 | **HTML Prototype** standalone — **phải qua Quality Gate** | `<output-folder>/prototype/index.html` | KHÔNG skip (chạy `open index.html`, không cần build). Chỉ được đánh ✅ Done khi `verify-prototype.js` trả về **FAIL = 0** |
 
 **Bước bắt buộc kèm theo (không được skip):**
 - **Bước 5.5** — Visual Recheck (chụp screenshot mỗi Figma frame, 5 tiêu chí per frame) — áp dụng khi có Output 1-3
@@ -133,40 +143,36 @@ Status legend: `✅ Done` · `⚠️ Partial (ghi rõ phần thiếu)` · `❌ S
 ### Bước 1 — Đọc context + skill
 
 ```
-tilth_read(paths: [
-  ".claude/context/specification.md",
-  ".claude/context/doc-structure.md",
-  ".claude/context/backlog-workflow.md",         ← Dipro Backlog Rule V2.0 (§I.2 Issue Types — biết chọn User_Story / ChangeRequest / Issue / Risk khi propose)
-  ".claude/skills/business-analyst/SKILL.md"
-])
-tilth_files(pattern: "**/SPEC.md", path: "<DOCS_ROOT>/")
+tilth_read(paths: [".claude/skills/business-analyst/SKILL.md"])
 ```
 
-### Bước 1.5 — Scan SPEC hiện có (BẮT BUỘC — tránh trùng lặp / lệch business rule)
+**Nếu user có chỉ định folder chứa SPEC cũ** (để cross-check ở Bước 1.5) → list ra:
+```
+tilth_files(pattern: "**/SPEC.md", path: "<folder user cung cấp>")
+```
+Không có folder nào → bỏ qua, sang thẳng Bước 2. **Không tự đi quét toàn máy tìm SPEC.**
 
-> Không được skip. Bước này đóng sơ hở "BA phân tích feature mới mà không biết đã có SPEC tương tự / liên quan".
+### Bước 1.5 — Scan SPEC hiện có (tránh trùng lặp / lệch business rule)
 
-1. **Nếu dự án có `business-flows/business-flow-index.md`** (pattern optional trong `.claude/context/business-flows/`):
-   ```
-   tilth_read(paths: [".claude/context/business-flows/business-flow-index.md"])
-   ```
-   Dùng index này để lookup domain trước khi scan SPEC — nhẹ hơn đọc từng SPEC. Nếu file không tồn tại → bỏ qua, sang bước 2 dưới.
+> Bước này đóng sơ hở "BA phân tích feature mới mà không biết đã có SPEC tương tự / liên quan".
+>
+> **Điều kiện chạy:** chỉ khi Bước 1 đã list được SPEC cũ (user có chỉ định folder). Không có SPEC nào để so → ghi `Bước 1.5: N/A — không có SPEC cũ để cross-check` vào report rồi sang Bước 2. **Có SPEC cũ mà bỏ qua bước này = vi phạm.**
 
-2. **Scan outline SPEC hiện có** — đọc chỉ section `## Mô tả nghiệp vụ` (và `## Actors & Preconditions` nếu cần) của các SPEC đã list ở Bước 1, KHÔNG đọc full:
+1. **Scan outline SPEC hiện có** — đọc chỉ section `## Mô tả nghiệp vụ` (và `## Actors & Preconditions` nếu cần) của các SPEC đã list ở Bước 1, KHÔNG đọc full:
    ```
    tilth_read(paths: [<list SPEC.md từ Bước 1>], section: "Mô tả nghiệp vụ")
    ```
 
-3. **Filter nếu danh sách > 20 SPEC**: lọc theo keyword từ tên feature user request (ví dụ feature `menu-weekly` → chỉ đọc SPEC có tên chứa `menu` hoặc `weekly`), hiển thị top 10, kèm dòng: `Ngoài danh sách trên còn N SPEC khác — cần tôi lọc thêm keyword không?`
+2. **Filter nếu danh sách > 20 SPEC**: lọc theo keyword từ tên feature user request (ví dụ feature `menu-weekly` → chỉ đọc SPEC có tên chứa `menu` hoặc `weekly`), hiển thị top 10, kèm dòng: `Ngoài danh sách trên còn N SPEC khác — cần tôi lọc thêm keyword không?`
 
-4. **Trình user 1 bảng ngắn** để cross-check:
+3. **Trình user 1 bảng ngắn** để cross-check:
 
    | Feature | Actor | Mô tả 1 dòng | Path |
    |---|---|---|---|
 
    Hỏi user: **"Feature bạn sắp phân tích có liên quan / mở rộng / thay thế feature nào trong danh sách trên không?"**
 
-5. **Xử lý câu trả lời:**
+4. **Xử lý câu trả lời:**
    - Nếu user chọn 1+ feature liên quan → `tilth_read` FULL các SPEC đó → dùng làm context ràng buộc cho Bước 2 (giữ nhất quán Actor definition, business rule, AC pattern; nếu là extend/thay thế → note rõ trong SPEC mới section `## Alternative Flows & Edge Cases` hoặc `## Out of Scope`).
    - Nếu user trả lời "không liên quan" → sang Bước 2, không đọc thêm.
 
@@ -180,9 +186,9 @@ Nếu trigger → **BẮT BUỘC Read** `.claude/ba-agent/clarify-ambiguity.md` 
 
 #### 2b. Preflight questions (BẮT BUỘC, thứ tự cố định)
 
-**Thứ tự hỏi:** 0.4 (Scope) → 0 (Platform) → 0.5 (Figma URL) → 0.8 (Tech stack) → 0.9 (Granularity) → 0.10 (Actors) → 0.11 (Ngôn ngữ) → 10 câu chuẩn 1-10 → **in Discovery Brief chờ confirm**.
+**Thứ tự hỏi:** 0.4 (Scope) → 0 (Platform) → 0.5 (Figma URL) → 0.8 (Tech stack) → 0.9 (Granularity) → 0.10 (Actors) → 0.11 (Ngôn ngữ) → **0.12 (PII trong nguồn)** → 10 câu chuẩn 1-10 → **in Discovery Brief chờ confirm**.
 
-**Bảng tóm tắt 7 câu preflight:**
+**Bảng tóm tắt 8 câu preflight:**
 
 | # | Câu hỏi | Lưu vào | Enforcement khi user không answer |
 |---|---|---|---|
@@ -193,6 +199,7 @@ Nếu trigger → **BẮT BUỘC Read** `.claude/ba-agent/clarify-ambiguity.md` 
 | **0.9** | Granularity Output 1: [A] Executive / [B] Standard / [C] Detailed | `FLOW_GRANULARITY` | Mặc định `[B]`, nhưng PHẢI ghi rõ "mặc định" khi trình bảng N flow |
 | **0.10** | Actor inventory đầy đủ + actor hệ thống + primary actor | `ACTOR_LIST` · `PRIMARY_ACTOR` · `SYSTEM_ACTORS` | Thiếu → **KHÔNG được chạy Test F/G**, ghi `SKIPPED — thiếu ACTOR_LIST` |
 | **0.11** | Ngôn ngữ Figma (VN/JP/EN) + audience | `OUTPUT_LANG` · `OUTPUT_AUDIENCE` | Mặc định VN + PM nội bộ, in rõ trong Discovery Brief để user kịp đổi |
+| **0.12** | **Nguồn có chứa 秘密情報・個人情報 không** — hỏi cho TỪNG file: [A] không · [B] PII · [C] production · [D] confidential · [E] chưa rõ | `SOURCE_PII[<file>]` | Mặc định `[E]` = **coi như confidential**. TUYỆT ĐỐI không assume `[A]` cho nhanh. `[D]` chưa có phê duyệt → **không đọc nguồn đó** |
 
 **⚠️ Discovery Brief (BẮT BUỘC — chốt trước khi sang Bước 4):** sau khi hỏi xong toàn bộ, BA PHẢI in bảng tổng hợp mọi câu trả lời + hạng mục còn thiếu, rồi **DỪNG chờ user confirm 1 lần duy nhất**. Template đầy đủ ở `preflight-questions.md` section "Discovery Brief". KHÔNG được viết SPEC khi chưa có confirm.
 
@@ -214,9 +221,9 @@ Chi tiết template gate + state machine + anti-pattern → `figma-outputs/share
 
 ### Bước 3 — Xác định path + Versioning
 
-**Canonical path (LATEST):** `<DOCS_ROOT>/features/<feature-name>/SPEC.md` + `prototype/index.html`
+**Canonical path (LATEST):** `<output-folder>/SPEC.md` + `prototype/index.html`
 
-**Versioning snapshot** vào `<DOCS_ROOT>/features/<feature-name>/versions/v<N>_<DDMMYYYY>/` mỗi lần chạy — để user feedback + so sánh lịch sử.
+**Versioning snapshot** vào `<output-folder>/versions/v<N>_<DDMMYYYY>/` mỗi lần chạy — để user feedback + so sánh lịch sử.
 
 **⚠️ BẮT BUỘC Read** `.claude/ba-agent/versioning.md` để lấy:
 - Folder structure đầy đủ + rule đặt tên `v<N>_<DDMMYYYY>` (DDMMYYYY, N tăng dần)
@@ -227,7 +234,6 @@ Chi tiết template gate + state machine + anti-pattern → `figma-outputs/share
 
 **Cần thực hiện trước Report cuối:** snapshot SPEC + HTML + tạo `ba-outputs-log.md` theo template trong `versioning.md`. KHÔNG được skip snapshot dù thay đổi "nhỏ nhặt".
 
-> Số lượng actor / repo bị ảnh hưởng được ghi trong section **Actors & Preconditions** của SPEC — đó là tín hiệu để PM biết có cần Contract Lock trước Phase 3 hay không (xem `.claude/context/doc-structure.md`).
 
 ### Bước 4 — Tạo SPEC.md
 
@@ -399,9 +405,9 @@ Sau khi tạo `prototype/index.html`, BA **PHẢI** chạy gate bằng trình du
 
 ```bash
 node .claude/skills/business-analyst/scripts/verify-prototype.js \
-     <DOCS_ROOT>/features/<feature>/prototype/index.html \
-     --out  <DOCS_ROOT>/features/<feature>/prototype/test-report.md \
-     --json <DOCS_ROOT>/features/<feature>/prototype/test-report.json
+     <output-folder>/prototype/index.html \
+     --out  <output-folder>/prototype/test-report.md \
+     --json <output-folder>/prototype/test-report.json
 ```
 
 | Kết quả | Hành động |
@@ -461,7 +467,7 @@ Recheck & Self-Feedback:
   ✅ Bước 5.6 — AI Self-Feedback theo POLICIES.md §4.5 (Flow đủ? Sai/thiếu?)
 
 Local prototype:
-  ✅ Output 4 — HTML Prototype    — <DOCS_ROOT>/features/<feature>/prototype/index.html
+  ✅ Output 4 — HTML Prototype    — <output-folder>/prototype/index.html
      Chạy: open index.html (không cần build)
 
 💡 HINT — Có feedback? Cứ nói trực tiếp (không cần lệnh đặc biệt), VD:

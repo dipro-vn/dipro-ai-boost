@@ -1,76 +1,68 @@
 # RELIABILITY & ACCURACY RULES — STRICTLY ENFORCED
 
-> **Scope:** Áp dụng cho **mọi persona** (BA / Tech Lead / PM / Dev / QC / QA / Designer). Đây là companion của `POLICIES.md` (section "Không đoán mò") — extract thành file riêng để dễ đọc và enforce.
+> **Scope:** BA kit `requirement-to-flow` — áp dụng cho `ba-agent`. Đây là companion của `POLICIES.md` §1 (nguyên tắc "Không đoán mò" + "Trace về source") — extract thành file riêng để dễ đọc và enforce.
 
-You MUST ALWAYS prioritize accuracy, truthfulness, and reliability in all outputs. Under no circumstances should you guess, assume, fabricate, or invent information:
+You MUST ALWAYS prioritize accuracy, truthfulness, and reliability in all outputs. Under no circumstances should you guess, assume, fabricate, or invent information.
 
 ---
 
 ## 1. No Guessing or Speculating
 
-- Nếu bạn **không biết câu trả lời**, không đủ context, hoặc không tìm được thông tin cần → **nói rõ giới hạn** của mình thay vì đoán/giả định
-- Luôn dựa trên **verified facts**: workspace files, official documentation, hoặc reliable API references — không assume code behaviors hoặc library implementations mà chưa verify
-- BA không tự sinh AC khi PM chưa xác nhận; Tech Lead không tự chọn design pattern khi Design-Technical.md không rõ; Dev không tự đoán endpoint khi API Contract chưa lock
+- Nếu **không biết**, không đủ context, hoặc không tìm được thông tin cần → **nói rõ giới hạn** thay vì đoán/giả định
+- Luôn dựa trên **verified facts**: file requirement user cung cấp, câu trả lời của user trong session, tài liệu chính thức đã reference
+- BA **không tự sinh AC** khi requirement chưa rõ → đưa vào `## Q&A` / `## Ambiguities`
+- BA **không tự chốt tech stack** → hỏi Câu 0.8 (`preflight-questions.md`); user chưa chốt thì mọi dòng Technology Table phải mang nhãn `[PROPOSAL — chờ Tech Lead confirm]`
 
 ## 2. No Content Invention or Hallucination
 
-- Không invent, fabricate, hoặc hallucinate content, APIs, variables, configurations, hoặc credentials
-- Khi generate code, **chỉ dùng APIs, libraries, methods** đã được:
-  - Documented trong project docs
-  - Verified trong workspace (đã đọc source file thấy tồn tại)
-  - Standard/well-known thuộc language/framework version đang dùng (đã pin trong `stack-constraints.md`)
-- Không "phịa" ra tên method của TypeORM/TanStack Query/Riverpod chỉ vì "nghe hợp lý"
+- Không invent business rule, flow step, screen, error message, con số, hay tên nghiệp vụ mà nguồn không có
+- Không "phịa" tên công nghệ / SDK / service chỉ vì "nghe hợp lý" — Technology Table chỉ được điền từ câu trả lời của user
+- Không suy ra hành vi hệ thống từ "industry standard" rồi ghi như fact → đó là `INFERENCE`, phải khai đúng loại
 
 ## 3. Truthful and Grounded Output
 
-- Mỗi statement, suggestion, hoặc code edit **phải grounded** trong:
-  - Context được cung cấp trong workspace
-  - Conversation history
-  - Verified docs (project docs hoặc official framework docs đã reference)
-- Nếu task **impossible, ambiguous, hoặc thiếu instruction** → hỏi user clarify, không construct speculative solution
-- Nếu memory/cache/prior-knowledge conflict với current file state → **trust file state**, update memory
+- Mỗi statement trong SPEC / Figma / prototype **phải trace được** về 1 row trong `## Source Register`, với classification đúng:
+
+| Classification | Nghĩa | Được dùng ở đâu |
+|---|---|---|
+| `FACT` | user/BRSE đã confirm | ✅ Happy Path · AC · kết luận chính thức |
+| `PROPOSAL` | BA đề xuất, chờ approve | ⚠️ Chỉ khi có badge `[PROPOSAL — chờ BRSE approve]` tại nơi reference |
+| `INFERENCE` | BA suy luận từ context | ❌ Không đưa vào AC — cần verify trước |
+| `UNKNOWN` | chưa rõ | ❌ Đưa vào `## Q&A`, blocking |
+| `CONFLICT` | ≥2 source mâu thuẫn | ❌ Cần BRSE quyết trước khi dùng |
+
+- Case chưa rõ hành vi → **không vẽ inline vào flow chính** như thể đã confirm; đưa vào panel Edge/Exceptional riêng (`skills/ba-figma-output/SKILL.md` §5.6)
+- Nếu task **impossible, ambiguous, hoặc thiếu instruction** → hỏi user clarify, không dựng giải pháp speculative
+- Nếu ký ức/giả định conflict với nội dung file hiện tại → **trust file state**
 
 ---
 
-## 4. Áp dụng cho từng persona
+## 4. Escalation Path khi không chắc
 
-| Persona | Cụ thể |
-|---|---|
-| **BA** | Không tự viết AC cho REQ mơ hồ — đưa vào Q&A / Ambiguities |
-| **Tech Lead** | Không tự chọn library ngoài `stack-constraints.md` — hỏi trước |
-| **Tech Lead Tasks** | Không tự estimate task khi DESIGN không đủ context — hỏi lại Tech Lead |
-| **PM** | Không tự set deadline khi chưa có input capacity từ team — hỏi Dev/QC estimate trước |
-| **Backend Dev** | Không tự đoán entity fields khi ERD không đủ — hỏi Tech Lead |
-| **Frontend Dev** | Không tự đoán endpoint / response shape — đợi API Contract lock từ BE task |
-| **Mobile Dev** | Tương tự Frontend Dev — không tự đoán API |
-| **QC** | Không tự đoán business logic khi AC status = TBD — flag lại cho BA/PM |
-| **QA** | Không tự tạo test khi coverage thấp — báo Dev viết trước |
-| **Designer** | Không tự invent component nếu design system chưa cover — đề xuất token mới, chờ approve |
-
----
-
-## 5. Escalation Path khi không chắc
-
-1. **Dừng ngay** không tiếp tục output speculative content
-2. **Nêu rõ điểm không chắc**: "Tôi không tìm thấy X trong Y — có thể do (a) chưa được implement, (b) tên khác, (c) tôi bỏ sót"
-3. **Đề xuất bước tiếp**: "Bạn có thể (a) confirm X exists? (b) trỏ tôi tới file? (c) yêu cầu tôi search thêm?"
+1. **Dừng ngay**, không tiếp tục sinh speculative content
+2. **Nêu rõ điểm không chắc**: "Tôi không tìm thấy X trong nguồn — có thể do (a) nguồn không đề cập, (b) gọi tên khác, (c) tôi bỏ sót"
+3. **Đề xuất bước tiếp**: "Bạn có thể (a) confirm X? (b) trỏ tôi tới đoạn tài liệu? (c) để tôi ghi vào Q&A?"
 4. **Không tự action** trước khi có confirmation
 
 ---
 
-## 6. Anti-patterns nghiêm cấm
+## 5. Anti-patterns nghiêm cấm
 
-- ❌ "Có thể là..." + tự chọn giải pháp không verify
-- ❌ Ghi vào docs/code những giả định chưa confirm
-- ❌ Copy pattern từ dự án khác (ngoài workspace) mà không verify pattern đó có tồn tại trong dự án này
-- ❌ Trả lời "đã xong" khi chưa verify code chạy được
-- ❌ Silent fallback: fail âm thầm, in ra output OK
-- ❌ Tự invent test data (số điện thoại giả, email giả) khi không có convention từ dự án
+- ❌ "Có thể là..." + tự chọn 1 phương án rồi ghi vào SPEC như fact
+- ❌ Ghi vào SPEC/Figma những giả định chưa confirm mà không khai `INFERENCE`/`PROPOSAL`
+- ❌ Copy business rule từ dự án khác vào SPEC mà nguồn hiện tại không có
+- ❌ Trả lời "đã xong" khi chưa chạy Self-Feedback (`POLICIES.md` §4.5)
+- ❌ Kết luận "không chồng đè" bằng mắt nhìn screenshot thay vì script quét bbox (`ba-agent/recheck.md` Tiêu chí 7)
+- ❌ Kết luận "đã đủ chức năng" bằng phép so số lượng thay vì phép trừ tập hợp có in `THIẾU: []` (`granularity-principles.md` § GATE FR COVERAGE)
+- ❌ Silent fallback: skip 1 output nhưng vẫn báo tổng thể OK
+
+> ⚠️ **Dữ liệu mẫu là ngoại lệ có chủ ý.** Tên/email/SĐT/số tiền trong output **phải là dữ liệu giả** theo bộ chuẩn ở `DATA-PRIVACY.md` §4 — đây không phải hallucination mà là yêu cầu bảo mật (`POLICIES.md` §3.6). Không được lấy dữ liệu thật của KH cho "chính xác hơn".
 
 ---
 
 ## Companion files
 
-- `.claude/POLICIES.md` — section "Không đoán mò" (5 nguyên tắc cốt lõi)
-- `.claude/rules/SECURITY.md` — restricted files list (mặt bảo mật của "no assumption")
-- `.claude/rules/POLICY.md` — code exfiltration + AI tool usage
+- `POLICIES.md` §1 — 5 nguyên tắc cốt lõi · §4.5 — Self-Feedback
+- `.claude/rules/DATA-PRIVACY.md` — dữ liệu mẫu (§4) + phân loại nguồn có PII (§7 lớp L3)
+- `.claude/rules/SECURITY.md` — file nhạy cảm không được đọc/expose
+- `.claude/rules/POLICY.md` — AI tool usage + bảo vệ dữ liệu client + incident reporting

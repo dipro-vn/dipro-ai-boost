@@ -16,10 +16,10 @@ pip install mkdocs mkdocs-material mkdocs-awesome-pages-plugin
 
 **Setup `mkdocs.yml` (chỉ tạo 1 lần cho project):**
 
-Copy template từ `.claude/templates/mkdocs.yml` đến root dự án (cùng cấp `<DOCS_ROOT>`):
+Copy template từ `.claude/templates/mkdocs.yml` đến root dự án (cùng cấp `<output-folder>`):
 
 ```bash
-# Tìm parent folder của <DOCS_ROOT>
+# Tìm parent folder của <output-folder>
 cp .claude/templates/mkdocs.yml <PROJECT_ROOT>/mkdocs.yml
 # Thay <TEN_DU_AN> trong file bằng tên thật của dự án
 ```
@@ -101,7 +101,7 @@ hoặc
 
 ## Content bổ sung BẮT BUỘC bên trong MkDocs site — Audit + Consistency
 
-> MkDocs không chỉ để publish SPEC. Nó còn là **audit trail** cho toàn bộ pipeline BA. 3 artifact dưới đây BẮT BUỘC được sinh trong `<DOCS_ROOT>/features/<feature>/audit/` và publish qua MkDocs — cho BRSE/PM/QC verify consistency giữa các artifact.
+> MkDocs không chỉ để publish SPEC. Nó còn là **audit trail** cho toàn bộ pipeline BA. 3 artifact dưới đây BẮT BUỘC được sinh trong `<output-folder>/audit/` và publish qua MkDocs — cho BRSE/PM/QC verify consistency giữa các artifact.
 
 ### A. Traceability Matrix (`audit/traceability.md`)
 
@@ -115,7 +115,7 @@ hoặc
 | Requirement ID | Source/evidence | Business node (Output 1) | Flow transition (Output 2 manifest) | Screen/Item/State (Output 3) | Prototype test (Output 4) | Status |
 |---|---|---|---|---|---|---|
 | RQ-001 | user turn 3 | STAGE: USER_INPUT | AUTH_D01 (email exists?) | AX_AUTH_001 / item ①/S05 | T02 PASS | ✅ Covered |
-| RQ-002 | POLICIES §5 | STAGE: PAYMENT | PAY_D01 (elepay) | AX_PAY_001 | T08 PASS | ✅ Covered |
+| RQ-002 | Câu 0.8 [B] | STAGE: PAYMENT | PAY_D01 (elepay) | AX_PAY_001 | T08 PASS | ✅ Covered |
 | RQ-003 | INFERENCE | — | — | — | — | ⚠ Not implemented (waiting BRSE) |
 | RQ-004 | UNKNOWN | — | — | — | — | ❌ Blocked (chờ user answer) |
 ```
@@ -184,9 +184,9 @@ Block xuất ra khi hoàn thành:
 ```
 ✅ Output 5 — MkDocs Site published: http://127.0.0.1:8000
 Audit artifacts:
-  - Traceability Matrix: <DOCS_ROOT>/features/<feature>/audit/traceability.md
-  - Consistency Report: <DOCS_ROOT>/features/<feature>/audit/consistency.md
-  - Approval History: <DOCS_ROOT>/features/<feature>/audit/approval-history.md
+  - Traceability Matrix: <output-folder>/audit/traceability.md
+  - Consistency Report: <output-folder>/audit/consistency.md
+  - Approval History: <output-folder>/audit/approval-history.md
 
 Consistency Gate: <PASS / FAIL>
 Known Gaps: <N gaps — X blocking, Y non-blocking>

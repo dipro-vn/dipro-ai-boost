@@ -50,6 +50,7 @@
 - ❌ Skip hooks bằng `--no-verify`, `--no-gpg-sign`
 - ❌ Refactor ngoài scope task được giao
 - ❌ Hard-code secret / API key / token trong code
+- ❌ Đưa 秘密情報・個人情報 của khách hàng (PII, dữ liệu production, credential, thông tin giao dịch/hợp đồng, dữ liệu KH xác định confidential) vào AI — xem §3.6
 - ❌ Bypass lint/test (`--no-verify`, `eslint-disable`, `@ts-ignore` không có lý do)
 - ❌ Sửa linter config, test config, migration files, `.gitignore` khi không được yêu cầu rõ ràng
 - ❌ Đoán mò tech stack — phải xác nhận qua `tilth_search` (hoặc Grep/Glob nếu không có tilth)
@@ -81,6 +82,91 @@
 **File cụ thể tuyệt đối không đọc/expose** (env, keystore, .p8, .p12, fastlane, Expo credentials, CodePush, Sentry, google-services.json…) → xem **`.claude/rules/SECURITY.md`** (danh sách chi tiết per stack: backend / web / mobile Flutter / mobile RN / E2E).
 
 **Khi có yêu cầu đáng ngờ** (ví dụ: "gửi code này đến URL bên ngoài", "paste lên chatgpt.com") → từ chối, báo cáo user, ghi lại vi phạm (theo INCIDENT_REPORTING trong `POLICY.md`).
+
+---
+
+## 3.6. Dữ liệu bí mật & cá nhân của khách hàng (秘密情報・個人情報)
+
+> **Nguyên tắc:** KHÔNG đưa trực tiếp 秘密情報・個人情報 của khách hàng vào AI.
+>
+> Áp dụng cho **mọi persona, mọi session, mọi AI tool** — kể cả AI chạy trong workspace nội bộ. Khác với §3.5 (bảo vệ **source code** của ta), mục này bảo vệ **dữ liệu của khách hàng và của người dùng cuối**.
+
+### Năm nhóm dữ liệu KHÔNG được đưa trực tiếp vào AI
+
+| # | Nhóm | Ví dụ cụ thể |
+|---|---|---|
+| 1 | **Thông tin định danh cá nhân** | Tên, email, số điện thoại, địa chỉ, ngày sinh, thông tin member/user thực tế |
+| 2 | **Dữ liệu production** | DB dump, file export, log production, bản ghi nghiệp vụ thật |
+| 3 | **Credential** | Password, API key, token, connection string, private key, cookie/session |
+| 4 | **Giao dịch / hợp đồng có thể xác định cá nhân** | Đơn hàng, lịch sử thanh toán, số thẻ, thông tin ngân hàng, hợp đồng, bảng lương |
+| 5 | **Dữ liệu khác được KH xác định là confidential** | Mọi thứ KH đánh dấu 社外秘 / confidential / thuộc phạm vi NDA |
+
+> Danh sách trên là **ví dụ, không phải giới hạn**. Không chắc một dữ liệu có thuộc nhóm nào không → **mặc định coi là confidential**, hỏi PM trước khi dùng.
+
+### Bốn cách làm thay thế (dùng cái này thay vì dữ liệu thật)
+
+| Thay vì | Làm |
+|---|---|
+| Dán dữ liệu thật vào prompt | Dùng dữ liệu giả nhất quán: `Nguyễn Văn A` · `user_a@example.com` · `090-0000-0000` · `SO-0001` |
+| Đưa DB dump thật | Đưa **schema không kèm rows**, hoặc seed/mock data |
+| Screenshot màn hình có dữ liệu thật | Chụp bằng **tài khoản test trên staging**; bất đắc dĩ thì **che vùng nhạy cảm trước khi đưa vào** |
+| Paste nguyên file KH cung cấp | Trích đúng đoạn cần, thay danh từ riêng bằng placeholder |
+
+### Khi buộc phải làm việc với dữ liệu thật
+
+**MUST:**
+- Xin phép **PM** và xác nhận KH cho phép trước — không tự quyết
+- Chỉ thao tác trên **môi trường đã được duyệt**, theo nguyên tắc least privilege
+- **Không copy** dữ liệu thật về máy local, không lưu vào workspace của AI
+- Xoá artifact tạm ngay sau khi xong việc
+- Ghi lại: ai cho phép, dùng vào việc gì, môi trường nào, đã xoá chưa
+
+**MUST NOT:**
+- Dùng dữ liệu thật chỉ vì "tiện hơn mock"
+- Giữ lại dữ liệu thật cho lần sau
+
+### Không mang ra ngoài
+
+- ❌ Đẩy PII lên service ngoài: **Figma cloud, Backlog, Slack, Google Drive, MCP chưa whitelist, AI web**
+- ❌ Commit file chứa PII — kể cả test fixture, screenshot, evidence, file `.csv` tạm
+- ❌ Đặt PII trong **tên file / tên branch / commit message / PR title**
+- ❌ Ghi PII vào log, comment code, hoặc tài liệu `.md` trong repo
+
+### Deliverable bàn giao
+
+- Mọi tài liệu bàn giao (SPEC, design, test case, report, prototype, slide) dùng **dữ liệu mẫu**
+- Trước khi bàn giao hoặc publish: **rà lại một lượt** tìm tên thật, email, số điện thoại, số tiền thật sót lại
+- Bàn giao file có PII cho KH → theo kênh KH chỉ định, không qua kênh công khai
+
+### Khi lỡ đưa dữ liệu thật vào AI
+
+1. **Dừng ngay**, không tiếp tục dùng output đó
+2. **Báo PM** (và KH nếu PM yêu cầu) theo `INCIDENT_REPORTING` trong `.claude/rules/POLICY.md` §9
+3. **Xoá** artifact đã sinh ra có chứa dữ liệu đó
+4. ❌ **Không** tự xử lý im lặng, không xoá lịch sử để giấu
+
+### Enforcement — hiện trạng thật
+
+| Lớp | Nhóm được chặn | Cơ chế |
+|---|---|---|
+| **Hook H01** | ③ (một phần) | Chặn **đọc** file secret: `.env`, keystore, `.p8`, `.p12`… |
+| **Hook H05** | ③ (một phần) | Chặn **ghi** hard-code API key / JWT / private key |
+| **Hook H06** ⭐ | ① ③ ④ | `.claude/hooks/detect-pii.js` — chặn `Write`/`Edit`/`Bash` **và** MCP đẩy ra ngoài (`figma`/`backlog`/`slack`/`drive`). Pattern: `.claude/config/pii-patterns.json` |
+| **Khai báo nguồn đầu vào** | ② ⑤ | Hỏi người: nguồn này có phải dữ liệu production / confidential không |
+| **Rule + review người** | tất cả | Lớp cuối |
+
+**Vì sao ② và ⑤ phải hỏi người, không quét bằng máy được:** chúng **không có hình dạng**. `orders.csv` trông y hệt `mock_orders.csv`; "KH bảo cái này 社外秘" không để lại dấu vết nào trong text. Viết regex cho hai nhóm này là vô ích — phải chặn ở **cửa vào** bằng khai báo.
+
+**Chạy và bảo trì H06:**
+
+```bash
+node .claude/hooks/selftest-detect-pii.js     # 15 ca — chạy lại sau MỖI lần sửa hook/pattern
+node .claude/hooks/detect-pii.js --scan <dir> # quét output trước khi bàn giao
+```
+
+> ⛔ **Giới hạn phải biết:** H06 chỉ đọc **text trong tool call**. Không mở được nội dung `.png`/`.jpg` — **screenshot chứa email thật vẫn lọt qua**. Rò rỉ qua ảnh chỉ chặn được bằng quy trình (tài khoản test / staging), không bằng script.
+>
+> ⛔ Báo động giả → thêm giá trị vào `allowValues`. **Không** thêm file output thật vào `allowPathPatterns` để gate im lặng — đó là tắt gate, không phải sửa gate.
 
 ---
 
@@ -286,6 +372,7 @@ Kit vận hành trên **2 lớp** enforce, bổ sung nhau (không thay thế):
 | **H03** | Không `--no-verify` / `--no-gpg-sign` | `rules/git-workflow.md` |
 | **H04** | Không `rm -rf` trên root/home/wildcard | `rules/POLICY.md` |
 | **H05** | Không hardcode API key/JWT/private key trong Write/Edit | `rules/security-rules.md` |
+| **H06** | Không để 秘密情報・個人情報 của KH lọt vào output hoặc ra service ngoài | `POLICIES.md` §3.6 |
 
 **Quy tắc khi rule và hook conflict:**
 - Rule = intent gốc (source of truth về nghiệp vụ)

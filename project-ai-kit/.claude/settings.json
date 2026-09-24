@@ -2,7 +2,9 @@
   "mcpServers": {
     "tilth": {
       "command": "tilth",
-      "args": ["--mcp"]
+      "args": [
+        "--mcp"
+      ]
     },
     "figma": {
       "type": "http",
@@ -10,7 +12,10 @@
     },
     "backlog": {
       "command": "npx",
-      "args": ["-y", "@nulab/backlog-mcp-server"],
+      "args": [
+        "-y",
+        "@nulab/backlog-mcp-server"
+      ],
       "env": {
         "BACKLOG_DOMAIN": "",
         "BACKLOG_API_KEY": ""
@@ -45,6 +50,16 @@
           {
             "type": "command",
             "command": "node .claude/hooks/detect-hardcoded-secret.js",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash|mcp__.*figma.*|mcp__.*backlog.*|mcp__.*slack.*|mcp__.*drive.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/detect-pii.js",
             "timeout": 5
           }
         ]

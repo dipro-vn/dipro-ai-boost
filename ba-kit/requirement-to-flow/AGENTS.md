@@ -60,6 +60,7 @@ Chi tiết trong `.claude/ba-agent/preflight-questions.md`.
 - Multi-flow feature → BA hỏi Gate B1/B2 để user chọn vẽ toàn bộ hay 1 flow
 - Nếu user "có" Figma URL mà chưa paste → BA DỪNG chờ, KHÔNG tự skip
 - Mọi lần chạy đều snapshot vào `versions/` — không overwrite version cũ
+- ⛔ **KHÔNG đưa 秘密情報・個人情報 của khách hàng vào AI** — tên/email/SĐT/địa chỉ, member/user thực tế, dữ liệu production, password/API key/token, thông tin giao dịch/hợp đồng, dữ liệu KH xác định confidential. Mọi output dùng **dữ liệu mẫu**. Chi tiết: `.claude/rules/DATA-PRIVACY.md`
 
 **5 rule cứng khi vẽ Figma (thêm sau khi audit thực tế — chi tiết trong `.claude/`):**
 
@@ -83,5 +84,9 @@ Chi tiết trong `.claude/ba-agent/preflight-questions.md`.
 | `.claude/ba-agent/clarify-ambiguity.md` | Template hỏi khi request mơ hồ |
 | `.claude/ba-agent/versioning.md` | Rule snapshot `versions/v<N>_<DDMMYYYY>/` |
 | `.claude/ba-agent/figma-outputs/*` | Chi tiết từng Figma output + gate rules |
+| `.claude/rules/DATA-PRIVACY.md` | 秘密情報・個人情報 của KH — 5 nhóm cấm, bản đồ rủi ro theo source/output, bộ dữ liệu mẫu, checklist bàn giao |
+| `.claude/hooks/detect-pii.js` | **Hook H06** — chặn cứng PII/credential ở `Write`/`Edit`/`Bash` + MCP (figma/backlog/slack/drive). Self-test: `node .claude/hooks/selftest-detect-pii.js` |
+| `.claude/config/pii-patterns.json` | Pattern + allowlist dữ liệu mẫu — nguồn duy nhất, sửa 1 chỗ |
+| `.claude/settings.json` | Nối hook vào `PreToolUse`. **Dự án đã có `settings.json` riêng → merge khối `hooks` vào, đừng ghi đè** |
 
 AI behavior policy chung + companion rules → `./POLICIES.md`.
