@@ -17,7 +17,9 @@
     ├── v1_<DDMMYYYY>/
     │   ├── SPEC.md                 ← snapshot SPEC lần chạy này
     │   ├── ba-outputs-log.md       ← record 5 outputs (path SPEC + 3 Figma URL + HTML path + ghi chú)
-    │   └── prototype/index.html    ← snapshot HTML (nếu có change)
+    │   ├── prototype/index.html    ← snapshot HTML (nếu có change)
+    │   ├── basic_design_before.xlsx  ← BẮT BUỘC khi chạy Output 5: bản master TRƯỚC khi ghi
+    │   └── basic-design-gate.md      ← report Quality Gate O5 (chỉ khi chạy Output 5)
     ├── v2_<DDMMYYYY>/
     │   └── ...
     └── ...
@@ -38,6 +40,20 @@ Check `versions/` folder:
 Snapshot vào `versions/v<N>_<DDMMYYYY>/`:
 - `cp SPEC.md versions/v<N>_<DDMMYYYY>/SPEC.md`
 - Tạo `versions/v<N>_<DDMMYYYY>/ba-outputs-log.md` với bảng 5-row (path SPEC + 3 Figma URL + HTML path) + ghi chú thay đổi so với version trước (nếu có)
+
+### Rule 2b — Output 5 (Basic Design): backup TRƯỚC khi ghi, không phải sau
+
+> File Excel là binary — **không có git diff để rollback**. `openpyxl` không bảo toàn 100% conditional formatting, một số merged range, chart và macro.
+
+Trước **bất kỳ** thao tác ghi nào vào master workbook:
+
+```bash
+cp "<master.xlsx>" "versions/v<N>_<DDMMYYYY>/basic_design_before.xlsx"
+```
+
+- Chưa có file backup → **KHÔNG được ghi**. Đây là điều kiện cứng, không phải khuyến nghị.
+- Bản backup này cũng là input `--before` của Quality Gate O5 (`verify-basic-design.py`) — không có nó thì 3 trong 10 check chỉ chạy được ở mức `WARN`.
+- Report của gate lưu cùng chỗ: `versions/v<N>_<DDMMYYYY>/basic-design-gate.md`
 - Copy `prototype/index.html` → `versions/v<N>_<DDMMYYYY>/prototype/index.html` (nếu HTML có thay đổi so với version trước)
 
 ### Rule 3 — Format `<DDMMYYYY>`

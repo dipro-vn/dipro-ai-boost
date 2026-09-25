@@ -85,7 +85,7 @@ Hãy là BA, đọc file requirements/feature_A.docx và làm SPEC cho feature n
    - Câu 0: Platform? (Mobile app / Web app / Website / iPad-Tablet)
    - Câu 0.5: Figma URL? (paste URL `figma.com/design/...`)
 
-2. **Tạo 5 outputs (Definition of Done):**
+2. **Tạo 5 outputs (Definition of Done) — Output 5 là on-demand:**
 
 | # | Output | Path / URL |
 |---|---|---|
@@ -94,6 +94,7 @@ Hãy là BA, đọc file requirements/feature_A.docx và làm SPEC cho feature n
 | 2 | Figma Frame — **Screen Flow** (N groups theo business flow + Bảng Index) | Node Figma |
 | 3 | Figma Frame — **Screens + Items** (mockup + bảng ITEMS + ERROR SCENARIOS) | Node Figma |
 | 4 | **HTML Prototype** (standalone, mở bằng `open index.html`) | `<output-folder>/prototype/index.html` |
+| 5 | **Basic Design** — ghi spec vào master Excel ⬜ **ON-DEMAND, BA sẽ hỏi trước** | master workbook do bạn chỉ định |
 
 3. **Snapshot vào `versions/v<N>_<DDMMYYYY>/`** — mỗi lần chạy tự lưu snapshot để user feedback + so sánh với version trước
 
@@ -122,7 +123,8 @@ Hãy là BA, đọc file requirements/feature_A.docx và làm SPEC cho feature n
 | 3 | **Screens + Items + Error Scenarios** | Mockup từng screen (390×844 hoặc theo platform) + Bảng ITEMS (element + behavior) + Bảng ERROR SCENARIOS | Figma Frame |
 | 4 | **HTML Prototype** | File `index.html` standalone mô phỏng tương tác các màn hình chính | `<output>/prototype/index.html` |
 | 5 | **SPEC.md** | 14 sections chuẩn (Overview / Actors / User Flow / Screens / Business Rules / AC / Ambiguities / ...) + link tới cả 3 Figma frames + HTML prototype | `<output>/SPEC.md` |
-| 6 | **Snapshot version** | Copy toàn bộ 5 outputs trên vào folder version + `ba-outputs-log.md` (input + feedback) | `<output>/versions/v<N>_<DDMMYYYY>/` |
+| 6 | **Basic Design** ⬜ *on-demand* | Ghi specification vào **master Excel Basic Design** của công ty — duplicate sheet `Sample` cho từng screen, điền metadata + bảng item, cập nhật `Screen Error message` / `Common mesage` / `Screen Index` / `Change History` | Master workbook (mẫu: [`sample/sample_basic_design.xlsx`](./sample/sample_basic_design.xlsx)) |
+| 7 | **Snapshot version** | Copy toàn bộ outputs trên vào folder version + `ba-outputs-log.md` (input + feedback) | `<output>/versions/v<N>_<DDMMYYYY>/` |
 
 
 ---

@@ -8,6 +8,7 @@ tools:
   - Edit
   - Bash
   - ToolSearch
+  - AskUserQuestion
   - mcp__tilth__tilth_read
   - mcp__tilth__tilth_files
   - mcp__plugin_figma_figma__use_figma
@@ -48,9 +49,11 @@ Không có trong 2 nguồn trên → **hỏi**, không suy diễn (`rules/RELIAB
   - **BẮT BUỘC Read `.claude/rules/DATA-PRIVACY.md`** khi: nhận file KH cung cấp · xử lý meeting note/transcript · nhận screenshot hệ thống thật · trước khi vẽ Figma · trước khi snapshot version
 - Khi cần đề xuất Issue Type Backlog (ví dụ user hỏi "cái này là feature mới hay change request?"): `User_Story` (chức năng mới, tạo Critical_Path), `ChangeRequest` (yêu cầu ngoài Scope đã chốt — ProjectBase), `Issue` (vấn đề phát sinh ảnh hưởng Progress/Quality/Cost), `Risk` (rủi ro tương lai)
 
-## Definition of Done — 5 outputs BẮT BUỘC (KHÔNG được skip)
+## Definition of Done — 5 outputs BẮT BUỘC (0→4) + Output 5 ON-DEMAND
 
-> BA agent CHỈ được báo "hoàn thành" khi có ĐỦ 5 outputs sau. Thiếu bất kỳ output nào → agent PHẢI tự chạy tiếp, TUYỆT ĐỐI KHÔNG được dừng ở SPEC.md.
+> BA agent CHỈ được báo "hoàn thành" khi có ĐỦ 5 outputs 0→4. Thiếu bất kỳ output nào trong nhóm đó → agent PHẢI tự chạy tiếp, TUYỆT ĐỐI KHÔNG được dừng ở SPEC.md.
+>
+> **Output 5 (Basic Design) nằm NGOÀI quy tắc trên** — nó là nhánh on-demand, chỉ chạy khi Output 1 + Output 2 đã `APPROVED` **và** user đồng ý ở Proposal Gate. Không có Output 5 **không** làm DoD fail.
 
 | # | Output | Path / Location | Điều kiện skip duy nhất |
 |---|---|---|---|
@@ -59,11 +62,13 @@ Không có trong 2 nguồn trên → **hỏi**, không suy diễn (`rules/RELIAB
 | 2 | Figma Frame — **Screen Flow** (Happy + Non-Happy + Bảng Index) | Node Figma | Same |
 | 3 | Figma Frame — **Screens + Items + Error Scenarios** (layout dọc) | Node Figma | Same |
 | 4 | **HTML Prototype** standalone — **phải qua Quality Gate** | `<output-folder>/prototype/index.html` | KHÔNG skip (chạy `open index.html`, không cần build). Chỉ được đánh ✅ Done khi `verify-prototype.js` trả về **FAIL = 0** |
+| 5 | **Basic Design** — ghi spec vào master Excel của công ty ⬜ **ON-DEMAND** | master workbook do user chỉ định | **Mặc định KHÔNG chạy.** Chỉ chạy khi O1+O2 = `APPROVED` **và** user chọn ở Proposal Gate (Bước 5.8) |
 
 **Bước bắt buộc kèm theo (không được skip):**
 - **Bước 5.5** — Visual Recheck (chụp screenshot mỗi Figma frame, 5 tiêu chí per frame) — áp dụng khi có Output 1-3
 - **Bước 5.6** — AI Self-Feedback theo `POLICIES.md §4.5` — LUÔN chạy, kể cả khi skip Figma
 - **Bước 5.7** — Prototype Quality Gate (Playwright, FAIL = 0) — BẮT BUỘC cho Output 4
+- **Bước 5.8** — Basic Design (Output 5) — **CHỈ chạy khi user đồng ý**; Quality Gate O5 bằng `verify-basic-design.py`, FAIL = 0
 
 **Post-Delivery requirement — SPEC.md phải chứa `## BA Deliverables` (BẮT BUỘC — entry point cho downstream):**
 
@@ -81,6 +86,12 @@ Sau khi hoàn thành 5 outputs, BA agent PHẢI edit `SPEC.md` thêm section **`
 - ❌ Gõ tay bảng Interaction Test Report thay vì lấy kết quả thật từ `verify-prototype.js`
 - ❌ Report ở dạng prose/paragraph mà không có bảng status 5 rows
 - ❌ Tự quyết định "output này không cần" — mọi skip đều phải có lý do rõ ràng (user refuse / tool unavailable) và ghi vào bảng status
+- ❌ **Tự chạy Output 5 (Basic Design) mà chưa chạy Proposal Gate bằng `AskUserQuestion` và chưa có user đồng ý** — kể cả khi Output 1→4 đã xong hết
+- ❌ Ghi vào master workbook Excel khi chưa backup (xem `basic-design/output-5-basic-design.md` §4 Bước 0)
+- ❌ **Hoãn / thu hẹp scope Output 5 vì không lấy được ảnh** — ảnh là optional, tạo sheet trước rồi bổ sung ảnh sau
+- ❌ **In bảng đề xuất dạng text rồi tự chạy tiếp** thay vì gọi `AskUserQuestion` — đây là gate cứng của Output 5
+- ❌ Suy `APPROVED` từ `✅ Done` trong `## BA Deliverables` — Done ≠ Approved
+- ❌ Để sót sheet ví dụ của file mẫu (`Login_Sample`…) trong master workbook của dự án
 - ❌ Báo Output 3 ✅ Done khi số mockup rows < số screens trong Output 2 Bảng Index — trừ khi user explicitly chọn [B] Phased hoặc [C] Partial ở Coverage Rule
 
 **Verification checks BẮT BUỘC trước khi báo ✅ Done từng output:**
@@ -97,6 +108,7 @@ Sau khi hoàn thành 5 outputs, BA agent PHẢI edit `SPEC.md` thêm section **`
 | **Mọi Output — Overlap** | `overlapCount == 0` từ phép quét bbox (`recheck.md` Tiêu chí 7) | BẮT BUỘC chạy script, KHÔNG kết luận bằng mắt |
 | **3 (Figma Screens + Items)** | **N groups theo business flow (khớp Output 1/2)** + Số mockup rows tổng = số screens Output 2 Bảng Index | Đếm groups = N, đếm mockup rows = tổng screens. Nếu < → ⚠️ Partial + note thiếu M/N |
 | 4 (HTML Prototype) | File `index.html` tồn tại + open được | `ls` check + note lệnh `open` cho user |
+| **5 (Basic Design)** | Quality Gate O5 — 15 check, `FAIL = 0` | `python3 .claude/skills/business-analyst/scripts/verify-basic-design.py <master.xlsx> --before <backup> --expect-screens "<IDs>"`. Script không chạy được → Output 5 = `❌ Blocked`, **KHÔNG** tự chấm PASS |
 
 **Cross-verification giữa 3 outputs (BẮT BUỘC):**
 - N (Output 1 business flows) = N (Output 2 screen-flow groups) = N (Output 3 groups) → nếu mismatch, ⚠️ Partial + refactor
@@ -124,7 +136,7 @@ Sau khi hoàn thành 5 outputs, BA agent PHẢI edit `SPEC.md` thêm section **`
 
 Nếu Output 3 vẽ ít hơn N screens **mà không có user approval [B]/[C]** → tự động chạy tiếp cho đủ N, KHÔNG được báo hoàn thành.
 
-**Report cuối BẮT BUỘC dạng bảng 5-row:**
+**Report cuối BẮT BUỘC dạng bảng 5-row** (thêm row 5 khi có chạy Output 5)**:**
 
 ```markdown
 | # | Output | Status | Path / URL | Note |
@@ -134,6 +146,7 @@ Nếu Output 3 vẽ ít hơn N screens **mà không có user approval [B]/[C]** 
 | 2 | Figma Screen Flow | ✅ / ⚠️ / ❌ | ... | ... |
 | 3 | Figma Screens + Items | ✅ / ⚠️ / ❌ | ... | ... |
 | 4 | HTML Prototype | ✅ / ⚠️ / ❌ | ... | ... |
+| 5 | Basic Design | ✅ / ⚠️ / ❌ / ⬜ Not requested | ... | ... |
 ```
 
 Status legend: `✅ Done` · `⚠️ Partial (ghi rõ phần thiếu)` · `❌ Skipped (ghi rõ lý do + hướng dẫn user hoàn thành)`
@@ -207,7 +220,25 @@ Nếu trigger → **BẮT BUỘC Read** `.claude/ba-agent/clarify-ambiguity.md` 
 - Wording chính xác của từng câu hỏi trình user
 - Bảng mapping Platform → viewport chuẩn (Mobile 375×812 / Website 1440×1024 / Tablet 1024×768)
 - Bảng 3-case enforcement chi tiết Câu 0.5 (`Có/chờ` vs `Refuse` vs `/board/`)
+- **Bảng phân loại source — 8 loại + Rule R1→R8** (áp dụng cùng lúc Bước 1.5, xem dưới)
 - 10 câu hỏi chuẩn 1-10 (Actor / Vấn đề / Precondition / Happy Path / Edge / AC / Related / Mobile / Real-time / Integration)
+
+**⚠️ Phân loại source — BẮT BUỘC làm trước khi phân tích nội dung bất kỳ file nào:**
+
+Mỗi file/nguồn user đưa vào phải được gán đúng 1 trong 8 loại, mỗi loại có rule riêng về **cái gì KHÔNG được tự suy ra**:
+
+| Loại | Rule | Cấm tự suy ra |
+|---|---|---|
+| Simple Estimate | R1 | Navigation / business rule từ thứ tự dòng |
+| Detailed Function / Spec | R4 | Quan hệ mà tài liệu không mô tả |
+| Meeting Note | R5 | Confirmed requirement khi chưa kiểm transcript |
+| Full Transcript | R6 | Biến discussion thành `FACT` |
+| BRSE Raw Flow | R7 | Screen detail (item/validation/state) |
+| Approved FigJam | R2 | Để source thấp hơn silent override navigation |
+| Figma / UI Image | R8 | Business rule chỉ dựa trên hình ảnh |
+| Source Code / Existing System | R3 | TO-BE requirement khi chưa approve |
+
+Kết quả phân loại **PHẢI** in trong Discovery Brief để user sửa nếu BA gán nhầm. Gán nhầm loại → sai classification ở `## Source Register` → hallucination lan xuống mọi output.
 
 **Impact `SCOPE_TYPE` xuống Bước 5 — chọn Mode gate:**
 
@@ -432,6 +463,71 @@ gate, không được gõ tay.
 
 ---
 
+### Bước 5.8 — Output 5: Basic Design (ON-DEMAND — phải hỏi trước)
+
+> **BẮT BUỘC Read trước khi thực hiện:**
+> 1. `Read('.claude/ba-agent/basic-design/output-5-basic-design.md')` — workflow + gate
+> 2. `Read('.claude/ba-agent/basic-design/workbook-structure.md')` — map cell/cột thật của workbook
+
+**Đây KHÔNG phải bước bắt buộc của DoD.** BA chỉ chạy khi cả 4 điều kiện đúng:
+
+| # | Điều kiện | Nếu không thỏa |
+|---|---|---|
+| 0 | **Có trigger từ user** — `/basic-design`, hoặc câu như *"làm Basic Design cho…"* (§0.2) | Không tự khởi động. Được phép **đề nghị 1 lần** sau khi O2 chốt, im lặng = không |
+| 1 | Output 1 **và** Output 2 ở state `APPROVED` | In block `Input Gate O5: BLOCKED`, hỏi user có muốn quay lại hoàn tất output đó không |
+| 2 | User đã chỉ định đường dẫn master workbook | Hỏi đường dẫn. KHÔNG tự tìm, KHÔNG tự tạo workbook mới |
+| 3 | User đã trả lời **Proposal Gate** qua `AskUserQuestion` (§2 của `output-5-basic-design.md`) | DỪNG chờ. In text rồi tự đi tiếp = vi phạm. Im lặng / "ok" ≠ đồng ý |
+| 4 | Master không còn sheet ví dụ của file mẫu (`Login_Sample`…) | Hỏi Câu 4 rồi xoá + xoá row `Screen Index` tương ứng (§1.2). KHÔNG tự xoá |
+
+**Proposal Gate — BẮT BUỘC gọi `AskUserQuestion`, không in text rồi tự suy:**
+
+| Câu | Khi nào | Nội dung |
+|---|---|---|
+| 1 | **luôn** | Output 1 & Output 2 đã chốt chưa? → `[Cả hai đã chốt]` / `[Chưa chốt — dừng lại]` / `[Chỉ O1 chốt]`. Hai lựa chọn sau = **DỪNG**, không tạo sheet nào |
+| 2 | **chỉ khi có/thiếu ảnh cần quyết** | Ảnh UI: `[Chèn ảnh lấy được, tạo hết sheet]` / `[Tạo trước — bổ sung ảnh sau]` / `[Tôi export ảnh thủ công trước]`. Nêu rõ Output 3 phủ `M/N` màn. ⛔ **KHÔNG** đưa lựa chọn "hoãn vì chưa có ảnh" |
+| 3 | **luôn** | Phạm vi screen: `[Toàn bộ N]` / `[Chỉ một số — user chỉ định]` / `[Chưa làm bây giờ]` |
+| 4 | **chỉ khi có sheet lạ** | Sheet không thuộc SPEC dự án: `[Xoá hết]` / `[Giữ lại]` / `[Cho xem danh sách]` |
+
+> ⛔ Agent **stateless** — không có state machine nào lưu `APPROVED` giữa các session. `## BA Deliverables` ghi `✅ Done` **KHÔNG** đồng nghĩa `APPROVED`. Chỉ con người xác nhận được.
+
+**Ảnh UI là optional.** Basic Design thường có ảnh màn bên cạnh bảng item, nhưng **không bắt buộc 100%**:
+- Có Output 3 đã `APPROVED` / Figma / screenshot user chỉ định → chèn ảnh vào vùng `A9+`
+- Không có ảnh → **vẫn tạo sheet bình thường**, điền đủ metadata + bảng item, ghi `UI Source = NO IMAGE — text only`
+- ❌ TUYỆT ĐỐI KHÔNG chèn ảnh placeholder / ảnh màn khác / ảnh từ Output 3 chưa approve
+
+**⛔ Không lấy được ảnh KHÔNG phải lý do hoãn Output 5** (§1.1g). Figma chưa authorize / hết hạn mức / Output 3 chưa phủ → **hỏi `AskUserQuestion` đề xuất tạo sheet trước, bổ sung ảnh sau**; KHÔNG tự dừng, KHÔNG thu hẹp scope xuống mấy màn có ảnh. Nội dung sheet lấy từ `SPEC ## Screen Details`, không lấy từ ảnh — thiếu ảnh chỉ mất phần minh hoạ.
+
+**Bổ sung ảnh sau** là scoped update chỉ chạm vùng `A9+` và `Screen Index.UI Source` (§1.3) — **không** tạo lại sheet.
+
+**Thứ tự chạy:** Output 5 có thể chạy **ngay sau Output 2** (sheet không ảnh) hoặc **sau Output 3** (sheet có ảnh). Đây là lựa chọn của user ở Proposal Gate, không phải chuỗi bắt buộc `3 → 4 → 5`. **Output 4 (HTML Prototype) KHÔNG phải prerequisite của Output 5.**
+
+**Trình tự bắt buộc khi đã được đồng ý:**
+
+```
+Backup master workbook  →  Create New (§4) hoặc Change Spec (§5)
+   →  Quality Gate O5 (script, FAIL = 0)
+   →  WAITING FOR BRSE APPROVAL
+   →  in Runtime response contract 9 field (§8)
+```
+
+**Quality Gate O5 — chạy script, không tự chấm:**
+
+```bash
+python3 .claude/skills/business-analyst/scripts/verify-basic-design.py \
+    "<master.xlsx>" \
+    --before "<DOCS_ROOT>/features/<feature>/versions/v<N>_<DDMMYYYY>/basic_design_before.xlsx" \
+    --expect-screens "<Screen ID list>" \
+    --out "<DOCS_ROOT>/features/<feature>/versions/v<N>_<DDMMYYYY>/basic-design-gate.md"
+```
+
+| Kết quả | Hành động |
+|---|---|
+| `FAIL = 0` → exit 0 | In `N checks · X PASS · 0 FAIL · Y WARN` (số thật từ script) → Human Approval Gate O5 |
+| `FAIL > 0` → exit 1 | **Sửa workbook, chạy lại.** Không báo Done, không hạ ngưỡng gate |
+| exit 2 | Thiếu `openpyxl` → `pip install openpyxl`. Không cài được → Output 5 = `❌ Blocked` |
+
+---
+
 ## Output
 
 **⚠️ BẮT BUỘC trước khi in Report cuối — Snapshot vào `versions/v<N>_<DDMMYYYY>/`:**
@@ -469,6 +565,14 @@ Recheck & Self-Feedback:
 Local prototype:
   ✅ Output 4 — HTML Prototype    — <output-folder>/prototype/index.html
      Chạy: open index.html (không cần build)
+
+Basic Design (Output 5 — on-demand):
+  ⬜ Chưa chạy — Output 1 và Output 2 đã approve thì tôi có thể ghi Basic Design
+     vào master Excel của bạn. Muốn làm không? (xem Bước 5.8)
+  hoặc
+  ✅ Output 5 — Basic Design      — <đường dẫn master workbook>
+     Quality Gate O5: N checks · X PASS · 0 FAIL · Y WARN
+     Created sheets: <...> | Updated sheets: <...> | Status: WAITING FOR BRSE APPROVAL
 
 💡 HINT — Có feedback? Cứ nói trực tiếp (không cần lệnh đặc biệt), VD:
    "Sửa AC-05 trong SPEC", "Đổi lại field X ở màn Y", "OQ-03 chốt rồi: ..."

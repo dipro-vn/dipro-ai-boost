@@ -261,6 +261,12 @@ Sau khi hỏi xong toàn bộ (0.4 → 0 → 0.5 → 0.8 → 0.9 → 0.10 → 0.
 | 0.12 | PII trong nguồn | <xem bảng khai báo dưới> | user |
 | 1-10 | 10 câu chuẩn | <tóm tắt 1 dòng mỗi câu; câu chưa trả lời ghi ⚠ CHƯA CÓ> | user |
 
+Phân loại source (BẮT BUỘC — xem "Bảng phân loại source — 8 loại"):
+
+| File / nguồn | Loại đã gán | Rule áp dụng | Được dùng để lấy |
+|---|---|---|---|
+| <tên file / URL / "chat với user"> | <Simple Estimate / Detailed Spec / Meeting Note / Full Transcript / BRSE Raw Flow / Approved FigJam / Figma-UI Image / Source Code> | <R1..R8> | <scope / rule / navigation / visual / AS-IS> |
+
 Khai báo PII theo từng nguồn (BẮT BUỘC — sửa nếu BA hiểu nhầm):
 
 | File / nguồn | Chứa PII? | Rule áp dụng | Được dùng để lấy |
@@ -276,6 +282,7 @@ Hạng mục còn thiếu: <list — hoặc "không thiếu">
 **⚠️ Enforcement:**
 - ❌ KHÔNG được sang Bước 4 khi chưa in Discovery Brief và chưa có confirm của user
 - Hạng mục `⚠ CHƯA CÓ` → ghi thẳng vào `## Source Register` của SPEC với classification `UNKNOWN`, KHÔNG tự điền
+- Bảng phân loại source in ra là để **user sửa nếu BA gán nhầm loại** — gán nhầm Meeting Note thành Detailed Spec sẽ biến thảo luận thành `FACT` (xem R5/R6). Nguồn không gán được loại → `UNKNOWN`, không dùng cho Output 1/2
 - Discovery Brief copy nguyên văn vào `versions/v<N>_<DDMMYYYY>/ba-outputs-log.md` làm audit trail
 - Nguồn khai `[D]` mà chưa có phê duyệt → **không đọc**, ghi `BLOCKED — chờ phê duyệt` vào `## Source Register`
 
@@ -283,7 +290,30 @@ Hạng mục còn thiếu: <list — hoặc "không thiếu">
 
 ## Rules bắt buộc khi phân loại source input (BẮT BUỘC — áp dụng cùng lúc Bước 1.5)
 
-> Trước khi trình 10 câu checklist, BA PHẢI xác định loại input requirement user đưa vào và enforce 2 rule dưới để tránh hallucination navigation.
+> Trước khi trình 10 câu checklist, BA PHẢI **phân loại từng file/nguồn** user đưa vào theo bảng dưới, rồi enforce đúng rule của loại đó. Đây là lớp chống hallucination sớm nhất — sai ở đây thì mọi output sau đều sai theo.
+
+### Bảng phân loại source — 8 loại
+
+| Loại source | Dùng để lấy | ⛔ **KHÔNG được tự suy ra** | Rule |
+|---|---|---|---|
+| **Simple Estimate** (`.xlsx` function inventory / cost) | Scope, function inventory | Navigation, business rule, user journey từ thứ tự dòng/cột | **R1** |
+| **Detailed Function / Spec** (spec cũ, function detail) | Rule, validation, transition **được viết explicit** | Quan hệ mà tài liệu không mô tả | **R4** |
+| **Meeting Note** (note tóm tắt) | Index topic, định vị chỗ cần tìm evidence | Confirmed requirement khi chưa kiểm transcript/hỏi lại | **R5** |
+| **Full Transcript** (bản ghi đầy đủ) | Evidence cho decision, proposal, pending point | Biến discussion thành `FACT` | **R6** |
+| **BRSE Raw Flow** (sketch / paste text / vẽ tay) | Business + navigation skeleton | Screen detail chưa được xác nhận | **R7** |
+| **Approved FigJam** (`figma.com/board/...`, user nói đã approve) | Navigation source of truth | Để source cấp thấp hơn silent override | **R2** |
+| **Figma Design / UI Image / Screenshot** | Visual source (layout, item, state) | Business rule chỉ dựa trên hình ảnh | **R8** |
+| **Source Code / Existing System / URL production** | AS-IS implementation evidence | TO-BE requirement khi chưa approve | **R3** |
+
+**Cách dùng bảng:**
+1. Với **mỗi** file/nguồn user đưa vào, gán đúng 1 loại. Không gán được → hỏi user, không tự đoán.
+2. In danh sách phân loại vào **Discovery Brief** (section dưới) để user kịp sửa nếu BA gán nhầm.
+3. Nguồn nào không rõ loại → `## Source Register` classification = `UNKNOWN`, **không dùng làm input cho Output 1/2**.
+
+> **Thứ tự ưu tiên khi ≥ 2 source mâu thuẫn:** Approved FigJam (navigation) > Detailed Spec (rule) > BRSE Raw Flow > Full Transcript > Meeting Note > Simple Estimate > UI Image > Source Code (AS-IS).
+> Mâu thuẫn **không** được tự resolve bằng thứ tự này — thứ tự chỉ quyết định cái nào ghi tạm vào flow. Mọi mâu thuẫn vẫn phải có 1 row `CONFLICT` trong `## Source Register` và được BRSE quyết.
+
+---
 
 ### Rule R1 — Cấm suy navigation từ Simple Estimate
 
@@ -360,6 +390,104 @@ Chờ user chọn. **KHÔNG được assume `[A]` chỉ vì "có existing → ch
 - ❌ Đọc Figma cũ → tự vẽ Output 1 y hệt → báo "đã xong theo phiên bản cũ"
 - ❌ Screenshot màn hình prod → tự extract items table cho Output 3 → user tưởng đó là TO-BE
 - ❌ Existing source code có route `/users/:id` → tự đưa vào Navigation Mapping mà không hỏi TO-BE có giữ route đó không
+
+### Rule R4 — Detailed Function / Spec: chỉ lấy cái được viết explicit
+
+**Trigger:** input là function detail, spec cũ, SRS, tài liệu mô tả rule/validation/transition.
+
+- ✅ Rule, validation, transition **được viết rõ ràng** trong tài liệu → `FACT`, ghi evidence bằng **section + số trang/dòng** (không ghi chung chung "trong spec")
+- ❌ **KHÔNG tự suy quan hệ mà tài liệu không mô tả.** Tài liệu có màn A và màn B nhưng không nói A → B thì **không có** transition A → B
+- ❌ KHÔNG "điền vào chỗ trống" cho nhất quán (VD spec mô tả validation cho 3/5 field → không tự viết validation cho 2 field còn lại)
+- ⚠️ Spec cũ + requirement mới cùng tồn tại → mọi chỗ khác nhau là **`CONFLICT`**, không phải "spec cũ đã lỗi thời nên bỏ qua"
+
+**Evidence locator bắt buộc:** `<tên file> § <section> (p.<trang>)`.
+
+---
+
+### Rule R5 — Meeting Note: là mục lục, KHÔNG phải kết luận
+
+**Trigger:** input là meeting note, biên bản họp, note Gemini/Notion, tóm tắt cuộc họp.
+
+> Meeting note là bản **tóm tắt do người khác viết** — đã qua 1 lần diễn giải và lược bỏ. Nó cho biết **đã bàn chuyện gì**, không đảm bảo **đã chốt thế nào**.
+
+| Dùng meeting note để | Cho phép |
+|---|---|
+| Biết cuộc họp bàn những topic nào | ✅ |
+| Định vị chỗ cần tìm evidence trong transcript | ✅ |
+| Lấy tên người / ngày / màn hình được nhắc tới | ✅ |
+| **Kết luận requirement đã được chốt** | ❌ — xem quy trình dưới |
+
+**Quy trình bắt buộc với mỗi mục trong meeting note:**
+
+| Tình huống | Classification | Hành động |
+|---|---|---|
+| Note ghi rõ "đã chốt / quyết định / OK" **và** có transcript xác nhận | `FACT` | Dùng bình thường |
+| Note ghi rõ "đã chốt" nhưng **không có transcript để đối chiếu** | `PROPOSAL` | Đưa vào `## Open Questions`, hỏi BRSE xác nhận lại |
+| Note ghi dạng thảo luận ("anh A nói...", "có thể là...") | `PROPOSAL` | Chờ approve |
+| Note ghi mục còn treo / chưa quyết | `UNKNOWN` | **Không nối vào flow** |
+
+- ❌ TUYỆT ĐỐI KHÔNG đọc meeting note rồi viết thẳng vào Happy Path / AC như requirement đã chốt
+- ❌ KHÔNG coi "không ai phản đối trong note" là đã đồng ý
+
+> Xử lý meeting note sau cuộc họp (tạo file, impact analysis) → `.claude/ba-agent/post-meeting-workflow.md`. Rule R5 này quy định **cách classify**, workflow kia quy định **cách xử lý**.
+
+---
+
+### Rule R6 — Full Transcript: evidence có timestamp, KHÔNG biến discussion thành FACT
+
+**Trigger:** input là bản ghi đầy đủ cuộc họp (transcript, phụ đề auto, recording đã convert text).
+
+- ✅ Transcript là **evidence mạnh nhất** trong nhóm meeting — nhưng chỉ khi trích đúng đoạn
+- ✅ Mọi row `## Source Register` lấy từ transcript **BẮT BUỘC** có locator dạng **timestamp** hoặc **speaker + dòng** (VD `[00:14:32] BRSE A`), không được ghi "trong cuộc họp"
+
+**Phân biệt 3 thứ trong cùng 1 transcript** — đây là chỗ agent hay gộp nhầm:
+
+| Trong transcript | Classification | Dấu hiệu nhận biết |
+|---|---|---|
+| **Decision** — người có thẩm quyền chốt | `FACT` | "chốt là...", "mình làm theo hướng...", "OK vậy đi" + không ai phản đối sau đó |
+| **Proposal** — ai đó đề xuất, chưa ai chốt | `PROPOSAL` | "hay là...", "em nghĩ nên...", "có thể làm..." |
+| **Pending** — bàn rồi để đó | `UNKNOWN` | "cái này để check lại", "tuần sau bàn tiếp", "chưa biết" |
+
+- ❌ **TUYỆT ĐỐI KHÔNG biến discussion thành `FACT`.** Một câu nói trong lúc bàn bạc không phải quyết định.
+- ❌ KHÔNG lấy câu cuối cùng về 1 topic làm kết luận — có khi đó chỉ là câu bỏ lửng
+- ⚠️ Transcript mâu thuẫn với meeting note → **transcript thắng**, và ghi 1 row `CONFLICT` để BRSE biết note bị sai
+
+---
+
+### Rule R7 — BRSE Raw Flow: skeleton được, screen detail thì không
+
+**Trigger:** BRSE cung cấp flow thô — paste text, ảnh vẽ tay, sketch Figma/FigJam **chưa approve**, hoặc mô tả miệng.
+
+- ✅ Dùng làm **business + navigation skeleton** — thứ tự bước, nhánh chính, entry/exit
+- ✅ Đây là source **được ưu tiên** hơn Simple Estimate khi dựng Output 1 (xem R1 lựa chọn `[A]`)
+- ❌ **KHÔNG suy screen detail** (item, validation, state, error) từ raw flow — raw flow ở tầng nghiệp vụ, không phải tầng màn hình
+- ❌ KHÔNG tự đặt Screen Code cho node mà BRSE chỉ ghi tên nghiệp vụ, trừ khi đã hỏi
+
+**Classification:** node/transition có trong raw flow = `FACT — BRSE raw flow`. Mọi thứ BA thêm vào để "cho đủ" = `PROPOSAL`, phải đánh dấu rõ khi trình Gate A.
+
+> Raw Flow **chưa approve** ≠ Approved FigJam (R2). Raw flow là điểm khởi đầu để bàn; FigJam đã approve là source of truth. Không được đối xử như nhau.
+
+---
+
+### Rule R8 — Figma Design / UI Image: visual source, KHÔNG phải rule source
+
+**Trigger:** input là Figma Design (`/design/`), ảnh màn hình, screenshot, ảnh chụp bản in.
+
+- ✅ Lấy được từ hình: **layout, danh sách item, thứ tự item, label hiển thị, state nhìn thấy được** (disabled, empty, loading nếu ảnh có)
+- ❌ **KHÔNG lấy được từ hình:** validation rule, maxlength, required, điều kiện chuyển màn, hành vi khi lỗi, business rule
+- ❌ TUYỆT ĐỐI KHÔNG viết `FACT` cho bất kỳ rule nào mà bằng chứng duy nhất là "nhìn thấy trên hình"
+
+| Suy từ hình | Được phép | Classification |
+|---|---|---|
+| "Màn này có ô nhập email" | ✅ | `FACT` |
+| "Ô email là required" (vì có dấu `*`) | ⚠️ chỉ khi dấu `*` được định nghĩa trong design system | `INFERENCE` nếu không có định nghĩa |
+| "Ô email maxlength 256" | ❌ | `UNKNOWN` — phải hỏi |
+| "Bấm nút này sang màn Mypage" | ❌ | `UNKNOWN` trừ khi flow/spec nói vậy |
+| "Sai format thì hiện message X" | ❌ | `UNKNOWN` — message thật phải lấy từ catalog / spec |
+
+**Với Figma Design có prototype link (interaction):** transition trong prototype = `PROPOSAL` của Designer, **không** tự thành `FACT` — phải đối chiếu Output 2 đã approve.
+
+> Figma **cũ của phiên bản trước** rơi vào **R3 (AS-IS)**, không phải R8. R8 dùng cho UI của chính phiên bản đang làm.
 
 ---
 

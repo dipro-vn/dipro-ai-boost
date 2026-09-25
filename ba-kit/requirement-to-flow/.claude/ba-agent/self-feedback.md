@@ -2,7 +2,7 @@
 
 > Sau Bước 5.5 (visual recheck), BA phải chạy tiếp **AI Self-Feedback** theo policy chung `POLICIES.md §4.5`.
 
-**Đọc lại toàn bộ SPEC.md + 3 Figma outputs + HTML prototype + MkDocs**, sau đó tự trả lời **2 câu hỏi cốt lõi**:
+**Đọc lại toàn bộ SPEC.md + 3 Figma outputs + HTML prototype** (và Basic Design workbook nếu Output 5 đã chạy), sau đó tự trả lời **2 câu hỏi cốt lõi**:
 
 **Câu 1 — Flow có bị THIẾU BƯỚC nào không?**
 - Actor nào chưa được đề cập trong `## Actors & Preconditions`?

@@ -13,7 +13,7 @@
 - Hoặc paste text trực tiếp trong chat
 - Hoặc chỉ nói bằng ngôn ngữ tự nhiên → BA sẽ hỏi thêm
 
-**Output** (5 artifacts per lần chạy):
+**Output** (5 artifacts per lần chạy + Output 5 on-demand):
 
 | # | Output | Path / URL |
 |---|---|---|
@@ -22,6 +22,9 @@
 | 2 | Figma Frame — **Screen Flow** (Master Map + N groups nối bằng **arrow thật** + **Error-Screen Strip** + badge `⚠N` trên mỗi screen + **Combined Overview** + bảng Screen Index + **⑦ Error/Popup Index**) | Node Figma |
 | 3 | Figma Frame — **Screens + Items** (mockup + bảng ITEMS + ERROR SCENARIOS) | Node Figma |
 | 4 | **HTML Prototype** (standalone, mở bằng `open index.html`) | `<output-folder>/prototype/index.html` |
+| 5 | **Basic Design** — ghi spec vào master Excel của công ty ⬜ **ON-DEMAND** | master workbook do user chỉ định |
+
+> **Output 5 không tự chạy.** BA chỉ đề xuất khi Output 1 + Output 2 đã `APPROVED`, và phải hỏi user trước. Ảnh UI (từ Output 3 / Figma) là **tuỳ chọn** — không có ảnh vẫn tạo được sheet, chỉ cần khai báo `NO IMAGE — text only` ở `Screen Index`.
 
 **Snapshot:** Mỗi lần chạy tự lưu vào `<output-folder>/versions/v<N>_<DDMMYYYY>/` để user feedback + so sánh version.
 
@@ -36,7 +39,8 @@ Hãy là BA, đọc file <path-to-requirement> và làm SPEC cho <feature>
 
 **Cách B — Slash command:**
 ```
-/create-spec <feature>
+/create-spec <feature>          ← Output 0→4
+/basic-design [Screen ID...]    ← Output 5 (on-demand)
 ```
 
 ---
@@ -84,6 +88,8 @@ Chi tiết trong `.claude/ba-agent/preflight-questions.md`.
 | `.claude/ba-agent/clarify-ambiguity.md` | Template hỏi khi request mơ hồ |
 | `.claude/ba-agent/versioning.md` | Rule snapshot `versions/v<N>_<DDMMYYYY>/` |
 | `.claude/ba-agent/figma-outputs/*` | Chi tiết từng Figma output + gate rules |
+| `.claude/ba-agent/basic-design/output-5-basic-design.md` | Output 5 — workflow, Input Gate, Proposal Gate, Quality Gate O5 |
+| `.claude/ba-agent/basic-design/workbook-structure.md` | Map cell/cột thật của master Excel Basic Design |
 | `.claude/rules/DATA-PRIVACY.md` | 秘密情報・個人情報 của KH — 5 nhóm cấm, bản đồ rủi ro theo source/output, bộ dữ liệu mẫu, checklist bàn giao |
 | `.claude/hooks/detect-pii.js` | **Hook H06** — chặn cứng PII/credential ở `Write`/`Edit`/`Bash` + MCP (figma/backlog/slack/drive). Self-test: `node .claude/hooks/selftest-detect-pii.js` |
 | `.claude/config/pii-patterns.json` | Pattern + allowlist dữ liệu mẫu — nguồn duy nhất, sửa 1 chỗ |

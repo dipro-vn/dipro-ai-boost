@@ -48,10 +48,10 @@ Cấu trúc bắt buộc:
 
 **⚠️ `## BA Deliverables` — vị trí + nội dung:**
 - Đặt NGAY SAU `## Mô tả nghiệp vụ`, TRƯỚC `## Actors & Preconditions`
-- Chứa đủ 6 outputs (SPEC.md + 3 Figma Frames + HTML Prototype + MkDocs Site) với path/URL clickable
+- Chứa đủ 5 outputs (SPEC.md + 3 Figma Frames + HTML Prototype) với path/URL clickable. **Output 5 (Basic Design) chỉ thêm section riêng khi đã thực sự chạy** — on-demand, không phải row `❌ Skipped`
 - Có "Downstream instructions" — chỉ rõ TL Design / Designer / QC dùng phần nào của SPEC + Figma
 - Format chi tiết → xem `.claude/ba-agent/figma-outputs/shared-rules.md` section "Post-Delivery requirement"
-- Bước 4 của ba-agent tạo skeleton (rows với `<URL>` placeholder). Bước 5 fill Figma URLs. Cuối cùng tất cả 6 rows đều có value hoặc `❌ Skipped — <lý do>`.
+- Bước 4 của ba-agent tạo skeleton (rows với `<URL>` placeholder). Bước 5 fill Figma URLs. Cuối cùng tất cả 5 rows đều có value hoặc `❌ Skipped — <lý do>`.
 
 ---
 
