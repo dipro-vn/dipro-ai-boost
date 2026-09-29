@@ -429,7 +429,7 @@ Chờ user chọn. **KHÔNG được assume `[A]` chỉ vì "có existing → ch
 - ❌ TUYỆT ĐỐI KHÔNG đọc meeting note rồi viết thẳng vào Happy Path / AC như requirement đã chốt
 - ❌ KHÔNG coi "không ai phản đối trong note" là đã đồng ý
 
-> Xử lý meeting note sau cuộc họp (tạo file, impact analysis) → `.claude/ba-agent/post-meeting-workflow.md`. Rule R5 này quy định **cách classify**, workflow kia quy định **cách xử lý**.
+> Xử lý meeting note sau cuộc họp (tạo file, triage 🔴 CR vs 🟡 FEEDBACK, impact analysis) → `.claude/ba-agent/post-meeting-workflow.md` (Bước 7); nhánh CR → `.claude/ba-agent/change-request.md`. Rule R5 này quy định **cách classify độ tin cậy của nguồn** (FACT/PROPOSAL/UNKNOWN), Bước 7 quy định **cách phân loại yêu cầu + cách xử lý**. Hai việc khác nhau, phải làm cả hai.
 
 ---
 

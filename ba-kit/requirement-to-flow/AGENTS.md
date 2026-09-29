@@ -23,10 +23,23 @@
 | 3 | Figma Frame — **Screens + Items** (mockup + bảng ITEMS + ERROR SCENARIOS) | Node Figma |
 | 4 | **HTML Prototype** (standalone, mở bằng `open index.html`) | `<output-folder>/prototype/index.html` |
 | 5 | **Basic Design** — ghi spec vào master Excel của công ty ⬜ **ON-DEMAND** | master workbook do user chỉ định |
+| OQ | **Open Questions** — register `.md` + `open_questions.xlsx` (+ Figma OQ view khi ≤ 20 câu) 🔶 **CONDITIONAL** | `<output-folder>/open-questions/` |
+
+> **Output OQ (Open Questions)** chạy ngay trong giai đoạn Output 1: sau khi BA hỏi user bằng `AskUserQuestion`, các business rule vẫn chưa có câu trả lời được gom thành register + export `open_questions.xlsx` bằng script (kèm sheet `Guideline` hướng dẫn KH cách trả lời). `n ≤ 20` → vẽ thêm **Figma OQ view**; `n > 20` → **chỉ xlsx** + in đường dẫn folder. Chỉ chứa **câu hỏi nghiệp vụ** — câu hỏi kỹ thuật chuyển Tech Lead. Chi tiết: `.claude/ba-agent/open-questions.md`.
 
 > **Output 5 không tự chạy.** BA chỉ đề xuất khi Output 1 + Output 2 đã `APPROVED`, và phải hỏi user trước. Ảnh UI (từ Output 3 / Figma) là **tuỳ chọn** — không có ảnh vẫn tạo được sheet, chỉ cần khai báo `NO IMAGE — text only` ở `Screen Index`.
 
 **Snapshot:** Mỗi lần chạy tự lưu vào `<output-folder>/versions/v<N>_<DDMMYYYY>/` để user feedback + so sánh version.
+
+**Bước 7 — Feedback / Meeting note (on-demand):** khi user gửi feedback hoặc meeting note sau khi đã có version, BA **phân định từng item** trước khi sửa:
+
+| Nhãn | BA làm gì |
+|---|---|
+| 🔴 **CR** (ngoài scope đã chốt) | Giải trình *vì sao là CR* (trích baseline) → `AskUserQuestion` → vẽ **CR view MỚI** (badge 🟩 NEW / 🟨 UPD / 🟥 DEL / ⬜ AS-IS + CR Change Table, **không vẽ chồng Output 1/2/3**) → `output_cr.md` (tài liệu trao đổi KH, ngắn gọn, gạch đầu dòng + reference) → snapshot `v<N+1>` |
+| 🟡 **FEEDBACK** (trong scope) | Impact Analysis → `AskUserQuestion` → scoped update → snapshot `v<N+1>` |
+| ⚪ **CHƯA RÕ** | Hỏi user, không tự chọn nhánh |
+
+Chi tiết: `.claude/ba-agent/post-meeting-workflow.md` (triage + nhánh feedback) · `.claude/ba-agent/change-request.md` (nhánh CR).
 
 ---
 
@@ -64,6 +77,9 @@ Chi tiết trong `.claude/ba-agent/preflight-questions.md`.
 - Multi-flow feature → BA hỏi Gate B1/B2 để user chọn vẽ toàn bộ hay 1 flow
 - Nếu user "có" Figma URL mà chưa paste → BA DỪNG chờ, KHÔNG tự skip
 - Mọi lần chạy đều snapshot vào `versions/` — không overwrite version cũ
+- Feedback / meeting note → BA **phân loại CR vs feedback trước khi sửa**, và luôn hỏi `AskUserQuestion` trước khi update/vẽ (Bước 7)
+- CR vẽ vào **view riêng** có phân định NEW / UPDATE — cấm vẽ chồng lên Output 1/2/3 đã giao
+- Còn open question sau khi hỏi user → BẮT BUỘC export Output OQ (xlsx + guideline trả lời); câu chưa trả lời **không được suy diễn** để lấp Happy Path / AC
 - ⛔ **KHÔNG đưa 秘密情報・個人情報 của khách hàng vào AI** — tên/email/SĐT/địa chỉ, member/user thực tế, dữ liệu production, password/API key/token, thông tin giao dịch/hợp đồng, dữ liệu KH xác định confidential. Mọi output dùng **dữ liệu mẫu**. Chi tiết: `.claude/rules/DATA-PRIVACY.md`
 
 **5 rule cứng khi vẽ Figma (thêm sau khi audit thực tế — chi tiết trong `.claude/`):**
@@ -86,7 +102,11 @@ Chi tiết trong `.claude/ba-agent/preflight-questions.md`.
 | `.claude/ba-agent/spec-template.md` | Template 14 sections cho SPEC.md |
 | `.claude/ba-agent/preflight-questions.md` | 3 câu Preflight + 10 câu chuẩn |
 | `.claude/ba-agent/clarify-ambiguity.md` | Template hỏi khi request mơ hồ |
-| `.claude/ba-agent/versioning.md` | Rule snapshot `versions/v<N>_<DDMMYYYY>/` |
+| `.claude/ba-agent/versioning.md` | Rule snapshot `versions/v<N>_<DDMMYYYY>/` (gồm Rule 2c — version sinh từ feedback/CR) |
+| `.claude/ba-agent/open-questions.md` | **Output OQ** — rule lọc câu hỏi nghiệp vụ, OQ Register, export xlsx, Figma OQ view (ngưỡng 20 câu), guideline trả lời |
+| `.claude/skills/business-analyst/scripts/export-open-questions.py` | Export + validate Output OQ → xlsx 3 sheet. `FAIL > 0` = không ghi file |
+| `.claude/ba-agent/post-meeting-workflow.md` | **Bước 7** — intake feedback/meeting note: triage 🔴 CR vs 🟡 FEEDBACK + nhánh feedback |
+| `.claude/ba-agent/change-request.md` | **Nhánh CR** — giải trình vì sao là CR, CR questions, rule vẽ CR view (NEW/UPD/DEL), template `output_cr.md` |
 | `.claude/ba-agent/figma-outputs/*` | Chi tiết từng Figma output + gate rules |
 | `.claude/ba-agent/basic-design/output-5-basic-design.md` | Output 5 — workflow, Input Gate, Proposal Gate, Quality Gate O5 |
 | `.claude/ba-agent/basic-design/workbook-structure.md` | Map cell/cột thật của master Excel Basic Design |

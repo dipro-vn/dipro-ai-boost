@@ -73,6 +73,8 @@ Bạn muốn:
 
 Chờ user chọn. KHÔNG được tự chạy tiếp Output 2 khi chưa có confirm.
 
+**Sau khi user trả lời Gate A — BẮT BUỘC chạy `Bước 5.4 — Output OQ`** (`.claude/ba-agent/open-questions.md`): các business rule **vẫn chưa có câu trả lời** sau lượt hỏi này phải được gom thành `OQ-REGISTER.md` → export `open_questions.xlsx` bằng script → `n ≤ 20` thì vẽ thêm Figma OQ view (Section riêng dưới Output 1, gap ≥ 300px), `n > 20` thì chỉ giao xlsx kèm đường dẫn folder. Không còn câu nào → in `Output OQ: N/A`. Bỏ qua bước này = business rule chốt muộn ở Output 2/3 → vẽ lại.
+
 ### Gate B1 — Sau Output 1, chỉ khi SCOPE_TYPE = `[B]/[C]` multi-flow (BẮT BUỘC)
 
 Nếu `SCOPE_TYPE` (từ Câu 0.4 Bước 2b) = `[B]` (cụm) hoặc `[C]` (toàn hệ thống) VÀ Output 1 detect N > 1 business flows → sau Gate A user chọn [1] tiếp tục → BA hỏi thêm:
@@ -131,6 +133,10 @@ Vẽ Output 1
    ↓
 Gate A (giải thích 3 outputs + xin phép Output 2)  ← MỌI SCOPE
    ↓ user chọn [1]
+Bước 5.4 — Output OQ: còn business rule chưa trả lời?
+   → có: OQ-REGISTER.md → export open_questions.xlsx (script) → n ≤ 20 thì vẽ Figma OQ view
+   → không: in "Output OQ: N/A" rồi đi tiếp
+   ↓
 Gate B1 (nếu multi-flow) — Output 2 toàn bộ hay 1 flow?
    ↓ user chọn scope
 Vẽ Output 2
@@ -146,6 +152,7 @@ Bước 5.5 Visual Recheck → Bước 5.6 Self-Feedback → Output 4 HTML → R
 - ❌ Vẽ liền Output 1 → 2 → 3 không dừng gate nào
 - ❌ Tự đoán "user chắc muốn toàn bộ" khi SCOPE multi-flow → vẽ hết N flows không hỏi
 - ❌ Skip Gate B2 khi user "trông có vẻ" đã ok Output 2
+- ❌ Sang Output 2 khi còn open question mà chưa export Output OQ (Bước 5.4) — hoặc gom câu hỏi lại để "hỏi 1 lần ở cuối"
 
 ---
 
@@ -395,6 +402,16 @@ Sau khi hoàn thành 5 outputs, BA agent PHẢI edit `SPEC.md` thêm section **`
 |---|---|---|---|
 | 4 | **HTML Prototype** | `<output-folder>/prototype/index.html` | `open <output-folder>/prototype/index.html` — standalone, không cần build |
 
+### Open Questions (Output OQ — bỏ hẳn section này khi không còn open question)
+
+| # | Output | Path / URL | Note |
+|---|---|---|---|
+| OQ | **Open Questions — Register** | `<output-folder>/open-questions/OQ-REGISTER.md` | Source of truth, `n = <n>` câu · Blocker `<a>` · High `<b>` |
+| OQ | **Open Questions — Excel giao KH** | `<output-folder>/open-questions/open_questions.xlsx` | Sheet `Guideline` hướng dẫn cách trả lời · sheet `Open Questions` để KH điền |
+| OQ | **Figma OQ view** | [Mở Figma](<URL frame OQ>) — hoặc `❌ Skipped — n = <n> > 20 (chỉ export xlsx)` | Card theo mức chặn, có ô `Trả lời:` để comment |
+
+> Folder gửi KH: `<output-folder>/open-questions/`. Chi tiết rule → `.claude/ba-agent/open-questions.md`.
+
 ### Basic Design (Output 5 — chỉ thêm section này khi đã chạy)
 
 | # | Output | Workbook | Sheets | Trạng thái |
@@ -407,6 +424,7 @@ Sau khi hoàn thành 5 outputs, BA agent PHẢI edit `SPEC.md` thêm section **`
 
 - **Tech Lead agent** — dùng `## Screens` (list) + `## Screen Details` (per-screen data) + Figma Frame 3 (Items) để thiết kế DB schema, API contract, service layer
 - **Designer agent** — dùng Figma Frame 1/2/3 làm reference low-fi → tạo high-fidelity screens, điền cột "Figma Link" trong `## Screens`
+- **Mọi downstream agent** — đọc `## Open Questions` TRƯỚC khi implement: câu chưa trả lời = business rule chưa chốt, KHÔNG được tự giả định để code/design/test
 - **QC agent** — dùng `## Acceptance Criteria` + `## Alternative Flows & Edge Cases` + HTML Prototype để test manual + Figma Frame 3 để verify Error Scenarios
 ```
 
