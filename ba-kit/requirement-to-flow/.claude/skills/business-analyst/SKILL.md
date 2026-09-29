@@ -125,6 +125,7 @@ See [REFERENCE.md](REFERENCE.md) for detailed interview frameworks and technique
 - **[resources/interview-frameworks.md](resources/interview-frameworks.md)** - Interview technique reference
 - **[scripts/discovery-checklist.sh](scripts/discovery-checklist.sh)** - Interactive discovery questions
 - **[scripts/validate-brief.sh](scripts/validate-brief.sh)** - Validate brief completeness
+- **[scripts/export-open-questions.py](scripts/export-open-questions.py)** - Output OQ: validate OQ register + export `open_questions.xlsx` (3 sheets: Guideline / Open Questions / Summary). Rule: `.claude/ba-agent/open-questions.md`
 
 ## Workflow Process
 

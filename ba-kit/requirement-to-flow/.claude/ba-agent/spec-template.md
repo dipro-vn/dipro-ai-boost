@@ -18,6 +18,7 @@ Cấu trúc bắt buộc:
 ## Screens
 ## Screen Details
 ## Responsive Requirements
+## Open Questions         ← BẮT BUỘC khi còn UNKNOWN/CONFLICT (Output OQ), bỏ hẳn khi không còn câu nào
 ```
 
 **⚠️ `## Source Register` — vị trí + nội dung (BẮT BUỘC):**
@@ -44,14 +45,14 @@ Cấu trúc bắt buộc:
 - Chỉ `FACT` được đưa vào Happy Path / AC như kết luận chính thức
 - `PROPOSAL` phải có badge `[PROPOSAL — chờ BRSE approve]` trong SPEC body nơi được reference
 - `INFERENCE` phải có badge `[INFERENCE — cần verify]` + list vào `## Alternative Flows & Edge Cases` như giả định
-- `UNKNOWN` và `CONFLICT` KHÔNG được nối vào flow bằng giả định — bắt buộc list vào cuối SPEC section `## Open Questions` (tạo thêm nếu chưa có)
+- `UNKNOWN` và `CONFLICT` KHÔNG được nối vào flow bằng giả định — bắt buộc list vào cuối SPEC section `## Open Questions`, và **phải được export thành Output OQ** (`.claude/ba-agent/open-questions.md`): register `.md` + `open_questions.xlsx` (+ Figma OQ view khi ≤ 20 câu)
 
 **⚠️ `## BA Deliverables` — vị trí + nội dung:**
 - Đặt NGAY SAU `## Mô tả nghiệp vụ`, TRƯỚC `## Actors & Preconditions`
-- Chứa đủ 6 outputs (SPEC.md + 3 Figma Frames + HTML Prototype + MkDocs Site) với path/URL clickable
+- Chứa đủ 5 outputs (SPEC.md + 3 Figma Frames + HTML Prototype) với path/URL clickable. **Output 5 (Basic Design) chỉ thêm section riêng khi đã thực sự chạy** — on-demand, không phải row `❌ Skipped`
 - Có "Downstream instructions" — chỉ rõ TL Design / Designer / QC dùng phần nào của SPEC + Figma
 - Format chi tiết → xem `.claude/ba-agent/figma-outputs/shared-rules.md` section "Post-Delivery requirement"
-- Bước 4 của ba-agent tạo skeleton (rows với `<URL>` placeholder). Bước 5 fill Figma URLs. Cuối cùng tất cả 6 rows đều có value hoặc `❌ Skipped — <lý do>`.
+- Bước 4 của ba-agent tạo skeleton (rows với `<URL>` placeholder). Bước 5 fill Figma URLs. Cuối cùng tất cả 5 rows đều có value hoặc `❌ Skipped — <lý do>`.
 
 ---
 
@@ -292,3 +293,29 @@ Sử dụng đúng viewport chuẩn theo `TARGET_PLATFORM` (đã hỏi ở Bư�
 ---
 
 Nếu thiếu thông tin để xác định screens cụ thể → tạo screens hợp lý nhất từ context (đạt ~90% độ chính xác), ghi chú `*` và note cuối bảng.
+
+
+---
+
+**Hướng dẫn điền `## Open Questions`:**
+
+> Bảng này là bản **rút gọn** của `open-questions/OQ-REGISTER.md` — đủ để downstream đọc SPEC là biết cái gì chưa chốt. Chi tiết (impact, phương án BA đề xuất, lựa chọn gợi ý) nằm ở register + xlsx.
+
+```markdown
+## Open Questions
+
+> Business rule CHƯA được chốt. Downstream (TL / Designer / QC) **KHÔNG được tự giả định** để code/design/test.
+> Chi tiết + chỗ trả lời: [open_questions.xlsx](<output-folder>/open-questions/open_questions.xlsx) · [Figma OQ view](<URL>) · Hướng dẫn trả lời: sheet `Guideline` trong file xlsx.
+
+| OQ ID | Câu hỏi | Liên quan | Mức chặn | Trạng thái |
+|---|---|---|---|---|
+| OQ-01 | Ai được quyền duyệt đơn giá trị trên 10 triệu? | FR-12 · Flow 2 · AX_ORD_004 | Blocker | Chưa trả lời |
+| OQ-02 | Đơn quá hạn thanh toán bao lâu thì tự huỷ? | FR-14 · Flow 2 | Blocker | Đã trả lời — 15 phút (v3) |
+```
+
+**Quy tắc bắt buộc:**
+- Mỗi row phải trace `FR No.` / flow / screen — không trace được thì câu hỏi chưa đủ chín, bỏ khỏi register
+- `Mức chặn` chỉ nhận `Blocker` / `High` / `Medium` / `Low`
+- Câu đã trả lời → đổi classification trong `## Source Register` sang `FACT`, ghi `Đã trả lời — <nội dung> (v<N>)`, rồi xoá khỏi register ở version sau
+- OQ ID **không đánh lại số** giữa các version
+- ⛔ Không đưa câu hỏi kỹ thuật (API / DB / framework / infra) vào đây — chuyển Tech Lead

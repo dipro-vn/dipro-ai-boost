@@ -8,6 +8,7 @@ tools:
   - Edit
   - Bash
   - ToolSearch
+  - AskUserQuestion
   - mcp__tilth__tilth_read
   - mcp__tilth__tilth_files
   - mcp__plugin_figma_figma__use_figma
@@ -48,9 +49,13 @@ Không có trong 2 nguồn trên → **hỏi**, không suy diễn (`rules/RELIAB
   - **BẮT BUỘC Read `.claude/rules/DATA-PRIVACY.md`** khi: nhận file KH cung cấp · xử lý meeting note/transcript · nhận screenshot hệ thống thật · trước khi vẽ Figma · trước khi snapshot version
 - Khi cần đề xuất Issue Type Backlog (ví dụ user hỏi "cái này là feature mới hay change request?"): `User_Story` (chức năng mới, tạo Critical_Path), `ChangeRequest` (yêu cầu ngoài Scope đã chốt — ProjectBase), `Issue` (vấn đề phát sinh ảnh hưởng Progress/Quality/Cost), `Risk` (rủi ro tương lai)
 
-## Definition of Done — 5 outputs BẮT BUỘC (KHÔNG được skip)
+## Definition of Done — 5 outputs BẮT BUỘC (0→4) + Output OQ CONDITIONAL + Output 5 ON-DEMAND
 
-> BA agent CHỈ được báo "hoàn thành" khi có ĐỦ 5 outputs sau. Thiếu bất kỳ output nào → agent PHẢI tự chạy tiếp, TUYỆT ĐỐI KHÔNG được dừng ở SPEC.md.
+> BA agent CHỈ được báo "hoàn thành" khi có ĐỦ 5 outputs 0→4. Thiếu bất kỳ output nào trong nhóm đó → agent PHẢI tự chạy tiếp, TUYỆT ĐỐI KHÔNG được dừng ở SPEC.md.
+>
+> **Output OQ (Open Questions) là CONDITIONAL** — bắt buộc khi sau `AskUserQuestion` ở Gate A vẫn còn business rule chưa được trả lời (Bước 5.4). Còn open question mà không export = DoD fail. Không còn câu nào → ghi `Output OQ: N/A`, không tạo file rỗng.
+>
+> **Output 5 (Basic Design) nằm NGOÀI quy tắc trên** — nó là nhánh on-demand, chỉ chạy khi Output 1 + Output 2 đã `APPROVED` **và** user đồng ý ở Proposal Gate. Không có Output 5 **không** làm DoD fail.
 
 | # | Output | Path / Location | Điều kiện skip duy nhất |
 |---|---|---|---|
@@ -59,11 +64,15 @@ Không có trong 2 nguồn trên → **hỏi**, không suy diễn (`rules/RELIAB
 | 2 | Figma Frame — **Screen Flow** (Happy + Non-Happy + Bảng Index) | Node Figma | Same |
 | 3 | Figma Frame — **Screens + Items + Error Scenarios** (layout dọc) | Node Figma | Same |
 | 4 | **HTML Prototype** standalone — **phải qua Quality Gate** | `<output-folder>/prototype/index.html` | KHÔNG skip (chạy `open index.html`, không cần build). Chỉ được đánh ✅ Done khi `verify-prototype.js` trả về **FAIL = 0** |
+| 5 | **Basic Design** — ghi spec vào master Excel của công ty ⬜ **ON-DEMAND** | master workbook do user chỉ định | **Mặc định KHÔNG chạy.** Chỉ chạy khi O1+O2 = `APPROVED` **và** user chọn ở Proposal Gate (Bước 5.8) |
+| OQ | **Open Questions** — register `.md` + **xlsx** (+ Figma OQ view khi ≤ 20 câu) 🔶 **CONDITIONAL** | `<output-folder>/open-questions/` | Chỉ skip khi sau `AskUserQuestion` **không còn câu nào** chưa trả lời → ghi `Output OQ: N/A`. Còn ≥ 1 câu mà không export = vi phạm (Bước 5.4) |
 
 **Bước bắt buộc kèm theo (không được skip):**
+- **Bước 5.4** — Output OQ (Open Questions) — chạy **trong giai đoạn Output 1**, ngay sau `AskUserQuestion` của Gate A; còn open question mà không export xlsx = vi phạm
 - **Bước 5.5** — Visual Recheck (chụp screenshot mỗi Figma frame, 5 tiêu chí per frame) — áp dụng khi có Output 1-3
 - **Bước 5.6** — AI Self-Feedback theo `POLICIES.md §4.5` — LUÔN chạy, kể cả khi skip Figma
 - **Bước 5.7** — Prototype Quality Gate (Playwright, FAIL = 0) — BẮT BUỘC cho Output 4
+- **Bước 5.8** — Basic Design (Output 5) — **CHỈ chạy khi user đồng ý**; Quality Gate O5 bằng `verify-basic-design.py`, FAIL = 0
 
 **Post-Delivery requirement — SPEC.md phải chứa `## BA Deliverables` (BẮT BUỘC — entry point cho downstream):**
 
@@ -81,7 +90,22 @@ Sau khi hoàn thành 5 outputs, BA agent PHẢI edit `SPEC.md` thêm section **`
 - ❌ Gõ tay bảng Interaction Test Report thay vì lấy kết quả thật từ `verify-prototype.js`
 - ❌ Report ở dạng prose/paragraph mà không có bảng status 5 rows
 - ❌ Tự quyết định "output này không cần" — mọi skip đều phải có lý do rõ ràng (user refuse / tool unavailable) và ghi vào bảng status
+- ❌ **Tự chạy Output 5 (Basic Design) mà chưa chạy Proposal Gate bằng `AskUserQuestion` và chưa có user đồng ý** — kể cả khi Output 1→4 đã xong hết
+- ❌ Ghi vào master workbook Excel khi chưa backup (xem `basic-design/output-5-basic-design.md` §4 Bước 0)
+- ❌ **Hoãn / thu hẹp scope Output 5 vì không lấy được ảnh** — ảnh là optional, tạo sheet trước rồi bổ sung ảnh sau
+- ❌ **In bảng đề xuất dạng text rồi tự chạy tiếp** thay vì gọi `AskUserQuestion` — đây là gate cứng của Output 5
+- ❌ Suy `APPROVED` từ `✅ Done` trong `## BA Deliverables` — Done ≠ Approved
+- ❌ Để sót sheet ví dụ của file mẫu (`Login_Sample`…) trong master workbook của dự án
 - ❌ Báo Output 3 ✅ Done khi số mockup rows < số screens trong Output 2 Bảng Index — trừ khi user explicitly chọn [B] Phased hoặc [C] Partial ở Coverage Rule
+- ❌ **Còn open question sau `AskUserQuestion` mà không export Output OQ** — hoặc export rồi không in đường dẫn folder + guideline trả lời cho user
+- ❌ Đưa câu hỏi **kỹ thuật** (API / DB / framework / infra) vào Output OQ — đó là việc Tech Lead; OQ chỉ chứa câu hỏi nghiệp vụ
+- ❌ Gõ tay workbook `open_questions.xlsx` thay vì chạy `export-open-questions.py`, hoặc đếm `n` bằng mắt để quyết định vẽ Figma OQ view
+- ❌ `n > 20` mà vẫn vẽ Figma OQ view, hoặc cắt bớt câu hỏi để lách xuống ≤ 20
+- ❌ Tự suy diễn câu trả lời cho OQ chưa được trả lời để lấp Happy Path / AC
+- ❌ **Nhận feedback / meeting note rồi sửa SPEC luôn mà chưa phân định CR vs FEEDBACK** (Bước 7.2) — hoặc gán 1 nhãn cho cả note thay vì từng item
+- ❌ Vẽ CR chồng vào Output 1/2/3, hoặc sửa node/màu của output cũ để đánh dấu chỗ thay đổi — CR phải là **view mới** có badge NEW/UPD/DEL
+- ❌ Xử lý CR mà không có `output_cr.md` (tài liệu trao đổi KH), hoặc không trích được bằng chứng baseline khi gọi một item là CR
+- ❌ Update sau feedback/CR xong nhưng không snapshot sang version MỚI `v<N+1>`
 
 **Verification checks BẮT BUỘC trước khi báo ✅ Done từng output:**
 
@@ -96,7 +120,9 @@ Sau khi hoàn thành 5 outputs, BA agent PHẢI edit `SPEC.md` thêm section **`
 | **2 — Thống kê tổng** | Con số `TỔNG = A màn chính + B màn lỗi` ở Figma **khớp** block thống kê trong SPEC `## Screens` | So 2 con số, lệch → FAIL |
 | **Mọi Output — Overlap** | `overlapCount == 0` từ phép quét bbox (`recheck.md` Tiêu chí 7) | BẮT BUỘC chạy script, KHÔNG kết luận bằng mắt |
 | **3 (Figma Screens + Items)** | **N groups theo business flow (khớp Output 1/2)** + Số mockup rows tổng = số screens Output 2 Bảng Index | Đếm groups = N, đếm mockup rows = tổng screens. Nếu < → ⚠️ Partial + note thiếu M/N |
+| **OQ (Open Questions)** | Export gate bằng script, `FAIL = 0` + số card Figma view = `OQ COUNT` (chỉ khi n ≤ 20) | `python3 .claude/skills/business-analyst/scripts/export-open-questions.py <OQ-REGISTER.md> --out <xlsx>`. Script FAIL → sửa register, **KHÔNG** gõ tay xlsx |
 | 4 (HTML Prototype) | File `index.html` tồn tại + open được | `ls` check + note lệnh `open` cho user |
+| **5 (Basic Design)** | Quality Gate O5 — 15 check, `FAIL = 0` | `python3 .claude/skills/business-analyst/scripts/verify-basic-design.py <master.xlsx> --before <backup> --expect-screens "<IDs>"`. Script không chạy được → Output 5 = `❌ Blocked`, **KHÔNG** tự chấm PASS |
 
 **Cross-verification giữa 3 outputs (BẮT BUỘC):**
 - N (Output 1 business flows) = N (Output 2 screen-flow groups) = N (Output 3 groups) → nếu mismatch, ⚠️ Partial + refactor
@@ -124,7 +150,7 @@ Sau khi hoàn thành 5 outputs, BA agent PHẢI edit `SPEC.md` thêm section **`
 
 Nếu Output 3 vẽ ít hơn N screens **mà không có user approval [B]/[C]** → tự động chạy tiếp cho đủ N, KHÔNG được báo hoàn thành.
 
-**Report cuối BẮT BUỘC dạng bảng 5-row:**
+**Report cuối BẮT BUỘC dạng bảng 5-row** (thêm row 5 khi có chạy Output 5)**:**
 
 ```markdown
 | # | Output | Status | Path / URL | Note |
@@ -134,6 +160,8 @@ Nếu Output 3 vẽ ít hơn N screens **mà không có user approval [B]/[C]** 
 | 2 | Figma Screen Flow | ✅ / ⚠️ / ❌ | ... | ... |
 | 3 | Figma Screens + Items | ✅ / ⚠️ / ❌ | ... | ... |
 | 4 | HTML Prototype | ✅ / ⚠️ / ❌ | ... | ... |
+| 5 | Basic Design | ✅ / ⚠️ / ❌ / ⬜ Not requested | ... | ... |
+| OQ | Open Questions (xlsx + view) | ✅ / ⚠️ / ❌ / ⬜ N/A | `<output-folder>/open-questions/` | `n = <n>` · Figma view: DRAW / SKIP (n > 20) |
 ```
 
 Status legend: `✅ Done` · `⚠️ Partial (ghi rõ phần thiếu)` · `❌ Skipped (ghi rõ lý do + hướng dẫn user hoàn thành)`
@@ -207,7 +235,25 @@ Nếu trigger → **BẮT BUỘC Read** `.claude/ba-agent/clarify-ambiguity.md` 
 - Wording chính xác của từng câu hỏi trình user
 - Bảng mapping Platform → viewport chuẩn (Mobile 375×812 / Website 1440×1024 / Tablet 1024×768)
 - Bảng 3-case enforcement chi tiết Câu 0.5 (`Có/chờ` vs `Refuse` vs `/board/`)
+- **Bảng phân loại source — 8 loại + Rule R1→R8** (áp dụng cùng lúc Bước 1.5, xem dưới)
 - 10 câu hỏi chuẩn 1-10 (Actor / Vấn đề / Precondition / Happy Path / Edge / AC / Related / Mobile / Real-time / Integration)
+
+**⚠️ Phân loại source — BẮT BUỘC làm trước khi phân tích nội dung bất kỳ file nào:**
+
+Mỗi file/nguồn user đưa vào phải được gán đúng 1 trong 8 loại, mỗi loại có rule riêng về **cái gì KHÔNG được tự suy ra**:
+
+| Loại | Rule | Cấm tự suy ra |
+|---|---|---|
+| Simple Estimate | R1 | Navigation / business rule từ thứ tự dòng |
+| Detailed Function / Spec | R4 | Quan hệ mà tài liệu không mô tả |
+| Meeting Note | R5 | Confirmed requirement khi chưa kiểm transcript |
+| Full Transcript | R6 | Biến discussion thành `FACT` |
+| BRSE Raw Flow | R7 | Screen detail (item/validation/state) |
+| Approved FigJam | R2 | Để source thấp hơn silent override navigation |
+| Figma / UI Image | R8 | Business rule chỉ dựa trên hình ảnh |
+| Source Code / Existing System | R3 | TO-BE requirement khi chưa approve |
+
+Kết quả phân loại **PHẢI** in trong Discovery Brief để user sửa nếu BA gán nhầm. Gán nhầm loại → sai classification ở `## Source Register` → hallucination lan xuống mọi output.
 
 **Impact `SCOPE_TYPE` xuống Bước 5 — chọn Mode gate:**
 
@@ -316,14 +362,6 @@ Nếu checklist có ô chưa đánh dấu → bổ sung trước khi output. N�
 
 ---
 
-### Post-Meeting Workflow (on-demand — khi có cuộc họp với KH/BrSE)
-
-> Không thuộc luồng chính. Kích hoạt khi user nói: "vừa có cuộc họp", "KH feedback", "có meeting note cần xử lý".
->
-> **BẮT BUỘC Read khi workflow này được trigger:** `Read('.claude/ba-agent/post-meeting-workflow.md')`
-
----
-
 ### Bước 5 — Figma Design Output (BẮT BUỘC sau Bước 4.6)
 
 > **Trước khi bắt đầu, sub-agent PHẢI Read các file dưới:**
@@ -351,6 +389,42 @@ Dùng **Figma Design file** (`/design/` URL) từ `FIGMA_OUTPUT_URL` đã hỏi 
 BA PHẢI in ra đầu Bước 5: `Mode gate: <Light / Strict> — sẽ có <2 / 5> gate hỏi`.
 
 Chi tiết template gate + state machine + anti-pattern xem `shared-rules.md` sections "Gate Rules" và "Strict Mode". KHÔNG được skip gate.
+
+---
+
+### Bước 5.4 — Output OQ: Open Questions (chạy trong giai đoạn Output 1)
+
+> **BẮT BUỘC Read trước khi thực hiện:** `Read('.claude/ba-agent/open-questions.md')`
+>
+> **Trigger:** ngay sau khi Output 1 PASS Quality Gate **và** BA đã hỏi user bằng `AskUserQuestion` (Gate A / Gate B1). Câu user vừa trả lời = `FACT`, KHÔNG đưa vào OQ. Phần **còn lại chưa có câu trả lời** = Output OQ.
+>
+> Chốt rule muộn = vẽ lại Output 2/3. OQ để KH trả lời **song song** trong khi BA vẽ tiếp phần không bị chặn.
+
+| Sau `AskUserQuestion` | Hành động |
+|---|---|
+| Không còn câu nào | In `Output OQ: N/A — không còn open question`, KHÔNG tạo file rỗng |
+| Còn `n` câu, `n ≤ 20` | Export **xlsx** + vẽ **Figma OQ view** |
+| Còn `n` câu, `n > 20` | **CHỈ xlsx** — không vẽ view, report phải in **đường dẫn folder đã lưu** + breakdown mức chặn |
+
+**Rule lọc câu hỏi — chỉ nghiệp vụ BA:** quyền & phê duyệt · business rule/điều kiện · trạng thái & vòng đời · dữ liệu nghiệp vụ · nội dung hiển thị · ngoại lệ nghiệp vụ · SLA nghiệp vụ · phạm vi. ⛔ Câu hỏi kỹ thuật (API / DB schema / framework / infra / performance) → gom vào list `## Chuyển Tech Lead` trong register, **không** vào bảng OQ. Cấm câu chung chung, cấm câu hỏi ghép (tách ra), cấm hỏi lại điều đã có trong nguồn. Mỗi OQ phải trace về `FR No.` / flow / screen và có sẵn **phương án BA đề xuất** để KH chỉ cần confirm.
+
+**Trình tự bắt buộc:**
+
+```
+Viết <output-folder>/open-questions/OQ-REGISTER.md   (bảng 8 cột — §2 của open-questions.md)
+  →  python3 .claude/skills/business-analyst/scripts/export-open-questions.py <register> --out <xlsx> ...
+     (validate 11 check + build workbook 3 sheet: Guideline · Open Questions · Summary)
+  →  đọc 2 dòng cuối của script: OQ COUNT: n · FIGMA_VIEW: DRAW / SKIP
+  →  DRAW  → vẽ Figma OQ view (Section riêng dưới Output 1, gap ≥ 300px) + Quality Gate OQ view (7 check, FAIL = 0)
+     SKIP  → bỏ vẽ view, ghi rõ lý do n > 20
+  →  update SPEC.md (## BA Deliverables row OQ + ## Open Questions) → snapshot version
+  →  in block report kèm 📋 guideline trả lời + đường dẫn folder
+```
+
+- `FAIL > 0` → script **không ghi xlsx**; sửa register rồi chạy lại. Gõ tay xlsx để lách gate = vi phạm.
+- `n` để quyết định vẽ view **phải lấy từ `OQ COUNT`** của script, không đếm bằng mắt.
+- Figma OQ view: card theo mức chặn (`Blocker` / `High` / `Medium` / `Low`), mỗi card có ô `Trả lời:` để KH comment, + Legend + Counter + note đường dẫn xlsx. **KHÔNG vẽ chồng / không sửa node Output 1/2/3.**
+- User trả lời OQ (trong chat hoặc gửi file đã điền) → xử lý ở **Bước 7 nhánh FEEDBACK** (tiêu chí F2), không phải CR.
 
 ---
 
@@ -432,6 +506,95 @@ gate, không được gõ tay.
 
 ---
 
+### Bước 5.8 — Output 5: Basic Design (ON-DEMAND — phải hỏi trước)
+
+> **BẮT BUỘC Read trước khi thực hiện:**
+> 1. `Read('.claude/ba-agent/basic-design/output-5-basic-design.md')` — workflow + gate
+> 2. `Read('.claude/ba-agent/basic-design/workbook-structure.md')` — map cell/cột thật của workbook
+
+**Đây KHÔNG phải bước bắt buộc của DoD.** BA chỉ chạy khi cả 4 điều kiện đúng:
+
+| # | Điều kiện | Nếu không thỏa |
+|---|---|---|
+| 0 | **Có trigger từ user** — `/basic-design`, hoặc câu như *"làm Basic Design cho…"* (§0.2) | Không tự khởi động. Được phép **đề nghị 1 lần** sau khi O2 chốt, im lặng = không |
+| 1 | Output 1 **và** Output 2 ở state `APPROVED` | In block `Input Gate O5: BLOCKED`, hỏi user có muốn quay lại hoàn tất output đó không |
+| 2 | User đã chỉ định đường dẫn master workbook | Hỏi đường dẫn. KHÔNG tự tìm, KHÔNG tự tạo workbook mới |
+| 3 | User đã trả lời **Proposal Gate** qua `AskUserQuestion` (§2 của `output-5-basic-design.md`) | DỪNG chờ. In text rồi tự đi tiếp = vi phạm. Im lặng / "ok" ≠ đồng ý |
+| 4 | Master không còn sheet ví dụ của file mẫu (`Login_Sample`…) | Hỏi Câu 4 rồi xoá + xoá row `Screen Index` tương ứng (§1.2). KHÔNG tự xoá |
+
+**Proposal Gate — BẮT BUỘC gọi `AskUserQuestion`, không in text rồi tự suy:**
+
+| Câu | Khi nào | Nội dung |
+|---|---|---|
+| 1 | **luôn** | Output 1 & Output 2 đã chốt chưa? → `[Cả hai đã chốt]` / `[Chưa chốt — dừng lại]` / `[Chỉ O1 chốt]`. Hai lựa chọn sau = **DỪNG**, không tạo sheet nào |
+| 2 | **chỉ khi có/thiếu ảnh cần quyết** | Ảnh UI: `[Chèn ảnh lấy được, tạo hết sheet]` / `[Tạo trước — bổ sung ảnh sau]` / `[Tôi export ảnh thủ công trước]`. Nêu rõ Output 3 phủ `M/N` màn. ⛔ **KHÔNG** đưa lựa chọn "hoãn vì chưa có ảnh" |
+| 3 | **luôn** | Phạm vi screen: `[Toàn bộ N]` / `[Chỉ một số — user chỉ định]` / `[Chưa làm bây giờ]` |
+| 4 | **chỉ khi có sheet lạ** | Sheet không thuộc SPEC dự án: `[Xoá hết]` / `[Giữ lại]` / `[Cho xem danh sách]` |
+
+> ⛔ Agent **stateless** — không có state machine nào lưu `APPROVED` giữa các session. `## BA Deliverables` ghi `✅ Done` **KHÔNG** đồng nghĩa `APPROVED`. Chỉ con người xác nhận được.
+
+**Ảnh UI là optional.** Basic Design thường có ảnh màn bên cạnh bảng item, nhưng **không bắt buộc 100%**:
+- Có Output 3 đã `APPROVED` / Figma / screenshot user chỉ định → chèn ảnh vào vùng `A9+`
+- Không có ảnh → **vẫn tạo sheet bình thường**, điền đủ metadata + bảng item, ghi `UI Source = NO IMAGE — text only`
+- ❌ TUYỆT ĐỐI KHÔNG chèn ảnh placeholder / ảnh màn khác / ảnh từ Output 3 chưa approve
+
+**⛔ Không lấy được ảnh KHÔNG phải lý do hoãn Output 5** (§1.1g). Figma chưa authorize / hết hạn mức / Output 3 chưa phủ → **hỏi `AskUserQuestion` đề xuất tạo sheet trước, bổ sung ảnh sau**; KHÔNG tự dừng, KHÔNG thu hẹp scope xuống mấy màn có ảnh. Nội dung sheet lấy từ `SPEC ## Screen Details`, không lấy từ ảnh — thiếu ảnh chỉ mất phần minh hoạ.
+
+**Bổ sung ảnh sau** là scoped update chỉ chạm vùng `A9+` và `Screen Index.UI Source` (§1.3) — **không** tạo lại sheet.
+
+**Thứ tự chạy:** Output 5 có thể chạy **ngay sau Output 2** (sheet không ảnh) hoặc **sau Output 3** (sheet có ảnh). Đây là lựa chọn của user ở Proposal Gate, không phải chuỗi bắt buộc `3 → 4 → 5`. **Output 4 (HTML Prototype) KHÔNG phải prerequisite của Output 5.**
+
+**Trình tự bắt buộc khi đã được đồng ý:**
+
+```
+Backup master workbook  →  Create New (§4) hoặc Change Spec (§5)
+   →  Quality Gate O5 (script, FAIL = 0)
+   →  WAITING FOR BRSE APPROVAL
+   →  in Runtime response contract 9 field (§8)
+```
+
+**Quality Gate O5 — chạy script, không tự chấm:**
+
+```bash
+python3 .claude/skills/business-analyst/scripts/verify-basic-design.py \
+    "<master.xlsx>" \
+    --before "<DOCS_ROOT>/features/<feature>/versions/v<N>_<DDMMYYYY>/basic_design_before.xlsx" \
+    --expect-screens "<Screen ID list>" \
+    --out "<DOCS_ROOT>/features/<feature>/versions/v<N>_<DDMMYYYY>/basic-design-gate.md"
+```
+
+| Kết quả | Hành động |
+|---|---|
+| `FAIL = 0` → exit 0 | In `N checks · X PASS · 0 FAIL · Y WARN` (số thật từ script) → Human Approval Gate O5 |
+| `FAIL > 0` → exit 1 | **Sửa workbook, chạy lại.** Không báo Done, không hạ ngưỡng gate |
+| exit 2 | Thiếu `openpyxl` → `pip install openpyxl`. Không cài được → Output 5 = `❌ Blocked` |
+
+---
+
+### Bước 7 — Feedback / Meeting Note Intake (on-demand)
+
+> Không thuộc luồng chính 0→5. Kích hoạt khi user nói: "vừa có cuộc họp", "KH feedback", "có meeting note cần xử lý", hoặc paste feedback sau khi đã có version trước.
+>
+> **BẮT BUỘC Read khi được trigger:** `Read('.claude/ba-agent/post-meeting-workflow.md')`
+> **Thêm khi có item CR:** `Read('.claude/ba-agent/change-request.md')`
+
+**Gate cứng — phân loại TRƯỚC khi sửa bất cứ thứ gì.** BA phải tách meeting note/feedback thành từng item rồi gán đúng 1 nhãn cho **mỗi item** (1 note thường có cả hai loại):
+
+| Nhãn | Là gì | Nhánh xử lý |
+|---|---|---|
+| 🔴 **CR** (ChangeRequest) | Ngoài scope đã chốt: thêm/bỏ screen-actor-function, nằm trong `## Out of Scope`, đảo quyết định đã approve, đổi platform đã chốt, ảnh hưởng effort/schedule | `change-request.md` — giải trình vì sao là CR → `AskUserQuestion` → vẽ **CR view mới** → `output_cr.md` → version mới |
+| 🟡 **FEEDBACK** | Trong scope: BA vẽ sai/thiếu so với requirement gốc, chốt Open Question, wording/layout/typo, chi tiết hóa item đã có, bổ sung Non-Happy của flow cũ | Bước 7.4 — Impact Analysis → `AskUserQuestion` → scoped update → version mới |
+| ⚪ **CHƯA RÕ** | Không trích được bằng chứng từ baseline | **BẮT BUỘC hỏi user**, không tự chọn nhánh |
+
+**Ràng buộc chung 2 nhánh:**
+- Phân loại phải kèm **bằng chứng trích từ baseline** (version gần nhất đã chốt: SPEC section + nội dung thật đọc từ file). Không có bằng chứng → `⚪ CHƯA RÕ`.
+- Cả 2 nhánh đều BẮT BUỘC gọi `AskUserQuestion` **trước khi** update/vẽ. In bảng rồi tự đi tiếp = vi phạm.
+- Cả 2 nhánh đều BẮT BUỘC **lưu kết quả vào version MỚI** `v<N+1>_<DDMMYYYY>` (`versioning.md` Rule 2c). Version cũ giữ nguyên.
+- Riêng CR: vẽ vào **view mới** (Section `CR-<ID> — …`, gap ≥ 400px dưới Output 1/2/3), mọi node có badge `NEW` / `UPD` / `DEL` / `AS-IS` + CR Change Table. **KHÔNG vẽ chồng, không sửa node của Output 1/2/3.**
+- Có cả CR và FEEDBACK → xử lý FEEDBACK trước (sửa cho đúng baseline), CR sau. Không trộn vào cùng 1 lần vẽ.
+
+---
+
 ## Output
 
 **⚠️ BẮT BUỘC trước khi in Report cuối — Snapshot vào `versions/v<N>_<DDMMYYYY>/`:**
@@ -462,6 +625,15 @@ Figma (nếu có URL):
      (Layout DỌC: mỗi hàng = 1 phone + 1 bảng đầy đủ item — Title/Mô tả/Mục đích)
      Page: <page user cung cấp>
 
+Output OQ — Open Questions:
+  ✅ Register   — <output-folder>/open-questions/OQ-REGISTER.md
+  ✅ Excel      — <output-folder>/open-questions/open_questions.xlsx
+     Folder     — <output-folder>/open-questions/        ← gửi KH folder này
+  ✅/❌ Figma OQ view — <node URL>  |  ❌ Skipped — n = <n> > 20 (chỉ export xlsx)
+  Tổng: <n> câu · Blocker <a> · High <b> · Medium <c> · Low <d>
+  Export gate: <11 checks · X PASS · 0 FAIL · Y WARN>
+  hoặc ⬜ N/A — không còn open question sau AskUserQuestion
+
 Recheck & Self-Feedback:
   ✅ Bước 5.5 — Visual Recheck (5 tiêu chí per frame)
   ✅ Bước 5.6 — AI Self-Feedback theo POLICIES.md §4.5 (Flow đủ? Sai/thiếu?)
@@ -470,9 +642,25 @@ Local prototype:
   ✅ Output 4 — HTML Prototype    — <output-folder>/prototype/index.html
      Chạy: open index.html (không cần build)
 
-💡 HINT — Có feedback? Cứ nói trực tiếp (không cần lệnh đặc biệt), VD:
-   "Sửa AC-05 trong SPEC", "Đổi lại field X ở màn Y", "OQ-03 chốt rồi: ..."
-   → BA sẽ scoped update (chỉ sửa đúng phần liên quan, không regenerate toàn bộ)
+Basic Design (Output 5 — on-demand):
+  ⬜ Chưa chạy — Output 1 và Output 2 đã approve thì tôi có thể ghi Basic Design
+     vào master Excel của bạn. Muốn làm không? (xem Bước 5.8)
+  hoặc
+  ✅ Output 5 — Basic Design      — <đường dẫn master workbook>
+     Quality Gate O5: N checks · X PASS · 0 FAIL · Y WARN
+     Created sheets: <...> | Updated sheets: <...> | Status: WAITING FOR BRSE APPROVAL
+
+💡 HINT — Trả lời Open Question: điền cột "Câu trả lời của bạn" trong open_questions.xlsx (xem sheet
+   "Guideline"), hoặc trả lời ngay trong chat theo format "OQ-03: <câu trả lời>" (mỗi câu 1 dòng).
+   → BA sẽ đổi UNKNOWN → FACT trong SPEC, vẽ lại phần bị ảnh hưởng, lưu version mới.
+   → Câu chưa trả lời vẫn được giữ ở ## Open Questions — BA KHÔNG tự suy diễn thay bạn.
+
+💡 HINT — Có feedback / meeting note? Cứ nói trực tiếp (không cần lệnh đặc biệt), VD:
+   "Sửa AC-05 trong SPEC", "Đổi lại field X ở màn Y", "OQ-03 chốt rồi: ...", "vừa họp với KH..."
+   → BA chạy Bước 7: phân định từng item là 🔴 CR hay 🟡 FEEDBACK (kèm bằng chứng từ baseline),
+     hỏi lại bạn bằng AskUserQuestion, rồi mới sửa
+   → FEEDBACK: scoped update (chỉ sửa đúng phần liên quan, không regenerate toàn bộ)
+   → CR: vẽ CR view MỚI (badge NEW/UPD/DEL, không chồng lên Output 1/2/3) + output_cr.md để trao đổi KH
    → Feedback được ghi vào versions/v<N>_<DDMMYYYY>/ba-outputs-log.md (version hiện tại)
    → Sau khi sửa xong, BA tạo version MỚI versions/v<N+1>_<DDMMYYYY>/ kèm mục
      "Diff so với version trước" — v<N> cũ vẫn giữ nguyên để so sánh
