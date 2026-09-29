@@ -4,6 +4,8 @@
 
 > **Không phải screen flow.** Đây là luồng **nghiệp vụ + kỹ thuật**: Actor nào → trigger gì → function nào xử lý → công nghệ gì → outcome.
 
+> **Sau khi vẽ xong Output 1 + hỏi user ở Gate A (`AskUserQuestion`):** nếu vẫn còn business rule chưa được trả lời → BẮT BUỘC chạy **Bước 5.4 — Output OQ** (`.claude/ba-agent/open-questions.md`): viết `OQ-REGISTER.md` → export `open_questions.xlsx` bằng script → `n ≤ 20` thì vẽ thêm Figma OQ view, `n > 20` thì chỉ giao xlsx. Chốt rule muộn = phải vẽ lại Output 2/3.
+
 ## Xác định N — bao nhiêu business flow? (BẮT BUỘC đọc trước khi đếm N)
 
 > Tổng quan nguyên tắc granularity chung (cả Flow lẫn Screen) xem `.claude/ba-agent/granularity-principles.md`.
