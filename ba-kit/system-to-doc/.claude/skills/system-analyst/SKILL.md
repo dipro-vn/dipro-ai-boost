@@ -18,7 +18,7 @@ Workflow canonical: `.claude/agents/system-analyst.md`. Skill này chỉ liệt 
 | `crawl-site.js` | Crawl 1 website read-only (chặn ghi ở tầng network, không theo link logout/xoá): screenshot, item, style, lỗi UI |
 | `scan-repo.py` | 1 repo: API, batch, route FE, lời gọi API từ FE, bảng DB được dùng, integration, evidence code-ref, `api-seed.csv` |
 | `read-schema.py` | Dump schema-only / SQLite metadata → bảng, cột, max length, format, constraint. Dump có dữ liệu → exit 3 |
-| `extract-design-tokens.py` | Tổng hợp màu / font / spacing quan sát được (website + CSS) → `tokens-draft.json` |
+| `extract-design-tokens.py` | Tổng hợp màu / font / spacing / component quan sát được (website + CSS) → `tokens-draft.json`; `--emit-tokens` sinh `tokens.json` khởi đầu đúng format type Design System |
 
 ## Inventory + render
 
@@ -44,12 +44,12 @@ Workflow canonical: `.claude/agents/system-analyst.md`. Skill này chỉ liệt 
 | V-BD | `verify-basic-design.py --asis` | O1 |
 | V-API | `verify-api-doc.py` | O2 |
 | V-DB | `verify-db-doc.py` | O3 |
-| V-DS | `verify-design-system.py` | O4 |
+| V-DS | `verify-design-system.py` | O4 (format Artifact type Design System) |
 | V3 | `verify-overview.py` | O6 |
 | V5 | `verify-flow-png.py` | flow O6 |
 | V8 | `verify-bug-list.py` | O7 |
 | V-CR | `verify-cr-impact.py` | Luồng 2 |
-| V9 | `selftest-gates.py` · `selftest-docs.py` · `selftest-basic-design.py` · `selftest-cr-impact.py` | gate không rỗng |
+| V9 | `selftest-gates.py` · `selftest-docs.py` · `selftest-basic-design.py` · `selftest-cr-impact.py` · `selftest-design-system.py` | gate không rỗng |
 
 Tên file báo cáo gate quyết định nó được tính cho output nào trong README version: `_internal/gates/v1.md` `v2.md` `v-bd-<WEB>.md` `v-api.md` `v-db.md` `v-ds.md` `v3.md` `v5.md` `v8.md` `v-cr.md`.
 

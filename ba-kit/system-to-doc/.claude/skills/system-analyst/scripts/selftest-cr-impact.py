@@ -3,7 +3,7 @@
 
   python3 selftest-cr-impact.py [--keep]
 
-Dung baseline gia (inventory + tokens.json + components.md) va 1 CR Impact DUNG -> PASS.
+Dung baseline gia (inventory + 04_DesignSystem/project/{tokens.json,components/}) va 1 CR Impact DUNG -> PASS.
 Sau do tiem tung loi vao ban copy -> khang dinh dung check do FAIL (hoac WARN).
 Chay lai sau MOI lan sua verify-cr-impact.py.
 """
@@ -76,15 +76,35 @@ def make_baseline(root, with_ds=True):
         "10_Site": [{"Site ID": "WEB-01", "URL": "https://shop.example"}],
     })
     if with_ds:
-        ds = os.path.join(b, "04_DesignSystem")
-        os.makedirs(ds)
-        json.dump({"color": {"status": {"error": {"$value": "#CF222E"}},
-                             "primary": "#1A7F37"}},
-                  open(os.path.join(ds, "tokens.json"), "w"))
-        open(os.path.join(ds, "components.md"), "w").write(
-            "# Components\n\n| Component | Variant |\n|---|---|\n| Button | primary |\n"
-            "| `TextField` | default |\n")
+        write_ds(b)
     return b
+
+
+def write_ds(b):
+    """04_DesignSystem/project/ dang artifact Design System (ten token phang, components/<Comp>/)."""
+    p = os.path.join(b, "04_DesignSystem", "project")
+    for d in ("Button", "Cover"):
+        os.makedirs(os.path.join(p, "components", d), exist_ok=True)
+    json.dump({"name": "Shop", "version": 1, "meta": {"source": "website"},
+               "color": {"themes": [{"id": "light", "name": "Light"}],
+                         "tokens": [{"name": "status-error", "value": "#cf222e", "usage": "Loi."},
+                                    {"name": "primary", "value": "#1a7f37", "usage": "Nut chinh."}]},
+               "type": {"fonts": [], "families": {}, "groups": [{"name": "Text", "styles": [
+                   {"name": "body", "fontSize": "14px", "usage": "Chu than."}]}]},
+               "spacing": {"tokens": [{"name": "space-4", "value": "16px", "usage": "Card."}]}},
+              open(os.path.join(p, "tokens.json"), "w"))
+    open(os.path.join(p, "components", "index.d.ts"), "w").write(
+        "export declare function Button(p: {}): JSX.Element;\n"
+        "export declare function TextField(p: {}): JSX.Element;\n")
+
+
+def write_legacy_ds(b):
+    """Layout cu (truoc artifact): tokens.json long nhau + components.md -> fallback."""
+    ds = os.path.join(b, "04_DesignSystem")
+    shutil.rmtree(ds, ignore_errors=True)
+    os.makedirs(ds)
+    json.dump({"color": {"status": {"error": {"$value": "#CF222E"}}}}, open(os.path.join(ds, "tokens.json"), "w"))
+    open(os.path.join(ds, "components.md"), "w").write("# Components\n\n| Component |\n|---|\n| Button |\n")
 
 
 def row(iid, ct, ref, item, **kw):
@@ -114,7 +134,8 @@ def valid_cr():
                       row("IMP-006", "UPD", "SC-001", "Gio hang")],
         "05_ThirdParty": [row("IMP-007", "NONE", "—", "—", Evidence="",
                               **{"Change Description": "CR khong them tich hop, khong cham EXT-001"})],
-        "06_Mockup": [row("IMP-008", "NEW", "DS:color.status.error;DS-component:Button", "Man OTP")],
+        "06_Mockup": [row("IMP-008", "NEW", "DS:status-error;DS:body;DS-component:Button;DS-component:TextField",
+                          "Man OTP")],
         "07_Questions": [{"Q ID": "CQ-001", "Question": "Gia tri status moi?",
                           "Why It Matters": "Bao cao cu loc theo status", "Axis": "DB",
                           "Owner": "KH", "Status": "Open"}],
@@ -169,7 +190,9 @@ CASES = [
     ("baseline_version lech", m_summary(baseline_version="ver0_010126_baseline"), "1", "FAIL"),
     ("source_type sai enum", m_summary(source_type="EMAIL"), "1", "FAIL"),
     ("mockup khong bam DS", m_set("IMP-008", **{"Baseline Ref": "—"}), "10d", "FAIL"),
-    ("mockup DS token khong ton tai", m_set("IMP-008", **{"Baseline Ref": "DS:color.nope"}), "6", "FAIL"),
+    ("mockup DS token khong ton tai", m_set("IMP-008", **{"Baseline Ref": "DS:nope-token"}), "6", "FAIL"),
+    ("mockup DS-component khong ton tai", m_set("IMP-008", **{"Baseline Ref": "DS-component:Carousel"}), "6", "FAIL"),
+    ("DS-component:Cover khong phai component", m_set("IMP-008", **{"Baseline Ref": "DS-component:Cover"}), "6", "FAIL"),
     ("mockup Note DS chua co -> WARN", m_set("IMP-008", **{"Baseline Ref": "—", "Note": "Design system chua co OTP input"}), "10d", "WARN"),
     ("o bat buoc trong", m_set("IMP-004", **{"Impact On Current": ""}), "13", "FAIL"),
     ("Impact ID trung", m_set("IMP-004", **{"Impact ID": "IMP-001"}), "2", "FAIL"),
@@ -242,6 +265,16 @@ def main():
         code, out = sh("verify-cr-impact.py", cr, "--baseline", base, "--other-cr", other)
         got = results(out).get("12")
         record("CR-vs-CR cung SC-001 -> check 12 WARN", got == "WARN" and code == 0,
+               "nhan %s (exit %d)" % (got, code))
+
+        # Baseline layout cu -> fallback duong dan cham + components.md
+        write_legacy_ds(base)
+        s, r = copy.deepcopy(s0), copy.deepcopy(r0)
+        find(r, "IMP-008")["Baseline Ref"] = "DS:color.status.error;DS-component:Button"
+        write_cr(cr, s, r)
+        code, out = sh("verify-cr-impact.py", cr, "--baseline", base)
+        got = results(out).get("6")
+        record("baseline layout cu -> DS ref cham van PASS (fallback)", got == "PASS" and code == 0,
                "nhan %s (exit %d)" % (got, code))
 
         # Baseline khong co 04_DesignSystem -> 10d chi WARN

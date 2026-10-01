@@ -120,7 +120,7 @@ def img_outputs(path):
         ("01_Screens/", "O1  Danh sách màn hình theo website (Basic Design xlsx)", BLUE_BG, BLUE),
         ("02_API/", "O2  API Documentation xlsx + sơ đồ map code", BLUE_BG, BLUE),
         ("03_DB/", "O3  Database Documentation xlsx + ERD", BLUE_BG, BLUE),
-        ("04_DesignSystem/", "O4  Design System hệ thống cũ", ORANGE_BG, ORANGE),
+        ("04_DesignSystem/", "O4  Design System (artifact claude.ai)", ORANGE_BG, ORANGE),
         ("05_Figma/", "O5  Link Figma: Flow tổng quan + Screen flow", ORANGE_BG, ORANGE),
         ("06_Overview/", "O6  Tài liệu tổng hợp (docx)", GREEN_BG, GREEN),
         ("07_BugList/", "O7  Bug hiện trạng Medium–High (nếu chọn)", RED_BG, RED),
@@ -319,7 +319,7 @@ def build(kit, samples):
         ["Source code", "Bao nhiêu repo, đường dẫn, FE hay BE, repo FE thuộc website nào", "Đường dẫn repo trên máy"],
         ["Database (tuỳ chọn)", "File schema / quyền đọc DB / chỉ có migration / không có",
          "mysqldump --no-data hoặc pg_dump --schema-only"],
-        ["Figma (tuỳ chọn)", "Link design hiện tại; link file để AI vẽ flow", "Link figma.com/design/..."],
+        ["Figma (tuỳ chọn)", "Link design hiện tại; link file để AI vẽ flow; có publish Design System lên claude.ai không", "Link figma.com/design/..."],
         ["Khác", "Có làm bug list không; ngôn ngữ; nguồn có dữ liệu người dùng thật không", ""],
     ])
     g.note("không gõ mật khẩu vào chat. Khi cần đăng nhập, AI mở trình duyệt để bạn tự đăng nhập; "
@@ -343,7 +343,7 @@ def build(kit, samples):
                                  "liên kết với màn nào"],
         ["O2 API Documentation", "Có những API/batch nào theo group; mỗi API làm gì, method, request, response"],
         ["O3 Database Documentation", "Có những bảng nào, quan hệ ra sao, từng cột: kiểu, format, giới hạn, mục đích"],
-        ["O4 Design System", "Màu, font, khoảng cách, component hệ thống đang dùng — dùng lại khi làm màn mới"],
+        ["O4 Design System", "Đúng format artifact Design System của claude.ai: brand book, màu theo theme, thang chữ, spacing/bo góc/đổ bóng, component có preview chạy thật, logo/icon. Đồng ý thì AI publish thành link private — dùng lại khi làm màn mới"],
         ["O5 Figma", "Flow tổng quan + Screen flow vẽ trên Figma"],
         ["O6 Tài liệu tổng hợp", "Đã chạy gì, có gì, nằm ở đâu, còn câu hỏi gì"],
         ["O7 Bug list", "Lỗi Medium–High đang tồn tại trên website"],

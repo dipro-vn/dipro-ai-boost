@@ -10,7 +10,7 @@ META_KEYS = [
     "system_name", "customer", "version_label", "version_folder", "version_type",
     "generated_date", "previous_version", "run_mode",
     "scope", "websites", "accounts", "access_approved_by", "crawl_mode",
-    "forbidden_zones", "source_repos", "db_mode", "figma_input_url",
+    "forbidden_zones", "source_repos", "db_mode", "figma_input_url", "ds_publish",
     "figma_output_url", "bug_list", "bug_recipient", "bug_scan_scope",
     "lang", "audience",
     "sensitive_scan", "env_observed", "crawl_budget_used",

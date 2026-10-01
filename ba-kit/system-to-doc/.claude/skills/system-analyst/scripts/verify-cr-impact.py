@@ -4,9 +4,11 @@
   python3 verify-cr-impact.py <ver>/CR-001_Impact.xlsx --baseline <outputs>/verK_... \
       [--other-cr <CR-xxx_Impact.xlsx> ...] [--out <ver>/_internal/gates/v-cr.md]
 
-Baseline ids lay tu <baseline>/_internal/inventory.xlsx + 04_DesignSystem/{tokens.json,components.md}.
+Baseline ids lay tu <baseline>/_internal/inventory.xlsx + 04_DesignSystem/project/ (tokens.json, components/).
 Baseline Ref: SC-001 · F-001 · API-001 · EXT-001 · WEB-01 · table:orders · column:orders.status ·
-DS:color.status.error · DS-component:Button · — ; nhieu ref cach nhau bang ';'.
+DS:<ten token|type style> (vd DS:primary) · DS-component:<Comp> (thu muc components/<Comp>/ hoac export
+trong index.d.ts) · — ; nhieu ref cach nhau bang ';'. Baseline cu (khong co project/tokens.json): DS: theo
+duong dan cham trong 04_DesignSystem/tokens.json, DS-component: theo components.md.
 Chan: truc bo trong · sua/xoa thu khong co trong baseline · cot moi trung ten ma khong khai Conflict ·
 High risk khong co giai trinh · CQ treo · mockup khong bam design system cu.
 """
@@ -53,17 +55,53 @@ def load_baseline(bdir):
     ds_dir = os.path.join(bdir, "04_DesignSystem")
     has_ds = os.path.isdir(ds_dir)
     tokens, comps = set(), set()
+    pj = os.path.join(ds_dir, "project", "tokens.json")
     tj = os.path.join(ds_dir, "tokens.json")
-    if os.path.isfile(tj):
+    if os.path.isfile(pj):
+        try:
+            tokens = artifact_tokens(json.load(open(pj, encoding="utf8")))
+        except ValueError as e:
+            print("CANH BAO: project/tokens.json loi JSON: %s" % e, file=sys.stderr)
+        comps = artifact_components(os.path.join(ds_dir, "project", "components"))
+    elif os.path.isfile(tj):
         try:
             walk_tokens(json.load(open(tj, encoding="utf8")), "", tokens)
         except ValueError as e:
             print("CANH BAO: tokens.json loi JSON: %s" % e, file=sys.stderr)
     cm = os.path.join(ds_dir, "components.md")
-    if os.path.isfile(cm):
+    if not os.path.isfile(pj) and os.path.isfile(cm):
         comps = parse_components(open(cm, encoding="utf8").read())
     return {"ids": ids, "tables": tables, "cols": cols, "has_ds": has_ds,
             "tokens": tokens, "comps": comps}
+
+
+def artifact_tokens(tk):
+    """Ten token moi family ({tokens:[...]}) + ten type style (format artifact Design System)."""
+    out = set()
+    if not isinstance(tk, dict):
+        return out
+    for k, v in tk.items():
+        if isinstance(v, dict) and isinstance(v.get("tokens"), list):
+            out |= {str(t.get("name", "")).lower() for t in v["tokens"] if isinstance(t, dict) and t.get("name")}
+    for gr in ((tk.get("type") or {}).get("groups") or []) if isinstance(tk.get("type"), dict) else []:
+        for st in (gr.get("styles") or []) if isinstance(gr, dict) else []:
+            if isinstance(st, dict) and st.get("name"):
+                out.add(str(st["name"]).lower())
+    return out
+
+
+def artifact_components(cdir):
+    """Thu muc components/<Comp>/ (tru Cover/lib/src) + ten export trong index.d.ts."""
+    out = set()
+    if os.path.isdir(cdir):
+        out |= {d.lower() for d in os.listdir(cdir)
+                if os.path.isdir(os.path.join(cdir, d)) and d not in ("Cover", "lib", "src")}
+        dts = os.path.join(cdir, "index.d.ts")
+        if os.path.isfile(dts):
+            out |= {m.lower() for m in re.findall(
+                r"export\s+(?:declare\s+)?(?:function|const|class)\s+([A-Za-z_$][\w$]*)",
+                open(dts, encoding="utf8").read())}
+    return out
 
 
 def walk_tokens(node, prefix, out):
@@ -104,9 +142,9 @@ def resolve(ref, B):
         c = low[7:].strip()
         return (c in B["cols"], "cot khong co trong baseline")
     if low.startswith("ds-component:"):
-        return (clean_name(ref[13:]) in B["comps"], "component khong co trong components.md")
+        return (clean_name(ref[13:]) in B["comps"], "component khong co trong design system baseline")
     if low.startswith("ds:"):
-        return (low[3:].strip() in B["tokens"], "token khong co trong tokens.json")
+        return (low[3:].strip() in B["tokens"], "token khong co trong tokens.json baseline")
     m = re.match(r"^(SC|F|API|EXT|WEB)-\d+$", ref)
     if m:
         return (ref in B["ids"][m.group(1)], "id khong co trong baseline")

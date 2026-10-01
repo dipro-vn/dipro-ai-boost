@@ -31,7 +31,7 @@ OUTPUT_GLOBS = {
     "O1": ["01_Screens/BasicDesign_*.xlsx"],
     "O2": ["02_API/API_Doc_*.xlsx"],
     "O3": ["03_DB/DB_Doc_*.xlsx"],
-    "O4": ["04_DesignSystem/tokens.json", "04_DesignSystem/README.md"],
+    "O4": ["04_DesignSystem/project/design-system.json"],
     "O5": ["05_Figma/figma-links.md"],
     "O6": ["06_Overview/Overview_*.docx"],
     "O7": ["07_BugList/BugList_*.xlsx"],

@@ -5,7 +5,7 @@
  *   node crawl-site.js --url https://stg.example.jp --site WEB-01 --out <ver>/_internal \
  *        [--mode read-only|submit-staging|submit-prod] [--max-urls 200] [--max-minutes 30] \
  *        [--storage-state <project>/.auth/WEB-01.json] [--role test_user] \
- *        [--forbid "/admin/batch,/payment"] [--ev-start 1] [--viewport 1440x900]
+ *        [--forbid "/admin/batch,/payment"] [--ev-start 1] [--viewport 1440x900] [--assets on|off]
  *
  * Gate G2 duoc thuc thi o day, khong phai bang loi hua trong prompt:
  *   - read-only  : chan moi request khac GET/HEAD o tang network
@@ -17,7 +17,12 @@
  *   recon/crawl/<site>/urls.txt          URL da tham, tru trang HTTP >= 400 (input cho verify-inventory.py --crawled)
  *   recon/crawl/<site>/pages.json        title · heading · form · header bang · item (KHONG luu gia tri input)
  *                                        trang HTTP >= 400: status + errorPage:true (giu screenshot lam bang chung bug)
- *   recon/crawl/<site>/styles.json       mau computed-style, tru trang loi (input cho extract-design-tokens.py)
+ *   recon/crawl/<site>/styles.json       mau computed-style, tru trang loi (input cho extract-design-tokens.py):
+ *                                        + components (nut/input/bang/nav/card/badge/tab...: count + <=3 mau style),
+ *                                        typeHist (to hop font), valueFreq (shadow/radius/padding/gap), fontFaces
+ *   recon/design/assets/<site>/          (--assets on, mac dinh) logos/ (logo + favicon, tai bang GET)
+ *                                        icons/icon-<hash8>.svg (svg inline <=64px) · assets.json (file -> trang + evId)
+ *                                        KHONG luu anh noi dung (co the chua du lieu ca nhan)
  *   recon/crawl/<site>/ui-issues.json    loi do duoc (anh vo, tran ngang, cham, console, 4xx/5xx) -> Bug List
  *   recon/crawl/<site>/evidence.csv      dong san sang dan vao sheet 05_Evidence
  *   recon/crawl/<site>/console.json · network.json · blocked.json (bang chung Gate G9)
@@ -25,6 +30,7 @@
  */
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const DESTRUCTIVE = [
   'delete', 'remove', 'destroy', 'xoa', 'xóa', '削除', '退会', 'withdraw',
@@ -34,6 +40,10 @@ const DESTRUCTIVE = [
 const LOGOUT_RE = /log-?out|sign-?out|ログアウト|đăng xuất|dang xuat/i;
 const EVIDENCE_HEADER = 'EV ID,Type,Locator,Captured At,Actor/Role,Artifact,Note';  // = S.SHEETS["05_Evidence"]
 const SLOW_MS = 5000;
+const MAX_ICONS = 80, MAX_LOGOS = 20, MAX_ASSET_BYTES = 2 * 1024 * 1024;
+const IMG_EXT = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp', 'image/avif': 'avif',
+  'image/svg+xml': 'svg', 'image/x-icon': 'ico', 'image/vnd.microsoft.icon': 'ico' };
+const hash8 = b => crypto.createHash('sha1').update(b).digest('hex').slice(0, 8);
 
 function arg(name, dflt) {
   const i = process.argv.indexOf('--' + name);
@@ -83,6 +93,7 @@ function hrefPath(u) {
   const forbid = String(arg('forbid', '')).split(',').map(s => s.trim()).filter(Boolean);
   const evStart = parseInt(arg('ev-start', '1'), 10);
   const vp = String(arg('viewport', '1440x900')).match(/^(\d+)x(\d+)$/);
+  const withAssets = !['off', 'false', 'no', '0'].includes(String(arg('assets', 'on')).toLowerCase());
 
   if (!start || start === true) { console.error('Thieu --url'); process.exit(1); }
   if (!site || !/^WEB-\d{2,}$/.test(String(site))) { console.error('Thieu/sai --site (vd WEB-01)'); process.exit(1); }
@@ -97,6 +108,8 @@ function hrefPath(u) {
   const crawlDir = path.join(out, 'recon', 'crawl', String(site));
   fs.mkdirSync(evDir, { recursive: true });
   fs.mkdirSync(crawlDir, { recursive: true });
+  const assetDir = path.join(out, 'recon', 'design', 'assets', String(site));
+  const assetFiles = [], assetSkipped = [], iconFonts = {}, assetSeen = new Set();
 
   let browser;
   try { browser = await chromium.launch(); }
@@ -130,6 +143,54 @@ function hrefPath(u) {
       networkIssues.push({ page: curUrl, url: r.url(), status: r.status(), at: new Date().toISOString() });
     }
   });
+
+  // --- luu asset: logo/favicon tai bang GET (ctx.request dung chung cookie), icon svg tu markup ---
+  const writeAsset = (kind, sub, prefix, buf, ext, meta) => {
+    const h = hash8(buf);
+    if (assetSeen.has(h)) return;
+    assetSeen.add(h);
+    const rel = sub + '/' + prefix + '-' + h + '.' + ext;
+    fs.mkdirSync(path.join(assetDir, sub), { recursive: true });
+    fs.writeFileSync(path.join(assetDir, rel), buf);
+    assetFiles.push(Object.assign({ kind, file: rel, size: buf.length, type: ext === 'svg' ? 'image/svg+xml'
+      : Object.keys(IMG_EXT).find(k => IMG_EXT[k] === ext) || 'application/octet-stream' }, meta));
+  };
+  const fetchImage = async (src, kind, prefix, meta) => {
+    if (assetFiles.filter(f => f.kind !== 'icon').length >= MAX_LOGOS) return;
+    try {
+      let buf, type;
+      if (/^data:image\//.test(src)) {
+        const m = src.match(/^data:([^;,]+)(;base64)?,(.*)$/s);
+        if (!m) return;
+        type = m[1];
+        buf = m[2] ? Buffer.from(m[3], 'base64') : Buffer.from(decodeURIComponent(m[3]));
+      } else if (/^https?:/.test(src)) {
+        if (forbid.some(f => src.includes(f))) { assetSkipped.push({ src, reason: 'forbidden-zone' }); return; }
+        const r = await ctx.request.get(src, { timeout: 15000, maxRedirects: 3 });   // GET only
+        if (!r.ok()) { assetSkipped.push({ src, reason: 'HTTP ' + r.status() }); return; }
+        type = (r.headers()['content-type'] || '').split(';')[0].trim().toLowerCase();
+        buf = await r.body();
+      } else return;
+      if (!IMG_EXT[type]) { assetSkipped.push({ src: src.slice(0, 200), reason: 'khong phai anh: ' + type }); return; }
+      if (buf.length > MAX_ASSET_BYTES) { assetSkipped.push({ src: src.slice(0, 200), reason: 'qua 2MB' }); return; }
+      writeAsset(kind, 'logos', prefix, buf, IMG_EXT[type], Object.assign({ source: src.slice(0, 300) }, meta));
+    } catch (e) { assetSkipped.push({ src: String(src).slice(0, 200), reason: String(e).split('\n')[0].slice(0, 120) }); }
+  };
+  const saveAssets = async (a, url, evId) => {
+    if (!a) return;
+    for (const [k, n] of Object.entries(a.fontIcons || {})) iconFonts[k] = (iconFonts[k] || 0) + n;
+    for (const l of a.logos || []) {
+      if (l.kind === 'img') await fetchImage(l.src, 'logo', 'logo', { page: url, evId, alt: l.alt, w: l.w, h: l.h });
+      else if (l.markup) writeAsset('logo', 'logos', 'logo', Buffer.from(l.markup), 'svg',
+        { source: 'inline-svg', page: url, evId, ink: l.ink, w: l.w, h: l.h });
+    }
+    for (const f of a.favicons || []) await fetchImage(f, 'favicon', 'favicon', { page: url, evId });
+    for (const ic of a.icons || []) {
+      if (assetFiles.filter(f => f.kind === 'icon').length >= MAX_ICONS) break;
+      writeAsset('icon', 'icons', 'icon', Buffer.from(ic.markup), 'svg',
+        { source: 'inline-svg', page: url, evId, ink: ic.ink, w: ic.w, h: ic.h });
+    }
+  };
 
   const queue = [normalize(start)];
   const queued = new Set(queue);
@@ -169,7 +230,7 @@ function hrefPath(u) {
 
     let info;
     try {
-      info = await page.evaluate(() => {
+      info = await page.evaluate((opt) => {
         const T = (s, n) => String(s || '').replace(/\s+/g, ' ').trim().slice(0, n);
         const visible = el => {
           if (!el.getClientRects().length) return false;
@@ -265,6 +326,194 @@ function hrefPath(u) {
           colorFreq, shadowFreq, fontFreq, sampled: els.length,
         };
 
+        // --- design system: mau style theo component (KHONG lay text du lieu; label chi cho nhan UI) ---
+        const Q = s => Array.from(document.querySelectorAll(s));
+        const TRANSP = v => !v || /rgba\(0, 0, 0, 0\)|transparent/.test(v);
+        const pick = (el, withLabel) => {
+          const s = cs(el);
+          const o = { bg: s.backgroundColor, color: s.color, borderColor: s.borderTopColor, borderWidth: s.borderTopWidth,
+            borderRadius: s.borderRadius, padding: s.padding, fontSize: s.fontSize, fontWeight: s.fontWeight,
+            lineHeight: s.lineHeight, fontFamily: s.fontFamily, boxShadow: s.boxShadow, height: s.height, gap: s.gap };
+          if (s.borderTopStyle === 'none') o.borderWidth = '0px';
+          if (withLabel) o.label = T(labelOf(el) || el.innerText, 30);
+          return o;
+        };
+        const sig = o => [o.bg, o.color, o.borderColor, o.borderWidth, o.borderRadius, o.padding, o.fontSize,
+          o.fontWeight, o.boxShadow, o.variant || ''].join('|');
+        // gom theo chu ky style -> count + <=3 mau pho bien nhat
+        const group = (list, withLabel, extra) => {
+          const els = Array.from(new Set(list)).filter(visible).slice(0, 300);
+          const by = new Map();
+          for (const el of els) {
+            const o = pick(el, withLabel);
+            if (extra) Object.assign(o, extra(el, o));
+            const k = sig(o);
+            if (by.has(k)) by.get(k).n += 1; else by.set(k, Object.assign(o, { n: 1 }));
+          }
+          return { count: els.length, samples: Array.from(by.values()).sort((a, b) => b.n - a.n).slice(0, 3) };
+        };
+        const btnVariant = (el, o) => ({ variant: !TRANSP(o.bg) ? 'solid'
+          : (parseFloat(o.borderWidth) > 0 ? 'outline' : 'text') });
+        const BTN_SEL = 'button,input[type=submit],input[type=button],[role="button"],a.btn,a.button,a[class*="btn"],a[class*="button"]';
+        const btnAll = Q(BTN_SEL).filter(visible);
+        const variants = {};
+        for (const el of btnAll) { const v = btnVariant(el, pick(el)).variant; variants[v] = (variants[v] || 0) + 1; }
+        const notIn = (el, sel) => !el.closest(sel);
+        const NAV_SEL = 'nav, aside, [role=navigation]';
+        const CRUMB_SEL = 'nav[aria-label*=readcrumb], .breadcrumb, .breadcrumbs, [class*=breadcrumb]';
+        const PAGI_SEL = 'nav[aria-label*=agination], .pagination, [class*=pagination]';
+        const navs = Q(NAV_SEL).filter(n => !n.matches(CRUMB_SEL + ',' + PAGI_SEL));
+        const inside = (roots, sel) => roots.flatMap(r => Array.from(r.querySelectorAll(sel)));
+        const scan = Array.from(document.body.querySelectorAll('*')).filter(visible).slice(0, 1500);
+        const SKIP_CARD = /^(HTML|BODY|TABLE|THEAD|TBODY|TR|TD|TH|NAV|HEADER|BUTTON|INPUT|SELECT|TEXTAREA|A|UL|OL|LI|IMG|SVG)$/;
+        const cards = scan.filter(el => {
+          if (SKIP_CARD.test(el.tagName.toUpperCase()) || el.children.length < 2) return false;
+          const s = cs(el);
+          return (s.boxShadow && s.boxShadow !== 'none') ||
+            (parseFloat(s.borderTopWidth) > 0 && s.borderTopStyle !== 'none' && parseFloat(s.borderTopLeftRadius) > 0);
+        });
+        const BADGE_CLS = /(^|[\s_-])(badge|tag|chip|label|status|pill)s?([\s_-]|$)/i;
+        const badges = scan.filter(el => {
+          const tag = el.tagName.toLowerCase();
+          if (['label', 'button', 'a', 'input', 'select', 'textarea', 'td', 'th', 'li'].includes(tag)) return false;
+          const txt = (el.innerText || '').trim();
+          if (!txt || txt.length > 20 || el.querySelector('div,p,table,ul,ol,input,select,textarea')) return false;
+          const s = cs(el);
+          if (BADGE_CLS.test(el.getAttribute('class') || '')) return true;
+          return /inline/.test(s.display) && !TRANSP(s.backgroundColor) && parseFloat(s.borderTopLeftRadius) > 0;
+        });
+        const comps = {
+          buttons: Object.assign(group(btnAll, true, btnVariant), { variants }),
+          inputs: group(Q('input:not([type=hidden]):not([type=submit]):not([type=button]):not([type=checkbox]):not([type=radio]):not([type=image]),select,textarea'), false),
+          checkbox: group(Q('input[type=checkbox]:not([role=switch])'), false),
+          radio: group(Q('input[type=radio]'), false),
+          switch: group(Q('[role=switch], .switch, .toggle, .form-switch input'), false),
+          links: group(Q('a[href]').filter(a => !a.matches(BTN_SEL) && notIn(a, NAV_SEL)), false),
+          header: group(Q('header, [role=banner]'), false),
+          nav: group(navs, false),
+          navItem: group(inside(navs, 'a, button, [role=menuitem]'), true),
+          navActive: group(inside(navs, '[aria-current]:not([aria-current=false]), .active, .is-active'), true),
+          cards: group(cards, false),
+          badges: group(badges, true),
+          tabs: group(Q('[role=tab], .tab, .tabs > *'), true),
+          tabActive: group(Q('[role=tab][aria-selected=true], .tab.active, .tab.is-active, .tabs > .active'), true),
+          pagination: group(Q(PAGI_SEL), false),
+          paginationItem: group(inside(Q(PAGI_SEL), 'a, button, li > span'), false),
+          dialogs: Object.assign(group(Q('[role=dialog], dialog'), false), { present: Q('[role=dialog], dialog').length }),
+          alerts: group(Q('[role=alert], .alert, .toast, .notification'), false),
+          breadcrumbs: group(Q(CRUMB_SEL), false),
+          tableTh: group(Q('table th'), false),
+          tableTd: group(Q('table td'), false),   // CHI style, khong bao gio lay text o
+        };
+        for (const h of ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']) comps[h] = group(Q(h), false);
+        const tb = Q('table').filter(visible);
+        comps.tables = { count: tb.length, samples: tb.slice(0, 3).map(t => {
+          const th = t.querySelector('thead') || t.querySelector('tr');
+          const td = t.querySelector('tbody td') || t.querySelector('td');
+          const tds = td ? cs(td) : null;
+          const hb = [th, th && th.querySelector('tr'), t.querySelector('th')].filter(Boolean)
+            .map(e => cs(e).backgroundColor).find(v => !TRANSP(v));
+          return { headerBg: hb || null,
+            rowBorder: tds ? [tds.borderBottomWidth, tds.borderBottomStyle, tds.borderBottomColor].join(' ') : null,
+            borderCollapse: cs(t).borderCollapse };
+        }) };
+
+        // to hop chu (font/co/line-height/weight/mau) cua phan tu co text truc tiep — chi dem, khong lay text
+        const typeHist = {}, valueFreq = { boxShadow: {}, borderRadius: {}, padding: {}, gap: {} };
+        for (const el of scan) {
+          const s = cs(el);
+          if (Array.from(el.childNodes).some(n => n.nodeType === 3 && n.textContent.trim())) {
+            const k = [s.fontFamily, s.fontSize, s.lineHeight, s.fontWeight, s.color].join('|');
+            const e = typeHist[k] || (typeHist[k] = { fontFamily: s.fontFamily, fontSize: s.fontSize, lineHeight: s.lineHeight,
+              fontWeight: s.fontWeight, color: s.color, count: 0, tags: [] });
+            e.count += 1;
+            const tg = el.tagName.toLowerCase();
+            if (e.tags.length < 5 && !e.tags.includes(tg)) e.tags.push(tg);
+          }
+          if (s.boxShadow && s.boxShadow !== 'none') inc(valueFreq.boxShadow, s.boxShadow);
+          if (s.borderRadius && !/^0px( 0px)*$/.test(s.borderRadius)) inc(valueFreq.borderRadius, s.borderRadius);
+          if (s.padding && !/^0px( 0px)*$/.test(s.padding)) inc(valueFreq.padding, s.padding);
+          if (s.gap && !/^(normal|0px)( (normal|0px))?$/.test(s.gap)) inc(valueFreq.gap, s.gap);
+        }
+        const typeTop = Object.values(typeHist).sort((a, b) => b.count - a.count).slice(0, 60);
+
+        // @font-face (chi stylesheet doc duoc cung origin; KHONG tai font)
+        const fontFaces = [], unreadableSheets = [];
+        const walkRules = (rules, base) => {
+          for (const r of Array.from(rules || [])) {
+            if (r.type === 5) {
+              const st = r.style, src = st.getPropertyValue('src') || '';
+              const urls = Array.from(src.matchAll(/url\(\s*['"]?([^'")]+)['"]?\s*\)/g)).map(m => {
+                try { return new URL(m[1], base).href; } catch { return m[1]; } }).filter(u => !u.startsWith('data:')).slice(0, 6);
+              fontFaces.push({ family: st.getPropertyValue('font-family').replace(/['"]/g, '').trim(),
+                weight: st.getPropertyValue('font-weight') || null, style: st.getPropertyValue('font-style') || null, src: urls });
+            } else if (r.cssRules) walkRules(r.cssRules, base);
+          }
+        };
+        for (const sh of Array.from(document.styleSheets)) {
+          let rules = null;
+          try { rules = sh.cssRules; } catch { unreadableSheets.push(sh.href); continue; }
+          walkRules(rules, sh.href || location.href);
+        }
+        const fontLinks = Q('link[rel=stylesheet][href]').map(l => l.href).filter(h => /fonts\.(googleapis|bunny)|typekit|fontawesome/i.test(h));
+
+        // --- assets: logo / favicon / icon svg inline (KHONG lay anh noi dung) ---
+        let assets = null;
+        if (opt.assets) {
+          const attr = (el, a) => el.getAttribute(a) || '';
+          const hint = el => /logo/i.test([attr(el, 'alt'), attr(el, 'class'), el.id, attr(el, 'src'), attr(el, 'aria-label')].join(' '))
+            || !!(el.parentElement && el.parentElement.closest('[class*=logo i],[id*=logo i]'));
+          const box = el => { const r = el.getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height) }; };
+          const cleanSvg = (svg) => {
+            let c = svg.cloneNode(true);
+            const use = svg.querySelector('use');
+            const ref = use && (use.getAttribute('href') || use.getAttribute('xlink:href') || '');
+            if (ref && ref.startsWith('#')) {   // sprite <use href="#id"> -> chep symbol vao
+              const sym = document.getElementById(ref.slice(1));
+              if (sym) { c = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                const vb = sym.getAttribute('viewBox') || svg.getAttribute('viewBox'); if (vb) c.setAttribute('viewBox', vb);
+                c.innerHTML = sym.innerHTML; }
+            }
+            if (c.querySelector('text, image, foreignObject, script')) return null;   // co the chua du lieu
+            const b = box(svg);
+            if (!c.getAttribute('width') && b.w) c.setAttribute('width', b.w);
+            if (!c.getAttribute('height') && b.h) c.setAttribute('height', b.h);
+            let m = new XMLSerializer().serializeToString(c).replace(/\son\w+="[^"]*"/gi, '');
+            if (!/xmlns=/.test(m.slice(0, 200))) m = m.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+            return m.length > 20000 ? null : m;
+          };
+          const logoSet = new Set();
+          for (const el of Q('img, svg').filter(visible)) {
+            if (el.parentElement && el.parentElement.closest('svg')) continue;   // svg con long trong svg
+            const inBar = !!el.closest('header, nav, [role=banner]');
+            const b = box(el);
+            const isImg = el.tagName.toLowerCase() === 'img';
+            if (hint(el) || (inBar && (isImg || b.w > 32 || b.h > 32))) logoSet.add(el);
+          }
+          const logos = Array.from(logoSet).slice(0, 5).map(el => el.tagName.toLowerCase() === 'img'
+            ? Object.assign({ kind: 'img', src: el.currentSrc || el.src, alt: T(el.alt, 60) }, box(el))
+            : Object.assign({ kind: 'svg', markup: cleanSvg(el), ink: cs(el).color }, box(el)));
+          const icons = [];
+          for (const el of Q('svg').filter(visible)) {
+            if (logoSet.has(el) || (el.parentElement && el.parentElement.closest('svg'))) continue;
+            const b = box(el);
+            if (!b.w || !b.h || b.w > 64 || b.h > 64) continue;
+            const m = cleanSvg(el);
+            if (m) icons.push({ markup: m, ink: cs(el).color, w: b.w, h: b.h });
+            if (icons.length >= 80) break;
+          }
+          const ICF = { fa: /(^|\s)(fa[srlbdk]?|fa-[\w-]+)(\s|$)/, 'material-icons': /material-(icons|symbols)/, ph: /(^|\s)ph(-[\w-]+)?(\s|$)/, bi: /(^|\s)bi(-[\w-]+)?(\s|$)/ };
+          const fontIcons = {};
+          for (const el of Q('i, span, [class]').slice(0, 3000)) {
+            const c = typeof el.className === 'string' ? el.className : attr(el, 'class');
+            for (const [k, rx] of Object.entries(ICF)) if (rx.test(c)) fontIcons[k] = (fontIcons[k] || 0) + 1;
+          }
+          assets = { logos, favicons: Q('link[rel~=icon][href], link[rel=apple-touch-icon][href]').map(l => l.href).slice(0, 4),
+            icons, fontIcons };
+        }
+        Object.assign(style, { components: comps, typeHist: typeTop, valueFreq, fontFaces, unreadableSheets, fontLinks,
+          fontIcons: assets ? assets.fontIcons : null });
+
         const brokenImages = Array.from(document.images)
           .filter(i => i.complete && i.naturalWidth === 0 && (i.currentSrc || i.src))
           .map(i => { try { return new URL(i.currentSrc || i.src).pathname; } catch { return String(i.src).split('?')[0]; } });
@@ -277,10 +526,10 @@ function hrefPath(u) {
           forms: Array.from(document.querySelectorAll('form')).map(f => ({
             action: f.getAttribute('action') === null ? location.href : f.action,
             method: (f.getAttribute('method') || 'GET').toUpperCase() })),
-          tables, items, anchors, style, brokenImages,
+          tables, items, anchors, style, brokenImages, assets,
           scrollWidth: document.documentElement.scrollWidth, innerWidth: window.innerWidth,
         };
-      });
+      }, { assets: withAssets });
     } catch (e) {
       networkIssues.push({ page: url, url, status: 'EVALUATE_ERROR', detail: String(e).slice(0, 200) });
       continue;
@@ -313,7 +562,10 @@ function hrefPath(u) {
       headings: info.headings, forms: info.forms, tables: info.tables, links,
       items: info.items, itemCount: info.itemCount, ...(errorPage ? { errorPage: true } : {}),
     });
-    if (!errorPage) styles.push(Object.assign({ url, evId }, info.style));
+    if (!errorPage) {
+      styles.push(Object.assign({ url, evId }, info.style));
+      await saveAssets(info.assets, url, evId);
+    }
     evidence.push([evId, 'screenshot', url, new Date().toISOString(), role, shot,
                    (info.title || '').replace(/[",\n]/g, ' ')]);
 
@@ -345,6 +597,11 @@ function hrefPath(u) {
     EVIDENCE_HEADER + '\n' +
     evidence.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\n') + (evidence.length ? '\n' : ''));
   W('destructive-selectors.json', JSON.stringify(DESTRUCTIVE, null, 2));
+  if (withAssets) {
+    fs.mkdirSync(assetDir, { recursive: true });
+    fs.writeFileSync(path.join(assetDir, 'assets.json'), JSON.stringify({ site, files: assetFiles, iconFonts,
+      skipped: assetSkipped, note: 'Chi logo/favicon/icon. Khong luu anh noi dung.' }, null, 2));
+  }
 
   await browser.close();
 
@@ -353,6 +610,8 @@ function hrefPath(u) {
     urls: pages.filter(p => !p.errorPage).length, errorPages: pages.filter(p => p.errorPage).length, budget: `${pages.length}/${maxUrls} URL · ${((Date.now() - t0) / 60000).toFixed(1)}/${maxMin} phut`,
     consoleErrors: consoleErrors.length, networkIssues: networkIssues.length,
     uiIssues: uiIssues.length, blocked: blocked.length,
+    assets: withAssets ? { logos: assetFiles.filter(f => f.kind !== 'icon').length,
+      icons: assetFiles.filter(f => f.kind === 'icon').length, dir: assetDir } : 'off',
     ev_range: pages.length ? `EV-${String(evStart).padStart(4, '0')}..EV-${String(evNo).padStart(4, '0')}` : null,
     next_ev: evNo + 1, out, crawlDir,
   }, null, 2));

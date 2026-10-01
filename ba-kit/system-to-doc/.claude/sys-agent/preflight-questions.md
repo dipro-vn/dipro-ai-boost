@@ -144,6 +144,11 @@ P7. (tuỳ chọn) Có Figma design / design system của hệ thống hiện t�
     [A] Có — link figma.com/design/...   [B] Không có
     → dùng bổ sung O4 Design System. figma_input_url
 
+P7b. (chỉ khi O4 sẽ chạy) Design System (O4) có publish thành artifact "Design System" trên claude.ai không?
+    [A] Có — artifact private, tôi tự chia sẻ link khi cần   (khuyến nghị)
+    [B] Không — chỉ giữ file trong 04_DesignSystem/project/ (publish sau được)
+    → ds_publish
+
 P8. Bạn muốn tôi vẽ Figma flow dự án (Output 1 Flow tổng quan + Output 2 Screen flow) ở đâu?
     [A] Có file Figma — link figma.com/design/... (page sẽ vẽ)
     [B] Chưa có link, tôi gửi sau
@@ -152,7 +157,7 @@ P8. Bạn muốn tôi vẽ Figma flow dự án (Output 1 Flow tổng quan + Outp
 ```
 - P8 `[B]` → **DỪNG phần O5** chờ link, làm các output khác trước; cuối lượt nhắc lại 1 lần. Không tự skip.
 - Link `/board/` (FigJam) → cảnh báo kit vẽ trên Design file, hỏi xác nhận.
-- ⚠️ Nhắc user: **Figma là cloud bên ngoài** — chỉ vẽ tên màn, ID, luồng; không vẽ dữ liệu thật.
+- ⚠️ Nhắc user: **Figma và claude.ai là cloud bên ngoài** — chỉ đưa lên tên màn, ID, luồng, token, chữ UI, logo/icon; không dữ liệu thật.
 
 ---
 
@@ -194,6 +199,7 @@ P11. Phân loại dữ liệu của nguồn (bắt buộc — máy không tự n
 | P5 | Source | REPO-01 <path> FE→WEB-01 · REPO-02 <path> BE | user |
 | P6 | Database | DUMP inputs/db/schema.sql | user |
 | P7 | Figma input | — | user |
+| P7b | Publish Design System | Có (private) | user |
 | P8 | Figma output | <link> | user |
 | P9 | Bug list | Có — nội bộ trước | user |
 | P10 | Ngôn ngữ · người đọc | VN · nội bộ | mặc định |

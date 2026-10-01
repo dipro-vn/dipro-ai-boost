@@ -3,7 +3,8 @@
 
   python3 build-version-index.py <ver folder> [--skip "O7=user khong yeu cau"] [--skip "O5=..."]
 
-Tu nhan dien output theo duong dan chuan (O1..O7, hoac output CR neu co CR-*_Impact.xlsx),
+Tu nhan dien output theo duong dan chuan (O1..O7, hoac output CR neu co CR-*_Impact.xlsx; O4 =
+04_DesignSystem/project/design-system.json, link artifact claude.ai lay tu 04_DesignSystem/link.md),
 dem so luong, doc ket qua gate tu _internal/gates/*.md (dong "N checks · X PASS · Y FAIL · Z WARN").
 index.json la dau vao cua render-overview-docx.py (chuong 2). Chay lai sau moi gate.
 README KHONG nhac toi _internal/ (artifact noi bo).
@@ -22,6 +23,7 @@ import inv_schema as S  # noqa: E402
 DASH = "—"
 SUMMARY_RX = re.compile(r"(\d+) checks · (\d+) PASS · (\d+) FAIL · (\d+) WARN")
 FIGMA_RX = re.compile(r"https?://(?:www\.)?figma\.com/[^\s)>\]]+")
+ARTIFACT_RX = re.compile(r"https://claude\.ai/(?:code/)?artifact/[A-Za-z0-9_-]+")
 VER_RX = re.compile(r"^ver(\d+)_(\d{2})(\d{2})(\d{2})_(.+)$")
 BD_SYSTEM_SHEETS = {"Common mesage", "Screen Error message", "Screen Index",
                     "Change History", "Sample"}
@@ -115,6 +117,40 @@ def entry(oid, name, content, files, count, exists, **kw):
     return d
 
 
+def ds_summary(ver):
+    """O4 = 04_DesignSystem/project/design-system.json (+ link.md neu da publish len claude.ai)."""
+    ds = os.path.join(ver, "04_DesignSystem")
+    proj = os.path.join(ds, "project")
+    exists = os.path.isfile(os.path.join(proj, "design-system.json"))
+    n_col = n_sty = n_comp = n_icon = 0
+    if exists:
+        try:
+            tk = json.load(open(os.path.join(proj, "tokens.json"), encoding="utf8"))
+            n_col = len((tk.get("color") or {}).get("tokens") or [])
+            n_sty = sum(len(g.get("styles") or []) for g in (tk.get("type") or {}).get("groups") or [])
+        except (OSError, ValueError, AttributeError):
+            pass
+        cdir = os.path.join(proj, "components")
+        if os.path.isdir(cdir):
+            n_comp = sum(1 for d in os.listdir(cdir) if os.path.isdir(os.path.join(cdir, d))
+                         and d not in ("Cover", "lib", "src"))
+        try:
+            idx = json.load(open(os.path.join(proj, "design-system.json"), encoding="utf8"))
+            n_icon = len(((idx.get("assetGroups") or {}).get("Icons") or {}).get("files") or {})
+        except (OSError, ValueError, AttributeError):
+            pass
+        if not n_icon and os.path.isdir(os.path.join(proj, "assets", "Icons")):
+            n_icon = sum(1 for f in os.listdir(os.path.join(proj, "assets", "Icons"))
+                         if not f.lower().endswith((".md", ".json")))
+    lk = os.path.join(ds, "link.md")
+    m = ARTIFACT_RX.search(open(lk, encoding="utf8").read()) if os.path.isfile(lk) else None
+    link = m.group(0) if m else ""
+    return {"exists": exists, "link": link,
+            "files": ["04_DesignSystem/project/"] + ([link] if link else []),
+            "count": "%d màu · %d style chữ · %d component · %d icon" % (n_col, n_sty, n_comp, n_icon),
+            "count_value": n_col}
+
+
 def baseline_outputs(ver, data, meta, sysname, n, gates, skips):
     outs = []
     sites = [r.get("Site ID", "") for r in (data or {}).get("10_Site", [])]
@@ -161,13 +197,11 @@ def baseline_outputs(ver, data, meta, sysname, n, gates, skips):
         bool(db_files), count_value=len(tables) if data else None), gates, skips,
         auto_skip="không có DB (db_mode=NONE)" if meta.get("db_mode") == "NONE" else None))
 
-    ds = os.path.join(ver, "04_DesignSystem")
-    ds_files = [p for p in glob.glob(os.path.join(ds, "**", "*"), recursive=True)
-                if os.path.isfile(p)]
+    ds = ds_summary(ver)
     outs.append(finish(entry(
-        "O4", "Design System", "Foundation, component, token theo từng site",
-        ["04_DesignSystem/"], "%d file" % len(ds_files), bool(ds_files),
-        count_value=len(ds_files)), gates, skips))
+        "O4", "Design System", "Token, kiểu chữ, component, icon (format artifact Design System)",
+        ds["files"], ds["count"], ds["exists"], count_value=ds["count_value"],
+        **({"link": ds["link"]} if ds["link"] else {})), gates, skips))
 
     fl = os.path.join(ver, "05_Figma", "figma-links.md")
     urls = FIGMA_RX.findall(open(fl, encoding="utf8").read()) if os.path.isfile(fl) else []

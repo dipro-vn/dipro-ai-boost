@@ -69,7 +69,7 @@ AI in **bảng tổng hợp** → bạn trả lời `OK` → AI khảo sát và 
 | **O1** | **Danh sách màn hình theo website** — tổng số màn, item từng màn, xử lý, lỗi hiển thị, liên kết giữa các màn (template Basic Design công ty) | `01_Screens/BasicDesign_WEB-01_ver<N>.xlsx` (1 file / website) |
 | **O2** | **API Documentation** — mọi API theo group (+ batch): làm gì, method, request, response; sheet tổng hợp có link tới từng API · **sơ đồ map code** FE ↔ BE ↔ DB | `02_API/API_Doc_….xlsx` · `02_API/CodeMap_….png` |
 | **O3** | **Database Documentation** — tổng quan bảng, quan hệ, từng bảng: field · kiểu · format · giới hạn · maxlength · mục đích · ERD | `03_DB/DB_Doc_….xlsx` · `03_DB/ERD_….png` |
-| **O4** | **Design System** hệ thống cũ (từ website / Figma + source) — dùng lại khi làm màn mới | `04_DesignSystem/` |
+| **O4** | **Design System** hệ thống cũ (từ website / Figma + source) — đúng format artifact **Design System** của claude.ai: brand book, màu theo theme, thang chữ, spacing/radius/shadow, component có preview, logo/icon, cover. Đồng ý thì publish thành link private | `04_DesignSystem/project/` · `04_DesignSystem/link.md` |
 | **O5** | **Figma flow** — Output 1 Flow tổng quan + Output 2 Screen flow | link trong `05_Figma/figma-links.md` |
 | **O6** | **Tài liệu tổng hợp** — đã chạy gì, có gì, ở đâu | `06_Overview/Overview_….docx` |
 | **O7** | **Bug list hiện trạng** mức Medium–High *(nếu chọn)* | `07_BugList/BugList_….xlsx` |

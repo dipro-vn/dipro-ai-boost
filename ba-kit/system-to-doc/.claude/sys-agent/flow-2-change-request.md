@@ -81,7 +81,7 @@ Mỗi nhãn phải trích **bằng chứng baseline**: ID (`SC-014`, `API-031`�
 
 ### 4.1 Cách lần ra ảnh hưởng (không phải cảm giác)
 
-1. **Điểm chạm trực tiếp:** từ nội dung CR, tìm ID trong baseline inventory (`02_Screen`, `01_Function`, `07_API`, `03/04_DB`, `09_Integration`, `10_Site`) và Design System (`04_DesignSystem/tokens.json`, `components.md`).
+1. **Điểm chạm trực tiếp:** từ nội dung CR, tìm ID trong baseline inventory (`02_Screen`, `01_Function`, `07_API`, `03/04_DB`, `09_Integration`, `10_Site`) và Design System (`04_DesignSystem/project/README.md` trước, rồi `tokens.json`, `components/<Comp>/README.md`; đã publish → `read` artifact trong `link.md`).
 2. **Lan 1–2 bước** theo liên kết đã có trong inventory:
 
 ```
@@ -115,7 +115,7 @@ Sinh rỗng: `build-inventory.py --cr --out <ver>/CR-<id>_Impact.xlsx` (schema: 
 |---|---|
 | `SC-014` · `F-031` · `API-022` · `EXT-003` · `WEB-01` | ID trong inventory |
 | `table:orders` · `column:orders.status` | bảng / cột DB |
-| `DS:color.status.error` · `DS-component:Button` | token / component trong Design System |
+| `DS:negative-500` · `DS:char-4-bold` · `DS-component:Button` | token (tên trong `04_DesignSystem/project/tokens.json`, mọi family + type style) / component (`project/components/<Comp>/`) |
 | `—` | chưa có trong baseline (chỉ cho `NEW`) |
 
 **Luật từng trục:**
@@ -166,7 +166,7 @@ Vẽ view CR lên Figma?
 
 - `UPD`/`DEL`/`AS-IS` phải ghi Screen ID / Function ID baseline trên node.
 - Sub-view: **CR-1 Flow** (đoạn luồng nghiệp vụ bị đổi) · **CR-2 Screen Flow** (màn bị đổi + hàng xóm) · **CR Change Table** (bắt buộc: Impact ID · badge · Baseline Ref · mô tả).
-- Mockup màn `NEW`/`UPD` (khi user yêu cầu): dùng **màu / font / component từ `04_DesignSystem` của baseline** — đây là cách đảm bảo "mockup mới nhất quán với hệ thống cũ".
+- Mockup màn `NEW`/`UPD` (khi user yêu cầu): dùng **token / type style / component từ Design System của baseline** (`04_DesignSystem/project/`, đúng tên token như README của nó quy định) — đây là cách đảm bảo "mockup mới nhất quán với hệ thống cũ".
 - Kiểm sau khi vẽ: số badge = số dòng CR Change Table; quét bbox không chồng lên node cũ (script trong `sys-agent/figma/code-patterns.md`), không kết luận bằng mắt.
 - Ghi link node vào `<ver>/05_Figma/figma-links.md`.
 

@@ -224,8 +224,10 @@ def build_outputs(p):
         Workbook().save(os.path.join(v, sub, name))
     fake_png(os.path.join(v, "02_API", "CodeMap_Fixture_ver1.png"))
     fake_png(os.path.join(v, "03_DB", "ERD_Fixture_ver1.png"))
-    os.makedirs(os.path.join(v, "04_DesignSystem"), exist_ok=True)
-    open(os.path.join(v, "04_DesignSystem", "README.md"), "w").write("# DS\n")
+    os.makedirs(os.path.join(v, "04_DesignSystem", "project"), exist_ok=True)   # O4 = format artifact Design System
+    json.dump({"v": 3, "layout": "files", "title": "Fixture"},
+              open(os.path.join(v, "04_DesignSystem", "project", "design-system.json"), "w"))
+    open(os.path.join(v, "04_DesignSystem", "link.md"), "w").write("https://claude.ai/artifact/FixtureDs01\n")
     os.makedirs(os.path.join(v, "05_Figma"), exist_ok=True)
     open(os.path.join(v, "05_Figma", "figma-links.md"), "w").write(
         "- SC-001 https://www.figma.com/design/abc/F?node-id=1-2\n"
