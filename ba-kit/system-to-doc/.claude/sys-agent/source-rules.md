@@ -42,7 +42,7 @@ Thứ tự này **chỉ quyết định giá trị nào ghi tạm vào inventory
 | Validation **đọc được trong code** | Hành vi phụ thuộc config môi trường không đọc được |
 | Tên bảng/cột được truy cập | Feature flag đang bật hay tắt trên production |
 
-**Evidence bắt buộc:** `code-ref` dạng `path/file.ts#L88-L104` — **phải chính xác tới dòng**.
+**Evidence bắt buộc:** `code-ref` dạng `REPO-01:path/file.ts#L88-L104` (tiền tố repo bắt buộc) — **phải chính xác tới dòng**.
 
 Route đọc được từ code nhưng **chưa quan sát trên UI** → `Status = To verify` + 1 dòng Open Question. Đây là lỗi phổ biến nhất của agent ở kit này.
 

@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
-"""Ve so do flow tong quan tu flow.json -> PNG (chen vao chuong 4 cua docx).
+"""Ve so do flow tong quan tu flow.json -> PNG (chen vao chuong 7 cua Overview O6).
 
-  python3 render-flow.py <flow.json> --out flow.png [--width 12] [--dpi 150]
+  python3 render-flow.py <_internal>/flow/flow.json --out <_internal>/flow/flow.png [--width 12] [--dpi 150]
+
+Schema flow.json + quy tac ref: xem verify-flow-png.py (gate V5).
 
 Layout theo lop: node.row = so hang (0 tren cung). Trong 1 hang, node xep theo thu tu
 xuat hien. Edge ve mui ten thang. Khong phu thuoc graphviz — chi can matplotlib.
@@ -12,6 +14,7 @@ import sys
 
 KIND_STYLE = {
     "actor":    dict(fc="#FFFFFF", ec="#222222"),
+    "site":     dict(fc="#F2F6FC", ec="#222222"),
     "screen":   dict(fc="#F2F6FC", ec="#222222"),
     "api":      dict(fc="#FFFFFF", ec="#222222"),
     "db":       dict(fc="#F7F7F7", ec="#222222"),

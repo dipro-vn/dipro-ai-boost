@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""GATE V8 — Bug List (Output 2B).
+"""GATE V8 — Bug List (O7).
 
-  python3 verify-bug-list.py <02_BugList.xlsx> [--inventory <inventory.xlsx>] [--out report.md]
+  python3 verify-bug-list.py <07_BugList/BugList_<sys>_ver<N>.xlsx> --inventory <_internal/inventory.xlsx> [--out report.md]
 
-File nay di ra NGOAI cong ty (bao khach hang) nen nguong bang chung cao hon O2A.
+File nay di ra NGOAI cong ty (bao khach hang) nen nguong bang chung cao.
+Chi ghi nhan bug muc Medium/High (khach yeu cau) — bug Low KHONG ghi.
 Chan: bug thieu buoc tai hien · thieu bang chung · quy ket Security khong co PoC ·
-bug chua tai hien duoc lot sheet gui khach · trung lap.
+bug chua tai hien duoc lot sheet gui khach · trung lap · Screen / Module khong tro ve SC-/F-.
 """
 import argparse
 import re
@@ -90,7 +91,8 @@ def main():
         if r.get("Category") not in S.BUG_CATEGORY:
             bad.append("%s Category=%s" % (tag, r.get("Category")))
         if r.get("Severity") not in S.BUG_SEVERITY:
-            bad.append("%s Severity=%s" % (tag, r.get("Severity")))
+            bad.append("%s Severity=%s (chi %s; bug Low khong ghi nhan)"
+                       % (tag, r.get("Severity"), "/".join(S.BUG_SEVERITY)))
         if r.get("Detected By") not in S.BUG_DETECTED_BY:
             bad.append("%s Detected By=%s" % (tag, r.get("Detected By")))
         if r.get("Report To Customer") not in S.BUG_REPORT:
@@ -105,8 +107,9 @@ def main():
              if len(re.findall(r"(?m)^\s*\d+[.)]", r.get("Repro Steps", ""))) < 2])
 
     # 6 — bang chung phan giai duoc
-    if a.inventory:
-        evids = {x.get("EV ID", "") for x in S.load(a.inventory)["05_Evidence"]}
+    inv = S.load(a.inventory) if a.inventory else None
+    if inv:
+        evids = {x.get("EV ID", "") for x in inv["05_Evidence"]}
         g.check(6, "Evidence tro toi EV co that trong inventory",
                 ["%s!%s -> %s" % (r["__sheet__"], r.get("Bug ID"), r.get("Evidence"))
                  for r in allb
@@ -128,10 +131,10 @@ def main():
     g.check(9, "Sheet Suspected khong duoc danh dau gui khach hang",
             [r.get("Bug ID") for r in susp if r.get("Report To Customer") == "Yes"])
 
-    # 10 — S1/S2 phai co Business Impact
-    g.check(10, "Bug S1/S2 phai ghi Business Impact",
+    # 10 — moi bug (High/Medium) phai co Business Impact
+    g.check(10, "Bug High/Medium phai ghi Business Impact",
             [r.get("Bug ID") for r in allb
-             if r.get("Severity", "").startswith(("S1", "S2"))
+             if r.get("Severity") in S.BUG_SEVERITY
              and not r.get("Business Impact", "").strip()])
 
     # 11 — trung lap
@@ -151,9 +154,13 @@ def main():
 
     # 13 — meta khai bao pham vi quet + nguoi nhan
     meta = {r.get("Key", ""): r.get("Value", "") for r in wb["00_Meta"]}
-    g.check(13, "00_Meta khai g13_scan_scope + g13_recipient",
-            [k for k in ("g13_scan_scope", "g13_recipient")
-             if not meta.get(k) or meta.get(k) == S.UNKNOWN])
+    bad_meta = []
+    for k in ("bug_scan_scope", "bug_recipient"):
+        if k not in meta:
+            bad_meta.append("thieu key %s (tao workbook bang build-inventory.py --bug-list)" % k)
+        elif not meta[k].strip() or meta[k] == S.UNKNOWN:
+            bad_meta.append("%s con %s — dien pham vi quet / nguoi nhan" % (k, meta[k] or "trong"))
+    g.check(13, "00_Meta khai bug_scan_scope + bug_recipient", bad_meta)
 
     # 14 — Observations la noi chua nghi van chua co PoC
     obs = wb["Observations"]
@@ -161,6 +168,21 @@ def main():
             ["row%s thieu %s" % (r["__row__"], c) for r in obs
              for c in ("Title", "Why suspicious", "Suggested investigation")
              if not r.get(c, "").strip()])
+
+    # 15 — Screen / Module tro ve SC-/F- co that trong inventory
+    if inv:
+        known = {x.get("Screen ID", "") for x in inv["02_Screen"]} | \
+                {x.get("Function ID", "") for x in inv["01_Function"]}
+        bad_ref = []
+        for r in allb + obs:
+            tag = "%s!%s" % (r["__sheet__"], r.get("Bug ID") or r.get("Obs ID") or r["__row__"])
+            refs = re.findall(r"\b(?:SC|F)-\d{3,}\b", r.get("Screen / Module", ""))
+            if not refs:
+                bad_ref.append("%s '%s' khong co SC-/F-" % (tag, r.get("Screen / Module", "")))
+            bad_ref += ["%s -> %s khong co trong inventory" % (tag, x) for x in refs if x not in known]
+        g.check(15, "Screen / Module tro ve SC-/F- co that trong inventory", bad_ref)
+    else:
+        g.warn(15, "Screen / Module phan giai", "chua truyen --inventory")
 
     rc = g.emit(a.out)
     sev = {}

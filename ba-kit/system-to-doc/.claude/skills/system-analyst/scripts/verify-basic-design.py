@@ -578,24 +578,43 @@ def run(master_path, before_path, expect_screens, approved, rep, asis_mode=False
     if asis_mode:
         miss16 = []
         for ws in ws_list:
-            for r in range(1, ws.max_row + 1):
+            # chi quet data row bang item: sau header (H="#", P co 記述/Description),
+            # dung truoc title ERROR SCENARIOS
+            hdr = None
+            for r in range(1, min(ws.max_row, 40) + 1):
+                h = str(ws.cell(row=r, column=8).value or "").strip()
+                p = str(ws.cell(row=r, column=16).value or "")
+                if h == "#" and ("記述" in p or "Description" in p):
+                    hdr = r
+                    break
+            if hdr is None:
+                miss16.append(f"{ws.title}: khong tim thay header bang item (H='#', P='記述')")
+                continue
+            for r in range(hdr + 1, ws.max_row + 1):
+                if ERR_TITLE_MARK in str(ws.cell(row=r, column=8).value or ""):
+                    break
+                name = (str(ws.cell(row=r, column=9).value or "")
+                        + str(ws.cell(row=r, column=10).value or "")).strip()
+                if not name:
+                    continue
                 jp = ws.cell(row=r, column=16).value   # P
                 vn = ws.cell(row=r, column=17).value   # Q
                 cm = str(ws.cell(row=r, column=18).value or "")  # R
                 body = (str(jp or "") + str(vn or "")).strip()
                 if not body:
                     continue
-                if UNKNOWN_MARK in body.upper():
+                # mien tru chi khi cot R khai bao UNKNOWN (chua quan sat duoc)
+                if UNKNOWN_MARK in cm.upper():
                     continue
                 if not EV_RE.search(cm):
                     miss16.append(f"{ws.title}!R{r}")
         if miss16:
             rep.add(16, "AS-IS: item co mo ta phai tro EV o cot R", "FAIL",
                     "; ".join(miss16[:8]) +
-                    ". Mo ta hanh vi khong co bang chung -> ghi UNKNOWN hoac them EV-xxxx.")
+                    ". Mo ta hanh vi khong co bang chung -> them EV-xxxx hoac ghi UNKNOWN o cot R.")
         else:
             rep.add(16, "AS-IS: item co mo ta phai tro EV o cot R", "PASS",
-                    f"{len(ws_list)} sheet, moi mo ta deu co EV hoac danh dau UNKNOWN")
+                    f"{len(ws_list)} sheet, moi item co mo ta deu co EV hoac UNKNOWN o cot R")
 
     return wb, ws_list
 

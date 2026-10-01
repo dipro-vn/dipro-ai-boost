@@ -1,234 +1,230 @@
-# Gate hỏi người — wording chính xác + cách xử lý từng câu trả lời
+# Gate hỏi người — wording + cách xử lý từng câu trả lời
 
-> **Mọi gate dưới đây PHẢI gọi tool `AskUserQuestion`.** In bảng text rồi tự suy ra câu trả lời là anti-pattern nghiêm cấm — agent stateless, không có state machine nào lưu "user đã đồng ý" giữa các session.
+> **Mọi gate dưới đây PHẢI gọi tool `AskUserQuestion`.** In bảng text rồi tự suy ra câu trả lời là anti-pattern nghiêm cấm.
 >
-> **Thứ tự bắt buộc:** G-R → G0 → G1 → G2 → G3 → G4 → G5 → G6 → G7 → **Discovery Brief** → (recon) → G9/G9b/G10 khi phát sinh → **Proposal Gate G11–G14**.
+> `AskUserQuestion` tối đa 4 câu / lần → hỏi theo **5 lượt** dưới đây. Câu cần nhập tự do (URL, đường dẫn) → để option gợi ý + user nhập ở ô **Other**. Câu trả lời mơ hồ → hỏi lại đúng câu đó, **không đoán**.
+>
+> **Thứ tự bắt buộc:** G-R → Lượt 1 (P0) → Lượt 2 (Website P1–P4) → Lượt 3 (Source P5 · DB P6) → Lượt 4 (Figma P7–P8) → Lượt 5 (P9–P11) → **Discovery Brief** → (recon) → G9/G10 khi phát sinh.
+>
+> Lưu mọi câu trả lời vào `_internal/inventory.xlsx` sheet `00_Meta` (key ở cột phải). **Không bao giờ lưu mật khẩu.**
 
 ---
 
-## G-R — Resume (chỉ khi đã tồn tại version trước)
+## G-R — Resume (chỉ khi `version-tool.py latest-baseline` tìm thấy baseline)
 
 ```
-Đã có tài liệu v<N-1> chạy ngày <DD/MM/YYYY> (<n> function · <m> screen · <k> câu hỏi còn treo).
+Đã có baseline ver<K> (<DD/MM/YYYY>): <a> site · <m> màn · <p> API · <t> bảng · <q> câu hỏi còn mở.
 Lần này bạn muốn:
-  [A] Delta — chỉ quét phần chưa phủ + kiểm lại phần đã có   (mặc định)
-  [B] Chạy lại toàn bộ từ đầu — hệ thống đã thay đổi nhiều
-  [C] Không quét — chỉ đọc lại v<N-1> và trả lời câu hỏi của tôi
+  [A] Delta — quét bổ sung phần thiếu + kiểm lại phần cũ   (mặc định)
+  [B] Chạy lại toàn bộ — hệ thống đã đổi nhiều
+  [C] Không quét — chỉ đọc lại ver<K> để trả lời câu hỏi
+  [D] Thực ra tôi có 1 yêu cầu thay đổi (CR) → chuyển Luồng 2
 ```
 
-| Chọn | `00_Meta.run_mode` | Hành vi |
+| Chọn | `run_mode` | Hành vi |
 |---|---|---|
-| `[A]` | `DELTA` | Giữ dòng cũ + `Note = Carried from v<N-1>`; evidence > 30 ngày đánh `STALE` và chụp lại nếu dòng đó `Confirmed` |
-| `[B]` | `FULL` | Bỏ qua dữ liệu cũ nhưng **vẫn giữ câu trả lời G0–G8 làm mặc định đề xuất** |
-| `[C]` | `READ_ONLY_REVIEW` | Không crawl, không sinh version mới |
-
-Chưa trả lời → mặc định `[A]`, **in rõ chữ "mặc định"**.
-
----
-
-## G0 — Scope (hỏi ĐẦU TIÊN)
-
-```
-Phạm vi tài liệu hoá lần này?
-  [A] Toàn hệ thống — mọi module
-  [B] Một số module — tôi sẽ liệt kê
-  [C] Một luồng nghiệp vụ cụ thể
-```
-Lưu `g0_scope`. **Chưa trả lời → DỪNG.** Không đoán `[A]` vì "chắc khách muốn đủ".
+| `[A]` | `DELTA` | Giữ dòng cũ + `Note = Carried from ver<K>`; evidence > 30 ngày → chụp lại nếu dòng đó `Confirmed`. Câu trả lời P0–P11 cũ làm **mặc định đề xuất** |
+| `[B]` | `FULL` | Bỏ dữ liệu cũ, vẫn đề xuất câu trả lời cũ |
+| `[C]` | `READ_ONLY_REVIEW` | Không crawl, **không** tạo version mới |
+| `[D]` | — | Đọc `flow-2-change-request.md`, chạy Luồng 2 |
 
 ---
 
-## G1 — Website & môi trường
+## Lượt 1 — P0 Tên & phạm vi
 
 ```
-Hệ thống có website nào để quan sát?
-  [A] 1 site production — URL: ?
-  [B] Nhiều site (user/admin/api docs...) — tôi sẽ liệt kê
-  [C] Có staging — ưu tiên quét staging  (an toàn nhất)
-  [D] Không quét được — tôi sẽ cung cấp screenshot
+P0a. Tên hệ thống (dùng trong tên file)?            → system_name   (Other: nhập tên)
+P0b. Tên ngắn cho version này?                       → slug           [baseline] [khao-sat-lan-dau] (Other)
+P0c. Phạm vi?                                         → scope
+     [A] Toàn hệ thống  [B] Một số module — liệt kê  [C] Một luồng nghiệp vụ
 ```
-Lưu `g1_websites`. **Chưa trả lời → DỪNG.**
-
-> Có staging mà vẫn chọn production → hỏi lại 1 lần: *"Staging an toàn hơn. Bạn chắc chắn muốn quét production?"*
+**Chưa trả lời P0a/P0c → DỪNG.** Không đoán `[A]`.
 
 ---
 
-## G2 — Quyền thao tác trên site ⚠️ **gate an toàn**
+## Lượt 2 — Website (P1–P4) ⚠️ lượt quan trọng nhất về an toàn
 
+### P1 — Website hiện tại
 ```
-Agent được phép thao tác tới đâu trên site?
-  [A] Chỉ đọc — không submit form, không bấm nút ghi/xoá   (mặc định)
-  [B] Được submit trên staging bằng tài khoản test
-  [C] Được submit cả production — tôi chịu trách nhiệm
-  [D] Không crawl — tôi tự thao tác và gửi screenshot
+Hệ thống có bao nhiêu website cần khảo sát? Liệt kê URL + môi trường.
+  [A] 1 website        [B] Nhiều website (user / admin / ...)   [C] Không có website để quét
+  → Other: "WEB-01 user https://stg.abc.jp (staging); WEB-02 admin https://stg-admin.abc.jp (staging)"
 ```
+→ `websites` (`WEB-01=<url>;WEB-02=<url>`) + sheet `10_Site`. Mỗi site có `Site ID` cố định `WEB-01, WEB-02…`.
 
-| Chọn | `g2_crawl_mode` | `crawl-site.js --mode` | Thực thi |
+- Có staging mà chọn production → hỏi lại 1 lần: *"Staging an toàn hơn. Bạn chắc chắn muốn quét production?"*
+- `[C]` → O1 = ⬜ (`không có website`), O4 chỉ chạy nếu có Figma. **Chạy tiếp** các phần khác.
+
+### P2 — Tài khoản đăng nhập + quyền được dùng ⚠️
+Hỏi **2 ý riêng**, không gộp:
+```
+P2a. Mỗi website đăng nhập bằng tài khoản role nào?
+     [A] Có tài khoản cho mọi role — liệt kê role   [B] Chỉ 1 số role   [C] Không có — chỉ màn public
+P2b. Tài khoản đó do ai cấp, và bạn có được PHÉP dùng nó để agent tự động quét hệ thống không?
+     [A] Tài khoản TEST do KH/PM cấp cho mục đích khảo sát — được phép
+     [B] Tài khoản thật / dùng chung — CHƯA rõ được phép
+     [C] Không được phép quét tự động
+```
+→ `accounts` (chỉ **tên role**, không tên người, không mật khẩu) · `access_approved_by` (vai trò người cấp, VD `PM phía KH`).
+
+| P2b | Hành vi |
+|---|---|
+| `[A]` | Đăng nhập bằng `login-site.js` (xem dưới) |
+| `[B]` | ⛔ **Không đăng nhập.** Chỉ quét màn public. Mọi màn sau login = `To verify` + Open Q "cần tài khoản test được phép" |
+| `[C]` | Như `[B]`, ghi rõ lý do |
+
+**Cách đăng nhập — agent KHÔNG nhận mật khẩu qua chat:**
+- Ưu tiên `node login-site.js --manual --url <login> --save .auth/WEB-01.json` → mở trình duyệt, **user tự gõ** tài khoản, script lưu phiên.
+- Hoặc user tự `export SITE_USER=... SITE_PASS=...` trong terminal rồi agent chạy `--form --user-env SITE_USER --pass-env SITE_PASS`.
+- User dán mật khẩu vào chat → **không dùng lại, không ghi ra file**, nhắc user đổi mật khẩu đó sau khảo sát.
+- Role không đăng nhập được → mọi chức năng của role đó `To verify` + Open Q, **cấm** đoán theo tên menu.
+
+### P3 — Quyền thao tác ⚠️ gate an toàn
+```
+Agent được thao tác tới mức nào trên website?
+  [A] Chỉ ĐỌC — không submit form, không bấm nút ghi/xoá            (mặc định)
+  [B] ĐỌC + CREATE/UPDATE trên STAGING bằng tài khoản test
+  [C] ĐỌC + CREATE/UPDATE cả PRODUCTION — tôi chịu trách nhiệm
+  [D] Không quét — tôi tự gửi screenshot
+```
+| Chọn | `crawl_mode` | `crawl-site.js --mode` | Thực thi |
 |---|---|---|---|
-| `[A]` | `READ_ONLY` | `read-only` | **Chặn ở tầng network:** mọi request khác GET/HEAD bị abort |
-| `[B]` | `SUBMIT_STAGING` | `submit-staging` | Cho POST, **vẫn** chặn selector phá dữ liệu |
-| `[C]` | `SUBMIT_PROD` | `submit-prod` | Như `[B]`; agent PHẢI in cảnh báo trước mỗi thao tác ghi |
+| `[A]` | `READ_ONLY` | `read-only` | **Chặn ở tầng network** mọi request khác GET/HEAD |
+| `[B]` | `SUBMIT_STAGING` | `submit-staging` | Cho POST, **vẫn** chặn nút xoá/thanh toán/gửi mail |
+| `[C]` | `SUBMIT_PROD` | `submit-prod` | Như `[B]` + in cảnh báo trước mỗi thao tác ghi |
 | `[D]` | `NO_CRAWL` | — | Không chạy crawler |
 
-Chưa trả lời → **mặc định `[A]`** và in: `Đang chạy chế độ READ-ONLY — mọi thao tác ghi bị chặn ở tầng network.`
+DELETE **không bao giờ** được cấp qua câu này — gặp nút xoá luôn đi qua G9. Chưa trả lời → `[A]` + in: `Đang chạy READ-ONLY — mọi thao tác ghi bị chặn ở tầng network.`
 
-⛔ Đây là gate duy nhất có thể gây hậu quả không hoàn tác được trên hệ thống thật. **Không bao giờ tự nâng quyền.**
+### P4 — Vùng cấm chạm
+```
+Có URL / chức năng nào tuyệt đối không được chạm? (VD /admin/batch, gửi mail hàng loạt, cổng thanh toán)
+  [A] Không có   → Other: liệt kê
+```
+→ `forbidden_zones` → `crawl-site.js --forbid`.
 
 ---
 
-## G3 — Tài khoản / role
+## Lượt 3 — Source code (P5) + Database (P6)
 
+### P5 — Source code
 ```
-Tài khoản nào để quan sát hệ thống?
-  [A] Có đủ mọi role (list role + ai cấp)
-  [B] Chỉ 1 role — role nào?
-  [C] Không có tài khoản — chỉ xem được màn public
+P5a. Có source code để quét không? Bao nhiêu repo, ở đâu?
+     [A] 1 repo  [B] Nhiều repo (FE / BE / batch riêng)  [C] Không có
+     → Other: "REPO-01 /path/web-fe (FE); REPO-02 /path/api (BE)"
+P5b. (chỉ khi có repo FE) Repo FE nào là của website nào?
+     → Other: "REPO-01 → WEB-01; REPO-03 → WEB-02"
 ```
-Lưu `g3_accounts`.
+→ `source_repos` + sheet `11_Repo` (`Kind`, `For Site`). Repo FE chưa gán site → hỏi lại, **không** đoán theo tên folder.
 
-**Enforcement:** role không có tài khoản → mọi chức năng của role đó `Status = To verify` + 1 dòng Open Question `Type = Unknown`, **cấm** đoán theo tên menu.
+- `[C]` → O2 = ⬜ (`không có source`), mọi business rule chỉ `Inferred`. Chạy tiếp.
+- Repo có trong đường dẫn nhưng `scan-sensitive.py` báo HIGH → xem §6 agent.
+
+### P6 — Database (tuỳ chọn)
+```
+Có thông tin database không?
+  [A] Có file schema-only (.sql) — đường dẫn?  (khuyến nghị đặt ở inputs/db/)
+  [B] Có quyền đọc DB — tôi sẽ tự xuất schema-only theo lệnh agent đưa
+  [C] Không có DB, nhưng source có migration / ORM model
+  [D] Không có gì
+```
+| Chọn | `db_mode` | Hành vi |
+|---|---|---|
+| `[A]` | `DUMP` | `read-schema.py --dump`. Dump có dữ liệu → script exit 3 → yêu cầu dump schema-only |
+| `[B]` | `READONLY_CONN` | Agent đưa lệnh `mysqldump --no-data` / `pg_dump --schema-only`; **user tự chạy** (agent không giữ mật khẩu DB) → như `[A]` |
+| `[C]` | `MIGRATION` | Agent dựng `03/04` từ migration/ORM, evidence `code-ref` |
+| `[D]` | `NONE` | O3 = ⬜, O6 chương DB ghi `Database not available.` |
 
 ---
 
-## G4 — Database
+## Lượt 4 — Figma (P7, P8)
 
 ```
-Database?
-  [A] Có dump / file schema — đường dẫn?
-  [B] Có connection read-only — thông tin kết nối?
-  [C] Không có → bỏ chương 3, liệt kê entity suy từ code ở Appendix A
-```
-Lưu `g4_db` ∈ `DUMP` / `READONLY_CONN` / `NONE`. **Chưa trả lời → DỪNG** (quyết định cả một chương).
+P7. (tuỳ chọn) Có Figma design / design system của hệ thống hiện tại không?
+    [A] Có — link figma.com/design/...   [B] Không có
+    → dùng bổ sung O4 Design System. figma_input_url
 
-Gate V2 check 12 và gate V3 check 5/6 đối chiếu trực tiếp giá trị này.
+P8. Bạn muốn tôi vẽ Figma flow dự án (Output 1 Flow tổng quan + Output 2 Screen flow) ở đâu?
+    [A] Có file Figma — link figma.com/design/... (page sẽ vẽ)
+    [B] Chưa có link, tôi gửi sau
+    [C] Không vẽ Figma lần này
+    → figma_output_url
+```
+- P8 `[B]` → **DỪNG phần O5** chờ link, làm các output khác trước; cuối lượt nhắc lại 1 lần. Không tự skip.
+- Link `/board/` (FigJam) → cảnh báo kit vẽ trên Design file, hỏi xác nhận.
+- ⚠️ Nhắc user: **Figma là cloud bên ngoài** — chỉ vẽ tên màn, ID, luồng; không vẽ dữ liệu thật.
 
 ---
 
-## G5 — Source code
+## Lượt 5 — Output tuỳ chọn + an toàn dữ liệu
 
 ```
-Source code?
-  [A] Có full repo — đường dẫn?
-  [B] Chỉ một phần (frontend / backend / module cụ thể)
-  [C] Không có
+P9. Có lập Bug list hiện trạng (lỗi giao diện/chức năng mức Medium–High phát hiện khi quét) không?
+    [A] Có — nội bộ review trước (mặc định)  [B] Có — gửi thẳng KH  [C] Không
+    → bug_list = YES/NO, bug_recipient
+
+P10. Ngôn ngữ tài liệu + người đọc?
+    [VN] [JP] [EN] [VN+JP]  ·  Nội bộ / BrSE / Khách hàng            → lang, audience
+
+P11. Phân loại dữ liệu của nguồn (bắt buộc — máy không tự nhận ra được dữ liệu production):
+    [A] Website staging, dữ liệu test — không có dữ liệu người dùng thật
+    [B] Website có dữ liệu thật của người dùng (production / staging copy từ prod)
+    [C] Chưa rõ
 ```
-Lưu `g5_source`. **Chưa trả lời → DỪNG.**
-
-`[C]` → mọi business rule chỉ có thể `Inferred`, **không** dòng nào được `Confirmed` chỉ bằng ảnh.
-
----
-
-## G6 — Mức chi tiết chương 2
-
-```
-Chương "Functional Overview" liệt kê ở mức nào?
-  [A] Executive — 10-15 chức năng, gộp theo capability
-  [B] Standard — 1 use-case = 1 dòng          (mặc định)
-  [C] Detailed — tới từng thao tác
-```
-Lưu `g6_detail`. Chưa trả lời → `[B]` + **in rõ chữ "mặc định"**.
-
----
-
-## G7 — Ngôn ngữ + audience
-
-```
-Tài liệu viết bằng ngôn ngữ nào, ai đọc?
-  Ngôn ngữ: [VN] / [JP] / [EN] / [VN + JP]
-  Audience: Nội bộ / BrSE / Khách hàng
-```
-Lưu `g7_lang` + `g7_audience`. Chưa trả lời → `VN` + `Nội bộ`.
-
-Audience = `Khách hàng` → tránh thuật ngữ kỹ thuật trong văn xuôi (không viết "API trả 500", viết "hệ thống báo lỗi").
+| P11 | Hành vi |
+|---|---|
+| `[A]` | Chạy bình thường |
+| `[B]` | ⚠️ **Cảnh báo:** screenshot sẽ chứa dữ liệu thật → đề nghị tài khoản test / staging. User vẫn giữ `[B]` → hỏi **ai duyệt** việc này, ghi `access_approved_by`, **không** chèn screenshot vào output gửi ra ngoài (O1 dùng `NO IMAGE — text only`), không đẩy ảnh lên Figma |
+| `[C]` | Coi như `[B]` |
 
 ---
 
 ## Discovery Brief — in 1 lần, chờ 1 confirm
 
 ```
-📋 DISCOVERY BRIEF — <system>
+📋 DISCOVERY BRIEF — <system_name> · ver<N>_<DDMMYY>_<slug>
 
 | # | Hạng mục | Giá trị | Nguồn |
 |---|---|---|---|
-| G-R | Run mode | <FULL/DELTA/READ_ONLY_REVIEW> | user / mặc định |
-| G0 | Scope | ... | user |
-| G1 | Website | ... | user |
-| G2 | Quyền crawl | ... | user / **mặc định READ_ONLY** |
-| G3 | Tài khoản | ... | user |
-| G4 | Database | ... | user |
-| G5 | Source code | ... | user |
-| G6 | Chi tiết | ... | user / mặc định |
-| G7 | Ngôn ngữ · Audience | ... | user / mặc định |
+| P0 | Phạm vi | ... | user |
+| P1 | Website | WEB-01 <url> (staging) · WEB-02 ... | user |
+| P2 | Tài khoản | WEB-01: admin, user — test, PM KH cấp, được phép | user |
+| P3 | Quyền thao tác | READ_ONLY | user / **mặc định** |
+| P4 | Vùng cấm | ... | user |
+| P5 | Source | REPO-01 <path> FE→WEB-01 · REPO-02 <path> BE | user |
+| P6 | Database | DUMP inputs/db/schema.sql | user |
+| P7 | Figma input | — | user |
+| P8 | Figma output | <link> | user |
+| P9 | Bug list | Có — nội bộ trước | user |
+| P10 | Ngôn ngữ · người đọc | VN · nội bộ | mặc định |
+| P11 | Dữ liệu nguồn | staging, dữ liệu test | user |
 
-Phân loại nguồn (sửa nếu tôi gán nhầm):
+Output dự kiến: O1 ✅ · O2 ✅ · O3 ✅ · O4 ✅ · O5 ✅ · O6 ✅ · O7 ✅
+Không chạy: <Ox — lý do> hoặc "không"
+Budget crawl: ≤ 200 URL · ≤ 30 phút / site
+Folder: outputs/ver<N>_<DDMMYY>_<slug>/
 
-| File / nguồn | Loại | Rule | Dùng để lấy |
-|---|---|---|---|
-| ... | Running Website / Source Code / Database / File KH | RE1-RE4 | ... |
-
-Budget dự kiến: ≤ 200 URL · ≤ 30 phút
-Hạng mục còn thiếu: <list hoặc "không thiếu">
-
-→ Đúng chưa? (reply "OK" để bắt đầu recon, hoặc sửa hạng mục nào sai)
+→ Đúng chưa? ("OK" để bắt đầu, hoặc sửa hạng mục sai)
 ```
-
-⛔ **Không được sang Bước 3 (recon) khi chưa có confirm.**
+⛔ **Không quét gì khi chưa có confirm.** Confirm xong mới `version-tool.py next --create`.
 
 ---
 
 ## G9 — Gặp hành động ghi khi crawl
 
-Trigger: crawler gặp element khớp danh sách phá dữ liệu (`削除` · `Xoá` · `Thanh toán` · `Gửi mail`...).
-
+Trigger: crawler gặp element khớp danh sách phá dữ liệu (`削除` · `Xoá` · `Thanh toán` · `Gửi mail`…).
 ```
 Màn <SC-xxx> có nút「<nhãn>」— thao tác này có thể thay đổi dữ liệu thật.
-  [A] Bỏ qua — ghi UNKNOWN cho hành vi của nút này   (mặc định)
-  [B] Được bấm, đây là staging có dữ liệu test
-  [C] Tôi tự thao tác và gửi screenshot cho bạn
+  [A] Bỏ qua — ghi UNKNOWN cho hành vi nút này   (mặc định)
+  [B] Được bấm — đây là staging có dữ liệu test
+  [C] Tôi tự thao tác và gửi screenshot
 ```
+`[A]` → item vẫn vào O1, mô tả `UNKNOWN — chưa quan sát được (bị chặn theo P3)` + Open Question.
 
-`[A]` → item vẫn được ghi vào inventory, cột mô tả hành vi ghi `UNKNOWN — chưa quan sát được (thao tác ghi bị chặn theo G2)`, kèm 1 Open Question.
-
-## G9b — Vùng cấm chạm (hỏi TRƯỚC khi crawl)
-
-```
-Có URL / chức năng nào tuyệt đối không được chạm không?
-(VD: /admin/batch, trang gửi mail hàng loạt, cổng thanh toán)
-```
-Lưu `forbidden_zones` → truyền vào `crawl-site.js --forbid`.
-
-## G10 — Tài liệu khách hàng mâu thuẫn hệ thống
-
-Trigger: phát hiện ≥ 3 điểm lệch.
-
+## G10 — Tài liệu KH mâu thuẫn hệ thống (≥ 3 điểm)
 ```
 Tài liệu khách hàng lệch với hệ thống thật ở <n> điểm.
   [A] Hệ thống thật thắng, ghi CONFLICT vào Open Questions   (mặc định)
-  [B] Dừng lại, tôi hỏi khách hàng trước
+  [B] Dừng, tôi hỏi khách hàng trước
   [C] Cho tôi xem danh sách lệch trước khi quyết
 ```
-
----
-
-## Proposal Gate — Output 2 (sau khi Output 1 qua mọi gate)
-
-### Bước A — in bảng tình hình trước khi hỏi
-
-```
-✅ Output 1 hoàn thành — <n> function · <m> screen · <k> bảng DB · <j> câu hỏi treo
-   Gate V1 <...> · V2 <...> · V3 <...> · V5 <...>
-```
-
-### Bước B — hỏi bằng `AskUserQuestion`
-
-| Câu | Khi nào | Header | Options |
-|---|---|---|---|
-| **G11** | LUÔN LUÔN | `Output 2` | `[Dừng ở Output 1]` · `[+ Basic Design]` · `[+ Bug List]` · `[Làm cả hai]` |
-| **G12** | Chỉ khi chọn Basic Design | `BD scope` | `[Toàn bộ <m> màn]` · `[Chỉ màn tôi chỉ định]` · `[Chưa làm bây giờ]` — kèm hỏi đường dẫn master workbook |
-| **G13** | Chỉ khi chọn Bug List | `Bug scope` | Quét: `[Blackbox + Code + DB]` · `[Chỉ blackbox]` · `[Blackbox + Code]` — Gửi: `[Nội bộ review trước]` (mặc định) · `[Gửi thẳng KH]` |
-| **G14** | Chỉ khi master workbook có sheet lạ | `Sheet lạ` | `[Xoá hết]` · `[Giữ lại — là screen thật]` · `[Cho tôi xem danh sách]` |
-
-**Enforcement:**
-- ⛔ Không có câu trả lời G11 → **không chạy gì thêm**, kết thúc ở Output 1.
-- ⛔ G14: **không bao giờ tự xoá sheet** — xoá là thao tác không hoàn tác được.
-- BA được phép đề nghị **1 lần duy nhất**. User nói "chưa" → không hỏi lại trong session.

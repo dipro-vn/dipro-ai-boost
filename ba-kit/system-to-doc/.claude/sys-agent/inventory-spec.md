@@ -2,9 +2,9 @@
 
 > **Artifact nội bộ của agent. KHÔNG phải deliverable cho user, KHÔNG nhắc trong README.**
 >
-> File: `01_Inventory_<system>_v<N>.xlsx` — sinh cùng lúc với `01_HighLevel_<system>_v<N>.docx`, từ **cùng một nguồn dữ liệu recon**. docx là bản người đọc, file này là bản máy đọc.
+> File: `outputs/ver<N>_<DDMMYY>_<slug>/_internal/inventory.xlsx`. Mọi bảng trong O1–O7 sinh từ file này; Luồng 2 đọc nó làm baseline.
 >
-> Mọi tên sheet / tên cột dưới đây là **hợp đồng cứng** giữa `build-inventory.py`, các gate script, và Output 2A/2B. Đổi tên cột = phải đổi cả 3 nơi.
+> Tên sheet / cột là **hợp đồng cứng**, định nghĩa duy nhất ở `.claude/skills/system-analyst/scripts/inv_schema.py`. Đổi cột → sửa `inv_schema.py` + file này.
 
 ---
 
@@ -13,22 +13,27 @@
 | Mục đích | Cụ thể |
 |---|---|
 | **Gate script đọc vào** | V1/V2/V4 cần dữ liệu có cấu trúc. Bảng trong docx không có kiểu dữ liệu, không có ID ổn định → không đếm được |
-| **Output 2 lấy nguồn ra** | O2A lấy `02_Screen` thay cho `SPEC ## Screens`; O2B lấy `01_Function` + `04_DB_Columns` |
-| **Bộ nhớ giữa các lần chạy** | Lần chạy sau đọc version mới nhất để biết đã phủ tới đâu, user đã trả lời gì, câu hỏi nào còn treo |
+| **Output lấy nguồn ra** | O1 ← `02_Screen` · O2 ← `07_API` + `08_API_Fields` · O3 ← `03/04` · O6 ← mọi sheet · O7 ← `01/02` |
+| **Bộ nhớ giữa các lần chạy** | Luồng 1 DELTA đọc để biết đã phủ tới đâu; **Luồng 2 đọc để tra baseline khi phân tích CR** |
 
 ---
 
-## 1. Bảy sheet
+## 1. Mười hai sheet
 
-| # | Sheet | Grain | Bắt buộc |
+| # | Sheet | Grain | Ghi chú |
 |---|---|---|---|
-| 1 | `00_Meta` | 1 file = 1 lần chạy | ✅ |
-| 2 | `01_Function` | 1 dòng = 1 chức năng | ✅ |
-| 3 | `02_Screen` | 1 dòng = 1 màn hình | ✅ |
-| 4 | `03_DB_Tables` | 1 dòng = 1 bảng | ✅ (rỗng + 1 dòng khai báo nếu `G4 = không có DB`) |
-| 5 | `04_DB_Columns` | 1 dòng = 1 cột | ✅ (như trên) |
-| 6 | `05_Evidence` | 1 dòng = 1 bằng chứng | ✅ |
-| 7 | `06_OpenQuestions` | 1 dòng = 1 câu hỏi treo | ✅ |
+| 1 | `00_Meta` | 1 file = 1 lần chạy | câu trả lời preflight |
+| 2 | `01_Function` | 1 dòng = 1 chức năng | |
+| 3 | `02_Screen` | 1 dòng = 1 màn hình | → O1 |
+| 4 | `03_DB_Tables` | 1 dòng = 1 bảng | rỗng nếu `db_mode = NONE` |
+| 5 | `04_DB_Columns` | 1 dòng = 1 cột | như trên |
+| 6 | `05_Evidence` | 1 dòng = 1 bằng chứng | |
+| 7 | `06_OpenQuestions` | 1 dòng = 1 câu hỏi treo | |
+| 8 | `07_API` | 1 dòng = 1 API / batch / webhook / queue | → O2 |
+| 9 | `08_API_Fields` | 1 dòng = 1 field request/response | → O2 |
+| 10 | `09_Integration` | 1 dòng = 1 liên kết bên thứ 3 | |
+| 11 | `10_Site` | 1 dòng = 1 website | |
+| 12 | `11_Repo` | 1 dòng = 1 repo source | |
 
 Header luôn ở **row 1**. Data từ **row 2**. Không merge cell, không sheet ẩn, không công thức.
 
@@ -36,30 +41,23 @@ Header luôn ở **row 1**. Data từ **row 2**. Không merge cell, không sheet
 
 ## 2. `00_Meta` — 2 cột `Key` · `Value`
 
-| Key | Ví dụ | Ghi chú |
+| Key | Ví dụ | Từ |
 |---|---|---|
-| `system_name` | `EC Portal` | |
-| `customer` | `ABC Corp` | |
-| `doc_version` | `v2` | khớp tên file |
-| `generated_date` | `2026-09-23` | |
-| `previous_version` | `v1` hoặc `—` | version đã đọc để resume |
-| `run_mode` | `FULL` · `DELTA` · `READ_ONLY_REVIEW` | kết quả Gate G-R |
-| `g0_scope` | `Toàn hệ thống` | |
-| `g1_websites` | `https://stg.abc.jp` | nhiều site ngăn bằng `;` |
-| `g2_crawl_mode` | `READ_ONLY` · `SUBMIT_STAGING` · `SUBMIT_PROD` · `NO_CRAWL` | **mặc định `READ_ONLY`** |
-| `g3_accounts` | `admin, user — thiếu role CS` | |
-| `g4_db` | `DUMP` · `READONLY_CONN` · `NONE` | `NONE` → chương 3 docx chỉ 1 dòng khai báo |
-| `g5_source` | `FULL_REPO` · `PARTIAL` · `NONE` | |
-| `g6_detail` | `EXECUTIVE` · `STANDARD` · `DETAILED` | |
-| `g7_lang` | `VN` · `JP` · `EN` · `VN+JP` | |
-| `g7_audience` | `Nội bộ` · `BrSE` · `Khách hàng` | |
-| `env_observed` | `Chrome 129 · 2026-09-23 14:00–15:20` | |
-| `crawl_budget_used` | `137/200 URL · 22 phút` | |
-| `forbidden_zones` | `/admin/batch/*; nút 削除` | từ Gate G9b |
-
-**Gate V3 đọc sheet này** để biết chương nào **được phép** trống. `g4_db = NONE` mà chương 3 docx có nội dung bảng → FAIL.
-
----
+| `system_name` · `customer` | `EC Portal` · `ABC Corp` | P0 |
+| `version_label` · `version_folder` · `version_type` | `ver1` · `ver1_011026_baseline` · `BASELINE` | `version-tool.py` |
+| `generated_date` · `previous_version` · `run_mode` | `2026-10-01` · `—` · `FULL`/`DELTA`/`READ_ONLY_REVIEW` | G-R |
+| `scope` | `Toàn hệ thống` | P0 |
+| `websites` | `WEB-01=https://stg.abc.jp;WEB-02=https://stg-admin.abc.jp` | P1 |
+| `accounts` · `access_approved_by` | `WEB-01: admin,user (test)` · `PM phía KH` — **chỉ role, không tên người, không mật khẩu** | P2 |
+| `crawl_mode` | `READ_ONLY` · `SUBMIT_STAGING` · `SUBMIT_PROD` · `NO_CRAWL` | P3 (mặc định `READ_ONLY`) |
+| `forbidden_zones` | `/admin/batch/*; nút 削除` | P4 |
+| `source_repos` | `REPO-01=/src/web(FE→WEB-01);REPO-02=/src/api(BE)` | P5 |
+| `db_mode` | `DUMP` · `READONLY_CONN` · `MIGRATION` · `NONE` | P6 |
+| `figma_input_url` · `figma_output_url` | link hoặc `—` | P7 · P8 |
+| `bug_list` · `bug_recipient` · `bug_scan_scope` | `YES` · `Nội bộ review trước` · `Blackbox` | P9 |
+| `lang` · `audience` | `VN` · `Nội bộ` | P10 |
+| `sensitive_scan` | `clean` / `stopped: <file> (đã xử lý: …)` | Bước 3 |
+| `env_observed` · `crawl_budget_used` | `Chrome · 2026-10-01 14:00–15:20` · `137/200 URL · 22 phút` | recon |
 
 ## 3. `01_Function`
 
@@ -68,7 +66,7 @@ Header luôn ở **row 1**. Data từ **row 2**. Không merge cell, không sheet
 | `Function ID` | `F-001` — liên tục, không trùng | ✅ |
 | `Module` | theo **domain nghiệp vụ**, không theo folder code | ✅ |
 | `Function` | động từ + tân ngữ | ✅ |
-| `Primary Actor` | lấy từ `g3_accounts` / Actor list | ✅ |
+| `Primary Actor` | lấy từ role ở `00_Meta.accounts` / `10_Site.Roles Observed` | ✅ |
 | `Description` | 1–3 câu, mô tả **cái quan sát được** | ✅ |
 | `Entry / Trigger` | URL · menu path · cron expr · webhook | ✅ |
 | `Screen IDs` | `SC-014,SC-015` hoặc `SYSTEM — no screen` | ✅ |
@@ -96,7 +94,8 @@ Header luôn ở **row 1**. Data từ **row 2**. Không merge cell, không sheet
 
 | Cột | Enum / định dạng | Bắt buộc |
 |---|---|---|
-| `Screen ID` | `SC-014` | ✅ |
+| `Screen ID` | `SC-014` — duy nhất trên **mọi** site | ✅ |
+| `Site` | `WEB-01` — phải có trong `10_Site` | ✅ |
 | `URL / Route` | `/orders/:id` | ✅ |
 | `Screen Name` | tên **hiển thị thật** trên UI | ✅ |
 | `Type` | `List` · `Detail` · `Form` · `Modal` · `Error` · `Other` | ✅ |
@@ -108,7 +107,7 @@ Header luôn ở **row 1**. Data từ **row 2**. Không merge cell, không sheet
 | `Status` | `Confirmed` · `To verify` · `Inferred` | ✅ |
 | `Note` | | ⬜ |
 
-> Output 5 của kit `requirement-to-flow` lấy nguồn từ `SPEC.md ## Screens`. Kit này **không có SPEC** — sheet này thay thế nó. Thiếu sheet này thì O2A không có Screen ID để duplicate, không có URL để điền `D1`, không có ảnh để chèn `A9`.
+> Kit `requirement-to-flow` lấy danh sách màn từ `SPEC.md ## Screens`. Kit này **không có SPEC** — sheet này thay thế nó cho O1 (Basic Design) và O5 (Figma).
 
 ---
 
@@ -120,7 +119,9 @@ Header luôn ở **row 1**. Data từ **row 2**. Không merge cell, không sheet
 
 ## 6. `04_DB_Columns`
 
-`Table` · `Column` · `Type` · `PK` · `FK` · `Nullable` · `Default` · `Meaning` · `Used By` · `Evidence` · `Confidence`
+`Table` · `Column` · `Type` · `PK` · `FK` · `Nullable` · `Default` · `Max Length` · `Format` · `Constraint` · `Meaning` · `Used By` · `Evidence` · `Confidence`
+
+`Max Length` / `Format` / `Constraint` do `read-schema.py` suy từ kiểu (`varchar(255)` → 255 · `decimal(10,2)` → `10,2` · ENUM/UNIQUE/CHECK → Constraint).
 
 **Luật `Meaning`:** chỉ được `Confidence = High` khi **có code đọc/ghi cột đó** (`Evidence` phải chứa ≥ 1 EV loại `code-ref`). Tên cột đẹp **không** phải bằng chứng.
 
@@ -134,7 +135,7 @@ Header luôn ở **row 1**. Data từ **row 2**. Không merge cell, không sheet
 |---|---|---|
 | `EV ID` | `EV-0031` — liên tục, không trùng | ✅ |
 | `Type` | `screenshot` · `har` · `console-log` · `code-ref` · `db-query` · `doc-quote` | ✅ |
-| `Locator` | `https://stg.abc.jp/orders/88` · `src/order/order.service.ts#L88-L104` · `orders.status` · `仕様書.pdf §3.2 p.12` | ✅ — **phải chính xác tới dòng/trang/cột** |
+| `Locator` | screenshot: URL · code-ref: **`REPO-01:src/order/order.service.ts#L88-L104`** · db-query: `schema:schema.sql#L120` · doc-quote: `仕様書.pdf §3.2 p.12` | ✅ — **chính xác tới dòng/trang**; code-ref bắt buộc tiền tố repo |
 | `Captured At` | `2026-09-23T14:02+07` | ✅ với `screenshot`/`har`/`console-log` |
 | `Actor/Role` | `test_user` · `anonymous` | ✅ với evidence từ website |
 | `Artifact` | `evidence/EV-0031.png` — đường dẫn tương đối | ✅ với `screenshot`/`har`/`console-log` |
@@ -152,13 +153,35 @@ Chi tiết cách thu thập + quy ước đặt tên file → `evidence-ledger.m
 
 ---
 
-## 9. Bug List workbook (O2B) — schema riêng
+## 9. `07_API` + `08_API_Fields`
 
-File `02_BugList_<system>_v<N>.xlsx`, 4 sheet:
+`07_API`: `API ID` (`API-001`) · `Group` · `Kind` (`API`/`BATCH`/`WEBHOOK`/`QUEUE`) · `Method` (`GET`…`DELETE`/`ANY`/`CRON`/`EVENT`) · `Path / Schedule` · `Summary` · `Auth` · `Handler` (code-ref locator) · `Repo` · `Called By Screens` · `Related Tables` · `Evidence` · `Status` (`Confirmed`/`To verify`/`Inferred`) · `Open Q` · `Note`
+
+`08_API_Fields`: `API ID` · `Direction` (`REQUEST`/`RESPONSE`) · `In` (`path`/`query`/`header`/`cookie`/`body`/`status`/`response-body`) · `Field` · `Type` · `Required` · `Format / Constraint` · `Description` · `Evidence`
+
+| Status | Điều kiện |
+|---|---|
+| `Confirmed` | Có EV `code-ref` tới handler **và** `Summary` viết từ việc đọc code |
+| `To verify` | Mới thấy route (giá trị mặc định từ `api-seed.csv`) — kèm Open Q |
+| `Inferred` | Suy từ FE gọi tới, không thấy handler — kèm Open Q |
+
+## 10. `09_Integration` · `10_Site` · `11_Repo`
+
+`09_Integration`: `EXT ID` · `Name` · `Kind` (Payment/Email/Storage/…) · `Purpose` · `Direction` (`OUTBOUND`/`INBOUND`/`BOTH`) · `Used By` (F-/API-) · `Config Keys` (**chỉ tên key**, không bao giờ giá trị) · `Evidence` · `Status` · `Note`
+
+`10_Site`: `Site ID` (`WEB-01`) · `Site Name` · `URL` · `Env` · `Roles Observed` · `Crawl Mode` · `FE Repo` · `Screen Count` (= số dòng `02_Screen` của site — gate kiểm) · `Note`
+
+`11_Repo`: `Repo ID` (`REPO-01`) · `Path` (dùng để phân giải code-ref) · `Kind` (`FE`/`BE`/`FULLSTACK`/`BATCH`/`OTHER`) · `Stack` · `For Site` · `Note`
+
+---
+
+## 11. Bug List workbook (O7) — schema riêng
+
+File `07_BugList/BugList_<sys>_ver<N>.xlsx`, 4 sheet:
 
 | Sheet | Nội dung | Gửi KH? |
 |---|---|---|
-| `00_Meta` | như trên + `g13_scan_scope`, `g13_recipient` | — |
+| `00_Meta` | như trên (`bug_scan_scope`, `bug_recipient` bắt buộc) | — |
 | `Bugs` | bug đã reproduce được | ✅ |
 | `Suspected` | nghi ngờ, chưa reproduce | ❌ nội bộ |
 | `Observations` | quan sát cần điều tra (gồm mọi nghi vấn security chưa có PoC) | ❌ nội bộ |
@@ -170,10 +193,10 @@ File `02_BugList_<system>_v<N>.xlsx`, 4 sheet:
 | Cột | Enum |
 |---|---|
 | `Category` | `Functional` · `UI/Layout` · `Data` · `Performance` · `Compatibility` · `Security` |
-| `Severity` | `S1 Blocker` · `S2 Major` · `S3 Minor` · `S4 Cosmetic` |
+| `Severity` | `High` · `Medium` (Low không ghi) |
 | `Reproduced` | `Yes — n/n` · `Intermittent` · `No` |
 | `Detected By` | `Playwright` · `Code review` · `DB check` · `Console` |
 | `Pre-existing` | `Yes` · `Unknown` |
 | `Report To Customer` | `Yes` · `Internal only` |
 
-Ràng buộc gate V8 → `outputs/output-2b-bug-list.md`.
+Ràng buộc gate V8 → `outputs/o7-bug-list.md`.

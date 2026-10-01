@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-"""Sinh inventory workbook rong dung schema (7 sheet + header + khung 00_Meta).
+"""Sinh workbook rong dung schema (header + khung Key/Value).
 
-  python3 build-inventory.py --out <path>/01_Inventory_<system>_v<N>.xlsx
-  python3 build-inventory.py --out ... --bug-list        # sinh workbook Bug List
+  python3 build-inventory.py --out <ver>/_internal/inventory.xlsx
+  python3 build-inventory.py --out ... --bug-list        # workbook Bug List (O7)
+  python3 build-inventory.py --out ... --cr              # workbook CR Impact (Luong 2)
 
 Artifact noi bo cua agent — KHONG phai deliverable cho user.
 """
 import argparse
+import os
 import sys
 
 import inv_schema as S
@@ -35,16 +37,19 @@ def build(path, sheets, meta_keys=None):
             c.alignment = Alignment(vertical="center", wrap_text=True)
             width = 40 if col in ("Description", "Repro Steps", "Meaning",
                                   "Reason / Evidence", "Business Impact",
-                                  "Locator", "Why suspicious") else 18
+                                  "Locator", "Why suspicious", "Summary",
+                                  "Change Description", "Impact On Current",
+                                  "Conflict Detail", "Question") else 18
             ws.column_dimensions[get_column_letter(i)].width = width
         ws.freeze_panes = "A2"
 
     if meta_keys:
-        ws = wb["00_Meta"]
+        ws = wb[next(iter(sheets))]
         for i, k in enumerate(meta_keys, start=2):
             ws.cell(row=i, column=1, value=k)
             ws.cell(row=i, column=2, value=S.UNKNOWN)
 
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)  # vd 07_BugList/ chua co
     wb.save(path)
     print("Da tao %s (%d sheet)" % (path, len(sheets)))
     return 0
@@ -55,7 +60,11 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--bug-list", action="store_true",
                     help="Sinh workbook Bug List thay vi Inventory")
+    ap.add_argument("--cr", action="store_true",
+                    help="Sinh workbook CR Impact (Luong 2)")
     a = ap.parse_args()
+    if a.cr:
+        return build(a.out, S.CR_SHEETS, S.CR_META_KEYS)
     if a.bug_list:
         return build(a.out, S.BUG_SHEETS, S.META_KEYS)
     return build(a.out, S.SHEETS, S.META_KEYS)

@@ -1,18 +1,18 @@
 ---
-description: Phân tích hệ thống đã có sẵn (website / source code / DB / file KH) thành tài liệu High Level
+description: Luồng 1 — khảo sát hệ thống có sẵn (website / source / DB / Figma) và dựng bộ tài liệu baseline có version
 ---
 
-Hãy là **System Analyst**. Đọc `.claude/agents/system-analyst.md` và chạy đúng quy trình 10 bước để tạo **Output 1 — High Level System Analysis**.
+Hãy là **System Analyst**. Đọc `.claude/agents/system-analyst.md` và chạy **Luồng 1 — Baseline** đúng 9 bước.
 
-Đối tượng phân tích: $ARGUMENTS
+Đối tượng / gợi ý ban đầu của user: $ARGUMENTS
 
-Bắt buộc, không được rút gọn:
-1. Bước 0.5 — đọc version trước nếu có (`versions/v*/`), chạy Gate **G-R**
-2. Bước 1 — hỏi đủ **G0 → G7** bằng `AskUserQuestion`, không đoán
-3. Bước 2 — in **Discovery Brief**, DỪNG chờ confirm
-4. Bước 3 — recon ở chế độ **read-only** trừ khi G2 cho phép khác
-5. Bước 4–7 — Evidence Ledger → reconcile → flow PNG → render docx + inventory.xlsx
-6. Chạy gate **V1 · V2 · V3 · V5 · V9**, `FAIL = 0` mới được báo xong
-7. Bước 8 — hỏi **Proposal Gate G11** (Output 2), **1 lần duy nhất**
-
-Không tự chạy Output 2A/2B khi chưa có câu trả lời G11.
+Bắt buộc, không rút gọn:
+1. `version-tool.py latest-baseline --outputs outputs` — có baseline → hỏi **G-R** (Delta / Toàn bộ / Chỉ đọc / Đây là CR → Luồng 2)
+2. Hỏi đủ **P0 → P11** bằng `AskUserQuestion` theo `.claude/sys-agent/preflight-questions.md` — **không đoán** URL, tài khoản, quyền, đường dẫn repo. Thứ gì user không có → ghi lại, chạy tiếp phần khác
+3. In **Discovery Brief**, DỪNG chờ confirm → `version-tool.py next --outputs outputs --slug <slug> --create`
+4. `scan-sensitive.py --path … --out <ver>/_internal/gates/sensitive.md` trên mọi repo / dump / file input — exit 3 → **cảnh báo + DỪNG**, hỏi cách khắc phục
+5. Recon **read-only** (trừ khi P3 cho phép khác) → inventory → gate V1 · V2
+6. Sinh O2 → O3 → O1 → O4 → O7 → O5 (mỗi output qua gate của nó, `FAIL = 0`)
+7. Sinh O6 docx tổng hợp → gate V3 · V5
+8. Self-test · `detect-pii.js --scan` · `build-version-index.py` · run-log
+9. Báo cáo cuối theo §8 của agent: **đường dẫn folder version + bảng từng output (file · số lượng · gate) + output không chạy và lý do**

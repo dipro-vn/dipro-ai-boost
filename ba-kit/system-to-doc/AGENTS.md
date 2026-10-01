@@ -1,34 +1,35 @@
 # BA Kit — System to Doc
 
-> **Kit ad-hoc** — mỗi lần chạy = 1 hệ thống đã có sẵn do Human chỉ định (website / source code / DB / file khách hàng). Không gắn với repo cụ thể, không cần khai báo trước.
+> **Kit ad-hoc** — mỗi dự án = 1 hệ thống đã có sẵn. Không cần khai báo trước; mọi thông tin hỏi lúc chạy.
 
 ---
 
-## Agent làm gì
+## Agent
 
-**1 agent duy nhất:** [`system-analyst`](.claude/agents/system-analyst.md) — canonical workflow.
+**1 agent duy nhất:** [`system-analyst`](.claude/agents/system-analyst.md) — canonical workflow cho cả 2 luồng.
 
-**Input:**
-
-| Nguồn | Bắt buộc | Ghi chú |
+| Luồng | Lệnh | Spec |
 |---|---|---|
-| Website đang chạy | ⬜ | Có thể nhiều site. Ưu tiên staging |
-| Source code | ⬜ | Repo path |
-| Database | ⬜ | Dump / schema / connection read-only |
-| File khách hàng cung cấp | ⬜ | `.pdf` / `.docx` / `.xlsx` |
+| **1 — Baseline** | `/analyze-system` | `system-analyst.md` §3 |
+| **2 — Change Request** | `/change-request <file / link / nội dung>` | `.claude/sys-agent/flow-2-change-request.md` |
 
-Không có nguồn nào cả → agent không chạy được. Có ít nhất 1 nguồn → chạy được, phần thiếu được ghi rõ là thiếu.
+**Input Luồng 1** (hỏi bằng `AskUserQuestion`, không đoán): Website (URL · tài khoản + quyền được dùng · READ/WRITE) · Source code (repo · FE/BE · FE↔website) · DB (tuỳ chọn, schema-only) · Figma (tuỳ chọn: design hiện tại + link để vẽ flow).
 
-**Output:**
+**Output Luồng 1** → `outputs/ver<N>_<DDMMYY>_<slug>/`:
 
-| # | Output | Bắt buộc | Nơi lưu |
-|---|---|---|---|
-| **O1** | High Level System Analysis (Word) | ✅ | `latest/01_HighLevel_<system>_v<N>.docx` |
-| **O1-INV** | Inventory workbook — **artifact nội bộ của agent** | ✅ | `latest/01_Inventory_<system>_v<N>.xlsx` |
-| **O2A** | Basic Design → master Excel công ty | ⬜ on-demand | master workbook do user chỉ định |
-| **O2B** | Bug List | ⬜ on-demand | `latest/02_BugList_<system>_v<N>.xlsx` |
+| # | Output | Gate |
+|---|---|---|
+| O1 | Danh sách màn hình theo website (Basic Design xlsx, 1 file / site) | V-BD |
+| O2 | API Documentation xlsx (+ batch) + Code map | V-API |
+| O3 | Database Documentation xlsx + ERD | V-DB |
+| O4 | Design System (cấu trúc designer-kit) | V-DS |
+| O5 | Figma Output 1 + Output 2 (cách vẽ của requirement-to-flow) | recheck bbox |
+| O6 | docx tổng hợp | V3 · V5 |
+| O7 | Bug list Medium–High (tuỳ chọn) | V8 |
 
-> **O1-INV không phải deliverable cho khách/user.** Đây là bộ nhớ dài hạn của agent: gate script đọc vào, Output 2 lấy nguồn ra, lần chạy sau đọc lại để làm tiếp. Không đưa vào README hay hướng dẫn sử dụng. Schema: [`inventory-spec.md`](.claude/sys-agent/inventory-spec.md).
+**Output Luồng 2** → `outputs/ver<N>_<DDMMYY>_CR-<id>-<slug>/`: `CR-<id>_Impact.xlsx` (6 trục) · `CR-<id>_Summary.md` · Figma view CR mới. Gate V-CR.
+
+`_internal/inventory.xlsx` trong mỗi version = bộ nhớ máy đọc của agent (schema: [`inventory-spec.md`](.claude/sys-agent/inventory-spec.md)). Không phải deliverable, không nhắc trong tài liệu cho user.
 
 ---
 
@@ -38,24 +39,26 @@ Không có nguồn nào cả → agent không chạy được. Có ít nhất 1 
 .claude/
 ├── agents/system-analyst.md          ← canonical workflow (sửa quy trình thì sửa file này)
 ├── commands/
-│   ├── analyze-system.md             /analyze-system
-│   ├── basic-design.md               /basic-design
-│   └── bug-list.md                   /bug-list
+│   ├── analyze-system.md             /analyze-system   (Luồng 1)
+│   └── change-request.md             /change-request   (Luồng 2)
 ├── sys-agent/
-│   ├── preflight-questions.md        G-R · G0-G14: wording + xử lý từng câu trả lời
-│   ├── source-rules.md               RE1-RE4: nguồn nào cho phép kết luận gì
-│   ├── evidence-ledger.md            xương sống chống bịa
-│   ├── inventory-spec.md             schema 7 sheet (hợp đồng với script)
-│   ├── versioning.md                 snapshot + resume
-│   ├── basic-design/
-│   │   └── workbook-structure.md     map cell master workbook (copy từ requirement-to-flow)
-│   └── outputs/
-│       ├── output-1-highlevel.md
-│       ├── output-2a-basic-design.md
-│       └── output-2b-bug-list.md
-└── skills/system-analyst/
-    ├── SKILL.md                      chỉ mục script
-    └── scripts/                      recon · render · 6 gate · 2 self-test
+│   ├── preflight-questions.md        G-R · P0–P11 · G9 · G10
+│   ├── flow-2-change-request.md      Luồng 2: nhận CR, 6 trục impact, Figma view CR
+│   ├── versioning.md                 folder ver<N>_<DDMMYY>_<slug>, README, run-log
+│   ├── source-rules.md · evidence-ledger.md · inventory-spec.md
+│   ├── outputs/o1-screens.md … o7-bug-list.md
+│   ├── basic-design/workbook-structure.md      (copy từ requirement-to-flow)
+│   ├── design-system-template/                 (copy từ designer-kit)
+│   └── figma/                                  (copy từ requirement-to-flow)
+├── skills/
+│   ├── system-analyst/               SKILL.md + scripts/ (recon · render · gate · self-test)
+│   └── ba-figma-output/              (copy từ requirement-to-flow) quy tắc vẽ Figma
+├── rules/                            DATA-PRIVACY · SECURITY · RELIABILITY · POLICY
+├── hooks/detect-pii.js               H06 — chặn PII/credential trước khi ghi / đẩy lên Figma
+├── config/pii-patterns.json
+└── settings.json                     nối H06 vào PreToolUse
+docs/                                 hướng dẫn sử dụng (docx)
+templates/                            sample_basic_design.xlsx · high-level-template.docx
 ```
 
 ---
@@ -64,20 +67,23 @@ Không có nguồn nào cả → agent không chạy được. Có ít nhất 1 
 
 | Loại | Ký hiệu | Công cụ | Nguyên tắc |
 |---|---|---|---|
-| **Hỏi người** | G-R · G0–G14 | `AskUserQuestion` | Cấm in text rồi tự suy ra câu trả lời |
-| **Máy chấm** | V1–V10 | script trong `skills/system-analyst/scripts/` | Cấm chấm bằng mắt. Script không chạy được → `❌ Blocked` |
-
-Chi tiết: [`preflight-questions.md`](.claude/sys-agent/preflight-questions.md) và bảng gate trong [`system-analyst.md`](.claude/agents/system-analyst.md).
+| **Hỏi người** | G-R · P0–P11 · G9 · G10 · CR-0…CR-2 | `AskUserQuestion` | Cấm in text rồi tự suy ra câu trả lời |
+| **Máy chấm** | S1 · V1–V9 · V-BD · V-API · V-DB · V-DS · V-CR | script trong `skills/system-analyst/scripts/` | Cấm chấm bằng mắt. Script không chạy được → `❌ Blocked` |
 
 ---
 
-## Quan hệ với `requirement-to-flow`
+## Quan hệ với kit khác
 
-| | requirement-to-flow | system-to-doc |
-|---|---|---|
-| Chiều | requirement → tài liệu → hệ thống | hệ thống → tài liệu |
-| Loại tài liệu | TO-BE | AS-IS |
-| Nguồn sự thật | con người nói ra | hiện vật quan sát được |
-| Chống sai | Source Register + R1–R8 | Evidence Ledger + RE1–RE4 |
+| | requirement-to-flow | system-to-doc | designer-kit |
+|---|---|---|---|
+| Chiều | requirement → tài liệu (TO-BE) | hệ thống → tài liệu (AS-IS) + impact CR | prototype → Figma |
+| Chống sai | Source Register + R1–R8 | Evidence Ledger + RE1–RE4 | DS intake D1–D8 |
 
-**Phần dùng chung đã copy sang (self-contained):** `verify-basic-design.py` · `bd_styles.py` · `selftest-basic-design.py` · `workbook-structure.md`, đều mang header `SOURCE: ... @ 447770e`. Sửa logic chung thì **sửa cả hai nơi**.
+**Phần copy self-contained** (file `.md`/`.py` mang header `SOURCE: …`; hook/config/settings copy nguyên — sửa logic chung thì **sửa cả hai nơi**):
+
+| Từ | Sang |
+|---|---|
+| requirement-to-flow `scripts/{verify-basic-design,bd_styles,selftest-basic-design}.py` · `basic-design/workbook-structure.md` | `skills/system-analyst/scripts/` · `sys-agent/basic-design/` |
+| requirement-to-flow `skills/ba-figma-output/` · `ba-agent/figma-outputs/{output-1-flow,output-2-screen-flow,shared-rules,code-patterns}.md` · `ba-agent/{granularity-principles,recheck}.md` | `skills/ba-figma-output/` · `sys-agent/figma/` |
+| requirement-to-flow `rules/` · `hooks/detect-pii.js` · `config/pii-patterns.json` · `settings.json` | cùng đường dẫn |
+| designer-kit `designer-agent/design-system-template/` | `sys-agent/design-system-template/` |

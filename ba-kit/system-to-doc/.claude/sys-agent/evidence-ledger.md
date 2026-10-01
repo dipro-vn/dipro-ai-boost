@@ -16,17 +16,17 @@
 ## 2. Cấu trúc thư mục
 
 ```
-<OUT>/
+outputs/ver<N>_<DDMMYY>_<slug>/_internal/
 ├── evidence/
 │   ├── EV-0001.png          screenshot man dang nhap
 │   ├── EV-0002.har          network trace
 │   ├── EV-0003.json         console log
 │   └── ...
 ├── recon/
-│   ├── crawl/               output cua crawl-site.js
-│   ├── code/                output cua scan-repo.py
+│   ├── crawl/<WEB-xx>/      output cua crawl-site.js
+│   ├── code/<REPO-xx>/      output cua scan-repo.py
 │   └── db/                  output cua read-schema.py
-└── 01_Inventory_<system>_v<N>.xlsx   ← sheet 05_Evidence tro toi evidence/
+└── inventory.xlsx       ← sheet 05_Evidence tro toi evidence/
 ```
 
 ---
@@ -38,7 +38,7 @@
 | `screenshot` | URL đầy đủ | `evidence/EV-xxxx.png` | Màn tồn tại, item nhìn thấy, state |
 | `har` | URL đầy đủ | `evidence/EV-xxxx.har` | Request/response thật, mã lỗi |
 | `console-log` | URL đầy đủ | `evidence/EV-xxxx.json` | Lỗi JS (input cho Bug List) |
-| `code-ref` | `src/a/b.ts#L88-L104` | — | Rule, validation, job, integration |
+| `code-ref` | `REPO-01:src/a/b.ts#L88-L104` | — | Rule, validation, job, integration |
 | `db-query` | `orders.status` hoặc câu SQL | — | Cấu trúc DB, tính toàn vẹn dữ liệu |
 | `doc-quote` | `仕様書.pdf § 3.2 (p.12)` | — | Điều khách hàng đã viết ra |
 
@@ -71,7 +71,7 @@
 Kiểm tra:
 ```bash
 python3 .claude/skills/system-analyst/scripts/verify-evidence.py \
-    <inventory.xlsx> --root <OUT> --code-root <repo> --out <OUT>/gate-v1.md
+    $I/inventory.xlsx --root $I --out $I/gates/v1.md      # $I = outputs/ver<N>_.../_internal
 ```
 
 ---

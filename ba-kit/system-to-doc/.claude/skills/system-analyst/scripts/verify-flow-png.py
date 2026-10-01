@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""GATE V5 — so do flow tong quan (chuong 4).
+"""GATE V5 — so do flow tong quan (chuong 7 cua Overview O6).
 
   python3 verify-flow-png.py <flow.json> --inventory <inventory.xlsx> [--png <flow.png>] [--out report.md]
 
 Khong OCR anh. Thay vao do kiem **nguon sinh ra anh** (flow.json): moi node phai tro
-ve mot Function ID / Screen ID / bang DB CO THAT trong inventory. Node khong tro ve dau
+ve mot F-/SC-/API-/EXT-/WEB- hoac bang DB CO THAT trong inventory. Node khong tro ve dau
 = node bia ra -> FAIL.
 
 Schema flow.json:
@@ -14,8 +14,9 @@ Schema flow.json:
   "edges": [{"from":"n1","to":"n2","label":""}],
   "explanation": ["1. User truy cap Web Application.", "..."]
 }
-kind ∈ actor · screen · api · db · external · batch
-ref  : F-xxx | SC-xxx | table:<ten bang> | "" (chi cho phep voi kind=actor/external)
+kind ∈ actor · site · screen · api · db · external · batch
+ref  : F-xxx | SC-xxx | API-xxx | EXT-xxx | WEB-xx | table:<ten bang>
+       | "" (chi cho phep voi kind=actor/external)
 """
 import argparse
 import json
@@ -25,7 +26,10 @@ import sys
 import inv_schema as S
 from gate_report import Gate
 
-KINDS = ["actor", "screen", "api", "db", "external", "batch"]
+KINDS = ["actor", "site", "screen", "api", "db", "external", "batch"]
+PREFIX_SHEET = [("F-", "01_Function", "Function ID"), ("SC-", "02_Screen", "Screen ID"),
+                ("API-", "07_API", "API ID"), ("EXT-", "09_Integration", "EXT ID"),
+                ("WEB-", "10_Site", "Site ID")]
 REF_OPTIONAL = ["actor", "external"]
 
 
@@ -46,8 +50,8 @@ def main():
     expl = flow.get("explanation", [])
     ids = [n.get("id") for n in nodes]
 
-    fset = {r.get("Function ID", "") for r in data["01_Function"]}
-    sset = {r.get("Screen ID", "") for r in data["02_Screen"]}
+    known = {p: {r.get(col, "") for r in data[sheet]} for p, sheet, col in PREFIX_SHEET}
+    sheet_of = {p: sheet for p, sheet, _ in PREFIX_SHEET}
     tset = {r.get("Table", "") for r in data["03_DB_Tables"]}
 
     g.check(1, "Co it nhat 1 node", [] if nodes else ["flow.json khong co node"])
@@ -66,19 +70,17 @@ def main():
             if kind not in REF_OPTIONAL:
                 bad_ref.append("%s (%s) thieu ref" % (n.get("id"), kind))
             continue
-        if ref.startswith("F-"):
-            if ref not in fset:
-                bad_ref.append("%s -> %s khong co trong 01_Function" % (n.get("id"), ref))
-        elif ref.startswith("SC-"):
-            if ref not in sset:
-                bad_ref.append("%s -> %s khong co trong 02_Screen" % (n.get("id"), ref))
+        prefix = next((p for p in known if ref.startswith(p)), None)
+        if prefix:
+            if ref not in known[prefix]:
+                bad_ref.append("%s -> %s khong co trong %s" % (n.get("id"), ref, sheet_of[prefix]))
         elif ref.startswith("table:"):
             t = ref.split(":", 1)[1]
             if t not in tset:
                 bad_ref.append("%s -> bang %s khong co trong 03_DB_Tables" % (n.get("id"), t))
         else:
             bad_ref.append("%s ref=%r sai dinh dang" % (n.get("id"), ref))
-    g.check(4, "Moi node tro ve Function/Screen/Table co that (khong bia node)", bad_ref)
+    g.check(4, "Moi node tro ve F/SC/API/EXT/WEB/table co that (khong bia node)", bad_ref)
 
     # 5 — edge tro toi node co that
     idset = set(ids)
@@ -91,10 +93,10 @@ def main():
     g.check(6, "Khong node mo coi (khong noi voi node nao)",
             [i for i in ids if i not in touched] if len(ids) > 1 else [])
 
-    # 7 — dien giai 4.1 phu het node
+    # 7 — dien giai (chuong 7) phu het node
     text = "\n".join(expl).lower()
-    g.check(7, "Muc 4.1 co dien giai", [] if expl else ["explanation rong"])
-    g.check(8, "Moi node duoc nhac trong dien giai 4.1",
+    g.check(7, "Flow co dien giai", [] if expl else ["explanation rong"])
+    g.check(8, "Moi node duoc nhac trong dien giai",
             [n.get("label") for n in nodes
              if (n.get("label") or "").lower() not in text])
 

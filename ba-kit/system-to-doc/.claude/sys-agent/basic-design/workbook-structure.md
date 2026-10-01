@@ -1,7 +1,7 @@
 # Ba Agent — Basic Design Workbook Structure (map thật của master workbook)
 
 > **SOURCE:** `ba-kit/requirement-to-flow/.claude/ba-agent/basic-design/workbook-structure.md` @ 447770e — copy self-contained cho kit `system-to-doc`. Khi master workbook cua cong ty doi, sua CA HAI noi.
-> Khac biet cua kit nay (AS-IS thay vi TO-BE) nam o `../outputs/output-2a-basic-design.md`.
+> Khác biệt của kit này (AS-IS thay vì TO-BE, 1 workbook / website) nằm ở `../outputs/o1-screens.md`. Ở kit này **"Quality Gate O5" = gate V-BD** (`verify-basic-design.py --asis`).
 
 > **Nguồn:** đọc trực tiếp từ `sample/sample_basic_design.xlsx` ngày 23/09/2026 bằng `openpyxl`.
 > Mọi con số dòng/cột dưới đây là **thật**, không phải mô tả từ tài liệu kiến trúc. Khi master workbook của dự án khác file mẫu, BA **PHẢI đọc lại workbook thật** và cập nhật mapping trước khi ghi — KHÔNG được ghi theo trí nhớ file mẫu.
@@ -74,7 +74,7 @@ Quy ước: **ảnh UI nằm cột A–F bên trái, bảng item nằm cột H�
 | Chiều rộng ảnh tối đa cho phép | **840 px** (chừa lề 14 px) |
 | Chiều cao ảnh tối đa | **900 px** |
 
-> ⚠️ **Lỗi có thật trong sheet mẫu gốc:** 2 ảnh của `Login_Sample` đều là `1521 px` chèn vào vùng 854 px → **tràn ~670 px sang cột H–R, đè lên bảng item**. Gate check 13 bắt lỗi này. Quy tắc resize đầy đủ: `output-5-basic-design.md` §1.1d.
+> ⚠️ **Lỗi có thật trong sheet mẫu gốc:** 2 ảnh của `Login_Sample` đều là `1521 px` chèn vào vùng 854 px → **tràn ~670 px sang cột H–R, đè lên bảng item**. Gate check 13 bắt lỗi này. Quy tắc resize: ảnh ≤ 840×900 px, anchor cột `A` (`../outputs/o1-screens.md` §4 bước 6).
 
 ### 2.4 Bảng item (cột H–R)
 
@@ -195,7 +195,7 @@ Nếu screen có > 11 item → **copy format của 1 row chuẩn xuống**, khô
 
 > ⛔ **Tuyệt đối không lấy style bằng cách copy từ row liền trước.** Khi master workbook sạch (chưa có row dữ liệu nào), cách đó rơi về copy từ **header** — data row thành chữ trắng nền xanh, hoặc mất hết đường kẻ. Đây là lỗi đã xảy ra thật.
 >
-> Dùng module `.claude/skills/business-analyst/scripts/bd_styles.py`.
+> Dùng module `.claude/skills/system-analyst/scripts/bd_styles.py`.
 
 | Loại hàng | Fill | Font | Border | Align | Dùng ở |
 |---|---|---|---|---|---|

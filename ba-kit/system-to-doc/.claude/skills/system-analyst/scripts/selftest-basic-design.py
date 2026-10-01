@@ -4,7 +4,10 @@
 """Self-test cho Quality Gate O5 — chung minh gate KHONG pass rong.
 
 Cach dung:
-    python3 selftest-basic-design.py <workbook-da-PASS.xlsx> [--before <backup.xlsx>]
+    python3 selftest-basic-design.py <workbook-da-PASS.xlsx> [--before <backup.xlsx>] [--asis]
+
+--asis: gate chay voi --asis + them 1 case cho check 16 (AS-IS, kit system-to-doc).
+Case nao thieu dieu kien tien quyet (vd workbook AS-IS khong co error) -> SKIP, khong tinh la loi.
 
 Lay 1 workbook da PASS gate, tiem tung loi da biet vao ban copy, roi xac nhan
 gate bat dung check ky vong. Gate PASS ma khong co self-test nay = chua chung
@@ -52,12 +55,23 @@ def first_screen_sheet(wb):
 
 
 # moi case: (ten, check ky vong, ham tiem loi)
+# ham tiem loi tra ve chuoi ly do khi thieu dieu kien -> SKIP (khong tinh la loi)
 def _no_border(wb):
-    for c in range(1, 11):
-        wb["Screen Error message"].cell(5, c).border = Border()
+    if "Screen Error message" not in wb.sheetnames:
+        return "Screen Error message"
+    es = wb["Screen Error message"]
+    for r in range(_gate.CATALOG_HEADER_ROW + 1, es.max_row + 1):
+        v = es.cell(r, 1).value
+        if v and not str(v).startswith(("🔴", "🟡", "🔵", "🟢")):
+            for c in range(1, 11):
+                es.cell(r, c).border = Border()
+            return None
+    return "row trong Screen Error message"
 
 
 def _header_fill(wb):
+    if "Screen Index" not in wb.sheetnames or wb["Screen Index"].cell(6, 2).value is None:
+        return "row trong Screen Index"
     for c in range(1, 13):
         wb["Screen Index"].cell(6, c).fill = PatternFill("solid", fgColor="FF1F4E78")
 
@@ -71,22 +85,28 @@ def _drop_err_table(wb):
                 unmerge_at(ws, rr)
                 for c in range(8, 19):
                     ws.cell(rr, c).value = None
-            return
+            return None
+    return f"bang ERROR SCENARIOS o {ws.title}"
 
 
 def _touch_sample(wb):
+    if "Sample" not in wb.sheetnames:
+        return "sheet Sample"
     wb["Sample"]["B1"] = "BI GHI BAY"
 
 
 def _blow_up_image(wb):
     ws = first_screen_sheet(wb)
-    if ws and ws._images:
-        im = ws._images[0]
-        im.anchor.ext.cx = int(1600 * 9525)
-        im.anchor.ext.cy = int(1200 * 9525)
+    if not (ws and ws._images):
+        return "anh UI o screen sheet dau"
+    im = ws._images[0]
+    im.anchor.ext.cx = int(1600 * 9525)
+    im.anchor.ext.cy = int(1200 * 9525)
 
 
 def _skip_chg_id(wb):
+    if "Change History" not in wb.sheetnames or wb["Change History"].cell(6, 1).value is None:
+        return "row trong Change History"
     h = wb["Change History"]
     r = 6
     while h.cell(r, 1).value is not None:
@@ -95,11 +115,31 @@ def _skip_chg_id(wb):
 
 
 def _drop_index_row(wb):
+    if "Screen Index" not in wb.sheetnames or wb["Screen Index"].cell(6, 2).value is None:
+        return "row trong Screen Index"
     wb["Screen Index"].delete_rows(6)
 
 
 def _ghost_code(wb):
     first_screen_sheet(wb)["Q9"] = "loi -> E_ZZ_999"
+
+
+def _strip_ev(wb):
+    # xoa EV o cot R cua item data row dau tien (sau header H="#")
+    ws = first_screen_sheet(wb)
+    hdr = next((r for r in range(1, 41)
+                if str(ws.cell(r, 8).value or "").strip() == "#"), None)
+    if hdr is None:
+        return f"header bang item o {ws.title}"
+    for r in range(hdr + 1, ws.max_row + 1):
+        if "ERROR SCENARIOS" in str(ws.cell(r, 8).value or ""):
+            break
+        name = str(ws.cell(r, 9).value or "") + str(ws.cell(r, 10).value or "")
+        body = str(ws.cell(r, 16).value or "") + str(ws.cell(r, 17).value or "")
+        if name.strip() and body.strip():
+            ws.cell(r, 18).value = "xem man hinh"
+            return None
+    return f"item data row co mo ta o {ws.title}"
 
 
 CASES = [
@@ -112,12 +152,15 @@ CASES = [
     ("xoa row Screen Index", 5, _drop_index_row),
     ("tro Message Code ma", 6, _ghost_code),
 ]
+CASE_ASIS = ("xoa EV o cot R item dau", 16, _strip_ev)
 
 
-def run_gate(path, before, screens):
+def run_gate(path, before, screens, asis=False):
     cmd = [sys.executable, GATE, path, "--expect-screens", screens]
     if before:
         cmd += ["--before", before]
+    if asis:
+        cmd.append("--asis")
     p = subprocess.run(cmd, capture_output=True, text=True)
     out = p.stdout + p.stderr
     if "Traceback" in out:
@@ -136,30 +179,37 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("workbook")
     ap.add_argument("--before")
+    ap.add_argument("--asis", action="store_true",
+                    help="gate chay --asis + them case check 16")
     args = ap.parse_args()
+    cases = CASES + ([CASE_ASIS] if args.asis else [])
 
     wb = openpyxl.load_workbook(args.workbook)
     screens = ",".join(str(ws["F1"].value) for ws in screen_sheets(wb))
     if not screens:
         sys.exit("FAIL: workbook khong co working sheet nao")
 
-    code, fails = run_gate(args.workbook, args.before, screens)
+    code, fails = run_gate(args.workbook, args.before, screens, args.asis)
     print(f"{'BASELINE (khong tiem loi)':34} exit={code} fails={fails or '[]'}")
     if code != 0:
         sys.exit("FAIL: workbook dau vao phai PASS gate truoc khi self-test")
 
     tmp = tempfile.mkdtemp()
-    bad = 0
+    bad = skip = 0
     print()
     print(f"{'LOI DA TIEM':34} {'KY VONG':8} {'BAT DUOC':12} KQ")
     print("-" * 74)
-    for name, want, inject in CASES:
+    for name, want, inject in cases:
         p = os.path.join(tmp, f"t_{want}_{abs(hash(name)) % 9999}.xlsx")
         shutil.copy(args.workbook, p)
         w = openpyxl.load_workbook(p)
-        inject(w)
+        why = inject(w)
+        if why:
+            skip += 1
+            print(f"{name:34} #{want:<7} {'-':12} SKIP — workbook khong co {why}")
+            continue
         w.save(p)
-        code, fails = run_gate(p, args.before, screens)
+        code, fails = run_gate(p, args.before, screens, args.asis)
         ok = code == 1 and want in fails
         if not ok:
             bad += 1
@@ -167,8 +217,8 @@ def main():
               f"{'OK' if ok else 'THAT BAI'}")
     shutil.rmtree(tmp, ignore_errors=True)
     print()
-    n = len(CASES)
-    print(f"{n - bad}/{n} case bat dung check ky vong")
+    n = len(cases) - skip
+    print(f"{n - bad}/{n} case bat dung check ky vong" + (f" ({skip} SKIP)" if skip else ""))
     sys.exit(1 if bad else 0)
 
 
