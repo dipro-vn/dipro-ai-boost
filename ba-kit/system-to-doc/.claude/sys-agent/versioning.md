@@ -39,7 +39,7 @@ ver1_011026_baseline/
 ├── 02_API/API_Doc_<sys>_ver1.xlsx                O2
 ├── 02_API/CodeMap_<sys>_ver1.png · .md
 ├── 03_DB/DB_Doc_<sys>_ver1.xlsx · ERD_<sys>_ver1.png   O3
-├── 04_DesignSystem/project/ · link.md             O4 (format Artifact type Design System)
+├── 04_DesignSystem/STATUS.md · project/           O4 (chuẩn chung với designer-kit)
 ├── 05_Figma/figma-links.md                       O5
 ├── 06_Overview/Overview_<sys>_ver1.docx          O6
 ├── 07_BugList/BugList_<sys>_ver1.xlsx            O7 (tuỳ chọn)

@@ -227,7 +227,10 @@ def build_outputs(p):
     os.makedirs(os.path.join(v, "04_DesignSystem", "project"), exist_ok=True)   # O4 = format artifact Design System
     json.dump({"v": 3, "layout": "files", "title": "Fixture"},
               open(os.path.join(v, "04_DesignSystem", "project", "design-system.json"), "w"))
-    open(os.path.join(v, "04_DesignSystem", "link.md"), "w").write("https://claude.ai/artifact/FixtureDs01\n")
+    open(os.path.join(v, "04_DesignSystem", "STATUS.md"), "w", encoding="utf8").write(
+        "# Design System — Fixture\n\n- Trạng thái: DRAFT\n- Artifact: https://claude.ai/artifact/FixtureDs01\n"
+        "- Nguồn: website WEB-01\n\n## Thiếu (TBD)\n\n| D# | Token / component | Ghi chú |\n|---|---|---|\n"
+        "| D1 | primary-hover | khong quan sat duoc |\n| D6 | Toast | khong quan sat duoc |\n")
     os.makedirs(os.path.join(v, "05_Figma"), exist_ok=True)
     open(os.path.join(v, "05_Figma", "figma-links.md"), "w").write(
         "- SC-001 https://www.figma.com/design/abc/F?node-id=1-2\n"
@@ -520,6 +523,10 @@ def main():
     for gate, (rc, fails) in run_gates(good).items():
         results.append(("baseline", "Fixture dung -> %s PASS" % gate, not fails,
                         "" if not fails else "FAIL o check %s" % fails))
+    # O4 trong index: link + trang thai + so TBD doc tu 04_DesignSystem/STATUS.md
+    o4 = next((e for e in json.load(open(good["index"], encoding="utf8"))["outputs"] if e["id"] == "O4"), {})
+    ok = o4.get("link") == "https://claude.ai/artifact/FixtureDs01" and "2 TBD · DRAFT" in str(o4.get("count"))
+    results.append(("index", "O4 doc link/trang thai/TBD tu STATUS.md", ok, "O4=%s" % {k: o4.get(k) for k in ("link", "count")}))
 
     # 1 — tung ca tiem loi (repo gia nam trong thu muc fixture -> sua Path theo ban copy)
     for i, (gate, name, expect, fn) in enumerate(CASES):

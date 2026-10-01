@@ -19,7 +19,8 @@
  *                                        trang HTTP >= 400: status + errorPage:true (giu screenshot lam bang chung bug)
  *   recon/crawl/<site>/styles.json       mau computed-style, tru trang loi (input cho extract-design-tokens.py):
  *                                        + components (nut/input/bang/nav/card/badge/tab...: count + <=3 mau style),
- *                                        typeHist (to hop font), valueFreq (shadow/radius/padding/gap), fontFaces
+ *                                        typeHist (to hop font), valueFreq (shadow/radius/padding/gap/maxWidth), fontFaces,
+ *                                        boxW/boxH (kich thuoc that) moi mau, bang: headerH/rowH
  *   recon/design/assets/<site>/          (--assets on, mac dinh) logos/ (logo + favicon, tai bang GET)
  *                                        icons/icon-<hash8>.svg (svg inline <=64px) · assets.json (file -> trang + evId)
  *                                        KHONG luu anh noi dung (co the chua du lieu ca nhan)
@@ -334,6 +335,8 @@ function hrefPath(u) {
           const o = { bg: s.backgroundColor, color: s.color, borderColor: s.borderTopColor, borderWidth: s.borderTopWidth,
             borderRadius: s.borderRadius, padding: s.padding, fontSize: s.fontSize, fontWeight: s.fontWeight,
             lineHeight: s.lineHeight, fontFamily: s.fontFamily, boxShadow: s.boxShadow, height: s.height, gap: s.gap };
+          const r = el.getBoundingClientRect();   // kich thuoc that (border-box) cho token size
+          o.boxW = Math.round(r.width * 100) / 100; o.boxH = Math.round(r.height * 100) / 100;
           if (s.borderTopStyle === 'none') o.borderWidth = '0px';
           if (withLabel) o.label = T(labelOf(el) || el.innerText, 30);
           return o;
@@ -367,7 +370,7 @@ function hrefPath(u) {
         const scan = Array.from(document.body.querySelectorAll('*')).filter(visible).slice(0, 1500);
         const SKIP_CARD = /^(HTML|BODY|TABLE|THEAD|TBODY|TR|TD|TH|NAV|HEADER|BUTTON|INPUT|SELECT|TEXTAREA|A|UL|OL|LI|IMG|SVG)$/;
         const cards = scan.filter(el => {
-          if (SKIP_CARD.test(el.tagName.toUpperCase()) || el.children.length < 2) return false;
+          if (SKIP_CARD.test(el.tagName.toUpperCase()) || el.children.length < 2 || el.matches('[role=dialog], dialog')) return false;
           const s = cs(el);
           return (s.boxShadow && s.boxShadow !== 'none') ||
             (parseFloat(s.borderTopWidth) > 0 && s.borderTopStyle !== 'none' && parseFloat(s.borderTopLeftRadius) > 0);
@@ -385,6 +388,7 @@ function hrefPath(u) {
         const comps = {
           buttons: Object.assign(group(btnAll, true, btnVariant), { variants }),
           inputs: group(Q('input:not([type=hidden]):not([type=submit]):not([type=button]):not([type=checkbox]):not([type=radio]):not([type=image]),select,textarea'), false),
+          select: group(Q('select'), false),
           checkbox: group(Q('input[type=checkbox]:not([role=switch])'), false),
           radio: group(Q('input[type=radio]'), false),
           switch: group(Q('[role=switch], .switch, .toggle, .form-switch input'), false),
@@ -413,13 +417,15 @@ function hrefPath(u) {
           const tds = td ? cs(td) : null;
           const hb = [th, th && th.querySelector('tr'), t.querySelector('th')].filter(Boolean)
             .map(e => cs(e).backgroundColor).find(v => !TRANSP(v));
-          return { headerBg: hb || null,
+          const tr = t.querySelector('tbody tr') || (td && td.parentElement);
+          const hh = th ? th.getBoundingClientRect().height : 0, rh = tr ? tr.getBoundingClientRect().height : 0;
+          return { headerBg: hb || null, headerH: Math.round(hh * 100) / 100 || null, rowH: Math.round(rh * 100) / 100 || null,
             rowBorder: tds ? [tds.borderBottomWidth, tds.borderBottomStyle, tds.borderBottomColor].join(' ') : null,
             borderCollapse: cs(t).borderCollapse };
         }) };
 
         // to hop chu (font/co/line-height/weight/mau) cua phan tu co text truc tiep — chi dem, khong lay text
-        const typeHist = {}, valueFreq = { boxShadow: {}, borderRadius: {}, padding: {}, gap: {} };
+        const typeHist = {}, valueFreq = { boxShadow: {}, borderRadius: {}, padding: {}, gap: {}, maxWidth: {} };
         for (const el of scan) {
           const s = cs(el);
           if (Array.from(el.childNodes).some(n => n.nodeType === 3 && n.textContent.trim())) {
@@ -434,6 +440,7 @@ function hrefPath(u) {
           if (s.borderRadius && !/^0px( 0px)*$/.test(s.borderRadius)) inc(valueFreq.borderRadius, s.borderRadius);
           if (s.padding && !/^0px( 0px)*$/.test(s.padding)) inc(valueFreq.padding, s.padding);
           if (s.gap && !/^(normal|0px)( (normal|0px))?$/.test(s.gap)) inc(valueFreq.gap, s.gap);
+          if (/^[\d.]+px$/.test(s.maxWidth) && el.children.length > 1) inc(valueFreq.maxWidth, s.maxWidth);
         }
         const typeTop = Object.values(typeHist).sort((a, b) => b.count - a.count).slice(0, 60);
 

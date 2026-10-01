@@ -4,7 +4,8 @@
   python3 build-version-index.py <ver folder> [--skip "O7=user khong yeu cau"] [--skip "O5=..."]
 
 Tu nhan dien output theo duong dan chuan (O1..O7, hoac output CR neu co CR-*_Impact.xlsx; O4 =
-04_DesignSystem/project/design-system.json, link artifact claude.ai lay tu 04_DesignSystem/link.md),
+04_DesignSystem/project/design-system.json; link artifact claude.ai + trang thai + so TBD lay tu
+04_DesignSystem/STATUS.md dong "- Artifact:" / "- Trạng thái:" / bang "## Thiếu (TBD)"),
 dem so luong, doc ket qua gate tu _internal/gates/*.md (dong "N checks · X PASS · Y FAIL · Z WARN").
 index.json la dau vao cua render-overview-docx.py (chuong 2). Chay lai sau moi gate.
 README KHONG nhac toi _internal/ (artifact noi bo).
@@ -118,7 +119,7 @@ def entry(oid, name, content, files, count, exists, **kw):
 
 
 def ds_summary(ver):
-    """O4 = 04_DesignSystem/project/design-system.json (+ link.md neu da publish len claude.ai)."""
+    """O4 = 04_DesignSystem/project/design-system.json + STATUS.md (link artifact, trang thai, so TBD)."""
     ds = os.path.join(ver, "04_DesignSystem")
     proj = os.path.join(ds, "project")
     exists = os.path.isfile(os.path.join(proj, "design-system.json"))
@@ -142,12 +143,27 @@ def ds_summary(ver):
         if not n_icon and os.path.isdir(os.path.join(proj, "assets", "Icons")):
             n_icon = sum(1 for f in os.listdir(os.path.join(proj, "assets", "Icons"))
                          if not f.lower().endswith((".md", ".json")))
-    lk = os.path.join(ds, "link.md")
-    m = ARTIFACT_RX.search(open(lk, encoding="utf8").read()) if os.path.isfile(lk) else None
-    link = m.group(0) if m else ""
-    return {"exists": exists, "link": link,
-            "files": ["04_DesignSystem/project/"] + ([link] if link else []),
-            "count": "%d màu · %d style chữ · %d component · %d icon" % (n_col, n_sty, n_comp, n_icon),
+    link, status, n_tbd = "", DASH, 0
+    sp = os.path.join(ds, "STATUS.md")
+    if os.path.isfile(sp):
+        sec = ""
+        for line in open(sp, encoding="utf8").read().splitlines():
+            m = re.match(r"^\s*-\s*(Artifact|Trạng thái|Trang thai)\s*:\s*(.*)$", line)
+            if m and m.group(1) == "Artifact":
+                a = ARTIFACT_RX.search(m.group(2))
+                link = a.group(0) if a else link
+            elif m:
+                status = m.group(2).strip() or DASH
+            if line.startswith("## "):
+                sec = line[3:].strip()
+            elif sec.startswith(("Thiếu", "Thieu")) and line.strip().startswith("|"):
+                cells = [c.strip() for c in line.strip().strip("|").split("|")]
+                if len(cells) >= 2 and not set(cells[0]) <= set("-: ") and not cells[1].startswith("Token"):
+                    n_tbd += 1
+    return {"exists": exists, "link": link, "status": status,
+            "files": ["04_DesignSystem/project/", "04_DesignSystem/STATUS.md"] + ([link] if link else []),
+            "count": "%d màu · %d style chữ · %d component · %d icon · %d TBD · %s" % (
+                n_col, n_sty, n_comp, n_icon, n_tbd, status),
             "count_value": n_col}
 
 
@@ -200,7 +216,7 @@ def baseline_outputs(ver, data, meta, sysname, n, gates, skips):
     ds = ds_summary(ver)
     outs.append(finish(entry(
         "O4", "Design System", "Token, kiểu chữ, component, icon (format artifact Design System)",
-        ds["files"], ds["count"], ds["exists"], count_value=ds["count_value"],
+        ds["files"], ds["count"], ds["exists"], count_value=ds["count_value"], ds_status=ds["status"],
         **({"link": ds["link"]} if ds["link"] else {})), gates, skips))
 
     fl = os.path.join(ver, "05_Figma", "figma-links.md")

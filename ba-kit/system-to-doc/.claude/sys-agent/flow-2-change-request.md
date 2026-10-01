@@ -81,7 +81,7 @@ Mỗi nhãn phải trích **bằng chứng baseline**: ID (`SC-014`, `API-031`�
 
 ### 4.1 Cách lần ra ảnh hưởng (không phải cảm giác)
 
-1. **Điểm chạm trực tiếp:** từ nội dung CR, tìm ID trong baseline inventory (`02_Screen`, `01_Function`, `07_API`, `03/04_DB`, `09_Integration`, `10_Site`) và Design System (`04_DesignSystem/project/README.md` trước, rồi `tokens.json`, `components/<Comp>/README.md`; đã publish → `read` artifact trong `link.md`).
+1. **Điểm chạm trực tiếp:** từ nội dung CR, tìm ID trong baseline inventory (`02_Screen`, `01_Function`, `07_API`, `03/04_DB`, `09_Integration`, `10_Site`) và Design System (`04_DesignSystem/project/README.md` trước, rồi `tokens.json`, `components/<Comp>/README.md`; đã publish → `read` artifact theo dòng `- Artifact:` trong `04_DesignSystem/STATUS.md`; token còn TBD trong `STATUS.md` → mockup cần màu đó phải đưa vào CQ).
 2. **Lan 1–2 bước** theo liên kết đã có trong inventory:
 
 ```

@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
-"""Gate V-DS — O4 Design System dung format artifact "Design System" (project/ kept in files).
+"""Gate V-DS — O4 Design System dung chuan design-system-format.md (= format artifact "Design System").
 
   python3 verify-design-system.py <ver>/04_DesignSystem \
-          --draft <_internal>/recon/design/tokens-draft.json [--figma-used] \
+          --draft <_internal>/recon/design/tokens-draft.json [--figma-used] [--approved-by "<ten nguoi duyet>"] \
           [--published-url https://claude.ai/artifact/<id>] [--out <_internal>/gates/v-ds.md]
 
-Tham so dau = thu muc CHUA project/ (project/design-system.json, tokens.json, README.md, components/...).
-Checks: 1 du file + Cover tran · 2 index design-system.json · 3 grammar tokens.json (format.md) ·
-4 usage that (khong TODO, khong ten obs-) · 5 chong bia (mau/font phai co trong draft; spacing/radius/
-shadow ngoai draft -> WARN) · 6 meta.source co website|figma + synced · 7 README brand book ·
-8 components (README, preview @dsCard, bundle.js, index.d.ts) · 9 cover · 10 assets ·
-11 contrast (WARN) · 12 link artifact da publish (khi co --published-url).
-Mau/font ngoai draft chi WARN khi --figma-used VA tokens.json meta.source chua "figma".
+Tham so dau = thu muc CHUA STATUS.md + project/ (project/design-system.json, tokens.json, README.md, components/...).
+Checks: 1 du file (STATUS.md + project/, Cover tran, khong con _Example) · 2 index design-system.json ·
+3 grammar tokens.json · 4 usage that (khong TODO, khong ten obs-) · 5 chong bia (mau/font phai co trong draft;
+spacing/radius/shadow ngoai draft -> WARN) · 6 meta.source ⊆ figma|screens|docs|code|website + synced ·
+7 README brand book (khong muc "Chua dong bo") · 8 components (README, preview @dsCard, bundle.js, index.d.ts) ·
+9 cover · 10 assets · 11 contrast (WARN) · 12 link artifact trong STATUS.md (khi co --published-url) ·
+13 STATUS.md (muc §8, Trang thai DRAFT|TBD; APPROVED chi khi --approved-by) · 14 token vai tro §3.3 co hoac
+nam trong STATUS.md Thieu (TBD) · 15 type D4 (Heading/Text, >=4 style, sample+usage) · 16 component §5 co hoac TBD.
+Danh sach bat buoc: ds_roles.py. Mau/font ngoai draft chi WARN khi --figma-used VA meta.source chua "figma".
 Exit: 0 PASS · 1 FAIL
 """
 import argparse
@@ -20,9 +22,11 @@ import json
 import os
 import re
 import sys
+import unicodedata
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from gate_report import Gate  # noqa: E402
+import ds_roles as R_  # noqa: E402
 
 NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
 JS_ID_RE = re.compile(r"^[A-Za-z_$][A-Za-z0-9_$]*$")
@@ -44,7 +48,8 @@ TOP_SCALAR = {"name", "version", "meta", "description", "$schema"}
 GENERIC_FONTS = {"sans-serif", "serif", "monospace", "system-ui", "cursive", "fantasy", "ui-sans-serif",
                  "ui-serif", "ui-monospace", "-apple-system", "blinkmacsystemfont", "inherit", "initial",
                  "emoji", "math", "fangsong", "ui-rounded"}
-NON_COMP = {"Cover", "lib", "src"}
+NON_COMP = {"Cover", "lib", "src", "_Example"}
+NOT_SYNCED = re.compile(r"^##+\s*(chua dong bo|not synced)", re.M)
 CAP_OTHER = 60
 
 
@@ -140,6 +145,36 @@ def marker(path):
     return attrs, text
 
 
+def fold(x):
+    """bo dau tieng Viet + thuong (so khop tieu de / nhan)."""
+    x = unicodedata.normalize("NFD", str(x).replace("đ", "d").replace("Đ", "D"))
+    return "".join(c for c in x if not unicodedata.combining(c)).lower().strip()
+
+
+def read_status(path):
+    """-> {lines: {trang thai, artifact, nguon}, heads: [..], tbd: set(ten)} hoac None."""
+    if not os.path.isfile(path):
+        return None
+    text = read(path)
+    lines = {}
+    for raw in text.splitlines():
+        m = re.match(r"^\s*[-*]\s*([^:]{1,40}):\s*(.*)$", raw)
+        if m and fold(m.group(1)) not in lines:
+            lines[fold(m.group(1))] = m.group(2).strip()
+    heads = [fold(h) for h in re.findall(r"^##\s+(.+?)\s*$", text, re.M)]
+    tbd, sec = set(), None
+    for raw in text.splitlines():
+        if raw.startswith("## "):
+            sec = fold(raw[3:])
+            continue
+        if sec and sec.startswith("thieu") and raw.strip().startswith("|"):
+            cells = [c.strip() for c in raw.strip().strip("|").split("|")]
+            if len(cells) < 2 or set(cells[0]) <= set("-: ") or fold(cells[1]).startswith("token"):
+                continue
+            tbd |= set(re.findall(r"[A-Za-z][A-Za-z0-9_.<>-]*", cells[1]))
+    return {"text": text, "lines": lines, "heads": heads, "tbd": tbd}
+
+
 def height_ok(attrs, lo, hi):
     try:
         return lo <= int(str(attrs.get("height"))) <= hi
@@ -153,6 +188,7 @@ def main():
     ap.add_argument("--draft", required=True)
     ap.add_argument("--figma-used", action="store_true")
     ap.add_argument("--published-url")
+    ap.add_argument("--approved-by", help="ten nguoi da duyet (cho phep Trang thai APPROVED)")
     ap.add_argument("--out")
     a = ap.parse_args()
     P = os.path.join(a.ds_dir, "project")
@@ -161,13 +197,21 @@ def main():
     def pj(*x):
         return os.path.join(P, *x)
 
-    # 1. du file + Cover tran
+    # 1. du file + Cover tran + khong con _Example
     req = ["design-system.json", "tokens.json", "README.md", "components/Cover/preview.html"]
     bad = ["thieu project/%s" % f for f in req if not os.path.isfile(pj(f))]
+    stat = read_status(os.path.join(a.ds_dir, "STATUS.md"))
+    if stat is None:
+        bad.append("thieu 04_DesignSystem/STATUS.md (trang thai, link artifact, Thieu TBD — thay link.md)")
     for f in ("README.md", "Cover.d.ts"):
         if os.path.exists(pj("components", "Cover", f)):
             bad.append("components/Cover/%s lam Cover thanh component thuong (giu thu muc tran)" % f)
-    g.check(1, "Du file project/ (design-system.json, tokens.json, README.md, Cover) + Cover tran", bad)
+    if os.path.exists(pj("components", "_Example")):
+        bad.append("con components/_Example/ cua template (xoa truoc khi publish)")
+    g.check(1, "Du file STATUS.md + project/ (design-system.json, tokens.json, README.md, Cover tran, khong _Example)", bad)
+    if os.path.exists(os.path.join(a.ds_dir, "link.md")):
+        g.warn("1w", "link.md la layout cu", "chuyen link vao STATUS.md dong '- Artifact:' roi xoa link.md")
+    tbd = stat["tbd"] if stat else set()
 
     # 2. index
     idx, bad, warn = {}, [], []
@@ -501,13 +545,16 @@ def main():
 
     # 6. meta.source + synced
     bad = []
+    parts = [x.strip().lower() for x in source.split("+")]
     if not source:
         bad.append("thieu meta.source")
-    elif not re.search(r"website|figma", source, re.I):
-        bad.append("meta.source=%r — DS khong duoc dung tu source code mot minh (can website hoac figma)" % source)
+    elif not set(parts) <= R_.SOURCES:
+        bad.append("meta.source=%r — gia tri ngoai %s (noi bang '+')" % (source, "/".join(sorted(R_.SOURCES))))
+    elif not set(parts) & {"website", "figma", "screens"}:
+        bad.append("meta.source=%r — DS khong duoc dung tu code/docs mot minh (can website, figma hoac screens)" % source)
     if not DATE_RE.match(str(meta.get("synced") or "")):
         bad.append("meta.synced phai la ngay YYYY-MM-DD")
-    g.check(6, "meta.source co website hoac figma + meta.synced", bad)
+    g.check(6, "meta.source ⊆ figma/screens/docs/code/website, co website/figma/screens + meta.synced", bad)
 
     # 7. README brand book
     bad, rm = [], ""
@@ -527,9 +574,17 @@ def main():
         ph = sorted({m.group(0) for m in PLACEHOLDER.finditer(rm)})
         if ph:
             bad.append("con placeholder: %s" % ", ".join(ph[:8]))
-    g.check(7, "README brand book (>=3 muc ##, nhac >=5 token, khong TODO)", bad)
+        if NOT_SYNCED.search(fold(rm)):
+            bad.append("co muc 'Chua dong bo / Not synced' — token/component thieu ghi vao STATUS.md ## Thieu (TBD)")
+    g.check(7, "README brand book (>=3 muc ##, nhac >=5 token, khong TODO, khong muc Chua dong bo)", bad)
+    w7 = []
     if rm.lstrip().startswith("# "):
-        g.warn("7w", "README bat dau bang tieu de '# ' (page da hien ten system)", rm.lstrip().split("\n", 1)[0][:60])
+        w7.append("bat dau bang tieu de '# ' (page da hien ten system): %s" % rm.lstrip().split("\n", 1)[0][:60])
+    first = re.search(r"^##\s+(.+)$", rm, re.M)
+    if len(theme_ids) >= 2 and not (first and re.match(r"^\d+\s+portal\s*=\s*\d+\s+theme", fold(first.group(1)))):
+        w7.append("%d theme nhung muc ## dau khong phai '<N> portal = <N> theme'" % len(theme_ids))
+    if w7:
+        g.warn("7w", "README thu tu muc §4", "; ".join(w7))
 
     # 8. components
     bad = []
@@ -575,6 +630,9 @@ def main():
             bad.append("thieu components/index.d.ts")
         else:
             d = read(dts)
+            l1 = next((x.strip() for x in d.splitlines() if x.strip()), "")
+            if not (l1.startswith(("//", "/*")) and ns and ns in l1):
+                g.warn("8w", "index.d.ts dong 1 phai la chu thich namespace + cach doi theme", l1[:80])
             miss = [c for c in comps if not re.search(r"\b%s\b" % re.escape(c), d)]
             if miss:
                 bad.append("component khong co trong index.d.ts: %s" % ", ".join(miss))
@@ -661,10 +719,71 @@ def main():
         bad = []
         if not URL_RE.match(a.published_url.strip()):
             bad.append("URL khong dang https://claude.ai/(code/)artifact/<id>")
-        lk = os.path.join(a.ds_dir, "link.md")
-        if not os.path.isfile(lk) or a.published_url.strip().rstrip("/") not in read(lk):
-            bad.append("04_DesignSystem/link.md khong chua URL")
-        g.check(12, "Link artifact Design System da publish + ghi link.md", bad)
+        art = (stat or {}).get("lines", {}).get("artifact", "")
+        if a.published_url.strip().rstrip("/") not in art:
+            bad.append("STATUS.md dong '- Artifact:' khong chua URL")
+        g.check(12, "Link artifact Design System da publish + ghi STATUS.md '- Artifact:'", bad)
+
+    # 13. STATUS.md (§8)
+    bad = []
+    if stat is None:
+        bad.append("khong co STATUS.md")
+    else:
+        for h in R_.STATUS_HEADINGS:
+            if not any(x.startswith(fold(h)) for x in stat["heads"]):
+                bad.append("thieu muc '## %s'" % h)
+        for k in R_.STATUS_LINES:
+            v = stat["lines"].get(fold(k))
+            if v is None:
+                bad.append("thieu dong '- %s:'" % k)
+            elif not v or re.search(r"<[^>]*>|…", v):
+                bad.append("dong '- %s:' rong / con placeholder" % k)
+        stt = fold(stat["lines"].get("trang thai", "")).upper()
+        if stt.startswith("APPROVED"):
+            if not a.approved_by:
+                bad.append("Trang thai APPROVED nhung khong co --approved-by (agent khong tu duyet)")
+        elif not re.match(r"^(DRAFT|TBD)\b", stt):
+            bad.append("Trang thai phai DRAFT / TBD: D#... / APPROVED YYYY-MM-DD (nhan: %r)" % stt[:30])
+    g.check(13, "STATUS.md dung §8 (muc, Trang thai DRAFT/TBD, Artifact, Nguon)", bad)
+
+    # 14. token vai tro §3.3 (co trong tokens.json hoac ghi TBD)
+    bad = []
+    for d_, names_ in R_.ROLES:
+        miss = [n for n in names_ if n not in names and n not in tbd]
+        if miss:
+            bad.append("%s: %s" % (d_, ", ".join(miss)))
+    for d_, alts in R_.ROLE_ALT:
+        if not any(x in names or x in tbd for x in alts):
+            bad.append("%s: %s" % (d_, " / ".join(alts)))
+    if not any(R_.SPACE_RE.match(n) for n in names) and not any(x.startswith("space") for x in tbd):
+        bad.append("D5: khong co space-<px> nao")
+    d7 = [n for _, ns_ in R_.ROLES if _ == "D7" for n in ns_]
+    if not families.get("size") and not all(n in tbd for n in d7):
+        bad.append("D7: thieu family size")
+    g.check(14, "Token vai tro §3.3 co trong tokens.json hoac ghi STATUS.md ## Thieu (TBD)", bad)
+
+    # 15. type D4
+    bad = []
+    if "sans" not in fam_keys and not tbd & {"sans", "families.sans"}:
+        bad.append("thieu type.families.sans")
+    gnames = {gr.get("name") for gr in (typ.get("groups") or []) if isinstance(gr, dict)} if isinstance(typ, dict) else set()
+    for gn in R_.TYPE_GROUPS:
+        if gn not in gnames and gn not in tbd:
+            bad.append("thieu group %s" % gn)
+    if len(styles) < R_.MIN_STYLES and not tbd & set(R_.TYPE_GROUPS):
+        bad.append("chi %d type style (can >= %d)" % (len(styles), R_.MIN_STYLES))
+    for st_ in styles:
+        smp = str(st_.get("sample") or "").strip()
+        if not smp or smp.upper().startswith("TODO"):
+            bad.append("style %s: thieu sample (nhan UI that)" % st_.get("name"))
+    g.check(15, "Type D4: families.sans, group Heading + Text, >= 4 style, moi style co sample", bad)
+
+    # 16. component §5
+    miss = [c for c in R_.COMPONENTS if c not in comps and c not in tbd]
+    if not any(c in comps or c in tbd for c in R_.COMP_ALT):
+        miss.append(" / ".join(R_.COMP_ALT))
+    g.check(16, "Component toi thieu §5 co trong components/ hoac ghi STATUS.md ## Thieu (TBD)",
+            ["thieu: " + ", ".join(miss)] if miss else [])
 
     if a.out:
         os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)

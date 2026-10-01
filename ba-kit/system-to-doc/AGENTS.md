@@ -22,7 +22,7 @@
 | O1 | Danh sách màn hình theo website (Basic Design xlsx, 1 file / site) | V-BD |
 | O2 | API Documentation xlsx (+ batch) + Code map | V-API |
 | O3 | Database Documentation xlsx + ERD | V-DB |
-| O4 | Design System — format Artifact type "Design System" (claude.ai), publish khi user đồng ý | V-DS |
+| O4 | Design System — chuẩn chung với designer-kit (= format Artifact type "Design System" của claude.ai), publish khi user đồng ý | V-DS |
 | O5 | Figma Output 1 + Output 2 (cách vẽ của requirement-to-flow) | recheck bbox |
 | O6 | docx tổng hợp | V3 · V5 |
 | O7 | Bug list Medium–High (tuỳ chọn) | V8 |
@@ -48,6 +48,7 @@
 │   ├── source-rules.md · evidence-ledger.md · inventory-spec.md
 │   ├── outputs/o1-screens.md … o7-bug-list.md
 │   ├── basic-design/workbook-structure.md      (copy từ requirement-to-flow)
+│   ├── design-system/                          chuẩn design system + template (copy từ designer-kit)
 │   └── figma/                                  (copy từ requirement-to-flow)
 ├── skills/
 │   ├── system-analyst/               SKILL.md + scripts/ (recon · render · gate · self-test)
@@ -78,7 +79,7 @@ templates/                            sample_basic_design.xlsx · high-level-tem
 | Chiều | requirement → tài liệu (TO-BE) | hệ thống → tài liệu (AS-IS) + impact CR |
 | Chống sai | Source Register + R1–R8 | Evidence Ledger + RE1–RE4 |
 
-O4 theo format của Artifact type **Design System** (claude.ai, `type_url` trong `outputs/o4-design-system.md`) — tài liệu format đọc từ type lúc chạy, không copy vào kit.
+O4 theo **chuẩn design system chung** với `designer-kit` (= format Artifact type **Design System** của claude.ai) → `04_DesignSystem/` copy thẳng sang `designer-kit/.../design-system/` dùng được.
 
 **Phần copy self-contained** (file `.md`/`.py` mang header `SOURCE: …`; hook/config/settings copy nguyên — sửa logic chung thì **sửa cả hai nơi**):
 
@@ -87,3 +88,4 @@ O4 theo format của Artifact type **Design System** (claude.ai, `type_url` tron
 | requirement-to-flow `scripts/{verify-basic-design,bd_styles,selftest-basic-design}.py` · `basic-design/workbook-structure.md` | `skills/system-analyst/scripts/` · `sys-agent/basic-design/` |
 | requirement-to-flow `skills/ba-figma-output/` · `ba-agent/figma-outputs/{output-1-flow,output-2-screen-flow,shared-rules,code-patterns}.md` · `ba-agent/{granularity-principles,recheck}.md` | `skills/ba-figma-output/` · `sys-agent/figma/` |
 | requirement-to-flow `rules/` · `hooks/detect-pii.js` · `config/pii-patterns.json` · `settings.json` | cùng đường dẫn |
+| designer-kit `designer-agent/design-system-format.md` · `design-system-template/` | `sys-agent/design-system/design-system-format.md` · `sys-agent/design-system/template/` |

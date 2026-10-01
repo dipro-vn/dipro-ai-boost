@@ -1,0 +1,34 @@
+<!-- @dsCard height=300 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=<Font+Chinh>:wght@400;700&display=swap"><style>
+html,body{margin:0;height:100%}
+.cv{position:relative;width:960px;height:300px;background:var(--page-bg);overflow:hidden;font-family:var(--font-sans)}
+svg{position:absolute;left:0;top:0}
+.p{fill:var(--primary)}
+.b{fill:var(--brand-<tên>)}
+.t{fill:var(--neutral-200)}
+.r8{rx:var(--radius-lg);ry:var(--radius-lg)}
+.r4{rx:var(--radius-sm);ry:var(--radius-sm)}
+.txt{position:absolute;left:40px;bottom:32px;max-width:440px}
+.name{margin:0;font-size:96px;line-height:.95;font-weight:700;color:var(--text-high)}
+.tag{margin:16px 0 0;font-size:14px;line-height:20px;color:var(--text-middle)}
+</style></head>
+<body>
+<div class="cv">
+<!--
+blocks: <token × kích thước, vd. primary × mỗi theme qua data-theme + brand-* accent>
+arrangement: <cách xếp, toàn bộ bên phải x=480>
+pattern: "<hàng pattern trong cover.md>" → <đơn vị, pitch theo space-*> — <lý do chọn>
+scales: <space-* · radius-* đã dùng>
+-->
+<svg width="960" height="300" viewBox="0 0 960 300" aria-hidden="true">
+  <!-- khối màu + pattern, mỗi fill / rx là class bind token -->
+</svg>
+<div class="txt">
+  <h1 class="name"><Tên dự án></h1>
+  <p class="tag"><1 câu tagline theo giọng của hệ thống></p>
+</div>
+</div>
+</body>
+</html>

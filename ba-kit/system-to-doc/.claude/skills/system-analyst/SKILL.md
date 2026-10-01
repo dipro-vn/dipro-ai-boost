@@ -53,7 +53,7 @@ Workflow canonical: `.claude/agents/system-analyst.md`. Skill này chỉ liệt 
 
 Tên file báo cáo gate quyết định nó được tính cho output nào trong README version: `_internal/gates/v1.md` `v2.md` `v-bd-<WEB>.md` `v-api.md` `v-db.md` `v-ds.md` `v3.md` `v5.md` `v8.md` `v-cr.md`.
 
-Thư viện dùng chung: `gate_report.py` · `docx_read.py` · `bd_styles.py`.
+Thư viện dùng chung: `gate_report.py` · `docx_read.py` · `bd_styles.py` · `ds_roles.py` (token vai trò D1–D7 + component tối thiểu của chuẩn design system chung — sửa cùng `sys-agent/design-system/design-system-format.md`).
 
 ## Dependency
 

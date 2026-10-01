@@ -67,7 +67,7 @@ Chưa có baseline mà user đưa CR → nói rõ phải chạy Luồng 1 trư�
 | **O1** | Danh sách màn hình theo website (Basic Design) | ✅ khi có website | `01_Screens/BasicDesign_<WEB-xx>_ver<N>.xlsx` | `outputs/o1-screens.md` |
 | **O2** | API Documentation (+ Batch) + Code map | ✅ khi có source | `02_API/API_Doc_…xlsx` · `02_API/CodeMap_…png/.md` | `outputs/o2-api-doc.md` |
 | **O3** | Database Documentation (+ ERD) | ✅ khi có DB **hoặc** ORM/migration trong source | `03_DB/DB_Doc_…xlsx` · `03_DB/ERD_…png` | `outputs/o3-db-doc.md` |
-| **O4** | Design System hệ thống cũ — **đúng format Artifact type "Design System"** (brand book, tokens, component + preview, assets, cover) | ✅ khi có website **hoặc** Figma | `04_DesignSystem/project/` (+ `link.md` nếu publish) | `outputs/o4-design-system.md` |
+| **O4** | Design System hệ thống cũ — **chuẩn chung với designer-kit** (`sys-agent/design-system/design-system-format.md`) = format Artifact type "Design System" | ✅ khi có website **hoặc** Figma | `04_DesignSystem/` (`STATUS.md` + `project/`) | `outputs/o4-design-system.md` |
 | **O5** | Figma flow (Output 1 + Output 2) | ✅ khi user cho link Figma | `05_Figma/figma-links.md` + node trên Figma | `outputs/o5-figma.md` |
 | **O6** | Tài liệu tổng hợp (docx) | ✅ LUÔN | `06_Overview/Overview_<sys>_ver<N>.docx` | `outputs/o6-overview.md` |
 | **O7** | Bug list hiện trạng (Medium–High) | ⬜ khi user chọn | `07_BugList/BugList_<sys>_ver<N>.xlsx` | `outputs/o7-bug-list.md` |
@@ -103,7 +103,7 @@ Output nào không đủ điều kiện (thiếu input) → **không làm DoD fa
 | 3 | `POLICIES.md` §3 · `.claude/rules/DATA-PRIVACY.md` |
 | 4 | `sys-agent/source-rules.md` · `sys-agent/evidence-ledger.md` |
 | 5 | `sys-agent/inventory-spec.md` |
-| 6 | `sys-agent/outputs/o<k>-*.md` của output đang làm |
+| 6 | `sys-agent/outputs/o<k>-*.md` của output đang làm (O4: thêm `sys-agent/design-system/design-system-format.md`) |
 | 7 | `sys-agent/outputs/o6-overview.md` |
 | 8 | `sys-agent/versioning.md` §4–5 |
 
@@ -129,7 +129,7 @@ python3 $S/read-schema.py --dump inputs/db/schema.sql --out $I --ev-start <next_
 
 # Design tokens quan sát được (cho O4) + tokens.json khởi đầu đúng format type Design System
 python3 $S/extract-design-tokens.py --crawl $I/recon/crawl --css-root REPO-01=<fe-repo> --out $I/recon/design \
-     --emit-tokens $V/04_DesignSystem/project/tokens.json --name "<system_name>"
+     --name "<system_name>" --emit-tokens $V/04_DesignSystem/project/tokens.json --emit-status $V/04_DesignSystem/STATUS.md
 ```
 
 Figma input (P7) → đọc bằng Figma MCP (`get_variable_defs`, `get_metadata`, `get_screenshot`) theo `outputs/o4-design-system.md` §2.
@@ -227,7 +227,7 @@ Bảng mức xử lý đầy đủ: `POLICIES.md` §5.
 | **V-BD** | `verify-basic-design.py --asis` | O1 sai template, thiếu Screen Index, item mô tả không có EV |
 | **V-API** | `verify-api-doc.py` | O2 thiếu API, hyperlink gãy, API Confirmed không có code-ref |
 | **V-DB** | `verify-db-doc.py` | O3 thiếu bảng/cột, quan hệ bịa, hyperlink gãy |
-| **V-DS** | `verify-design-system.py` | O4 sai format type Design System (index, tokens dạng list, preview, cover), còn token `obs-`/`TODO`, màu/font không quan sát được |
+| **V-DS** | `verify-design-system.py` | O4 lệch chuẩn chung (cây file, tokens, tên token vai trò D1–D7, component tối thiểu — thiếu mà không ghi TBD), còn `obs-`/`TODO`, màu/font không quan sát được, AI tự ghi APPROVED |
 | **V8** | `verify-bug-list.py` | O7 thiếu repro/evidence, Low lọt vào, Security không PoC |
 | **V3** | `verify-overview.py` | O6 thiếu chương, số liệu ≠ inventory, index ≠ file thật |
 | **V5** | `verify-flow-png.py` | Node flow không map về ID có thật |

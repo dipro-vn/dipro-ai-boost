@@ -343,7 +343,7 @@ def build(kit, samples):
                                  "liên kết với màn nào"],
         ["O2 API Documentation", "Có những API/batch nào theo group; mỗi API làm gì, method, request, response"],
         ["O3 Database Documentation", "Có những bảng nào, quan hệ ra sao, từng cột: kiểu, format, giới hạn, mục đích"],
-        ["O4 Design System", "Đúng format artifact Design System của claude.ai: brand book, màu theo theme, thang chữ, spacing/bo góc/đổ bóng, component có preview chạy thật, logo/icon. Đồng ý thì AI publish thành link private — dùng lại khi làm màn mới"],
+        ["O4 Design System", "Cùng chuẩn với designer-kit = format artifact Design System của claude.ai: brand book, màu theo theme, thang chữ, spacing/bo góc/đổ bóng, component có preview chạy thật, logo/icon. Đồng ý thì AI publish thành link private — dùng lại khi làm màn mới"],
         ["O5 Figma", "Flow tổng quan + Screen flow vẽ trên Figma"],
         ["O6 Tài liệu tổng hợp", "Đã chạy gì, có gì, nằm ở đâu, còn câu hỏi gì"],
         ["O7 Bug list", "Lỗi Medium–High đang tồn tại trên website"],
