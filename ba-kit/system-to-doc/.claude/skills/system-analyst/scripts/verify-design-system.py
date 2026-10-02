@@ -3,9 +3,12 @@
 
   python3 verify-design-system.py <ver>/04_DesignSystem \
           --draft <_internal>/recon/design/tokens-draft.json [--figma-used] [--approved-by "<ten nguoi duyet>"] \
-          [--published-url https://claude.ai/artifact/<id>] [--out <_internal>/gates/v-ds.md]
+          [--published-url https://claude.ai/artifact/<id> | --published-url WEB-01=<url> ...] [--out <_internal>/gates/v-ds.md]
 
-Tham so dau = thu muc CHUA STATUS.md + project/ (project/design-system.json, tokens.json, README.md, components/...).
+Tham so dau = thu muc CHUA STATUS.md + project/ (project/design-system.json, tokens.json, README.md, components/...)
+HOAC 04_DesignSystem layout per-site (WEB-01/{STATUS.md,project/}, WEB-02/...): chay checks 1-16 cho tung site,
+ma check "WEB-01.3", chong bia dung mau/font quan sat cua site do (draft perSite.<site>.observed).
+Check 0: layout khop dsLayout.mode cua draft (per-site <-> WEB-xx/, single/themes <-> 1 thu muc; tron 2 layout FAIL).
 Checks: 1 du file (STATUS.md + project/, Cover tran, khong con _Example) · 2 index design-system.json ·
 3 grammar tokens.json · 4 usage that (khong TODO, khong ten obs-) · 5 chong bia (mau/font phai co trong draft;
 spacing/radius/shadow ngoai draft -> WARN) · 6 meta.source ⊆ figma|screens|docs|code|website + synced ·
@@ -182,17 +185,9 @@ def height_ok(attrs, lo, hi):
         return False
 
 
-def main():
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("ds_dir", help="thu muc 04_DesignSystem (chua project/)")
-    ap.add_argument("--draft", required=True)
-    ap.add_argument("--figma-used", action="store_true")
-    ap.add_argument("--published-url")
-    ap.add_argument("--approved-by", help="ten nguoi da duyet (cho phep Trang thai APPROVED)")
-    ap.add_argument("--out")
-    a = ap.parse_args()
-    P = os.path.join(a.ds_dir, "project")
-    g = Gate("Gate V-DS — Design System (%s)" % a.ds_dir)
+def verify_one(a, ds_dir, g, draft, draft_err, site=None, published_url=None):
+    """Checks 1-16 cho 1 thu muc DS (STATUS.md + project/). site: id khi layout per-site."""
+    P = os.path.join(ds_dir, "project")
 
     def pj(*x):
         return os.path.join(P, *x)
@@ -200,7 +195,7 @@ def main():
     # 1. du file + Cover tran + khong con _Example
     req = ["design-system.json", "tokens.json", "README.md", "components/Cover/preview.html"]
     bad = ["thieu project/%s" % f for f in req if not os.path.isfile(pj(f))]
-    stat = read_status(os.path.join(a.ds_dir, "STATUS.md"))
+    stat = read_status(os.path.join(ds_dir, "STATUS.md"))
     if stat is None:
         bad.append("thieu 04_DesignSystem/STATUS.md (trang thai, link artifact, Thieu TBD — thay link.md)")
     for f in ("README.md", "Cover.d.ts"):
@@ -209,7 +204,7 @@ def main():
     if os.path.exists(pj("components", "_Example")):
         bad.append("con components/_Example/ cua template (xoa truoc khi publish)")
     g.check(1, "Du file STATUS.md + project/ (design-system.json, tokens.json, README.md, Cover tran, khong _Example)", bad)
-    if os.path.exists(os.path.join(a.ds_dir, "link.md")):
+    if os.path.exists(os.path.join(ds_dir, "link.md")):
         g.warn("1w", "link.md la layout cu", "chuyen link vao STATUS.md dong '- Artifact:' roi xoa link.md")
     tbd = stat["tbd"] if stat else set()
 
@@ -488,15 +483,16 @@ def main():
     meta = tk.get("meta") if isinstance(tk.get("meta"), dict) else {}
     source = str(meta.get("source") or "")
     figma_ok = a.figma_used and "figma" in source.lower()
-    draft = None
-    try:
-        draft = json.load(open(a.draft, encoding="utf8"))
-    except (OSError, ValueError) as e:
-        g.fail(5, "Mau/font co trong tokens-draft (chong bia)", "khong doc duoc draft: %s" % e)
-    if draft is not None:
+    if draft is None:
+        g.fail(5, "Mau/font co trong tokens-draft (chong bia)", "khong doc duoc draft: %s" % draft_err)
+    else:
+        # per-site: doi chieu mau/font quan sat duoc CUA SITE DO (perSite.<site>.observed), thieu -> tap chung
+        so = (((draft.get("perSite") or {}).get(site) or {}).get("observed") or None) if site else None
         obs = {}
-        for c in draft.get("colors", []):
+        for c in ([] if so else draft.get("colors", [])):
             obs.setdefault(c["hex"].lower(), set()).update(c.get("alpha") or [1.0])
+        for h, al in ((so or {}).get("colors") or {}).items():
+            obs.setdefault(h.lower(), set()).update(al or [1.0])
         badc = []
         for t in families["color"]:
             v = t.get("value")
@@ -508,11 +504,11 @@ def main():
                     badc.append("%s=%s (khong doi chieu duoc)" % (t.get("name"), x))
                 elif c[0] not in obs or not any(abs(c[1] - al) <= 0.01 for al in obs[c[0]]):
                     badc.append("%s=%s" % (t.get("name"), x))
-        names_obs = set()
-        for f in draft.get("fonts", []):
+        names_obs = set((so or {}).get("fontNames") or [])
+        for f in ([] if so else draft.get("fonts", [])):
             for n in f.get("names") or [x.strip().strip("'\"") for x in f.get("family", "").split(",")]:
                 names_obs.add(n.lower())
-        for f in draft.get("fontFaces", []):
+        for f in ([] if so else draft.get("fontFaces", [])):
             names_obs.add(str(f.get("family", "")).lower())
         badf = sorted({first_family(v) for v in fam_keys.values() if isinstance(v, str)
                        and first_family(v).lower() not in GENERIC_FONTS
@@ -715,12 +711,12 @@ def main():
         g.ok(11, "Contrast chu/nen >= 4.5:1 (hoac usage da ghi ty le)")
 
     # 12. link publish
-    if a.published_url:
+    if published_url:
         bad = []
-        if not URL_RE.match(a.published_url.strip()):
+        if not URL_RE.match(published_url.strip()):
             bad.append("URL khong dang https://claude.ai/(code/)artifact/<id>")
         art = (stat or {}).get("lines", {}).get("artifact", "")
-        if a.published_url.strip().rstrip("/") not in art:
+        if published_url.strip().rstrip("/") not in art:
             bad.append("STATUS.md dong '- Artifact:' khong chua URL")
         g.check(12, "Link artifact Design System da publish + ghi STATUS.md '- Artifact:'", bad)
 
@@ -785,6 +781,126 @@ def main():
     g.check(16, "Component toi thieu §5 co trong components/ hoac ghi STATUS.md ## Thieu (TBD)",
             ["thieu: " + ", ".join(miss)] if miss else [])
 
+
+
+class SiteGate:
+    """Gate con: tien to ma check + tieu de bang id site (layout per-site)."""
+    def __init__(self, g, site):
+        self.g, self.site = g, site
+
+    def _w(self, fn, no, title, *x, **k):
+        return fn("%s.%s" % (self.site, no), "[%s] %s" % (self.site, title), *x, **k)
+
+    def ok(self, no, title, *x, **k):
+        return self._w(self.g.ok, no, title, *x, **k)
+
+    def fail(self, no, title, *x, **k):
+        return self._w(self.g.fail, no, title, *x, **k)
+
+    def warn(self, no, title, *x, **k):
+        return self._w(self.g.warn, no, title, *x, **k)
+
+    def check(self, no, title, *x, **k):
+        return self._w(self.g.check, no, title, *x, **k)
+
+
+SITE_DIR = re.compile(r"^WEB-\d+$")
+
+
+def detect_layout(root):
+    """-> (layout 'folder'|'per-site'|'mixed'|'empty', [site], [file la o root per-site])"""
+    has_one = os.path.isdir(os.path.join(root, "project")) or os.path.isfile(os.path.join(root, "STATUS.md"))
+    names = sorted(os.listdir(root)) if os.path.isdir(root) else []
+    sites = [x for x in names if SITE_DIR.match(x) and os.path.isdir(os.path.join(root, x))]
+    if has_one and sites:
+        return "mixed", sites, []
+    if sites:
+        extra = [x for x in names if x not in sites and not x.startswith(".")]
+        return "per-site", sites, extra
+    return ("folder" if has_one else "empty"), [], []
+
+
+def check_layout(g, root, layout, sites, extra, draft):
+    """Check 0: bo cuc 04_DesignSystem khop dsLayout.mode trong draft."""
+    title = "Bo cuc 04_DesignSystem khop dsLayout.mode cua tokens-draft (1 thu muc hoac WEB-xx/ moi website)"
+    bad = []
+    if layout == "mixed":
+        bad.append("tron 2 layout: co project//STATUS.md o root VA thu muc %s (chon 1)" % ", ".join(sites))
+    if extra:
+        bad.append("layout per-site: root chi chua thu muc WEB-xx/, thua: %s" % ", ".join(extra[:8]))
+    lay = (draft or {}).get("dsLayout") if isinstance(draft, dict) else None
+    if not isinstance(lay, dict) or lay.get("mode") not in ("single", "themes", "per-site"):
+        if bad:
+            g.check(0, title, bad)
+        else:
+            g.warn(0, title, "draft khong co dsLayout (chay lai extract-design-tokens.py) — bo qua so khop mode")
+        return lay
+    mode, forced = lay["mode"], " (FORCED)" if lay.get("forced") else ""
+    if layout == "per-site" and mode != "per-site":
+        bad.append("draft mode=%s%s nhung root la layout per-site (%s) — gop lai 1 thu muc hoac chay lai "
+                   "extract --force-mode per-site" % (mode, forced, ", ".join(sites)))
+    if layout == "folder" and mode == "per-site":
+        bad.append("draft mode=per-site%s (%s) nhung root la 1 thu muc — tach WEB-xx/ (extract --emit-root) hoac "
+                   "user quyet gop: extract --force-mode themes" % (forced, lay.get("reason", "")[:120]))
+    if layout == "per-site" and mode == "per-site":
+        want = sorted(lay.get("sites") or [])
+        if want and sorted(sites) != want:
+            bad.append("thu muc site %s khac dsLayout.sites %s" % (", ".join(sites), ", ".join(want)))
+    g.check(0, title + " [mode %s%s]" % (mode, forced), bad)
+    return lay
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("ds_dir", help="thu muc DS (chua project/) hoac 04_DesignSystem/ layout per-site (WEB-xx/project/)")
+    ap.add_argument("--draft", required=True)
+    ap.add_argument("--figma-used", action="store_true")
+    ap.add_argument("--published-url", action="append", default=[],
+                    help="URL (1 thu muc) hoac WEB-01=URL (per-site, lap lai)")
+    ap.add_argument("--approved-by", help="ten nguoi da duyet (cho phep Trang thai APPROVED)")
+    ap.add_argument("--out")
+    a = ap.parse_args()
+    draft, draft_err = None, None
+    try:
+        draft = json.load(open(a.draft, encoding="utf8"))
+    except (OSError, ValueError) as e:
+        draft_err = e
+    urls, bare = {}, []
+    for u in a.published_url:
+        m = re.match(r"^(WEB-\d+)=(.+)$", u.strip())
+        if m:
+            urls[m.group(1)] = m.group(2)
+        else:
+            bare.append(u)
+    layout, sites, extra = detect_layout(a.ds_dir)
+    g = Gate("Gate V-DS — Design System (%s)" % a.ds_dir)
+    lay = check_layout(g, a.ds_dir, layout, sites, extra, draft)
+    if layout in ("per-site", "mixed") and sites:
+        if bare:
+            g.fail(12, "Link artifact Design System", "layout per-site: dung --published-url WEB-xx=<url> cho tung site")
+        titles = {}
+        for s_ in sites:
+            verify_one(a, os.path.join(a.ds_dir, s_), SiteGate(g, s_), draft, draft_err, s_, urls.get(s_))
+            try:
+                titles.setdefault(json.load(open(os.path.join(a.ds_dir, s_, "project", "design-system.json"),
+                                                 encoding="utf8")).get("title"), []).append(s_)
+            except (OSError, ValueError, AttributeError):
+                pass
+        dup = ["%s: %s" % (t, ", ".join(v)) for t, v in titles.items() if t and len(v) > 1]
+        if dup:
+            g.warn("0w", "Title DS trung nhau giua cac website (de nham artifact)", "; ".join(dup))
+    else:
+        if urls:
+            g.fail(12, "Link artifact Design System", "layout 1 thu muc: --published-url khong co tien to WEB-xx=")
+        verify_one(a, a.ds_dir, g, draft, draft_err, None, bare[0] if bare else None)
+        if isinstance(lay, dict) and lay.get("mode") == "themes":
+            try:
+                n = len(json.load(open(os.path.join(a.ds_dir, "project", "tokens.json"),
+                                       encoding="utf8"))["color"]["themes"])
+            except (OSError, ValueError, KeyError, TypeError):
+                n = None
+            if n is not None and n < len(lay.get("sites") or []):
+                g.warn("0w", "mode themes: nen 1 theme / website", "%d theme cho %d website" % (n, len(lay["sites"])))
     if a.out:
         os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
     return g.emit(a.out)

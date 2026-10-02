@@ -3,9 +3,10 @@
 
   python3 build-version-index.py <ver folder> [--skip "O7=user khong yeu cau"] [--skip "O5=..."]
 
-Tu nhan dien output theo duong dan chuan (O1..O7, hoac output CR neu co CR-*_Impact.xlsx; O4 =
-04_DesignSystem/project/design-system.json; link artifact claude.ai + trang thai + so TBD lay tu
-04_DesignSystem/STATUS.md dong "- Artifact:" / "- Trạng thái:" / bang "## Thiếu (TBD)"),
+Tu nhan dien output theo duong dan chuan (O1..O7, hoac output CR neu co CR-*_Impact.xlsx: so hang muc + tong
+MD + trang thai don gia, Figma CR (gate v-cr-figma), input/). O4 = 04_DesignSystem/project/ (1 bo) hoac
+04_DesignSystem/WEB-xx/project/ (moi site 1 dong); link artifact + trang thai + so TBD lay tu STATUS.md
+canh project/ (dong "- Artifact:" / "- Trạng thái:" / bang "## Thiếu (TBD)"),
 dem so luong, doc ket qua gate tu _internal/gates/*.md (dong "N checks · X PASS · Y FAIL · Z WARN").
 index.json la dau vao cua render-overview-docx.py (chuong 2). Chay lai sau moi gate.
 README KHONG nhac toi _internal/ (artifact noi bo).
@@ -20,6 +21,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import inv_schema as S  # noqa: E402
+import cr_common as C  # noqa: E402
 
 DASH = "—"
 SUMMARY_RX = re.compile(r"(\d+) checks · (\d+) PASS · (\d+) FAIL · (\d+) WARN")
@@ -31,7 +33,7 @@ BD_SYSTEM_SHEETS = {"Common mesage", "Screen Error message", "Screen Index",
 ICON = {"ok": "✅", "warn": "⚠️", "fail": "❌", "skip": "⬜"}
 # tien to ten file gate -> output (thu tu quan trong: dai truoc)
 GATE_MAP = [("v-overview", "O6"), ("v-bd", "O1"), ("v-api", "O2"), ("v-db", "O3"),
-            ("v-ds", "O4"), ("v-figma", "O5"), ("v-cr", "CR"), ("v1", "INV"), ("v2", "INV"),
+            ("v-ds", "O4"), ("v-figma", "O5"), ("v-cr-figma", "O5"), ("v-cr", "CR"), ("v1", "INV"), ("v2", "INV"),
             ("v3", "O6"), ("v4", "O6"), ("v5", "O6"), ("v6", "O6"), ("v7", "O1"), ("v8", "O7")]
 
 
@@ -65,16 +67,16 @@ def parse_gates(ver):
             continue
         _, pa, fa, wa = (int(x) for x in hits[-1])
         m = re.search(r"web-\d{2,}", stem)
-        if target == "O1" and m:
-            target = "O1:" + m.group(0).upper()
+        if target in ("O1", "O4") and m:
+            target = target + ":" + m.group(0).upper()
         out.setdefault(target, []).append((os.path.basename(p), pa, fa, wa))
     return out
 
 
 def gate_of(gates, key):
     items = gates.get(key, [])
-    if key.startswith("O1:"):
-        items = items + gates.get("O1", [])
+    if key.startswith(("O1:", "O4:")):
+        items = items + gates.get(key[:2], [])
     if not items:
         return DASH, "chua chay gate"
     f = sum(x[2] for x in items)
@@ -88,9 +90,9 @@ def gate_of(gates, key):
 def finish(e, gates, skips, auto_skip=None):
     """Gan gate + trang thai cho 1 entry."""
     oid = e["id"]
-    key = oid if oid != "O1" else "O1:" + e.get("site", "")
+    key = oid + ":" + e["site"] if oid in ("O1", "O4") and e.get("site") else oid
     e["gate"], e["gate_detail"] = gate_of(gates, key)
-    reason = skips.get(oid) or skips.get(key.replace("O1:", "O1=")) or None
+    reason = skips.get(oid) or skips.get(key.replace(":", "=")) or None
     if not e["exists"] and (reason or auto_skip):
         e["status"], e["reason"] = "skip", reason or auto_skip
         e["files"], e["count"] = [], DASH
@@ -118,10 +120,9 @@ def entry(oid, name, content, files, count, exists, **kw):
     return d
 
 
-def ds_summary(ver):
-    """O4 = 04_DesignSystem/project/design-system.json + STATUS.md (link artifact, trang thai, so TBD)."""
-    ds = os.path.join(ver, "04_DesignSystem")
-    proj = os.path.join(ds, "project")
+def ds_summary(ds_dir, label):
+    """1 bo design system = <ds_dir>/project/ (design-system.json, tokens.json, components/) + STATUS.md."""
+    proj = os.path.join(ds_dir, "project")
     exists = os.path.isfile(os.path.join(proj, "design-system.json"))
     n_col = n_sty = n_comp = n_icon = 0
     if exists:
@@ -144,7 +145,7 @@ def ds_summary(ver):
             n_icon = sum(1 for f in os.listdir(os.path.join(proj, "assets", "Icons"))
                          if not f.lower().endswith((".md", ".json")))
     link, status, n_tbd = "", DASH, 0
-    sp = os.path.join(ds, "STATUS.md")
+    sp = os.path.join(ds_dir, "STATUS.md")
     if os.path.isfile(sp):
         sec = ""
         for line in open(sp, encoding="utf8").read().splitlines():
@@ -161,10 +162,30 @@ def ds_summary(ver):
                 if len(cells) >= 2 and not set(cells[0]) <= set("-: ") and not cells[1].startswith("Token"):
                     n_tbd += 1
     return {"exists": exists, "link": link, "status": status,
-            "files": ["04_DesignSystem/project/", "04_DesignSystem/STATUS.md"] + ([link] if link else []),
+            "files": [label + "project/", label + "STATUS.md"] + ([link] if link else []),
             "count": "%d màu · %d style chữ · %d component · %d icon · %d TBD · %s" % (
                 n_col, n_sty, n_comp, n_icon, n_tbd, status),
             "count_value": n_col}
+
+
+def ds_entries(ver, gates, skips):
+    """O4: 04_DesignSystem/project/ (1 bo) va/hoac 04_DesignSystem/WEB-xx/project/ (moi site 1 bo)."""
+    root = os.path.join(ver, "04_DesignSystem")
+    sets = [(site, d) for site, d in C.ds_dirs(root)]
+    if not sets:
+        sets = [("", root)]
+    outs = []
+    for site, d in sets:
+        ds = ds_summary(d, "04_DesignSystem/" + (site + "/" if site else ""))
+        kw = {"site": site} if site else {}
+        if ds["link"]:
+            kw["link"] = ds["link"]
+        outs.append(finish(entry(
+            "O4", "Design System" + (" %s" % site if site else ""),
+            "Token, kiểu chữ, component, icon (format artifact Design System)",
+            ds["files"], ds["count"], ds["exists"], count_value=ds["count_value"],
+            ds_status=ds["status"], **kw), gates, skips))
+    return outs
 
 
 def baseline_outputs(ver, data, meta, sysname, n, gates, skips):
@@ -213,11 +234,7 @@ def baseline_outputs(ver, data, meta, sysname, n, gates, skips):
         bool(db_files), count_value=len(tables) if data else None), gates, skips,
         auto_skip="không có DB (db_mode=NONE)" if meta.get("db_mode") == "NONE" else None))
 
-    ds = ds_summary(ver)
-    outs.append(finish(entry(
-        "O4", "Design System", "Token, kiểu chữ, component, icon (format artifact Design System)",
-        ds["files"], ds["count"], ds["exists"], count_value=ds["count_value"], ds_status=ds["status"],
-        **({"link": ds["link"]} if ds["link"] else {})), gates, skips))
+    outs += ds_entries(ver, gates, skips)
 
     fl = os.path.join(ver, "05_Figma", "figma-links.md")
     urls = FIGMA_RX.findall(open(fl, encoding="utf8").read()) if os.path.isfile(fl) else []
@@ -248,46 +265,64 @@ def baseline_outputs(ver, data, meta, sysname, n, gates, skips):
 
 
 def cr_outputs(ver, impact, gates, skips):
+    """CR folder: CR-<id>_Impact.xlsx (Summary + Impact) · Figma CR · input/."""
     outs = []
     wb = load_xlsx(impact)
-    n_imp = sum(sheet_rows(wb[s]) for s in S.CR_AXES if s in wb.sheetnames)
-    n_q = sheet_rows(wb["07_Questions"]) if "07_Questions" in wb.sheetnames else 0
-    summ = {}
-    if "00_Summary" in wb.sheetnames:
-        summ = {str(r[0]): str(r[1]) for r in wb["00_Summary"].iter_rows(min_row=2, values_only=True)
-                if r and r[0] is not None and len(r) > 1}
-    outs.append(finish(entry("CR", "CR Impact", "Phân tích ảnh hưởng 6 trục",
-                             [rel(ver, impact)], "%d dòng ảnh hưởng · %d câu hỏi" % (n_imp, n_q),
-                             True, count_value=n_imp), gates, skips))
-    sm = sorted(glob.glob(os.path.join(ver, "CR-*_Summary.md")))
-    cr_id = os.path.basename(impact)[:-len("_Impact.xlsx")]
-    outs.append(finish(entry("CR-S", "CR Summary", "Tóm tắt CR cho khách/PM",
-                             [rel(ver, p) for p in sm] or ["%s_Summary.md" % cr_id], "1 file" if sm else DASH,
-                             bool(sm), count_value=len(sm)), gates, skips))
+    n_imp, md = 0, 0.0
+    if S.CR_SHEET_IMPACT in wb.sheetnames:
+        ws = wb[S.CR_SHEET_IMPACT]
+        hdr = [str(c.value or "").strip() for c in ws[1]]
+        ci, cm = hdr.index("Impact ID") if "Impact ID" in hdr else 1, hdr.index("MD") if "MD" in hdr else None
+        for r in ws.iter_rows(min_row=2, values_only=True):
+            if re.match(S.CR_IMPACT_ID, str(r[ci] or "")):
+                n_imp += 1
+                try:
+                    md += float(r[cm]) if cm is not None and r[cm] is not None else 0
+                except (TypeError, ValueError):
+                    pass
+    summ, rate_st = {}, "?"
+    if S.CR_SHEET_SUMMARY in wb.sheetnames:
+        for r in wb[S.CR_SHEET_SUMMARY].iter_rows(values_only=True):
+            if r and r[0] is not None and len(r) > 1:
+                summ.setdefault(str(r[0]).strip(), "" if r[1] is None else str(r[1]))
+        rate_st = (summ.get(C.L_RATES) or "?").split()[0]
+    cj = os.path.join(ver, "_internal", "cr.json")
+    meta = {}
+    if os.path.isfile(cj):
+        try:
+            meta = C.load_json(cj).get("meta") or {}
+        except (OSError, ValueError):
+            pass
+    meta.setdefault("baseline_version", summ.get(C.L_BASELINE, ""))
+    meta.setdefault("cr_id", summ.get(C.L_CR, ""))
+    outs.append(finish(entry("CR", "CR Impact", "Giải trình CR + ảnh hưởng 6 trục + MD (Summary · Impact)",
+                             [rel(ver, impact)], "%d hạng mục · %s MD (đơn giá %s)" % (
+                                 n_imp, C.fmt_md(round(md, 2)), rate_st),
+                             True, count_value=n_imp, md=round(md, 2), rates_status=rate_st), gates, skips))
     fl = os.path.join(ver, "05_Figma", "figma-links.md")
     urls = FIGMA_RX.findall(open(fl, encoding="utf8").read()) if os.path.isfile(fl) else []
-    # CR khong bat buoc ve mockup: khong co 05_Figma -> skip, khong can --skip
-    outs.append(finish(entry("O5", "Figma (CR)", "Mockup thay đổi theo CR",
+    # CR khong bat buoc ve: khong co figma-links + khong co gate v-cr-figma -> skip "không vẽ"
+    outs.append(finish(entry("O5", "Figma (CR)", "Màn/luồng thay đổi theo CR (badge NEW/UPD/DEL/IMPACT/AS-IS)",
                              ["05_Figma/figma-links.md"], "%d link" % len(urls),
-                             os.path.isfile(fl), count_value=len(urls)), gates, skips,
-                       auto_skip="không vẽ"))
+                             os.path.isfile(fl) or bool(gates.get("O5")), count_value=len(urls)),
+                       gates, skips, auto_skip="không vẽ"))
     inp = [p for p in glob.glob(os.path.join(ver, "input", "**", "*"), recursive=True)
            if os.path.isfile(p)]
     outs.append(finish(entry("IN", "Input CR", "Tài liệu yêu cầu gốc", ["input/"],
                              "%d file" % len(inp), bool(inp), count_value=len(inp)),
                        gates, skips))
-    # Summary md + input khong co gate -> trang thai theo su ton tai (gate V-CR thuoc Impact)
+    # input khong co gate -> trang thai theo su ton tai
     for e in outs:
-        if e["id"] in ("IN", "CR-S") and e["gate"] == DASH and e["exists"]:
+        if e["id"] == "IN" and e["gate"] == DASH and e["exists"]:
             e["status"], e["reason"], e["status_text"] = "ok", "", ICON["ok"]
-    return outs, summ
+    return outs, meta
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("version_folder")
     ap.add_argument("--skip", action="append", default=[],
-                    help='"O7=ly do" (lap lai duoc; O1=WEB-02 khong ap dung cho rieng 1 site: "O1=WEB-02=ly do")')
+                    help='"O7=ly do" (lap lai duoc; rieng 1 site: "O1=WEB-02=ly do" / "O4=WEB-02=ly do")')
     a = ap.parse_args()
 
     ver = os.path.abspath(a.version_folder)
@@ -297,9 +332,9 @@ def main():
     skips = {}
     for s in a.skip:
         k, _, v = s.partition("=")
-        if k == "O1" and re.match(r"^WEB-\d+=", v):
+        if k in ("O1", "O4") and re.match(r"^WEB-\d+=", v):
             site, _, v = v.partition("=")
-            k = "O1=" + site
+            k = k + "=" + site
         skips[k.strip()] = v.strip() or "không yêu cầu"
 
     folder = os.path.basename(ver)

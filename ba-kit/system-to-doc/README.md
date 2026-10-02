@@ -69,7 +69,7 @@ AI in **bảng tổng hợp** → bạn trả lời `OK` → AI khảo sát và 
 | **O1** | **Danh sách màn hình theo website** — tổng số màn, item từng màn, xử lý, lỗi hiển thị, liên kết giữa các màn (template Basic Design công ty) | `01_Screens/BasicDesign_WEB-01_ver<N>.xlsx` (1 file / website) |
 | **O2** | **API Documentation** — mọi API theo group (+ batch): làm gì, method, request, response; sheet tổng hợp có link tới từng API · **sơ đồ map code** FE ↔ BE ↔ DB | `02_API/API_Doc_….xlsx` · `02_API/CodeMap_….png` |
 | **O3** | **Database Documentation** — tổng quan bảng, quan hệ, từng bảng: field · kiểu · format · giới hạn · maxlength · mục đích · ERD | `03_DB/DB_Doc_….xlsx` · `03_DB/ERD_….png` |
-| **O4** | **Design System** hệ thống cũ (từ website / Figma + source) — **cùng chuẩn với `designer-kit`** và format artifact **Design System** của claude.ai: brand book, màu theo theme, thang chữ, spacing/radius/shadow/size, component có preview, logo/icon, cover; token đặt tên vai trò chuẩn, phần không quan sát được ghi TBD. Đồng ý thì publish thành link private | `04_DesignSystem/` (`STATUS.md` + `project/`) |
+| **O4** | **Design System** hệ thống cũ (từ website / Figma + source) — **cùng chuẩn với `designer-kit`** và format artifact **Design System** của claude.ai: brand book, màu theo theme, thang chữ, spacing/radius/shadow/size, component có preview, logo/icon, cover; token đặt tên vai trò chuẩn, phần không quan sát được ghi TBD. Nhiều website: chỉ khác màu → 1 Design System mỗi site 1 theme; khác cả phong cách → mỗi website 1 Design System riêng. Đồng ý thì publish thành link private | `04_DesignSystem/` (`STATUS.md` + `project/`) |
 | **O5** | **Figma flow** — Output 1 Flow tổng quan + Output 2 Screen flow | link trong `05_Figma/figma-links.md` |
 | **O6** | **Tài liệu tổng hợp** — đã chạy gì, có gì, ở đâu | `06_Overview/Overview_….docx` |
 | **O7** | **Bug list hiện trạng** mức Medium–High *(nếu chọn)* | `07_BugList/BugList_….xlsx` |
@@ -100,7 +100,13 @@ Mọi dòng trong tài liệu gắn với bằng chứng (ảnh chụp, dòng co
 | Bên thứ 3 | Thêm liên kết nào? Ảnh hưởng liên kết hiện tại không? |
 | Mockup | Màn mới có nhất quán với Design System cũ không? |
 
-**Output Luồng 2** (`outputs/ver<N>_<DDMMYY>_CR-<id>-<tên>/`): `CR-<id>_Impact.xlsx` (chi tiết 6 trục + câu hỏi) · `CR-<id>_Summary.md` (≤ 1 trang, gửi KH được) · Figma **view CR mới** (chỉ phần thay đổi + phần bị ảnh hưởng, không vẽ đè bản cũ).
+**Output Luồng 2** (`outputs/ver<N>_<DDMMYY>_CR-<id>-<tên>/`):
+- `CR-<id>_Impact.xlsx` — **2 sheet**, gửi khách được:
+  - `Summary`: **vì sao đây là CR** (đối chiếu hệ thống hiện tại, theo tiêu chí C1–C6) · **tổng MD** theo trục × loại · trục không ảnh hưởng · câu hỏi cần khách trả lời
+  - `Impact`: từng hạng mục — trục · loại (thêm / sửa / xoá / bị ảnh hưởng) · **vì sao phải sửa** · ảnh hưởng tới cái đang có · xung đột · rủi ro · **MD**
+- Figma **view CR mới** — chỉ phần thay đổi + phần bị ảnh hưởng, tô màu theo loại, không vẽ đè bản cũ.
+
+> MD = đơn giá trong `.claude/config/md-unit-rates.json` × số lượng (AI chỉ chọn loại hạng mục, không tự gõ số). Bảng đơn giá đang **DRAFT** — PM / Tech Lead duyệt rồi đổi `status` thành `APPROVED`.
 
 CR đã được làm xong trong hệ thống → chạy `/analyze-system` chọn **Delta** để có baseline mới.
 

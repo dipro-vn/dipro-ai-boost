@@ -39,7 +39,7 @@ ver1_011026_baseline/
 ├── 02_API/API_Doc_<sys>_ver1.xlsx                O2
 ├── 02_API/CodeMap_<sys>_ver1.png · .md
 ├── 03_DB/DB_Doc_<sys>_ver1.xlsx · ERD_<sys>_ver1.png   O3
-├── 04_DesignSystem/STATUS.md · project/           O4 (chuẩn chung với designer-kit)
+├── 04_DesignSystem/STATUS.md · project/           O4 (chuẩn chung với designer-kit; per-site: WEB-xx/STATUS.md · project/)
 ├── 05_Figma/figma-links.md                       O5
 ├── 06_Overview/Overview_<sys>_ver1.docx          O6
 ├── 07_BugList/BugList_<sys>_ver1.xlsx            O7 (tuỳ chọn)
@@ -55,10 +55,9 @@ ver2_151026_CR-001-them-coupon/
 ├── README.md
 ├── run-log.md                     baseline: ver1_011026_baseline
 ├── input/                         CR nguyên văn (file copy / cr-request.md khi dán chat / link.md)
-├── CR-001_Impact.xlsx             6 trục impact
-├── CR-001_Summary.md              ≤ 1 trang, trao đổi với KH
+├── CR-001_Impact.xlsx             2 sheet: Summary (vì sao là CR + tổng MD) · Impact (từng hạng mục)
 ├── 05_Figma/figma-links.md        link view CR mới
-└── _internal/gates/
+└── _internal/  cr.json · cr-figma-nodes.json · gates/
 ```
 
 Folder CR **không** copy lại baseline — nó trỏ tới baseline bằng `baseline_version`. CR được duyệt **và đã code xong** → chạy Luồng 1 mode `DELTA` để có baseline mới. CR chưa code xong thì baseline vẫn là bản cũ (AS-IS chưa đổi).

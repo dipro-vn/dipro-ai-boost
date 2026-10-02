@@ -510,6 +510,69 @@ def run_gates(p):
     return out
 
 
+def index_cases(tmp):
+    """build-version-index: O4 moi site 1 bo (WEB-xx/project/) + thu muc CR (Impact xlsx, Figma CR, input/)."""
+    out = []
+    # O4 layout moi: 04_DesignSystem/WEB-01/ + WEB-02/
+    d = os.path.join(tmp, "o4sites")
+    shutil.copytree(os.path.join(tmp, "good"), d)
+    v = os.path.join(d, VER)
+    ds = os.path.join(v, "04_DesignSystem")
+    for site in ("WEB-01", "WEB-02"):
+        shutil.copytree(os.path.join(ds, "project"), os.path.join(ds, site, "project"))
+        txt = open(os.path.join(ds, "STATUS.md"), encoding="utf8").read()
+        open(os.path.join(ds, site, "STATUS.md"), "w", encoding="utf8").write(
+            txt.replace("FixtureDs01", "FixtureDs" + site[-2:]))
+    shutil.rmtree(os.path.join(ds, "project"))
+    os.remove(os.path.join(ds, "STATUS.md"))
+    open(os.path.join(v, "_internal", "gates", "v-ds-WEB-02.md"), "w").write(
+        "**3 checks · 2 PASS · 1 FAIL · 0 WARN**\n")
+    sh("build-version-index.py", v)
+    o4 = [e for e in json.load(open(os.path.join(v, "_internal", "index.json"), encoding="utf8"))["outputs"]
+          if e["id"] == "O4"]
+    got = {e.get("site"): (e.get("link", "")[-2:], e["status"]) for e in o4}
+    out.append(("index", "O4 layout WEB-xx/project/ -> 1 dong / site, link + gate rieng",
+                got == {"WEB-01": ("01", "warn"), "WEB-02": ("02", "fail")}, "O4=%s" % got))
+
+    # Thu muc CR
+    cr = os.path.join(d, "ver2_021026_CR-001-otp")
+    os.makedirs(os.path.join(cr, "_internal", "gates"))
+    os.makedirs(os.path.join(cr, "input"))
+    open(os.path.join(cr, "input", "CR-001.md"), "w").write("# CR-001\n")
+    cj = os.path.join(cr, "_internal", "cr.json")
+    json.dump({"meta": {"cr_id": "CR-001", "cr_title": "OTP", "baseline_version": VER,
+                        "cr_version": "ver2_021026_CR-001-otp", "source_type": "FILE",
+                        "source_ref": "input/CR-001.md", "received_date": "02/10/2026",
+                        "requested_by": "PM khach hang", "overall_risk": "Low", "recommendation": "Lam"},
+               "justification": [{"item": "CR-001.1", "request": "OTP", "baseline_ref": "SC-001",
+                                  "baseline_quote": "Dang nhap khong OTP", "criteria": ["C1"],
+                                  "why": "Chua co", "not_feedback": "Khong phai loi"}],
+               "impacts": [{"id": "IMP-001", "axis": "Screen", "change_type": "UPD", "baseline_ref": "SC-001",
+                            "item": "Dang nhap", "change": "Them OTP", "why_change": "Yeu cau CR muc 1",
+                            "impact_on_current": "Luong login", "conflict": "No", "risk": "Low",
+                            "rate_code": "SCR-UPD-M", "qty": 2, "evidence": "input/CR-001.md"}]},
+              open(cj, "w"))
+    rates = os.path.abspath(os.path.join(HERE, "..", "..", "..", "..", S.MD_RATES_PATH))
+    rc, o = sh("build-cr-impact.py", "--cr-json", cj, "--rates", rates,
+               "--out", os.path.join(cr, "CR-001_Impact.xlsx"))
+    open(os.path.join(cr, "_internal", "gates", "v-cr.md"), "w").write("**20 checks · 20 PASS · 0 FAIL · 0 WARN**\n")
+    sh("build-version-index.py", cr)
+    idx = json.load(open(os.path.join(cr, "_internal", "index.json"), encoding="utf8"))
+    e = {x["id"]: x for x in idx["outputs"]}
+    st = json.load(open(rates)).get("status")
+    ok = (rc == 0 and list(e) == ["CR", "O5", "IN"] and e["CR"]["count"] == "1 hạng mục · 3 MD (đơn giá %s)" % st
+          and e["CR"]["status"] == "ok" and e["O5"]["status"] == "skip" and "không vẽ" in e["O5"]["status_text"]
+          and idx["baseline_ref"] == VER)
+    out.append(("index", "CR: Impact xlsx (N hang muc · MD · don gia), Figma skip, khong co Summary.md",
+                ok, "%s %s" % (o.strip()[-80:], {k: (x["count"], x["status"]) for k, x in e.items()})))
+    open(os.path.join(cr, "_internal", "gates", "v-cr-figma.md"), "w").write("**6 checks · 5 PASS · 1 FAIL · 0 WARN**\n")
+    sh("build-version-index.py", cr)
+    e = {x["id"]: x for x in json.load(open(os.path.join(cr, "_internal", "index.json"), encoding="utf8"))["outputs"]}
+    out.append(("index", "CR: co gate v-cr-figma -> dong Figma theo gate (FAIL)",
+                e["O5"]["gate"] == "FAIL" and e["CR"]["gate"] == "PASS", "O5=%s CR=%s" % (e["O5"]["gate"], e["CR"]["gate"])))
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--keep", action="store_true")
@@ -527,6 +590,7 @@ def main():
     o4 = next((e for e in json.load(open(good["index"], encoding="utf8"))["outputs"] if e["id"] == "O4"), {})
     ok = o4.get("link") == "https://claude.ai/artifact/FixtureDs01" and "2 TBD · DRAFT" in str(o4.get("count"))
     results.append(("index", "O4 doc link/trang thai/TBD tu STATUS.md", ok, "O4=%s" % {k: o4.get(k) for k in ("link", "count")}))
+    results += index_cases(tmp)
 
     # 1 — tung ca tiem loi (repo gia nam trong thu muc fixture -> sua Path theo ban copy)
     for i, (gate, name, expect, fn) in enumerate(CASES):

@@ -147,7 +147,7 @@ def img_flow2(path):
     _box(ax, P, 6.6, 1.6, 2.2, 1.2, "Phân tích\n6 trục impact", ORANGE_BG, ORANGE, bold=True)
     _arrow(ax, 8.8, 2.2, 9.4, 2.2)
     _box(ax, P, 9.4, 0.7, 2.4, 3.0,
-         "ver<N>_…_CR-001/\n\nCR-001_Impact.xlsx\nCR-001_Summary.md\nFigma view CR mới", GREEN_BG, GREEN)
+         "ver<N>_…_CR-001/\n\nCR-001_Impact.xlsx\n(Summary + Impact, MD)\nFigma view CR mới", GREEN_BG, GREEN)
     _save(plt, fig, path)
 
 
@@ -168,8 +168,9 @@ def img_badges(path):
     plt, P, fig, ax = _canvas(12, 2.4)
     for i, (t, d, fc, ec, dash) in enumerate([
             ("NEW", "thứ mới", GREEN_BG, GREEN, False), ("UPD", "thứ sửa: cũ → mới", ORANGE_BG, ORANGE, True),
-            ("DEL", "thứ xoá", RED_BG, RED, True), ("AS-IS", "màn bên cạnh, không đổi", GREY_BG, "#D0D7DE", False)]):
-        _box(ax, P, 0.2 + i * 3.0, 0.6, 2.6, 1.2, t + "\n" + d, fc, ec, size=11, dashed=dash)
+            ("DEL", "thứ xoá", RED_BG, RED, True), ("IMPACT", "không sửa, bị ảnh hưởng", "#FBEEFF", "#6639BA", True),
+            ("AS-IS", "màn bên cạnh, không đổi", GREY_BG, "#D0D7DE", False)]):
+        _box(ax, P, 0.2 + i * 2.4, 0.6, 2.2, 1.2, t + "\n" + d, fc, ec, size=10, dashed=dash)
     _save(plt, fig, path)
 
 
@@ -368,9 +369,9 @@ def build(kit, samples):
 
     g.h1("BƯỚC 6 — Nhận kết quả Luồng 2")
     g.image(I("06_sau-truc.png"), "6 câu hỏi AI trả lời cho mỗi yêu cầu")
-    g.bullets(["CR-<id>_Impact.xlsx — chi tiết từng trục, xung đột, mức rủi ro, câu hỏi cần khách trả lời.",
-               "CR-<id>_Summary.md — tóm tắt ≤ 1 trang, gửi khách được.",
-               "Figma — 1 view CR MỚI, chỉ vẽ phần thay đổi và phần bị ảnh hưởng; bản cũ giữ nguyên."])
+    g.bullets(["CR-<id>_Impact.xlsx — sheet Impact: từng hạng mục (thêm / sửa / xoá / bị ảnh hưởng), vì sao phải sửa, xung đột, rủi ro, MD.",
+               "Sheet Summary: vì sao đây là CR (đối chiếu hệ thống hiện tại) + tổng MD — gửi khách được.",
+               "Figma — 1 view CR MỚI, chỉ vẽ phần thay đổi và phần bị ảnh hưởng (tô màu theo loại); bản cũ giữ nguyên."])
     g.image(I("07_badge-cr.png"), "Ký hiệu trên Figma view CR", width_cm=14)
     g.placeholder("Figma view CR thực tế (section CR-xxx đặt dưới bản baseline)")
 

@@ -67,7 +67,7 @@ Chưa có baseline mà user đưa CR → nói rõ phải chạy Luồng 1 trư�
 | **O1** | Danh sách màn hình theo website (Basic Design) | ✅ khi có website | `01_Screens/BasicDesign_<WEB-xx>_ver<N>.xlsx` | `outputs/o1-screens.md` |
 | **O2** | API Documentation (+ Batch) + Code map | ✅ khi có source | `02_API/API_Doc_…xlsx` · `02_API/CodeMap_…png/.md` | `outputs/o2-api-doc.md` |
 | **O3** | Database Documentation (+ ERD) | ✅ khi có DB **hoặc** ORM/migration trong source | `03_DB/DB_Doc_…xlsx` · `03_DB/ERD_…png` | `outputs/o3-db-doc.md` |
-| **O4** | Design System hệ thống cũ — **chuẩn chung với designer-kit** (`sys-agent/design-system/design-system-format.md`) = format Artifact type "Design System" | ✅ khi có website **hoặc** Figma | `04_DesignSystem/` (`STATUS.md` + `project/`) | `outputs/o4-design-system.md` |
+| **O4** | Design System hệ thống cũ — **chuẩn chung với designer-kit** (`sys-agent/design-system/design-system-format.md`) = format Artifact type "Design System" | ✅ khi có website **hoặc** Figma | `04_DesignSystem/` (`STATUS.md` + `project/`; website khác phong cách → `04_DesignSystem/WEB-xx/…` mỗi site 1 DS) | `outputs/o4-design-system.md` |
 | **O5** | Figma flow (Output 1 + Output 2) | ✅ khi user cho link Figma | `05_Figma/figma-links.md` + node trên Figma | `outputs/o5-figma.md` |
 | **O6** | Tài liệu tổng hợp (docx) | ✅ LUÔN | `06_Overview/Overview_<sys>_ver<N>.docx` | `outputs/o6-overview.md` |
 | **O7** | Bug list hiện trạng (Medium–High) | ⬜ khi user chọn | `07_BugList/BugList_<sys>_ver<N>.xlsx` | `outputs/o7-bug-list.md` |
@@ -128,8 +128,8 @@ python3 $S/scan-repo.py <repo> --repo-id REPO-01 --out $I --ev-start <next_ev> -
 python3 $S/read-schema.py --dump inputs/db/schema.sql --out $I --ev-start <next_ev>
 
 # Design tokens quan sát được (cho O4) + tokens.json khởi đầu đúng format type Design System
-python3 $S/extract-design-tokens.py --crawl $I/recon/crawl --css-root REPO-01=<fe-repo> --out $I/recon/design \
-     --name "<system_name>" --emit-tokens $V/04_DesignSystem/project/tokens.json --emit-status $V/04_DesignSystem/STATUS.md
+python3 $S/extract-design-tokens.py --crawl $I/recon/crawl --css-root REPO-01@WEB-01=<fe-repo> --out $I/recon/design \
+     --name "<system_name>" --emit-root $V/04_DesignSystem      # tự quyết 1 DS nhiều theme hay 1 DS / website
 ```
 
 Figma input (P7) → đọc bằng Figma MCP (`get_variable_defs`, `get_metadata`, `get_screenshot`) theo `outputs/o4-design-system.md` §2.
@@ -171,10 +171,10 @@ Chi tiết: **`sys-agent/flow-2-change-request.md`** (BẮT BUỘC Read trước
 | 0 | Nhận CR (file trong `inputs/cr/` · dán trong chat · link) → lưu nguyên văn vào `<ver>/input/` | — |
 | 1 | `version-tool.py latest-baseline --outputs outputs` + `list --outputs outputs` (CR khác đang mở?) | 🟡 CR-0 xác nhận baseline |
 | 2 | Hỏi bổ sung phần CR chưa rõ — không đoán | 🟡 CR-1 |
-| 3 | Phân tích impact **6 trục**: System · DB · Business · Screen · Third-party · Mockup | — |
-| 4 | Ghi `CR-<id>_Impact.xlsx` → gate | 🔴 V-CR |
-| 5 | Figma: **view MỚI**, chỉ phần CR + phần bị ảnh hưởng, không vẽ đè | 🟡 CR-2 |
-| 6 | `CR-<id>_Summary.md` (≤ 1 trang, gửi KH được) + README + run-log | 🔴 H06 scan |
+| 3 | Phân loại CR / BUG / QUESTION + **giải trình vì sao là CR** (tiêu chí C1–C6, trích baseline) → phân tích **6 trục** System · DB · Business · Screen · Third-party · Mockup (NEW / UPD / DEL / IMPACT + vì sao sửa + mã đơn giá MD) → `_internal/cr.json` | — |
+| 4 | `build-cr-impact.py` → `CR-<id>_Impact.xlsx` (2 sheet Summary + Impact, MD do script tính) → gate | 🔴 V-CR |
+| 5 | Figma: **view MỚI**, chỉ hạng mục Impact + hàng xóm 1 bước, tô màu theo loại, không vẽ đè | 🟡 CR-2 · 🔴 V-CR-FIGMA |
+| 6 | `detect-pii --scan` + README + run-log | 🔴 H06 scan |
 
 ---
 
@@ -231,7 +231,8 @@ Bảng mức xử lý đầy đủ: `POLICIES.md` §5.
 | **V8** | `verify-bug-list.py` | O7 thiếu repro/evidence, Low lọt vào, Security không PoC |
 | **V3** | `verify-overview.py` | O6 thiếu chương, số liệu ≠ inventory, index ≠ file thật |
 | **V5** | `verify-flow-png.py` | Node flow không map về ID có thật |
-| **V-CR** | `verify-cr-impact.py` | Trục impact bị bỏ trống, sửa/xoá thứ không có trong baseline, xung đột không khai |
+| **V-CR** | `verify-cr-impact.py` | Không đủ 2 sheet, trục bị bỏ trống, giải trình CR không trích được baseline, sửa/xoá thứ không có trong baseline, MD ≠ đơn giá × số lượng, xung đột không khai |
+| **V-CR-FIGMA** | `verify-cr-figma.py` | View CR vẽ ngoài phạm vi (không phải hạng mục Impact / hàng xóm 1 bước), badge sai loại, hạng mục đổi mà không vẽ |
 | **V9** | `selftest-*.py` | Gate rỗng — tiêm lỗi, gate phải bắt |
 
 Verdict: `✅ Complete` (FAIL = 0) · `⚠️ Needs Revision` (tự sửa, chạy lại) · `❌ Critical Gaps` (thiếu **nguồn** → DỪNG hỏi user, không bịa để lấp).

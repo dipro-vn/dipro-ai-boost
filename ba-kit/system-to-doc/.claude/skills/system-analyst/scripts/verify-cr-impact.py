@@ -1,19 +1,16 @@
 #!/usr/bin/env python3
-"""GATE V-CR — CR Impact workbook (Luong 2).
+"""GATE V-CR — CR Impact (Luong 2): cr.json + CR-<id>_Impact.xlsx (2 sheet Summary + Impact).
 
-  python3 verify-cr-impact.py <ver>/CR-001_Impact.xlsx --baseline <outputs>/verK_... \
-      [--other-cr <CR-xxx_Impact.xlsx> ...] [--out <ver>/_internal/gates/v-cr.md]
+  python3 verify-cr-impact.py <ver>/CR-001_Impact.xlsx --cr-json <ver>/_internal/cr.json \
+      --baseline <outputs>/verK_... [--rates .claude/config/md-unit-rates.json] \
+      [--other-cr <ver khac>/_internal/cr.json ...] [--out <ver>/_internal/gates/v-cr.md]
 
-Baseline ids lay tu <baseline>/_internal/inventory.xlsx + 04_DesignSystem/project/ (tokens.json, components/).
-Baseline Ref: SC-001 · F-001 · API-001 · EXT-001 · WEB-01 · table:orders · column:orders.status ·
-DS:<ten token|type style> (vd DS:primary) · DS-component:<Comp> (thu muc components/<Comp>/ hoac export
-trong index.d.ts) · — ; nhieu ref cach nhau bang ';'. Baseline cu (khong co project/tokens.json): DS: theo
-duong dan cham trong 04_DesignSystem/tokens.json, DS-component: theo components.md.
-Chan: truc bo trong · sua/xoa thu khong co trong baseline · cot moi trung ten ma khong khai Conflict ·
-High risk khong co giai trinh · CQ treo · mockup khong bam design system cu.
+Baseline Ref: SC-/F-/API-/EXT-/WEB- · table:orders · column:orders.status · DS:<token> · DS-component:<Comp>
+· DS:WEB-01:<token> / DS-component:WEB-01:<Comp> (chon site) · — ; nhieu ref cach nhau ';'.
+Design system baseline: 04_DesignSystem/project/ (1 bo) hoac 04_DesignSystem/WEB-xx/project/ (moi site 1 bo).
+--rates mac dinh: <kit>/.claude/config/md-unit-rates.json. Tom tat impact in ra stderr.
 """
 import argparse
-import json
 import os
 import re
 import sys
@@ -21,367 +18,389 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import inv_schema as S  # noqa: E402
+import cr_common as C  # noqa: E402
 from gate_report import Gate  # noqa: E402
 
-REQUIRED = ["Impact ID", "Change Type", "Baseline Ref", "Item", "Change Description",
-            "Impact On Current", "Conflict", "Risk"]
-NONE_REFS = ("—", "-", "–", "")
-ID_PREFIX = {"SC": "02_Screen", "F": "01_Function", "API": "07_API",
-             "EXT": "09_Integration", "WEB": "10_Site"}
-DS_LACK_RE = re.compile(r"design[ _-]?system|\bDS\b", re.I)
+KIT = os.path.abspath(os.path.join(HERE, "..", "..", "..", ".."))
 
 
-def refs_of(value):
-    return [r.strip() for r in str(value or "").split(";")
-            if r.strip() and r.strip() not in NONE_REFS]
+def read_xlsx(path):
+    """-> (sheetnames, impact header, impact rows {col: value}, total MD row, summary rows [list])."""
+    from openpyxl import load_workbook
+    wb = load_workbook(path, data_only=True)
+    names = wb.sheetnames
+    hdr, rows, total, summ = [], [], None, []
+    if S.CR_SHEET_IMPACT in names:
+        ws = wb[S.CR_SHEET_IMPACT]
+        hdr = [C.txt(c.value) for c in ws[1]]
+        for i, r in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+            d = {h: r[k] if k < len(r) else None for k, h in enumerate(hdr) if h}
+            iid = C.txt(d.get("Impact ID"))
+            if iid == C.L_TOTAL_MD:
+                total = d.get("MD")
+            elif iid:
+                d["__row__"] = i
+                rows.append(d)
+    if S.CR_SHEET_SUMMARY in names:
+        summ = [list(r) for r in wb[S.CR_SHEET_SUMMARY].iter_rows(values_only=True)]
+    return names, hdr, rows, total, summ
 
 
-def load_baseline(bdir):
-    inv = os.path.join(bdir, "_internal", "inventory.xlsx")
-    if not os.path.isfile(inv):
-        raise SystemExit("Khong thay baseline inventory: %s" % inv)
-    data = S.load(inv)
-    ids = {}
-    for pre, sheet in ID_PREFIX.items():
-        col = S.ID_PATTERNS[sheet][0]
-        ids[pre] = {r.get(col, "") for r in data.get(sheet, []) if r.get(col)}
-    tables = {r.get("Table", "").lower() for r in data.get("03_DB_Tables", []) if r.get("Table")}
-    cols = set()
-    for r in data.get("04_DB_Columns", []):
-        t, c = r.get("Table", "").lower(), r.get("Column", "").lower()
-        if t and c:
-            tables.add(t)
-            cols.add("%s.%s" % (t, c))
-    ds_dir = os.path.join(bdir, "04_DesignSystem")
-    has_ds = os.path.isdir(ds_dir)
-    tokens, comps = set(), set()
-    pj = os.path.join(ds_dir, "project", "tokens.json")
-    tj = os.path.join(ds_dir, "tokens.json")
-    if os.path.isfile(pj):
-        try:
-            tokens = artifact_tokens(json.load(open(pj, encoding="utf8")))
-        except ValueError as e:
-            print("CANH BAO: project/tokens.json loi JSON: %s" % e, file=sys.stderr)
-        comps = artifact_components(os.path.join(ds_dir, "project", "components"))
-    elif os.path.isfile(tj):
-        try:
-            walk_tokens(json.load(open(tj, encoding="utf8")), "", tokens)
-        except ValueError as e:
-            print("CANH BAO: tokens.json loi JSON: %s" % e, file=sys.stderr)
-    cm = os.path.join(ds_dir, "components.md")
-    if not os.path.isfile(pj) and os.path.isfile(cm):
-        comps = parse_components(open(cm, encoding="utf8").read())
-    return {"ids": ids, "tables": tables, "cols": cols, "has_ds": has_ds,
-            "tokens": tokens, "comps": comps}
+def num(v):
+    try:
+        return round(float(v), 2)
+    except (TypeError, ValueError):
+        return None
 
 
-def artifact_tokens(tk):
-    """Ten token moi family ({tokens:[...]}) + ten type style (format artifact Design System)."""
-    out = set()
-    if not isinstance(tk, dict):
-        return out
-    for k, v in tk.items():
-        if isinstance(v, dict) and isinstance(v.get("tokens"), list):
-            out |= {str(t.get("name", "")).lower() for t in v["tokens"] if isinstance(t, dict) and t.get("name")}
-    for gr in ((tk.get("type") or {}).get("groups") or []) if isinstance(tk.get("type"), dict) else []:
-        for st in (gr.get("styles") or []) if isinstance(gr, dict) else []:
-            if isinstance(st, dict) and st.get("name"):
-                out.add(str(st["name"]).lower())
-    return out
-
-
-def artifact_components(cdir):
-    """Thu muc components/<Comp>/ (tru Cover/lib/src) + ten export trong index.d.ts."""
-    out = set()
-    if os.path.isdir(cdir):
-        out |= {d.lower() for d in os.listdir(cdir)
-                if os.path.isdir(os.path.join(cdir, d)) and d not in ("Cover", "lib", "src")}
-        dts = os.path.join(cdir, "index.d.ts")
-        if os.path.isfile(dts):
-            out |= {m.lower() for m in re.findall(
-                r"export\s+(?:declare\s+)?(?:function|const|class)\s+([A-Za-z_$][\w$]*)",
-                open(dts, encoding="utf8").read())}
-    return out
-
-
-def walk_tokens(node, prefix, out):
-    if isinstance(node, dict):
-        for k, v in node.items():
-            p = "%s.%s" % (prefix, k) if prefix else str(k)
-            out.add(p.lower())
-            walk_tokens(v, p, out)
-
-
-def parse_components(text):
-    """Best effort: cot dau cua bang markdown + heading ## / ###."""
-    out = set()
-    for line in text.splitlines():
-        s = line.strip()
-        m = re.match(r"^#{2,4}\s+(.+)$", s)
+def summary_matrix(summ):
+    """Doc bang Truc x Loai tren Summary -> ({axis: [NEW,UPD,DEL,IMPACT,Tong]}, tong hang, Tong MD dau trang)."""
+    mat, tot, head_total = {}, None, None
+    start = None
+    for i, r in enumerate(summ):
+        a = C.txt(r[0] if r else "")
+        if a == C.L_TOTAL_MD and head_total is None and len(r) > 1:
+            head_total = num(r[1])
+        if a == C.L_AXIS_HDR and [C.txt(x) for x in r[1:5]] == S.CR_CHANGE_TYPE:
+            start = i
+            break
+    if start is None:
+        return None, None, head_total
+    for r in summ[start + 1:]:
+        a = C.txt(r[0])
+        vals = [num(x) for x in (list(r[1:6]) + [None] * 5)[:5]]
+        if a == C.L_TOTAL:
+            tot = vals
+            break
+        m = re.search(r"\((\w+)\)\s*$", a)
         if m:
-            out.add(clean_name(m.group(1)))
-        elif s.startswith("|") and not re.match(r"^\|[\s:|-]+\|?$", s):
-            cells = [c.strip() for c in s.strip("|").split("|")]
-            if cells and cells[0]:
-                out.add(clean_name(cells[0]))
-    out.discard("")
-    return out
-
-
-def clean_name(s):
-    return re.sub(r"[`*_]", "", s).strip().lower()
-
-
-def resolve(ref, B):
-    """-> (ok, ly do neu khong ok)."""
-    low = ref.lower()
-    if low.startswith("table:"):
-        t = low[6:].strip()
-        return (t in B["tables"], "bang khong co trong baseline")
-    if low.startswith("column:"):
-        c = low[7:].strip()
-        return (c in B["cols"], "cot khong co trong baseline")
-    if low.startswith("ds-component:"):
-        return (clean_name(ref[13:]) in B["comps"], "component khong co trong design system baseline")
-    if low.startswith("ds:"):
-        return (low[3:].strip() in B["tokens"], "token khong co trong tokens.json baseline")
-    m = re.match(r"^(SC|F|API|EXT|WEB)-\d+$", ref)
-    if m:
-        return (ref in B["ids"][m.group(1)], "id khong co trong baseline")
-    return (False, "cu phap ref khong hop le")
+            mat[m.group(1)] = vals
+        else:
+            break
+    return mat, tot, head_total
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("impact")
+    ap.add_argument("--cr-json", required=True)
     ap.add_argument("--baseline", required=True)
+    ap.add_argument("--rates", default=os.path.join(KIT, S.MD_RATES_PATH))
     ap.add_argument("--other-cr", action="append", default=[])
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
+    try:
+        import openpyxl  # noqa: F401
+    except ImportError:
+        print("Thieu openpyxl. Chay: pip install openpyxl", file=sys.stderr)
+        return 2
 
-    wb = S.load(a.impact, S.CR_SHEETS)
-    B = load_baseline(a.baseline)
+    cr = C.load_json(a.cr_json)
+    rates_meta, rates = C.load_rates(a.rates)
+    B = C.load_baseline(a.baseline)
+    names, hdr, xrows, xtotal, summ = read_xlsx(a.impact)
     g = Gate("GATE V-CR — %s" % os.path.basename(a.impact))
-    summ = {r.get("Key", ""): r.get("Value", "") for r in wb["00_Summary"]}
+    meta = cr.get("meta") or {}
+    J = cr.get("justification") or []
+    IMP = cr.get("impacts") or []
+    NOI = cr.get("no_impact_axes") or []
+    Q = cr.get("questions") or []
     base_name = os.path.basename(os.path.normpath(a.baseline))
 
-    # 1. Summary
-    bad = ["%s rong/thieu" % k for k in S.CR_META_KEYS
-           if not summ.get(k) or summ.get(k) == S.UNKNOWN]
-    if summ.get("source_type") and summ["source_type"] not in S.CR_SOURCE_TYPE:
-        bad.append("source_type=%s" % summ["source_type"])
-    if summ.get("baseline_version") and summ["baseline_version"] != base_name:
-        bad.append("baseline_version=%s != %s" % (summ["baseline_version"], base_name))
-    g.check(1, "00_Summary du key, source_type hop le, baseline_version khop", bad)
-
-    rows = []
-    for sheet in S.CR_AXES:
-        for r in wb[sheet]:
-            r["__sheet__"] = sheet
-            rows.append(r)
-
-    def loc(r):
-        return "%s!%s" % (r["__sheet__"], r["__row__"])
-
-    # 2. Impact ID
-    bad, seen = [], {}
-    for r in rows:
-        iid = r.get("Impact ID", "")
-        if iid and not re.match(S.CR_IMPACT_ID, iid):
-            bad.append("%s %s sai dang" % (loc(r), iid))
-        if iid and iid in seen:
-            bad.append("%s %s trung voi %s" % (loc(r), iid, seen[iid]))
-        seen.setdefault(iid, loc(r))
-    g.check(2, "Impact ID dung dang IMP-NNN, duy nhat tren 6 truc", bad)
-
-    # 3. Moi truc tra loi tuong minh
+    # 1. Workbook
     bad = []
-    for sheet, axis in S.CR_AXES.items():
-        rs = wb[sheet]
-        nones = [r for r in rs if r.get("Change Type") == "NONE"]
-        if not rs:
-            bad.append("%s (%s) bo trong — them 1 dong NONE giai thich" % (sheet, axis))
-        elif nones and len(rs) > 1:
-            bad.append("%s co NONE lan voi dong khac" % sheet)
-        elif nones and len(nones[0].get("Change Description", "")) < 15:
-            bad.append("%s NONE thieu giai thich (>=15 ky tu)" % sheet)
-    g.check(3, "Ca 6 truc co >=1 dong (khong anh huong = 1 dong NONE co ly do)", bad)
+    if names != [S.CR_SHEET_SUMMARY, S.CR_SHEET_IMPACT]:
+        bad.append("sheet = %s (phai dung %s, %s)" % (names, S.CR_SHEET_SUMMARY, S.CR_SHEET_IMPACT))
+    if S.CR_SHEET_IMPACT in names and [h for h in hdr if h] != S.CR_IMPACT_COLS:
+        bad.append("header Impact khac CR_IMPACT_COLS: %s" % [h for h in hdr if h])
+    g.check(1, "Workbook dung 2 sheet Summary + Impact, header Impact dung schema", bad)
 
-    # 4. Enum
-    bad = []
-    for r in rows:
-        for col, enum in (("Change Type", S.CR_CHANGE_TYPE), ("Conflict", S.CR_CONFLICT),
-                          ("Risk", S.CR_RISK)):
-            v = r.get(col, "")
-            if v and v not in enum:
-                bad.append("%s %s=%s" % (loc(r), col, v))
-    g.check(4, "Enum Change Type / Conflict / Risk", bad)
+    # 2. Meta
+    bad = ["meta.%s rong/UNKNOWN" % k for k in S.CR_META_KEYS
+           if not C.txt(meta.get(k)) or C.txt(meta.get(k)) == S.UNKNOWN]
+    if C.txt(meta.get("source_type")) and meta["source_type"] not in S.CR_SOURCE_TYPE:
+        bad.append("source_type=%s" % meta["source_type"])
+    if C.txt(meta.get("overall_risk")) and meta["overall_risk"] not in S.CR_RISK:
+        bad.append("overall_risk=%s" % meta["overall_risk"])
+    if C.txt(meta.get("baseline_version")) and meta["baseline_version"] != base_name:
+        bad.append("baseline_version=%s != %s" % (meta["baseline_version"], base_name))
+    g.check(2, "meta du key, source_type/overall_risk hop le, baseline_version khop", bad)
 
-    # 5. UPD/DEL ref ton tai
-    bad = []
-    for r in rows:
-        if r.get("Change Type") not in ("UPD", "DEL"):
-            continue
-        refs = refs_of(r.get("Baseline Ref"))
-        if not refs:
-            bad.append("%s %s khong co Baseline Ref" % (loc(r), r.get("Change Type")))
-        for ref in refs:
-            ok, why = resolve(ref, B)
+    ds_warn = []
+
+    def res(ref):
+        ok, why, w = C.resolve(ref, B)
+        if w:
+            ds_warn.append(w)
+        return ok, why
+
+    # 3. Justification
+    bad = [] if J else ["justification rong — phai giai trinh vi sao la CR"]
+    for i, j in enumerate(J):
+        tag = C.txt(j.get("item")) or "justification[%d]" % i
+        miss = [f for f in ("item", "request", "baseline_ref", "baseline_quote", "why", "not_feedback")
+                if not C.txt(j.get(f))]
+        if miss:
+            bad.append("%s thieu %s" % (tag, ",".join(miss)))
+        crit = j.get("criteria") if isinstance(j.get("criteria"), list) else []
+        if not crit:
+            bad.append("%s khong co tieu chi C1..C6" % tag)
+        bad += ["%s tieu chi %s khong co trong C1..C6" % (tag, c) for c in crit if c not in S.CR_CRITERIA]
+        for ref in C.refs_of(j.get("baseline_ref")):
+            ok, why = res(ref)
             if not ok:
-                bad.append("%s %s: %s" % (loc(r), ref, why))
-    g.check(5, "UPD/DEL: moi Baseline Ref ton tai trong baseline", bad)
+                bad.append("%s %s: %s" % (tag, ref, why))
+    g.check(3, "Giai trinh CR: >=1 dong, tieu chi C1..C6, baseline_ref co that + trich dan", bad)
 
-    # 6. NEW
+    # 4. Phu 6 truc
     bad = []
-    for r in rows:
-        if r.get("Change Type") != "NEW":
+    noi = {}
+    for x in NOI:
+        noi.setdefault(C.txt(x.get("axis")), []).append(x)
+    for ax in noi:
+        if ax not in S.CR_AXES:
+            bad.append("no_impact_axes axis=%s khong hop le" % ax)
+    for ax in S.CR_AXES:
+        has = any(i.get("axis") == ax for i in IMP)
+        if has and ax in noi:
+            bad.append("%s vua co impact vua khai khong anh huong" % ax)
+        elif not has and ax not in noi:
+            bad.append("%s bo trong — them impact hoac no_impact_axes kem ly do" % ax)
+        elif not has and len(C.txt(noi[ax][0].get("reason"))) < 15:
+            bad.append("%s khong anh huong nhung ly do < 15 ky tu" % ax)
+    g.check(4, "Ca 6 truc: co impact HOAC no_impact_axes (ly do >= 15 ky tu), khong ca hai", bad)
+
+    # 5. Impact ID
+    bad, seen = [], set()
+    for i, imp in enumerate(IMP):
+        iid = C.txt(imp.get("id"))
+        if not re.match(S.CR_IMPACT_ID, iid):
+            bad.append("impacts[%d] id=%r sai dang" % (i, iid))
+        if iid in seen:
+            bad.append("%s trung" % iid)
+        seen.add(iid)
+    g.check(5, "Impact ID dung dang IMP-NNN, duy nhat", bad)
+
+    def tag(imp):
+        return C.txt(imp.get("id")) or "?"
+
+    # 6. Enum
+    bad = []
+    for imp in IMP:
+        for f, enum in (("axis", S.CR_AXES), ("change_type", S.CR_CHANGE_TYPE),
+                        ("conflict", S.CR_CONFLICT), ("risk", S.CR_RISK)):
+            if C.txt(imp.get(f)) not in enum:
+                bad.append("%s %s=%s" % (tag(imp), f, imp.get(f)))
+    g.check(6, "Enum axis / change_type / conflict / risk", bad)
+
+    # 7. UPD/DEL/IMPACT ref ton tai
+    bad = []
+    for imp in IMP:
+        if imp.get("change_type") not in ("UPD", "DEL", "IMPACT"):
             continue
-        for ref in refs_of(r.get("Baseline Ref")):
+        refs = C.refs_of(imp.get("baseline_ref"))
+        if not refs:
+            bad.append("%s %s khong co baseline_ref" % (tag(imp), imp.get("change_type")))
+        for ref in refs:
+            ok, why = res(ref)
+            if not ok:
+                bad.append("%s %s: %s" % (tag(imp), ref, why))
+    g.check(7, "UPD/DEL/IMPACT: moi baseline_ref ton tai trong baseline", bad)
+
+    # 8. NEW
+    bad = []
+    for imp in IMP:
+        if imp.get("change_type") != "NEW":
+            continue
+        for ref in C.refs_of(imp.get("baseline_ref")):
             low = ref.lower()
             if low.startswith("column:"):
                 tc = low[7:].strip()
-                t = tc.split(".")[0]
-                if "." not in tc or t not in B["tables"]:
-                    bad.append("%s %s: bang cha khong co trong baseline" % (loc(r), ref))
-                elif tc in B["cols"] and r.get("Conflict") != "Yes":
-                    bad.append("%s %s: cot da ton tai — trung ten, phai Conflict=Yes"
-                               % (loc(r), ref))
+                if "." not in tc or tc.split(".")[0] not in B["tables"]:
+                    bad.append("%s %s: bang cha khong co trong baseline" % (tag(imp), ref))
+                elif tc in B["cols"] and imp.get("conflict") != "Yes":
+                    bad.append("%s %s: cot da ton tai — trung ten, phai conflict=Yes" % (tag(imp), ref))
                 continue
-            ok, why = resolve(ref, B)
+            ok, why = res(ref)
             if not ok:
-                bad.append("%s %s: %s (NEW chi gan vao cha da ton tai)" % (loc(r), ref, why))
-    g.check(6, "NEW: ref la — hoac cha ton tai; cot moi khong trung cot cu (tru Conflict=Yes)", bad)
+                bad.append("%s %s: %s (NEW chi gan vao cha da ton tai)" % (tag(imp), ref, why))
+    g.check(8, "NEW: ref la — hoac cha ton tai; cot moi trung cot cu phai conflict=Yes", bad)
 
-    cq_ids = [q.get("Q ID", "") for q in wb["07_Questions"]]
-    cq_set = set(cq_ids)
-
-    # 7. Conflict
+    # 9. Noi dung bat buoc
     bad = []
-    for r in rows:
-        if r.get("Conflict") != "Yes":
+    for imp in IMP:
+        miss = [f for f in ("item", "change", "impact_on_current") if not C.txt(imp.get(f))]
+        if len(C.txt(imp.get("why_change"))) < 10:
+            miss.append("why_change(>=10 ky tu)")
+        if miss:
+            bad.append("%s thieu %s" % (tag(imp), ",".join(miss)))
+    g.check(9, "Moi impact co hang muc, noi dung, vi sao phai sua, anh huong", bad)
+
+    # 10. Don gia
+    bad = []
+    for imp in IMP:
+        bad += C.rate_errors(imp, rates, tag(imp))
+    g.check(10, "rate_code co trong bang don gia, dung truc + loai; qty > 0", bad)
+
+    # 11. Sheet Impact khop cr.json, MD = rate x qty
+    bad = []
+    by_id = {C.txt(r.get("Impact ID")): r for r in xrows}
+    if [C.txt(r.get("Impact ID")) for r in xrows] != [tag(i) for i in IMP]:
+        bad.append("Impact ID tren sheet %s != cr.json %s — chay lai build-cr-impact.py" % (
+            list(by_id), [tag(i) for i in IMP]))
+    for imp in IMP:
+        r = by_id.get(tag(imp))
+        if not r:
             continue
-        if not r.get("Conflict Detail"):
-            bad.append("%s Conflict=Yes thieu Conflict Detail" % loc(r))
-        qs_ok = any(q in cq_set for q in S.split_ids(r.get("Open Q")))
-        if not (qs_ok or r.get("Note")):
-            bad.append("%s Conflict=Yes khong co CQ hop le hoac Note" % loc(r))
-    g.check(7, "Conflict=Yes: co Conflict Detail + (CQ hoac Note)", bad)
+        loc = "Impact!%s" % r["__row__"]
+        for col, f in (("Trục", "axis"), ("Loại", "change_type"), ("Mã đơn giá", "rate_code")):
+            if C.txt(r.get(col)) != C.txt(imp.get(f)):
+                bad.append("%s %s=%s != cr.json %s" % (loc, col, r.get(col), imp.get(f)))
+        if num(r.get("Số lượng")) != num(imp.get("qty")):
+            bad.append("%s Số lượng=%s != qty %s" % (loc, r.get("Số lượng"), imp.get("qty")))
+        want = C.md_of(imp, rates)
+        if want is not None and num(r.get("MD")) != want:
+            bad.append("%s %s MD=%s != %s x %s = %s" % (loc, tag(imp), r.get("MD"),
+                       C.fmt_md(rates[imp["rate_code"]].get("md")), imp.get("qty"), C.fmt_md(want)))
+    m, row_tot, col_tot, grand = C.md_matrix(IMP, rates)
+    if num(xtotal) != grand:
+        bad.append("dong Tong MD sheet Impact=%s != %s" % (xtotal, C.fmt_md(grand)))
+    g.check(11, "Sheet Impact khop cr.json; MD = don gia x so luong; dong Tong MD dung", bad)
 
-    # 8. High risk
-    bad = ["%s Risk=High khong co Open Q / Note" % loc(r) for r in rows
-           if r.get("Risk") == "High" and not (r.get("Open Q") or r.get("Note"))]
-    g.check(8, "Risk=High: co cau hoi hoac giai phap (Open Q / Note)", bad)
-
-    # 9. CQ
+    # 12. Tong tren Summary
     bad = []
-    for q in wb["07_Questions"]:
-        qid = q.get("Q ID", "")
-        if not re.match(S.CR_QUESTION_ID, qid):
-            bad.append("07_Questions!%s Q ID=%r sai dang" % (q["__row__"], qid))
-    dup = sorted({x for x in cq_ids if x and cq_ids.count(x) > 1})
-    bad += ["%s trung" % d for d in dup]
-    for r in rows:
-        for q in S.split_ids(r.get("Open Q")):
-            if q not in cq_set:
-                bad.append("%s Open Q %s khong co trong 07_Questions" % (loc(r), q))
-    g.check(9, "CQ dung dang, duy nhat, moi Open Q tro toi CQ co that", bad)
-
-    # 10. Loai ref theo truc
-    def axis_rows(sheet, types=("NEW", "UPD", "DEL")):
-        return [r for r in wb[sheet] if r.get("Change Type") in types]
-
-    bad = []
-    for r in axis_rows("04_Screen", ("UPD", "DEL")):
-        refs = refs_of(r.get("Baseline Ref"))
-        if not refs or any(not x.startswith("SC-") for x in refs):
-            bad.append("%s ref=%s (UPD/DEL man hinh phai la SC-)" % (loc(r), r.get("Baseline Ref")))
-    g.check("10a", "04_Screen UPD/DEL tham chieu SC-", bad)
-
-    bad = []
-    for r in axis_rows("02_DB"):
-        for x in refs_of(r.get("Baseline Ref")):
-            if not x.lower().startswith(("table:", "column:")):
-                bad.append("%s ref=%s (chi table:/column:/—)" % (loc(r), x))
-    g.check("10b", "02_DB tham chieu table:/column:/—", bad)
-
-    bad = []
-    for r in axis_rows("05_ThirdParty"):
-        for x in refs_of(r.get("Baseline Ref")):
-            if not x.startswith("EXT-"):
-                bad.append("%s ref=%s (chi EXT-/—)" % (loc(r), x))
-    g.check("10c", "05_ThirdParty tham chieu EXT-/—", bad)
-
-    fail, warn = [], []
-    for r in axis_rows("06_Mockup", ("NEW", "UPD")):
-        refs = refs_of(r.get("Baseline Ref"))
-        if any(x.lower().startswith(("ds:", "ds-component:")) for x in refs):
-            continue
-        if DS_LACK_RE.search(r.get("Note", "")):
-            warn.append("%s khong co DS ref, Note: DS chua co" % loc(r))
-        else:
-            fail.append("%s mockup khong bam DS:/DS-component: nao" % loc(r))
-    title = "06_Mockup NEW/UPD bam design system cu (DS:/DS-component:)"
-    if not B["has_ds"]:
-        g.check("10d", title + " — baseline khong co 04_DesignSystem", fail + warn, level="WARN")
-    elif fail:
-        g.check("10d", title, fail + warn)
+    smat, stot, shead = summary_matrix(summ)
+    if smat is None:
+        bad.append("Summary khong co bang Truc x NEW/UPD/DEL/IMPACT")
     else:
-        g.check("10d", title, warn, level="WARN")
+        for ax in S.CR_AXES:
+            got = smat.get(ax)
+            want = [m[ax][t] for t in S.CR_CHANGE_TYPE] + [row_tot[ax]]
+            if got != want:
+                bad.append("%s: %s != %s" % (ax, got, want))
+        want = [col_tot[t] for t in S.CR_CHANGE_TYPE] + [grand]
+        if stot != want:
+            bad.append("dong Tong: %s != %s" % (stot, want))
+    if shead != grand:
+        bad.append("Tong MD dau trang=%s != %s" % (shead, C.fmt_md(grand)))
+    g.check(12, "Summary: tong MD theo truc / loai / tong chung = tong cac dong", bad)
 
-    # 11. Evidence
-    bad = ["%s %s" % (loc(r), r.get("Impact ID")) for r in rows
-           if r.get("Change Type") not in ("NONE", "") and not r.get("Evidence")]
-    g.check(11, "Evidence (trich CR / file baseline) cho moi dong khac NONE", bad)
+    q_ids = [C.txt(q.get("id")) for q in Q]
+    q_set = set(q_ids)
 
-    # 12. CR-vs-CR
+    def has_q(imp):
+        return any(x in q_set for x in S.split_ids(imp.get("question")))
+
+    # 13. Conflict
+    bad = []
+    for imp in IMP:
+        if imp.get("conflict") != "Yes":
+            continue
+        if not C.txt(imp.get("conflict_detail")) or C.txt(imp.get("conflict_detail")) in C.NONE_REFS:
+            bad.append("%s conflict=Yes thieu conflict_detail" % tag(imp))
+        if not (has_q(imp) or C.txt(imp.get("md_note"))):
+            bad.append("%s conflict=Yes khong co CQ hoac md_note" % tag(imp))
+    g.check(13, "Conflict=Yes: co chi tiet + (CQ hoac md_note)", bad)
+
+    # 14. High risk
+    bad = ["%s risk=High khong co CQ / md_note" % tag(imp) for imp in IMP
+           if imp.get("risk") == "High" and not (has_q(imp) or C.txt(imp.get("md_note")))]
+    g.check(14, "Risk=High: co cau hoi hoac giai phap (question / md_note)", bad)
+
+    # 15. CQ
+    bad = ["questions %r sai dang CQ-NNN" % x for x in q_ids if not re.match(S.CR_QUESTION_ID, x)]
+    bad += ["%s trung" % d for d in sorted({x for x in q_ids if x and q_ids.count(x) > 1})]
+    for q in Q:
+        if not C.txt(q.get("question")):
+            bad.append("%s thieu noi dung cau hoi" % q.get("id"))
+    for imp in IMP:
+        bad += ["%s question %s khong co trong questions" % (tag(imp), x)
+                for x in S.split_ids(imp.get("question")) if x not in q_set]
+    g.check(15, "CQ dung dang, duy nhat, moi question tro toi CQ co that", bad)
+
+    # 16. Loai ref theo truc
+    def axis_imps(ax, types):
+        return [i for i in IMP if i.get("axis") == ax and i.get("change_type") in types]
+    bad = []
+    for imp in axis_imps("Screen", ("UPD", "DEL", "IMPACT")):
+        refs = C.refs_of(imp.get("baseline_ref"))
+        if not refs or any(not x.startswith("SC-") for x in refs):
+            bad.append("%s ref=%s (Screen UPD/DEL/IMPACT phai la SC-)" % (tag(imp), imp.get("baseline_ref")))
+    g.check("16a", "Screen UPD/DEL/IMPACT tham chieu SC-", bad)
+    bad = ["%s ref=%s (chi table:/column:/—)" % (tag(i), x) for i in axis_imps("DB", S.CR_CHANGE_TYPE)
+           for x in C.refs_of(i.get("baseline_ref")) if not x.lower().startswith(("table:", "column:"))]
+    g.check("16b", "DB tham chieu table:/column:/—", bad)
+    bad = ["%s ref=%s (chi EXT-/—)" % (tag(i), x) for i in axis_imps("ThirdParty", S.CR_CHANGE_TYPE)
+           for x in C.refs_of(i.get("baseline_ref")) if not x.startswith("EXT-")]
+    g.check("16c", "ThirdParty tham chieu EXT-/—", bad)
+    bad = ["%s mockup khong bam DS:/DS-component: nao" % tag(i) for i in axis_imps("Mockup", ("NEW", "UPD"))
+           if not any(x.lower().startswith(("ds:", "ds-component:")) for x in C.refs_of(i.get("baseline_ref")))]
+    title = "Mockup NEW/UPD bam design system baseline (DS:/DS-component:)"
+    if B["has_ds"]:
+        g.check("16d", title, bad)
+    else:
+        g.check("16d", title + " — baseline khong co 04_DesignSystem", bad, level="WARN")
+
+    # 17. Evidence
+    bad = [tag(i) for i in IMP if not C.txt(i.get("evidence"))]
+    g.check(17, "Evidence (trich CR / file baseline) cho moi impact", bad)
+
+    # 18. DS mo ho
+    g.check(18, "Ref DS khong mo ho giua cac site (DS:WEB-xx:<token>)", sorted(set(ds_warn)), level="WARN")
+
+    # 19. Don gia da duyet chua
+    st = C.txt(rates_meta.get("status")).upper()
+    if st == "APPROVED":
+        g.ok(19, "Bang don gia APPROVED", "v%s" % rates_meta.get("version"))
+    else:
+        g.warn(19, "Bang don gia APPROVED", "status=%s v%s — MD la uoc luong so bo, PM/Tech Lead phai duyet"
+               % (st or "?", rates_meta.get("version")))
+
+    # 20. CR-vs-CR
     mine = {}
-    for r in rows:
-        if r.get("Change Type") in ("UPD", "DEL"):
-            for x in refs_of(r.get("Baseline Ref")):
-                mine.setdefault(x.lower(), []).append(r.get("Impact ID"))
+    for imp in IMP:
+        if imp.get("change_type") in ("UPD", "DEL"):
+            for x in C.refs_of(imp.get("baseline_ref")):
+                mine.setdefault(x.lower(), []).append(tag(imp))
     overlap = []
     for other in a.other_cr:
         try:
-            ow = S.load(other, S.CR_SHEETS)
-        except SystemExit as e:
-            overlap.append("%s: khong doc duoc (%s)" % (os.path.basename(other), e))
+            o = C.load_json(other)
+        except (OSError, ValueError) as e:
+            overlap.append("%s: khong doc duoc (%s)" % (other, e))
             continue
-        ocr = {r.get("Key"): r.get("Value") for r in ow["00_Summary"]}.get("cr_id") \
-            or os.path.basename(other)
-        for sheet in S.CR_AXES:
-            for r in ow[sheet]:
-                if r.get("Change Type") not in ("UPD", "DEL"):
-                    continue
-                for x in refs_of(r.get("Baseline Ref")):
-                    if x.lower() in mine:
-                        overlap.append("%s: %s (%s) <-> %s %s" % (
-                            x, ",".join(mine[x.lower()]), summ.get("cr_id", "?"),
-                            ocr, r.get("Impact ID")))
+        ocr = C.txt((o.get("meta") or {}).get("cr_id")) or other
+        for imp in o.get("impacts") or []:
+            if imp.get("change_type") not in ("UPD", "DEL"):
+                continue
+            for x in C.refs_of(imp.get("baseline_ref")):
+                if x.lower() in mine:
+                    overlap.append("%s: %s (%s) <-> %s %s" % (x, ",".join(mine[x.lower()]),
+                                   meta.get("cr_id", "?"), ocr, imp.get("id")))
     if a.other_cr:
-        g.check(12, "Xung dot CR-vs-CR (cung Baseline Ref bi UPD/DEL)", overlap, level="WARN")
+        g.check(20, "Xung dot CR-vs-CR (cung baseline_ref bi UPD/DEL)", overlap, level="WARN")
     else:
-        g.ok(12, "Xung dot CR-vs-CR", "khong truyen --other-cr")
+        g.ok(20, "Xung dot CR-vs-CR", "khong truyen --other-cr")
 
-    # 13. Cot bat buoc
+    # 21. Khong thuoc CR
     bad = []
-    for r in rows:
-        miss = [c for c in REQUIRED if not r.get(c)]
-        if miss:
-            bad.append("%s thieu %s" % (loc(r), ",".join(miss)))
-    g.check(13, "Khong o trong o cot bat buoc", bad)
+    for n in cr.get("not_cr") or []:
+        if C.txt(n.get("label")) not in S.CR_NOT_CR_LABEL:
+            bad.append("%s label=%s" % (n.get("item"), n.get("label")))
+        if not C.txt(n.get("reason")):
+            bad.append("%s thieu reason" % n.get("item"))
+    g.check(21, "not_cr: label BUG/QUESTION + ly do", bad)
 
     # Tom tat impact
-    print("IMPACT %s (baseline %s):" % (summ.get("cr_id", "?"), base_name), file=sys.stderr)
-    for sheet, axis in S.CR_AXES.items():
-        cnt = {t: 0 for t in S.CR_CHANGE_TYPE}
-        for r in wb[sheet]:
-            if r.get("Change Type") in cnt:
-                cnt[r["Change Type"]] += 1
-        print("  %-11s NEW %d · UPD %d · DEL %d · NONE %d" % (
-            axis, cnt["NEW"], cnt["UPD"], cnt["DEL"], cnt["NONE"]), file=sys.stderr)
-    print("  Conflict=Yes: %d · Risk=High: %d · CQ: %d" % (
-        sum(r.get("Conflict") == "Yes" for r in rows),
-        sum(r.get("Risk") == "High" for r in rows), len(cq_ids)), file=sys.stderr)
+    print("IMPACT %s (baseline %s):" % (meta.get("cr_id", "?"), base_name), file=sys.stderr)
+    for ax in S.CR_AXES:
+        cnt = {t: sum(1 for i in IMP if i.get("axis") == ax and i.get("change_type") == t)
+               for t in S.CR_CHANGE_TYPE}
+        print("  %-11s %s · %s MD" % (ax, " · ".join("%s %d" % kv for kv in cnt.items()),
+                                       C.fmt_md(row_tot[ax])), file=sys.stderr)
+    print("  Tong MD: %s (don gia %s) · Conflict=Yes: %d · Risk=High: %d · CQ: %d" % (
+        C.fmt_md(grand), st or "?", sum(i.get("conflict") == "Yes" for i in IMP),
+        sum(i.get("risk") == "High" for i in IMP), len(Q)), file=sys.stderr)
 
     if a.out:
         os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)

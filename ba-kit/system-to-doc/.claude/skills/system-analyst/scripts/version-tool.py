@@ -31,7 +31,8 @@ OUTPUT_GLOBS = {
     "O1": ["01_Screens/BasicDesign_*.xlsx"],
     "O2": ["02_API/API_Doc_*.xlsx"],
     "O3": ["03_DB/DB_Doc_*.xlsx"],
-    "O4": ["04_DesignSystem/project/design-system.json"],
+    "O4": ["04_DesignSystem/project/design-system.json",            # 1 DS (single / themes)
+           "04_DesignSystem/WEB-*/project/design-system.json"],     # 1 DS / website (per-site)
     "O5": ["05_Figma/figma-links.md"],
     "O6": ["06_Overview/Overview_*.docx"],
     "O7": ["07_BugList/BugList_*.xlsx"],
@@ -98,10 +99,16 @@ def scan(outputs):
         mc = CR_SLUG_RE.match(slug)
         if mc:
             cr_id = mc.group(1).upper()
-        if impacts:
-            summ = read_kv(impacts[0], "00_Summary")
-            cr_id = summ.get("cr_id") or cr_id or os.path.basename(impacts[0]).split("_")[0]
-            base_ref = summ.get("baseline_version", "")
+        cr_json = os.path.join(p, "_internal", "cr.json")
+        if os.path.isfile(cr_json):
+            try:
+                cm = json.load(open(cr_json, encoding="utf8")).get("meta", {})
+            except (OSError, ValueError):
+                cm = {}
+            cr_id = cm.get("cr_id") or cr_id
+            base_ref = cm.get("baseline_version", "")
+        if impacts and not cr_id:
+            cr_id = os.path.basename(impacts[0]).split("_")[0]
         if not vtype and (impacts or mc):
             vtype = "CR"
         vers.append({"n": n, "folder": name, "path": os.path.abspath(p),

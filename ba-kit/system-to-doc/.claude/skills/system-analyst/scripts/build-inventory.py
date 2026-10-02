@@ -3,8 +3,8 @@
 
   python3 build-inventory.py --out <ver>/_internal/inventory.xlsx
   python3 build-inventory.py --out ... --bug-list        # workbook Bug List (O7)
-  python3 build-inventory.py --out ... --cr              # workbook CR Impact (Luong 2)
 
+CR Impact (Luong 2): dung build-cr-impact.py.
 Artifact noi bo cua agent — KHONG phai deliverable cho user.
 """
 import argparse
@@ -38,8 +38,7 @@ def build(path, sheets, meta_keys=None):
             width = 40 if col in ("Description", "Repro Steps", "Meaning",
                                   "Reason / Evidence", "Business Impact",
                                   "Locator", "Why suspicious", "Summary",
-                                  "Change Description", "Impact On Current",
-                                  "Conflict Detail", "Question") else 18
+                                  "Question") else 18
             ws.column_dimensions[get_column_letter(i)].width = width
         ws.freeze_panes = "A2"
 
@@ -60,11 +59,7 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--bug-list", action="store_true",
                     help="Sinh workbook Bug List thay vi Inventory")
-    ap.add_argument("--cr", action="store_true",
-                    help="Sinh workbook CR Impact (Luong 2)")
     a = ap.parse_args()
-    if a.cr:
-        return build(a.out, S.CR_SHEETS, S.CR_META_KEYS)
     if a.bug_list:
         return build(a.out, S.BUG_SHEETS, S.META_KEYS)
     return build(a.out, S.SHEETS, S.META_KEYS)

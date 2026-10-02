@@ -122,34 +122,37 @@ ID_PATTERNS = {
     "11_Repo": ("Repo ID", r"^REPO-\d{2,}$"),
 }
 
-# --- Change Request impact workbook (Luong 2) ---
+# --- Change Request impact workbook (Luong 2) — 2 sheet: Summary + Impact ---
+# Nguon du lieu: <ver>/_internal/cr.json (agent viet) -> build-cr-impact.py render xlsx.
 CR_META_KEYS = [
     "cr_id", "cr_title", "baseline_version", "cr_version", "source_type",
-    "source_ref", "received_date", "requested_by", "summary",
-    "overall_risk", "recommendation",
+    "source_ref", "received_date", "requested_by", "overall_risk", "recommendation",
 ]
-CR_AXES = {
-    "01_System": "System",
-    "02_DB": "DB",
-    "03_Business": "Business",
-    "04_Screen": "Screen",
-    "05_ThirdParty": "ThirdParty",
-    "06_Mockup": "Mockup",
-}
-CR_IMPACT_COLS = [
-    "Impact ID", "Change Type", "Baseline Ref", "Item", "Change Description",
-    "Impact On Current", "Conflict", "Conflict Detail", "Risk", "Evidence",
-    "Open Q", "Note",
-]
-CR_SHEETS = {"00_Summary": ["Key", "Value"]}
-CR_SHEETS.update({s: list(CR_IMPACT_COLS) for s in CR_AXES})
-CR_SHEETS["07_Questions"] = ["Q ID", "Question", "Why It Matters", "Axis", "Owner", "Status"]
-CR_CHANGE_TYPE = ["NEW", "UPD", "DEL", "NONE"]
+CR_AXES = ["System", "DB", "Business", "Screen", "ThirdParty", "Mockup"]
+CR_CHANGE_TYPE = ["NEW", "UPD", "DEL", "IMPACT"]
 CR_CONFLICT = ["Yes", "No", "UNKNOWN"]
 CR_RISK = ["High", "Medium", "Low"]
 CR_SOURCE_TYPE = ["FILE", "CHAT", "LINK"]
+CR_CRITERIA = {
+    "C1": "Chuc nang / man / API / bang moi chua co trong he thong hien tai (baseline)",
+    "C2": "Doi hanh vi dang chay da Confirmed trong baseline (khach doi y, khong phai he thong loi)",
+    "C3": "Them / bo man, actor, chuc nang, lien ket ben thu 3",
+    "C4": "Doi business rule / validation dang chay",
+    "C5": "Doi nen tang / thiet bi / yeu cau phi chuc nang (hieu nang, bao mat, trinh duyet)",
+    "C6": "Keo theo doi schema DB, API contract hoac tai lieu da ban giao",
+}
+CR_NOT_CR_LABEL = ["BUG", "QUESTION"]
+CR_SHEET_SUMMARY = "Summary"
+CR_SHEET_IMPACT = "Impact"
+CR_IMPACT_COLS = [  # header hien thi cho khach -> tieng Viet co dau
+    "No", "Impact ID", "Trục", "Loại", "Baseline Ref", "Hạng mục",
+    "Nội dung thay đổi", "Vì sao phải sửa", "Ảnh hưởng tới hiện tại",
+    "Xung đột", "Chi tiết xung đột", "Rủi ro", "Mã đơn giá", "Số lượng",
+    "MD", "Ghi chú MD", "Evidence", "Câu hỏi",
+]
 CR_IMPACT_ID = r"^IMP-\d{3,}$"
 CR_QUESTION_ID = r"^CQ-\d{3,}$"
+MD_RATES_PATH = ".claude/config/md-unit-rates.json"
 
 NO_IMAGE = "NO IMAGE"
 NO_SCREEN = "SYSTEM — no screen"

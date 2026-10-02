@@ -6,6 +6,8 @@
 Dung 1 04_DesignSystem HOP LE theo design-system-format.md (STATUS.md + project/: 1 theme, token vai tro §3.3
 co hoac ghi TBD, type Heading/Text 4 style, Button + Badge co bundle/d.ts/preview, component con lai ghi TBD,
 cover, nhom Icons) -> PASS. Sau do tiem tung loi vao ban copy -> khang dinh dung check do FAIL.
+Layout per-site (04_DesignSystem/WEB-01, WEB-02 + draft dsLayout): hop le PASS, loi 1 site FAIL dung site do,
+tron layout / lech dsLayout.mode FAIL, --force-mode da ghi forced PASS.
 Chay lai sau MOI lan sua verify-design-system.py / ds_roles.py.
 """
 import argparse
@@ -272,6 +274,123 @@ CASES = [
 ]
 
 
+# ---------- layout per-site (04_DesignSystem/WEB-xx/) ----------
+WEB2_PRIMARY = "#c2410c"
+
+
+def lay(mode, sites=("WEB-01", "WEB-02"), auto=None, forced=False):
+    return {"mode": mode, "auto": auto or mode, "forced": forced, "reason": "selftest", "sites": list(sites), "diffs": []}
+
+
+def site_draft(mode="per-site", **k):
+    """draft chung + perSite.<site>.observed: WEB-02 co primary rieng, KHONG co #0057b8."""
+    d = draft()
+    d["colors"].append({"hex": WEB2_PRIMARY.upper(), "count": 2, "alpha": [1.0]})
+    obs1 = {c["hex"].lower(): c["alpha"] for c in draft()["colors"]}
+    obs2 = dict((h, al) for h, al in obs1.items() if h != "#0057b8")
+    obs2[WEB2_PRIMARY] = [1.0]
+    names = ["noto sans jp", "arial", "sans-serif"]
+    d["perSite"] = {"WEB-01": {"observed": {"colors": obs1, "fontNames": names}},
+                    "WEB-02": {"observed": {"colors": obs2, "fontNames": names}}}
+    d["dsLayout"] = lay(mode, **k)
+    return d
+
+
+def build_persite(root, mode="per-site", **k):
+    """root/04_DesignSystem/{WEB-01,WEB-02}/ = 2 DS hop le; WEB-02 primary rieng."""
+    tmp = os.path.join(root, "_tmp")
+    ds1, _, _ = build(tmp)
+    top = os.path.join(root, "04_DesignSystem")
+    os.makedirs(top)
+    for s_ in ("WEB-01", "WEB-02"):
+        shutil.copytree(ds1, os.path.join(top, s_))
+    shutil.rmtree(tmp)
+    P2 = os.path.join(top, "WEB-02", "project")
+    edit_tokens(lambda d: [ctok(n)(d).update(value=WEB2_PRIMARY) for n in ("primary", "primary-text")])(P2)
+    for f in ("design-system.json", "components/Cover/preview.html"):
+        fp = os.path.join(P2, f)
+        txt = open(fp).read().replace("ShopDemo", "ShopDemo B")
+        open(fp, "w").write(txt)
+    dp = os.path.join(root, "tokens-draft.json")
+    json.dump(site_draft(mode, **k), open(dp, "w"))
+    return top, dp
+
+
+def set_draft_layout(dp, **k):
+    d = json.load(open(dp))
+    d["dsLayout"] = lay(**k)
+    json.dump(d, open(dp, "w"))
+
+
+# (ten, ham(root -> (ds, draft)), check mong doi, ket qua mong doi, exit mong doi)
+def _ps_valid(r):
+    return build_persite(r)
+
+
+def _ps_bad_site(r):
+    top, dp = build_persite(r)
+    edit_tokens(lambda d: ctok("text-low")(d).update(usage="TODO — kiem lai"))(os.path.join(top, "WEB-02", "project"))
+    return top, dp
+
+
+def _ps_color_other_site(r):
+    top, dp = build_persite(r)
+    edit_tokens(lambda d: ctok("primary")(d).update(value="#0057b8"))(os.path.join(top, "WEB-02", "project"))
+    return top, dp
+
+
+def _ps_mixed(r):
+    top, dp = build_persite(r)
+    shutil.copytree(os.path.join(top, "WEB-01", "project"), os.path.join(top, "project"))
+    return top, dp
+
+
+def _ps_extra_file(r):
+    top, dp = build_persite(r)
+    open(os.path.join(top, "README.md"), "w").write("index\n")
+    return top, dp
+
+
+def _ps_draft_themes(r):
+    top, dp = build_persite(r)
+    set_draft_layout(dp, mode="themes")
+    return top, dp
+
+
+def _ps_sites_mismatch(r):
+    top, dp = build_persite(r)
+    set_draft_layout(dp, mode="per-site", sites=("WEB-01", "WEB-02", "WEB-03"))
+    return top, dp
+
+
+def _single_draft_persite(r):
+    ds, _, dp = build(r)
+    d = json.load(open(dp))
+    d["dsLayout"] = lay("per-site")
+    json.dump(d, open(dp, "w"))
+    return ds, dp
+
+
+def _single_forced(r):
+    ds, _, dp = build(r)
+    d = json.load(open(dp))
+    d["dsLayout"] = lay("themes", auto="per-site", forced=True)
+    json.dump(d, open(dp, "w"))
+    return ds, dp
+
+
+LAYOUT_CASES = [
+    ("per-site 2 site hop le -> PASS", _ps_valid, "0", "PASS", 0),
+    ("per-site: WEB-02 con usage TODO -> WEB-02.4 FAIL", _ps_bad_site, "WEB-02.4", "FAIL", 1),
+    ("per-site: WEB-02 dung mau chi thay o WEB-01 -> WEB-02.5 FAIL", _ps_color_other_site, "WEB-02.5", "FAIL", 1),
+    ("tron layout (project/ + WEB-xx/) -> check 0 FAIL", _ps_mixed, "0", "FAIL", 1),
+    ("per-site co file thua o root -> check 0 FAIL", _ps_extra_file, "0", "FAIL", 1),
+    ("per-site nhung draft mode themes -> check 0 FAIL", _ps_draft_themes, "0", "FAIL", 1),
+    ("thu muc site khac dsLayout.sites -> check 0 FAIL", _ps_sites_mismatch, "0", "FAIL", 1),
+    ("1 thu muc nhung draft mode per-site -> check 0 FAIL", _single_draft_persite, "0", "FAIL", 1),
+    ("1 thu muc + draft FORCED themes (tu dong per-site) -> PASS", _single_forced, "0", "PASS", 0),
+]
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--keep", action="store_true")
@@ -321,6 +440,17 @@ def main():
         code, out = run(os.path.join(d, "04_DesignSystem"), os.path.join(d, "tokens-draft.json"), "--figma-used")
         record("mau ngoai draft + --figma-used + source figma -> check 5 WARN",
                results(out).get("5") == "WARN" and code == 0, "nhan %s (exit %d)" % (results(out).get("5"), code))
+        for i, (name, fn, chk, want, ecode) in enumerate(LAYOUT_CASES, 1):
+            ds_, dp_ = fn(os.path.join(root, "L%02d" % i))
+            code, out = run(ds_, dp_)
+            r = results(out)
+            fails = sorted(k for k, v in r.items() if v == "FAIL")
+            ok = r.get(chk) == want and code == ecode
+            if want == "FAIL" and "." in chk:   # loi 1 site khong lan sang site kia
+                ok = ok and not [k for k in fails if not k.startswith(chk.split(".")[0] + ".")]
+            if want == "PASS":
+                ok = ok and not fails
+            record(name, ok, "nhan %s=%s, FAIL %s (exit %d)" % (chk, r.get(chk), fails, code))
     finally:
         if a.keep:
             print("Giu fixture tai %s" % root)

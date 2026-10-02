@@ -18,7 +18,7 @@ Workflow canonical: `.claude/agents/system-analyst.md`. Skill này chỉ liệt 
 | `crawl-site.js` | Crawl 1 website read-only (chặn ghi ở tầng network, không theo link logout/xoá): screenshot, item, style, lỗi UI |
 | `scan-repo.py` | 1 repo: API, batch, route FE, lời gọi API từ FE, bảng DB được dùng, integration, evidence code-ref, `api-seed.csv` |
 | `read-schema.py` | Dump schema-only / SQLite metadata → bảng, cột, max length, format, constraint. Dump có dữ liệu → exit 3 |
-| `extract-design-tokens.py` | Tổng hợp màu / font / spacing / component quan sát được (website + CSS) → `tokens-draft.json`; `--emit-tokens` sinh `tokens.json` khởi đầu đúng format type Design System |
+| `extract-design-tokens.py` | Tổng hợp màu / font / spacing / component quan sát được (website + CSS) → `tokens-draft.json`; `--emit-root` tự quyết 1 DS nhiều theme hay 1 DS / website và sinh `tokens.json` + `STATUS.md` khởi đầu đúng chuẩn chung |
 
 ## Inventory + render
 

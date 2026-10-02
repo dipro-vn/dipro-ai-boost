@@ -27,7 +27,7 @@
 | O6 | docx tổng hợp | V3 · V5 |
 | O7 | Bug list Medium–High (tuỳ chọn) | V8 |
 
-**Output Luồng 2** → `outputs/ver<N>_<DDMMYY>_CR-<id>-<slug>/`: `CR-<id>_Impact.xlsx` (6 trục) · `CR-<id>_Summary.md` · Figma view CR mới. Gate V-CR.
+**Output Luồng 2** → `outputs/ver<N>_<DDMMYY>_CR-<id>-<slug>/`: `CR-<id>_Impact.xlsx` (2 sheet: `Summary` giải trình CR + tổng MD · `Impact` từng hạng mục + vì sao sửa + MD) · Figma view CR mới (badge NEW/UPD/DEL/IMPACT/AS-IS, chỉ phần liên quan). Gate V-CR · V-CR-FIGMA. Đơn giá MD: `.claude/config/md-unit-rates.json`.
 
 `_internal/inventory.xlsx` trong mỗi version = bộ nhớ máy đọc của agent (schema: [`inventory-spec.md`](.claude/sys-agent/inventory-spec.md)). Không phải deliverable, không nhắc trong tài liệu cho user.
 
