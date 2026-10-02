@@ -15,7 +15,7 @@
 
 | Gate | Hỏi gì | Không đạt |
 |---|---|---|
-| G1 — Design system | Có link / Figma / file quy định màu, font, size, weight… chưa? Đủ D1–D8 chưa? | Chưa có → **dừng** · Thiếu → xin 1–5 màn Figma để agent tự phân tích, bổ sung |
+| G1 — Design system | Có link Figma / file / artifact / codebase quy định màu, font, size, component… chưa? Phân tích → Design System artifact đủ D1–D8 chưa? | Chưa có → **dừng** · Thiếu → xin 1–5 màn Figma để agent tự đo, bổ sung |
 | G2 — Prototype & phạm vi | Prototype ở đâu · tài liệu khác · muốn vẽ toàn bộ / chọn màn / chỉ phân tích / 1 luồng | Không có prototype và tài liệu → **dừng** |
 | G3 — Figma đầu ra | Link Figma (file / section) có quyền EDIT · tên output | Không có link và không cho tạo file → **dừng** |
 | — | Platform · ngôn ngữ tên (vi + ja + en) | — |
@@ -24,7 +24,7 @@
 
 | # | Output | Vị trí |
 |---|---|---|
-| 1 | Design system của dự án (dựng lần đầu, user duyệt) | `design-system/` |
+| 1 | **Design System artifact** của dự án (định dạng type "Design System": README brand book · tokens · component + preview · Logos / Icons · Cover), user duyệt | Link claude.ai/artifact + `design-system/project/` |
 | 2 | Figma frames HIGH-FIDELITY | Link Figma đầu ra user cung cấp |
 | 3 | Báo cáo: Screen Inventory + Figma link + Design notes | `output/<feature>/figma-screens.md` |
 
@@ -32,11 +32,12 @@
 
 | File | Nội dung |
 |---|---|
-| `.claude/designer-agent/design-system-intake.md` | G1 — câu hỏi, checklist D1–D8, phân tích 1–5 màn Figma, dựng design-system/ |
+| `.claude/designer-agent/design-system-intake.md` | G1 — câu hỏi nguồn, phân tích đầy đủ từng loại nguồn, dựng + publish artifact |
+| `.claude/designer-agent/design-system-format.md` | Chuẩn định dạng Design System (cây file, tokens.json, README, component, cover, token vai trò D1–D8, checklist) |
 | `.claude/designer-agent/prototype-intake.md` | G2 — câu hỏi prototype, phạm vi, tài liệu |
 | `.claude/designer-agent/naming-rule.md` | Tên đa ngôn ngữ xuống dòng, không bị cắt |
 | `.claude/designer-agent/output-template.md` | Template figma-screens.md |
-| `.claude/designer-agent/design-system-template/` | Template design-system/ |
+| `.claude/designer-agent/design-system-template/` | Skeleton `design-system/` (`STATUS.md` + `project/`) |
 | `.claude/skills/figma-design/` | Đọc / ghi Figma MCP, map token, checklist chất lượng |
 | `.claude/rules/` | DATA-PRIVACY · POLICY · RELIABILITY · SECURITY |
 | `.claude/hooks/detect-pii.js` | Hook H06 — chặn dữ liệu cá nhân thật khi ghi file / Figma |

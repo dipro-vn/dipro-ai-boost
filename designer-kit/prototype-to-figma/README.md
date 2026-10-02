@@ -17,7 +17,7 @@ Kiểm tra: gõ `/mcp` → thấy **figma** ở trạng thái connected. Tài kh
 
 | Cần có | Ghi chú |
 |---|---|
-| **Design system** của dự án | Link Figma (Foundations / Component Library) · tài liệu guideline · hoặc 1–5 màn Figma đã duyệt. **Chưa có → agent dừng.** |
+| **Design system** của dự án | Link Figma (Foundations / Component Library) · tài liệu guideline · link artifact Design System · codebase · hoặc 1–5 màn Figma đã duyệt. Agent phân tích → dựng **Design System artifact** (claude.ai) để bạn duyệt. **Chưa có → agent dừng.** |
 | **Prototype** `.html` | Copy vào `input/` |
 | **Link Figma đầu ra** | File / page / section bạn có quyền EDIT |
 
@@ -30,16 +30,16 @@ Kiểm tra: gõ `/mcp` → thấy **figma** ở trạng thái connected. Tài kh
    ```
    hoặc gõ `/prototype-to-figma`
 3. Trả lời các hộp chọn — thiếu gì agent hỏi, không tự đoán:
-   - **Design system:** có chưa? đủ chưa? → thiếu thì gửi 1–5 màn / link Figma để agent tự phân tích, bổ sung
+   - **Design system:** nguồn ở đâu? → agent phân tích, dựng Design System artifact; thiếu thì gửi 1–5 màn / link Figma để agent đo, bổ sung
    - **Prototype & phạm vi:** vẽ toàn bộ · chọn màn · chỉ phân tích · 1 luồng
    - **Link Figma đầu ra** · tên output
    - **Platform** · **ngôn ngữ tên** màn (đề xuất vi + ja + en)
-4. Duyệt design system (lần đầu) và danh sách màn → agent vẽ Figma.
+4. Duyệt Design System artifact (lần đầu, mở link để xem token / component / preview) và danh sách màn → agent vẽ Figma.
 5. Kết quả: frame trong Figma + `output/<feature>/figma-screens.md`.
 
 ## Lưu ý
 
-- Màu, font, component lấy từ `design-system/` — không copy CSS của prototype.
+- Màu, font, component lấy từ Design System artifact (`design-system/`) — không copy CSS của prototype.
 - Tên đa ngôn ngữ được xuống dòng, không bị cắt chữ.
 - Không đưa dữ liệu cá nhân thật vào Figma (hook H06 chặn khi phát hiện).
 - Agent không sửa prototype, không commit / push.

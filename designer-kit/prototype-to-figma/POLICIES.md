@@ -33,7 +33,7 @@
 | Thiếu | Bước | Nếu user không có |
 |---|---|---|
 | Design system | 0.1 (G1) | Dừng |
-| Design system chưa đủ D1–D8 | 0.1 (G1) | Xin 1–5 màn Figma / tài liệu · hoặc dùng tạm TBD |
+| Design System artifact chưa đủ D1–D8 (`design-system-format.md` §3.3) | 0.1 (G1) | Xin 1–5 màn Figma / tài liệu · hoặc dùng tạm TBD |
 | Prototype · phạm vi · tài liệu | 0.2 (G2) | Không có nguồn nào → dừng |
 | Link Figma đầu ra · tên output | 0.3 (G3) | Dừng (trừ khi cho tạo file mới) |
 | Platform · ngôn ngữ tên | 0.4 · 0.5 | — |
@@ -61,7 +61,7 @@ hoặc
 
 - Sửa 1 frame → chỉ động vào frame đó; frame đã duyệt không vẽ lại.
 - Sau khi sửa → trạng thái `WAITING_APPROVAL`, không tự coi là đã duyệt.
-- Đổi token design system → cập nhật `design-system/` + changelog, báo các frame bị ảnh hưởng (`STALE`).
+- Đổi token design system → cập nhật `design-system/project/` + publish lại artifact + changelog `STATUS.md`, báo các frame bị ảnh hưởng (`STALE`).
 
 ## 6. Dữ liệu khách hàng (tóm tắt — chi tiết `.claude/rules/DATA-PRIVACY.md`)
 

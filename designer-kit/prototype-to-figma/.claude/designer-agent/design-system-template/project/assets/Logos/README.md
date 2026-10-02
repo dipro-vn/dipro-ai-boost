@@ -1,0 +1,1 @@
+Logo <tên> (<mô tả hình>, màu `brand-<tên>` #……), <định dạng> nền trong suốt <W×H>, lấy nguyên từ <nguồn>. Chỉ đặt trên <nền>: <vị trí> cao <px>, <vị trí> cao <px>. Không đổi màu, không kéo giãn, không đặt lên nền `primary`.

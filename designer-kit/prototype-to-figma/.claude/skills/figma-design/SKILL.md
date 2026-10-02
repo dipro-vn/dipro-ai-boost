@@ -24,16 +24,18 @@ get_screenshot(fileKey, nodeId)      → ảnh PNG
 
 ## 3. Map giá trị Figma → design system
 
-| Giá trị Figma | Map sang (`design-system/`) |
+| Giá trị Figma | Map sang (`design-system/project/`, chuẩn `design-system-format.md`) |
 |---|---|
-| Màu hex | `foundation.md` D1–D3 / `tokens.json color` |
-| Font size / weight / line-height | `foundation.md` D4 |
-| Padding / gap | spacing scale D5 |
-| Radius / shadow | D5 |
-| Component instance | `components.md` D6 |
+| Màu hex | `tokens.json` `color.tokens` (token vai trò D1–D3, giá trị theo theme) |
+| Font size / weight / line-height | `tokens.json` `type.groups[].styles` (D4) |
+| Padding / gap | `spacing.tokens` `space-*` (D5) |
+| Radius / shadow | `radius.tokens` · `shadow.tokens` (D5) |
+| Viewport / khung màn | `size.tokens` `viewport-*`, `header-height`, `sidebar-width`… (D7) |
+| Component instance | `components/<Comp>/README.md` + `meta.componentKeys` (D6) |
+| Câu chữ / icon / logo | `README.md` mục Nội dung và giọng văn · Icon · Logo (D8) |
 
 - Variable name và màu hiển thị có thể lệch → **tin màu đo trên màn đã duyệt**, ghi mâu thuẫn.
-- Không tự bịa token; thiếu → hỏi user (design-system-intake §5).
+- Không tự bịa token; thiếu → hỏi user (design-system-intake §3, Câu DS-2).
 
 ## 4. Kiểm tra chất lượng (trước khi báo xong)
 

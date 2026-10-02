@@ -1,7 +1,11 @@
 # design-system/ — Design system của dự án
 
-Folder này **đang trống**. Lần chạy đầu, Designer Agent sẽ hỏi nguồn design system (link Figma / tài liệu / 1–5 màn Figma mẫu), phân tích rồi dựng các file tại đây để bạn duyệt:
+Folder này **đang trống**. Lần chạy đầu, Designer Agent hỏi nguồn design system (link Figma / tài liệu / link artifact / codebase / 1–5 màn Figma mẫu), phân tích đầy đủ rồi dựng tại đây và publish thành **Design System artifact** trên claude.ai để bạn duyệt:
 
-`README.md` · `foundation.md` · `platform-<tên>.md` · `components.md` · `tokens.json` · `refs/`
+```
+design-system/
+├── STATUS.md          ← trạng thái, link artifact, platform, TBD, mâu thuẫn, changelog
+└── project/           ← nội dung artifact: design-system.json · tokens.json · README.md · components/ · assets/
+```
 
-Chưa có nguồn design system → agent dừng lại, không vẽ.
+Chuẩn định dạng: `.claude/designer-agent/design-system-format.md`. Chưa có nguồn design system → agent dừng lại, không vẽ.
