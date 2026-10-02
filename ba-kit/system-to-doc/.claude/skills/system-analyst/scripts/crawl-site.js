@@ -6,6 +6,9 @@
  *        [--mode read-only|submit-staging|submit-prod] [--max-urls 200] [--max-minutes 30] \
  *        [--storage-state <project>/.auth/WEB-01.json] [--role test_user] \
  *        [--forbid "/admin/batch,/payment"] [--ev-start 1] [--viewport 1440x900] [--assets on|off]
+ *        [--http-user-env VAR --http-pass-env VAR]   HTTP Basic Auth, gia tri chi lay tu env
+ *        [--seed-file urls.txt]   URL khoi tao them (SPA dieu huong bang nut) — van qua bo loc logout/pha du lieu
+ *        [--headed]               mo cua so trinh duyet de user quan sat (mac dinh headless)
  *
  * Gate G2 duoc thuc thi o day, khong phai bang loi hua trong prompt:
  *   - read-only  : chan moi request khac GET/HEAD o tang network
@@ -78,6 +81,16 @@ function hrefPath(u) {
   try { const x = new URL(u); return decodeURIComponent(x.pathname + x.search); } catch { return String(u); }
 }
 
+// HTTP Basic Auth (vd lop CloudFront) — CHI doc tu bien moi truong, chi gui toi origin cua --url
+function httpCreds(arg, url) {
+  const ue = arg('http-user-env', null), pe = arg('http-pass-env', null);
+  if (!ue && !pe) return null;
+  if (!ue || ue === true || !pe || pe === true) { console.error('Basic Auth can ca --http-user-env VAR va --http-pass-env VAR'); process.exit(1); }
+  const username = process.env[ue], password = process.env[pe];
+  if (!username || !password) { console.error(`Bien moi truong ${ue} / ${pe} chua duoc dat`); process.exit(1); }
+  return { username, password, origin: new URL(String(url)).origin };
+}
+
 (async () => {
   let chromium;
   try { ({ chromium } = require('playwright')); }
@@ -113,10 +126,12 @@ function hrefPath(u) {
   const assetFiles = [], assetSkipped = [], iconFonts = {}, assetSeen = new Set();
 
   let browser;
-  try { browser = await chromium.launch(); }
+  try { browser = await chromium.launch({ headless: arg('headed', false) !== true }); }   // --headed: mo cua so de quan sat
   catch (e) { console.error('Khong mo duoc chromium. Chay: npx playwright install chromium\n' + String(e).split('\n')[0]); process.exit(2); }
   const ctxOpts = { viewport, serviceWorkers: 'block' };   // SW co the vuot qua ctx.route
   if (storage) ctxOpts.storageState = storage;
+  const hc = httpCreds(arg, start);
+  if (hc) ctxOpts.httpCredentials = hc;
   const ctx = await browser.newContext(ctxOpts);
   const page = await ctx.newPage();
 
@@ -195,6 +210,16 @@ function hrefPath(u) {
 
   const queue = [normalize(start)];
   const queued = new Set(queue);
+  // --seed-file: URL khoi tao (vd route tinh lay tu source) — cung bo loc origin / logout / pha du lieu nhu link
+  const seedFile = arg('seed-file', null);
+  if (seedFile && seedFile !== true) {
+    for (const line of fs.readFileSync(String(seedFile), 'utf8').split(/\r?\n/)) {
+      const n = normalize(line.trim());
+      if (!n || !/^https?:/.test(n) || !sameOrigin(n, start) || queued.has(n)) continue;
+      if (LOGOUT_RE.test(hrefPath(n)) || destructiveHit(hrefPath(n))) { blocked.push({ kind: 'seed-skipped', url: n }); continue; }
+      queued.add(n); queue.push(n);
+    }
+  }
   const seen = new Set(), pages = [], evidence = [], styles = [], uiIssues = [];
   const t0 = Date.now();
   let evNo = evStart - 1;

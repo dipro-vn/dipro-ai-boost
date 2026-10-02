@@ -241,8 +241,13 @@ def main():
     crawled = read_lists(a.crawled)
     if crawled:
         known = {norm_route(r.get("URL / Route", "")) for r in screens}
+        # route co tham so khong phai so (vd /tenant/:code <- /tenant/KL): khop theo pattern cua man
+        pats = [re.compile("^" + re.sub(r"/:[^/]+", "/[^/]+", re.escape(norm_route(r.get("URL / Route", "")))
+                                        .replace(r"\:", ":")) + "$")
+                for r in screens if ":" in r.get("URL / Route", "")]
         g.check(16, "Moi URL da crawl co mat trong 02_Screen",
-                sorted({u for u in crawled if norm_route(u) not in known}))
+                sorted({u for u in crawled if norm_route(u) not in known
+                        and not any(p.match(norm_route(u)) for p in pats)}))
     else:
         g.warn(16, "Crawl coverage", "chua truyen --crawled")
 

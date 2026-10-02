@@ -12,6 +12,8 @@
  *        [--user-selector "#email"] [--pass-selector "#password"] [--submit-selector "button[type=submit]"] \
  *        [--success-url-contains ... | --success-selector ...]
  *
+ *   # Site co HTTP Basic Auth (vd CloudFront): them --http-user-env VAR --http-pass-env VAR (ca 2 mode)
+ *
  * Output: file storage state (cookie + localStorage) mode 0600. .auth/ PHAI nam trong .gitignore,
  * khong bao gio copy vao outputs/, khong in ra, khong ghi vao tai lieu.
  * --form: request khac GET/HEAD chi duoc phep toi origin cua form login (POST duy nhat kit cho phep).
@@ -35,6 +37,16 @@ function arg(name, dflt) {
 function mask(s) {
   s = String(s || '');
   return s.length <= 4 ? '****' : s.slice(0, 2) + '****' + s.slice(-2);
+}
+
+// HTTP Basic Auth (vd lop CloudFront) — CHI doc tu bien moi truong, chi gui toi origin cua --url
+function httpCreds(arg, url) {
+  const ue = arg('http-user-env', null), pe = arg('http-pass-env', null);
+  if (!ue && !pe) return null;
+  if (!ue || ue === true || !pe || pe === true) { console.error('Basic Auth can ca --http-user-env VAR va --http-pass-env VAR'); process.exit(1); }
+  const username = process.env[ue], password = process.env[pe];
+  if (!username || !password) { console.error(`Bien moi truong ${ue} / ${pe} chua duoc dat`); process.exit(1); }
+  return { username, password, origin: new URL(String(url)).origin };
 }
 
 function strip(u) { try { const x = new URL(u); x.hash = ''; x.search = ''; return x.toString().replace(/\/$/, ''); } catch { return u; } }
@@ -95,7 +107,10 @@ async function loggedIn(page, loginUrl, opt) {
   try { browser = await chromium.launch({ headless: !manual }); }
   catch (e) { console.error('Khong mo duoc chromium. Chay: npx playwright install chromium\n' + String(e).split('\n')[0]); process.exit(2); }
 
-  const ctx = await browser.newContext({ serviceWorkers: 'block' });
+  const ctxOpts = { serviceWorkers: 'block' };
+  const hc = httpCreds(arg, url);
+  if (hc) ctxOpts.httpCredentials = hc;
+  const ctx = await browser.newContext(ctxOpts);
   const page = await ctx.newPage();
   let ok = false;
   const blocked = [];

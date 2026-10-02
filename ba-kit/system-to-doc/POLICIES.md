@@ -24,6 +24,7 @@
 - ❌ Kết nối DB của khách, chạy bất kỳ câu SQL nào, đọc dòng dữ liệu (kể cả "xem thử")
 - ❌ Bấm nút xoá / thanh toán / gửi mail khi chưa qua G9; vào vùng `forbidden_zones`
 - ❌ Dùng tài khoản khi user chưa xác nhận **được phép** dùng nó để quét tự động (P2b)
+- ❌ Dùng credential (mật khẩu, Basic Auth, câu trả lời bảo mật) của môi trường **PRODUCTION** hoặc môi trường **chưa xác nhận 100% là TEST** — xem §3.2
 - ❌ Khai thác / thử lỗ hổng bảo mật (kể cả để lấy PoC trên production)
 - ❌ Vượt budget (200 URL / 30 phút / site) mà không báo — hết budget thì **dừng và báo phần đã phủ**
 
@@ -54,10 +55,32 @@
 
 ### 3.2 Credential của chính việc khảo sát
 
-- Mật khẩu tài khoản quét **không bao giờ** nằm trong file nào. Đăng nhập bằng `login-site.js --manual` (user tự gõ) hoặc biến môi trường.
+> **Nguyên tắc:** chặt tuyệt đối với **PRODUCTION**; với môi trường **TEST đã xác nhận** thì agent được dùng tài khoản test để tự chạy.
+
+**Môi trường TEST đã xác nhận** = đủ cả 3, mỗi ý do user trả lời qua `AskUserQuestion` (không suy từ tên URL):
+
+| # | Điều kiện | Câu hỏi |
+|---|---|---|
+| T1 | URL thuộc môi trường dev / staging / test — **không phải production** | P1 |
+| T2 | Tài khoản là tài khoản **TEST** do KH/PM cấp, **được phép** quét tự động | P2b = `[A]` |
+| T3 | Môi trường không chứa dữ liệu người dùng thật | P11 = `[A]` |
+
+Thiếu 1 ý / trả lời mơ hồ → **hỏi lại để phân loại** (không phải xin phép vi phạm). Vẫn chưa chắc 100% → **coi là PRODUCTION**.
+
+| | TEST đã xác nhận | PRODUCTION / chưa xác nhận |
+|---|---|---|
+| Mật khẩu user dán vào chat | ✅ Được dùng để đăng nhập | ⛔ Không dùng, nhắc user đổi mật khẩu |
+| File tài khoản user chỉ định (VD `inputs/credentials.local.md`) | ✅ Được đọc để đăng nhập | ⛔ Không đọc (`rules/SECURITY.md` §1) |
+| Basic Auth / câu hỏi bảo mật của môi trường | ✅ Được dùng | ⛔ Không dùng |
+| Cách đăng nhập | `login-site.js --form` (credential qua **biến môi trường**) hoặc `--manual` | **Chỉ** `--manual` — user tự gõ |
+
+**Luôn bắt buộc, kể cả TEST:**
+- Giá trị credential **không bao giờ** xuất hiện trong `outputs/`, docx/xlsx, Figma, claude.ai artifact, run-log, báo cáo cuối — chỉ ghi **tên role** + vai trò người cấp.
+- Không truyền mật khẩu qua tham số CLI — dùng biến môi trường.
 - Phiên đăng nhập chỉ ở `.auth/` (gitignore, quyền 600), **không** copy vào `outputs/`.
-- User dán mật khẩu vào chat → không ghi ra file, nhắc user đổi mật khẩu sau khảo sát.
-- Không đọc `.env` / key store / `.git/config` của repo khách (`rules/SECURITY.md`). Cần biết cấu hình → chỉ ghi **tên key** từ `.env.example`.
+- Ghi vào `run-log.md` mục *Điều kiện chạy*: T1–T3 + vai trò người duyệt.
+- Hết khảo sát: nhắc user xoá file tài khoản + đổi mật khẩu đã dán vào chat.
+- Ngoại lệ TEST **chỉ** áp dụng cho tài khoản dùng để khảo sát. Secret trong **repo / hệ thống của khách** vẫn cấm: không đọc `.env` / key store / `.git/config` của repo khách (`rules/SECURITY.md`). Cần biết cấu hình → chỉ ghi **tên key** từ `.env.example`.
 
 ---
 

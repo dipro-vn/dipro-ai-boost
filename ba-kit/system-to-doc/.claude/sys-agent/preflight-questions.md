@@ -73,10 +73,17 @@ P2b. Tài khoản đó do ai cấp, và bạn có được PHÉP dùng nó để
 | `[B]` | ⛔ **Không đăng nhập.** Chỉ quét màn public. Mọi màn sau login = `To verify` + Open Q "cần tài khoản test được phép" |
 | `[C]` | Như `[B]`, ghi rõ lý do |
 
-**Cách đăng nhập — agent KHÔNG nhận mật khẩu qua chat:**
-- Ưu tiên `node login-site.js --manual --url <login> --save .auth/WEB-01.json` → mở trình duyệt, **user tự gõ** tài khoản, script lưu phiên.
+**Cách đăng nhập — phụ thuộc môi trường (`POLICIES.md` §3.2):**
+
+| Môi trường | Cách |
+|---|---|
+| **TEST đã xác nhận** (T1 dev/staging/test · T2 = P2b `[A]` · T3 = P11 `[A]`) | Agent được dùng tài khoản user dán vào chat hoặc file tài khoản user chỉ định: `login-site.js --form --user-env … --pass-env …` (+ `--http-user-env/--http-pass-env` khi có Basic Auth), giá trị đặt vào biến môi trường, không in ra |
+| **PRODUCTION / chưa chắc** | Chỉ `--manual` — user tự gõ. Không dùng mật khẩu trong chat / file |
+
+- `--manual`: `node login-site.js --manual --url <login> --save .auth/WEB-01.json` → mở trình duyệt, **user tự gõ** tài khoản, script lưu phiên.
 - Hoặc user tự `export SITE_USER=... SITE_PASS=...` trong terminal rồi agent chạy `--form --user-env SITE_USER --pass-env SITE_PASS`.
-- User dán mật khẩu vào chat → **không dùng lại, không ghi ra file**, nhắc user đổi mật khẩu đó sau khảo sát.
+- User dán mật khẩu vào chat → TEST đã xác nhận: được dùng để đăng nhập, **không ghi ra file**; PRODUCTION / chưa chắc: **không dùng**. Cả hai: nhắc user đổi mật khẩu sau khảo sát.
+- Môi trường chưa rõ là TEST hay PRODUCTION → hỏi lại P1 (phân loại). Vẫn chưa chắc → coi là PRODUCTION.
 - Role không đăng nhập được → mọi chức năng của role đó `To verify` + Open Q, **cấm** đoán theo tên menu.
 
 ### P3 — Quyền thao tác ⚠️ gate an toàn

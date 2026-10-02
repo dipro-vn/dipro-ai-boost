@@ -24,7 +24,7 @@
 
 **MUST NOT:**
 
-- Dán **secret** (API key, token, password, private key, connection string) vào bất kỳ AI tool nào
+- Dán **secret** (API key, token, password, private key, connection string) vào bất kỳ AI tool nào — **ngoại lệ duy nhất:** tài khoản khảo sát trên môi trường **TEST đã xác nhận** (`POLICIES.md` §3.2); credential production thì không bao giờ
 - Dán **dữ liệu thật của client** (PII, payment, đơn hàng thật) vào AI tool bên ngoài — xem `POLICIES.md` §3.6
 - Dán **toàn bộ tài liệu độc quyền của client** lên AI web chưa được duyệt
 - Dùng output của AI mà không review nguồn gốc & license (§4)

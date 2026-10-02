@@ -56,7 +56,7 @@ Chưa có baseline mà user đưa CR → nói rõ phải chạy Luồng 1 trư�
 - Mọi gate verify PHẢI chạy script. Script không chạy được → output đó `❌ Blocked`, không tự chấm PASS.
 - **Phát hiện dữ liệu nhạy cảm / bảo mật → CẢNH BÁO + DỪNG** (§6). Không bao giờ hỏi "có tiếp tục vi phạm không".
 - **Không bao giờ sửa version cũ.** Mỗi lần chạy = 1 folder mới.
-- Mật khẩu không bao giờ nằm trong file. Session đăng nhập chỉ ở `.auth/` (ngoài `outputs/`).
+- Credential tài khoản khảo sát: **PRODUCTION / chưa xác nhận → cấm dùng tuyệt đối** (chỉ `--manual`); **TEST đã xác nhận (T1–T3)** → được dùng để tự đăng nhập (`POLICIES.md` §3.2). Giá trị credential không bao giờ vào output. Session đăng nhập chỉ ở `.auth/` (ngoài `outputs/`).
 
 ---
 
@@ -120,6 +120,7 @@ python3 $S/scan-sensitive.py --path <repo-1> --path <repo-2> --path inputs/ --ou
 node $S/login-site.js --manual --url <login-url> --save .auth/WEB-01.json   # chỉ khi có tài khoản
 node $S/crawl-site.js --site WEB-01 --url <url> --out $I --mode read-only \
      --storage-state .auth/WEB-01.json --role <role> --forbid "<vùng cấm>" --ev-start 1
+# tuỳ chọn: --http-user-env V --http-pass-env V (Basic Auth, giá trị từ biến môi trường) · --seed-file <urls.txt> (SPA điều hướng bằng nút: route lấy từ source) · --headed (mở cửa sổ quan sát)
 
 # Source — mỗi repo 1 lần
 python3 $S/scan-repo.py <repo> --repo-id REPO-01 --out $I --ev-start <next_ev> --api-start 1
@@ -263,7 +264,8 @@ In nguyên bảng `README.md` của version (sinh bởi `build-version-index.py`
 - ❌ Đọc code thấy route → ghi chức năng `Confirmed`
 - ❌ Suy nghĩa cột DB từ tên cột rồi ghi `High`
 - ❌ Đọc tiếp file mà `scan-sensitive.py` đã gắn HIGH
-- ❌ Ghi mật khẩu vào bất kỳ file nào, copy `.auth/` vào `outputs/`
+- ❌ Ghi mật khẩu vào output / tài liệu / Figma / run-log, copy `.auth/` vào `outputs/`
+- ❌ Dùng credential của môi trường PRODUCTION hoặc môi trường chưa xác nhận 100% là TEST
 - ❌ Ghi đè / sửa version cũ; vẽ đè lên frame Figma cũ khi làm CR
 - ❌ Bỏ trống 1 trục impact trong CR thay vì ghi `NONE` + lý do
 - ❌ Thiếu input rồi dừng cả quy trình — phải ghi lại và chạy tiếp phần khác

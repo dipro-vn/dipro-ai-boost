@@ -17,8 +17,10 @@ You MUST NEVER read, search, display, copy, export, print, or output the content
 | **Service account & cert** | service account JSON, `*.p8`, `*.p12`, `*.pfx`, `*.cer`, `google-services.json`, `GoogleService-Info.plist` | Cloud takeover (AWS/GCP), Firebase hijack, App Store Connect abuse |
 | **Keystore & provisioning** | `*.keystore`, `*.jks`, `*.mobileprovision`, `*.provisionprofile`, `android/key.properties` | Attacker ký giả app đi qua distribution |
 | **Database & dump** | `*.db`, `*.sqlite`, `*.sqlite3`, `*.dump`, `*.sql`, `*.sql.gz`, DB export của KH | ⚠️ Rủi ro cao nhất — thường chứa dữ liệu thật. **Ngoại lệ duy nhất ở kit system-to-doc:** dump **schema-only** user cung cấp cho P6, và **chỉ đọc qua `read-schema.py`** (script tự từ chối, exit 3, khi thấy `INSERT`/`COPY`). Không mở bằng Read/cat. SQLite: chỉ đọc metadata qua script, không SELECT dữ liệu |
-| **Test account thật** | `test-users.json`, `playwright/.auth/*`, **`.auth/*` của kit này**, file chứa email + password đăng nhập được | Account test thường có quyền thật trên staging/prod. `.auth/*.json` chỉ được truyền cho `crawl-site.js --storage-state`, không đọc nội dung |
+| **Test account thật** | `test-users.json`, `playwright/.auth/*`, **`.auth/*` của kit này**, file chứa email + password đăng nhập được | Account test thường có quyền thật trên staging/prod. `.auth/*.json` chỉ được truyền cho `crawl-site.js --storage-state`, không đọc nội dung **Ngoại lệ:** file tài khoản khảo sát user chỉ định, khi môi trường đã xác nhận là **TEST** (T1–T3, `POLICIES.md` §3.2) — production thì không bao giờ |
 | **Tên file gợi ý credential** | chứa `token`, `password`, `secret`, `credential`, `apikey` | Suy đoán an toàn: cứ từ chối trước, hỏi user sau |
+
+**Ngoại lệ — tài khoản khảo sát trên môi trường TEST đã xác nhận** (`POLICIES.md` §3.2): agent được đọc file tài khoản user chỉ định / dùng mật khẩu user dán để đăng nhập, truyền cho script qua biến môi trường. Không bao giờ ghi giá trị ra output. Không áp dụng cho production, không áp dụng cho secret trong repo khách (`.env`, key, service account…).
 
 **Ngoại lệ được phép đọc:** `.env.example`, `.env.sample`, `.env.template`, `settings.json.example`, `.gitignore` — placeholder, không chứa value thật.
 
