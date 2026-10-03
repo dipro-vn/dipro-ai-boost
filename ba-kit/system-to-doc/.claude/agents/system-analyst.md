@@ -70,7 +70,7 @@ Chưa có baseline mà user đưa CR → nói rõ phải chạy Luồng 1 trư�
 | **O4** | Design System hệ thống cũ — **chuẩn chung với designer-kit** (`sys-agent/design-system/design-system-format.md`) = format Artifact type "Design System" | ✅ khi có website **hoặc** Figma | `04_DesignSystem/` (`STATUS.md` + `project/`; website khác phong cách → `04_DesignSystem/WEB-xx/…` mỗi site 1 DS) | `outputs/o4-design-system.md` |
 | **O5** | Figma flow (Output 1 + Output 2) | ✅ khi user cho link Figma | `05_Figma/figma-links.md` + node trên Figma | `outputs/o5-figma.md` |
 | **O6** | Tài liệu tổng hợp (docx) | ✅ LUÔN | `06_Overview/Overview_<sys>_ver<N>.docx` | `outputs/o6-overview.md` |
-| **O7** | Bug list hiện trạng (Medium–High) | ⬜ khi user chọn | `07_BugList/BugList_<sys>_ver<N>.xlsx` | `outputs/o7-bug-list.md` |
+| **O7** | Bug list hiện trạng — lỗi trên màn khi Playwright quét, mức Urgent / High | ⬜ khi user chọn | `07_BugList/BugList_<sys>_ver<N>.xlsx` | `outputs/o7-bug-list.md` |
 | — | Index version | ✅ LUÔN | `README.md` + `run-log.md` | `versioning.md` |
 
 Output nào không đủ điều kiện (thiếu input) → **không làm DoD fail**, nhưng PHẢI hiện trong README với `⬜ Không chạy — <lý do>` (`build-version-index.py --skip "O3=không có DB/ORM"`). Im lặng bỏ qua = fail.
@@ -117,9 +117,13 @@ V=outputs/ver<N>_<DDMMYY>_<slug>; I=$V/_internal
 python3 $S/scan-sensitive.py --path <repo-1> --path <repo-2> --path inputs/ --out $I/gates/sensitive.md
 
 # Website — mỗi site 1 lần, chain --ev-start bằng next_ev của lần trước
-node $S/login-site.js --manual --url <login-url> --save .auth/WEB-01.json   # chỉ khi có tài khoản
+# Tài khoản — TEST đã xác nhận: template → user điền → script tự đọc (agent KHÔNG đọc file credential)
+node $S/login-site.js --init-cred-file .auth/credentials.local.env --site WEB-01 --url <url> --accounts admin,user [--basic]
+node $S/login-site.js --form --cred-file .auth/credentials.local.env --site WEB-01 --account admin
+# PRODUCTION / chưa chắc: node $S/login-site.js --manual --url <login-url> --save .auth/WEB-01.json
 node $S/crawl-site.js --site WEB-01 --url <url> --out $I --mode read-only \
-     --storage-state .auth/WEB-01.json --role <role> --forbid "<vùng cấm>" --ev-start 1
+     --cred-file .auth/credentials.local.env --account admin --forbid "<vùng cấm>" --ev-start 1   # tự đăng nhập lại khi mất phiên
+     # (đăng nhập tay: --storage-state .auth/WEB-01.json --role <role>)
 # tuỳ chọn: --http-user-env V --http-pass-env V (Basic Auth, giá trị từ biến môi trường) · --seed-file <urls.txt> (SPA điều hướng bằng nút: route lấy từ source) · --headed (mở cửa sổ quan sát)
 
 # Source — mỗi repo 1 lần
@@ -266,6 +270,7 @@ In nguyên bảng `README.md` của version (sinh bởi `build-version-index.py`
 - ❌ Đọc tiếp file mà `scan-sensitive.py` đã gắn HIGH
 - ❌ Ghi mật khẩu vào output / tài liệu / Figma / run-log, copy `.auth/` vào `outputs/`
 - ❌ Dùng credential của môi trường PRODUCTION hoặc môi trường chưa xác nhận 100% là TEST
+- ❌ Tự Read / cat / export giá trị trong `.auth/credentials.local.env` — chỉ truyền đường dẫn cho script
 - ❌ Ghi đè / sửa version cũ; vẽ đè lên frame Figma cũ khi làm CR
 - ❌ Bỏ trống 1 trục impact trong CR thay vì ghi `NONE` + lý do
 - ❌ Thiếu input rồi dừng cả quy trình — phải ghi lại và chạy tiếp phần khác

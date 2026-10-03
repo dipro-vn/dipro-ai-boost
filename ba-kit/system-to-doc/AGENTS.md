@@ -25,7 +25,7 @@
 | O4 | Design System — chuẩn chung với designer-kit (= format Artifact type "Design System" của claude.ai), publish khi user đồng ý | V-DS |
 | O5 | Figma Output 1 + Output 2 (cách vẽ của requirement-to-flow) | recheck bbox |
 | O6 | docx tổng hợp | V3 · V5 |
-| O7 | Bug list Medium–High (tuỳ chọn) | V8 |
+| O7 | Bug list màn hình (quét Playwright) mức Urgent–High (tuỳ chọn) | V8 |
 
 **Output Luồng 2** → `outputs/ver<N>_<DDMMYY>_CR-<id>-<slug>/`: `CR-<id>_Impact.xlsx` (2 sheet: `Summary` giải trình CR + tổng MD · `Impact` từng hạng mục + vì sao sửa + MD) · Figma view CR mới (badge NEW/UPD/DEL/IMPACT/AS-IS, chỉ phần liên quan). Gate V-CR · V-CR-FIGMA. Đơn giá MD: `.claude/config/md-unit-rates.json`.
 

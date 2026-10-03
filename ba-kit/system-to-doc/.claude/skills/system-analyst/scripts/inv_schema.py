@@ -106,9 +106,11 @@ INTEGRATION_DIRECTION = ["OUTBOUND", "INBOUND", "BOTH"]
 INTEGRATION_STATUS = ["Confirmed", "To verify", "Inferred"]
 REPO_KIND = ["FE", "BE", "FULLSTACK", "BATCH", "OTHER"]
 
-BUG_CATEGORY = ["Functional", "UI/Layout", "Data", "Performance", "Compatibility", "Security"]
-BUG_SEVERITY = ["High", "Medium"]
-BUG_DETECTED_BY = ["Playwright", "Code review", "DB check", "Console"]
+# O7: chi bug QUAN SAT TREN MAN khi Playwright quet website, chi muc Urgent / High
+BUG_CATEGORY = ["Functional", "UI/Layout", "Performance", "Compatibility"]
+BUG_SEVERITY = ["Urgent", "High"]
+BUG_DETECTED_BY = ["Playwright"]
+BUG_SCREEN_EVIDENCE = ["screenshot", "console-log", "har"]
 BUG_REPORT = ["Yes", "Internal only"]
 
 ID_PATTERNS = {

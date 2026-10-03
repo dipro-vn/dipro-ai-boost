@@ -1,4 +1,10 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(node .claude/skills/system-analyst/scripts/crawl-site.js *)",
+      "Bash(node .claude/skills/system-analyst/scripts/login-site.js *)"
+    ]
+  },
   "hooks": {
     "PreToolUse": [
       {

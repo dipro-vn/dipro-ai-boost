@@ -191,16 +191,16 @@ def build_flow(p):
 
 def build_buglist(p):
     wb = new_wb(S.BUG_SHEETS)
-    for k, v in (("bug_scan_scope", "Blackbox+Code+DB"), ("bug_recipient", "PM noi bo")):
+    for k, v in (("bug_scan_scope", "Playwright — man hinh"), ("bug_recipient", "PM noi bo")):
         wb["00_Meta"].append([k, v])
     wb["Bugs"].append([
         "BUG-001", "Nut Luu khong phan hoi", "SC-002", "/orders", "Functional",
-        "Medium", "1. Mo /orders\n2. Bam Luu\n3. Khong co gi xay ra",
+        "High", "1. Mo /orders\n2. Bam Luu\n3. Khong co gi xay ra",
         "Luu thanh cong", "Khong phan hoi", "EV-0002", "Yes — 3/3", "Playwright",
         "User khong luu duoc thay doi", "Chrome 129 · 2026-10-01", "Yes", "Yes", "Open", ""])
     wb["Suspected"].append([
         "BUG-002", "Cham khi tai danh sach lon", "SC-002", "/orders", "Performance",
-        "Medium", "1. Mo /orders\n2. Cuon toi cuoi", "Tai nhanh", "Doi khi cham",
+        "High", "1. Mo /orders\n2. Cuon toi cuoi", "Tai nhanh", "Doi khi cham",
         "EV-0002", "Intermittent", "Playwright", "Anh huong trai nghiem",
         "Chrome 129", "Unknown", "Internal only", "Open", ""])
     wb["Observations"].append([
@@ -433,12 +433,22 @@ def _(p):
     mutate(p["bug"], set_cell("Bugs", 2, "Reproduced", "No", S.BUG_SHEETS))
 
 
-@case("V8", "Quy ket Security ma khong co PoC", 8)
+@case("V8", "Bug API doc tu code (URL /api, evidence code-ref)", 8)
 def _(p):
     def f(wb):
-        set_cell("Bugs", 2, "Category", "Security", S.BUG_SHEETS)(wb)
-        set_cell("Bugs", 2, "Reproduced", "Intermittent", S.BUG_SHEETS)(wb)
+        set_cell("Bugs", 2, "URL / Route", "/api/orders", S.BUG_SHEETS)(wb)
+        set_cell("Bugs", 2, "Evidence", "EV-0004", S.BUG_SHEETS)(wb)
     mutate(p["bug"], f)
+
+
+@case("V8", "Category Data (khong quan sat tren man)", 4)
+def _(p):
+    mutate(p["bug"], set_cell("Bugs", 2, "Category", "Data", S.BUG_SHEETS))
+
+
+@case("V8", "Bug gan voi chuc nang F- thay vi man SC-", 15)
+def _(p):
+    mutate(p["bug"], set_cell("Bugs", 2, "Screen / Module", "F-001", S.BUG_SHEETS))
 
 
 @case("V8", "Repro Steps chi co 1 buoc", 5)
@@ -456,9 +466,9 @@ def _(p):
     mutate(p["bug"], f)
 
 
-@case("V8", "Severity Low (khong duoc ghi nhan)", 4)
+@case("V8", "Severity Medium (chi ghi Urgent / High)", 4)
 def _(p):
-    mutate(p["bug"], set_cell("Bugs", 2, "Severity", "Low", S.BUG_SHEETS))
+    mutate(p["bug"], set_cell("Bugs", 2, "Severity", "Medium", S.BUG_SHEETS))
 
 
 @case("V8", "00_Meta bug_recipient con UNKNOWN", 13)

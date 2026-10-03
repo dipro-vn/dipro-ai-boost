@@ -9,6 +9,15 @@
  *        [--http-user-env VAR --http-pass-env VAR]   HTTP Basic Auth, gia tri chi lay tu env
  *        [--seed-file urls.txt]   URL khoi tao them (SPA dieu huong bang nut) — van qua bo loc logout/pha du lieu
  *        [--headed]               mo cua so trinh duyet de user quan sat (mac dinh headless)
+ *        [--cred-file <project>/.auth/credentials.local.env --account admin [--login-url <url>]]
+ *                                 credential tu file user dien (auth-common.js: chi ENV=TEST, chi origin cua
+ *                                 <site>.URL, file trong .auth/ khong bi git track). Co --cred-file thi:
+ *                                 - tu dang nhap luc dau neu gap o mat khau; Basic Auth lay tu file (uu tien hon env)
+ *                                 - MAT SESSION (bi chuyen ve trang co o mat khau / URL login) -> ghi blocked.json
+ *                                   kind "session-lost", thu lai URL 1 lan de biet trang nao giet session
+ *                                   (trang do = "session-killer": khong tham lai, pages.json sessionKiller:true,
+ *                                   khong vao urls.txt neu khong quan sat duoc), dang nhap lai toi da 5 lan / run
+ *                                 --role mac dinh = ten account
  *
  * Gate G2 duoc thuc thi o day, khong phai bang loi hua trong prompt:
  *   - read-only  : chan moi request khac GET/HEAD o tang network
@@ -35,6 +44,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const A = require('./auth-common');
 
 const DESTRUCTIVE = [
   'delete', 'remove', 'destroy', 'xoa', 'xóa', '削除', '退会', 'withdraw',
@@ -42,6 +52,8 @@ const DESTRUCTIVE = [
   'send mail', 'gui mail', 'gửi mail', '送信', 'submit order', 'confirm order',
 ];
 const LOGOUT_RE = /log-?out|sign-?out|ログアウト|đăng xuất|dang xuat/i;
+const LOGIN_RE = /log-?in|sign-?in|ログイン/i;
+const MAX_RELOGIN = 5;
 const EVIDENCE_HEADER = 'EV ID,Type,Locator,Captured At,Actor/Role,Artifact,Note';  // = S.SHEETS["05_Evidence"]
 const SLOW_MS = 5000;
 const MAX_ICONS = 80, MAX_LOGOS = 20, MAX_ASSET_BYTES = 2 * 1024 * 1024;
@@ -92,6 +104,11 @@ function httpCreds(arg, url) {
 }
 
 (async () => {
+  for (const bad of ['user', 'pass', 'password', 'username']) {
+    if (process.argv.includes('--' + bad)) {
+      console.error(`Tu choi: khong nhan credential qua CLI (--${bad}). Dung --cred-file.`); process.exit(3);
+    }
+  }
   let chromium;
   try { ({ chromium } = require('playwright')); }
   catch { console.error('Thieu playwright. Chay: npm i -D playwright && npx playwright install chromium'); process.exit(2); }
@@ -102,7 +119,9 @@ function httpCreds(arg, url) {
   const mode = arg('mode', 'read-only');
   const maxUrls = parseInt(arg('max-urls', '200'), 10);
   const maxMin = parseFloat(arg('max-minutes', '30'));
-  const role = arg('role', 'anonymous');
+  const credFile = arg('cred-file', null);
+  const account = arg('account', null);
+  const role = arg('role', account && account !== true ? account : 'anonymous');
   const storage = arg('storage-state', null);
   const forbid = String(arg('forbid', '')).split(',').map(s => s.trim()).filter(Boolean);
   const evStart = parseInt(arg('ev-start', '1'), 10);
@@ -117,6 +136,16 @@ function httpCreds(arg, url) {
   if (!vp) { console.error('--viewport phai dang 1440x900'); process.exit(1); }
   if (!(evStart >= 1)) { console.error('--ev-start phai >= 1'); process.exit(1); }
   const viewport = { width: parseInt(vp[1], 10), height: parseInt(vp[2], 10) };
+  // credential tu file — kiem tra an toan TRUOC khi mo trinh duyet / ghi output (exit 3 neu tu choi)
+  const cred = credFile ? A.loadCreds({ file: credFile, site, account, url: start, needAccount: true }) : null;
+  let loginUrl = arg('login-url', null);
+  if (loginUrl === true) { console.error('--login-url can gia tri'); process.exit(1); }
+  if (loginUrl && cred && A.originOf(loginUrl) !== cred.origin) {
+    A.refuse(`origin cua --login-url khac origin cua ${site}.URL (${cred.origin}) — credential chi duoc gui toi origin do`);
+  }
+  const userSel = String(arg('user-selector', A.DEF_USER)), passSel = String(arg('pass-selector', A.DEF_PASS));
+  const submitSel = String(arg('submit-selector', A.DEF_SUBMIT));
+  const okOpt = { urlContains: arg('success-url-contains', null), selector: arg('success-selector', null) };
 
   const evDir = path.join(out, 'evidence');
   const crawlDir = path.join(out, 'recon', 'crawl', String(site));
@@ -130,18 +159,23 @@ function httpCreds(arg, url) {
   catch (e) { console.error('Khong mo duoc chromium. Chay: npx playwright install chromium\n' + String(e).split('\n')[0]); process.exit(2); }
   const ctxOpts = { viewport, serviceWorkers: 'block' };   // SW co the vuot qua ctx.route
   if (storage) ctxOpts.storageState = storage;
-  const hc = httpCreds(arg, start);
+  const hc = cred ? cred.basic : httpCreds(arg, start);   // Basic Auth chi gui toi origin cua site
   if (hc) ctxOpts.httpCredentials = hc;
   const ctx = await browser.newContext(ctxOpts);
   const page = await ctx.newPage();
 
   const consoleErrors = [], networkIssues = [], blocked = [];
   let curUrl = null;
+  let allowPost = null;   // chi mo khi dang dien form login (origin cua site), dong ngay sau do
 
   // --- Gate G2 thuc thi o tang network ---
   await ctx.route('**/*', route => {
     const req = route.request();
     const m = req.method();
+    if (allowPost && !['GET', 'HEAD'].includes(m)) {
+      let o = null; try { o = new URL(req.url()).origin; } catch { /* */ }
+      if (o === allowPost) return route.continue();
+    }
     if (mode === 'read-only' && !['GET', 'HEAD'].includes(m)) {
       blocked.push({ kind: 'request', method: m, url: req.url(), page: curUrl, at: new Date().toISOString() });
       return route.abort();
@@ -224,18 +258,12 @@ function httpCreds(arg, url) {
   const t0 = Date.now();
   let evNo = evStart - 1;
 
-  while (queue.length && seen.size < maxUrls) {
-    if ((Date.now() - t0) / 60000 > maxMin) { console.error('Het budget thoi gian'); break; }
-    const url = queue.shift();
-    if (!url || seen.has(url)) continue;
-    if (forbid.some(f => url.includes(f))) { blocked.push({ kind: 'forbidden-zone', url }); continue; }
-    seen.add(url);
-    curUrl = url;
-
+  // dieu huong 1 URL: domcontentloaded + load + 400ms; loadMs uu tien Navigation Timing
+  const visit = async (u) => {
     let resp;
     const tNav = Date.now();
-    try { resp = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 }); }
-    catch (e) { networkIssues.push({ page: url, url, status: 'NAVIGATION_ERROR', detail: String(e).slice(0, 200) }); continue; }
+    try { resp = await page.goto(u, { waitUntil: 'domcontentloaded', timeout: 20000 }); }
+    catch (e) { return { err: e }; }
     try { await page.waitForLoadState('load', { timeout: 15000 }); } catch { /* trang khong fire load */ }
     let loadMs = Date.now() - tNav;
     try {
@@ -245,8 +273,94 @@ function httpCreds(arg, url) {
       });
       if (nav) loadMs = nav;
     } catch { /* giu gia tri do bang dong ho */ }
-
     await page.waitForTimeout(400);
+    return { resp, loadMs };
+  };
+
+  // --- dang nhap (lai) bang form, credential tu file; chi POST toi origin cua site ---
+  const killers = [];
+  let relogins = 0, stopReason = null, lastOk = null;
+  const isLoginUrl = u => (loginUrl && A.strip(u) === A.strip(loginUrl)) || LOGIN_RE.test(hrefPath(u));
+  const sessionLost = async (reqUrl) => {
+    if (isLoginUrl(reqUrl)) return false;   // tu mo trang login thi khong tinh
+    const fin = page.url();
+    if (A.strip(fin) === A.strip(reqUrl)) return false;   // khong bi chuyen trang
+    if (isLoginUrl(fin)) return true;
+    try { return !!(await A.firstVisible(page, passSel)); } catch { return false; }
+  };
+  const doLogin = async (lu) => {
+    const prevCur = curUrl;
+    curUrl = 'login';
+    const r = await A.formLogin(page, { loginUrl: lu, user: cred.user, pass: cred.pass, origin: cred.origin,
+      userSel, passSel, submitSel, opt: okOpt, allow: o => { allowPost = o; } });
+    allowPost = null;
+    curUrl = prevCur;
+    return r;
+  };
+  const relogin = async () => {
+    if (relogins >= MAX_RELOGIN) {
+      stopReason = `Da dang nhap lai ${MAX_RELOGIN} lan — DUNG crawl. Con trang giet session chua xac dinh? Xem blocked.json (session-lost), them vao --forbid roi chay lai.`;
+      console.error(stopReason);
+      return false;
+    }
+    relogins += 1;
+    const r = await doLogin(loginUrl);
+    if (!r.ok) { stopReason = `Dang nhap lai THAT BAI (lan ${relogins}): ${r.reason} — DUNG crawl`; console.error(stopReason); return false; }
+    console.error(`Dang nhap lai OK (${relogins}/${MAX_RELOGIN}) user ${A.mask(cred.user)}`);
+    return true;
+  };
+
+  if (cred) {   // dang nhap luc dau neu gap o mat khau (storage state het han / chua co)
+    try { await page.goto(loginUrl || start, { waitUntil: 'domcontentloaded', timeout: 30000 }); } catch { /* */ }
+    try { await page.waitForLoadState('networkidle', { timeout: 5000 }); } catch { /* */ }
+    if (await A.firstVisible(page, passSel)) {
+      if (!loginUrl) loginUrl = page.url();
+      const r = await doLogin(null);
+      if (!r.ok) {
+        await browser.close();
+        console.error(`Dang nhap THAT BAI (user ${A.mask(cred.user)}): ${r.reason}`);
+        process.exit(1);
+      }
+      console.error(`Dang nhap OK user ${A.mask(cred.user)} -> ${r.landedOn}`);
+    }
+  }
+
+  while (queue.length && seen.size < maxUrls) {
+    if ((Date.now() - t0) / 60000 > maxMin) { console.error('Het budget thoi gian'); break; }
+    const url = queue.shift();
+    if (!url || seen.has(url)) continue;
+    if (forbid.some(f => url.includes(f))) { blocked.push({ kind: 'forbidden-zone', url }); continue; }
+    seen.add(url);
+    curUrl = url;
+
+    let r = await visit(url);
+    if (r.err) { networkIssues.push({ page: url, url, status: 'NAVIGATION_ERROR', detail: String(r.err).slice(0, 200) }); continue; }
+
+    // --- mat session -> dang nhap lai, thu lai 1 lan de biet trang nao giet session ---
+    if (cred && await sessionLost(url)) {
+      if (!loginUrl) loginUrl = page.url();   // URL co o mat khau sau redirect
+      const rec = { kind: 'session-lost', url, at: new Date().toISOString() };
+      blocked.push(rec);
+      console.error(`Mat session khi mo ${url} -> dang nhap lai`);
+      if (!await relogin()) break;
+      r = await visit(url);
+      if (r.err) { networkIssues.push({ page: url, url, status: 'NAVIGATION_ERROR', detail: String(r.err).slice(0, 200) }); continue; }
+      if (await sessionLost(url)) {
+        // chinh trang nay giet session (vd goi signOut()) — co man hinh nhung khong quan sat duoc
+        rec.killer = url; rec.how = 'redirect-to-login';
+        killers.push({ url, how: 'redirect-to-login' });
+        pages.push({ url, title: null, status: null, evId: null, sessionKiller: true,
+          note: 'Mo trang nay lam mat session (bi chuyen ve trang dang nhap) — co man hinh o day nhung khong quan sat duoc' });
+        if (!await relogin()) break;
+        continue;
+      }
+      // trang nay binh thuong -> session bi giet boi trang tham ngay truoc (sau khi load)
+      const prev = lastOk && pages.find(p => p.url === lastOk);
+      rec.killer = prev ? prev.url : null;
+      rec.how = prev ? 'after-load' : 'unknown';
+      if (prev) { prev.sessionKiller = true; prev.sessionKillerHow = 'after-load'; killers.push({ url: prev.url, how: 'after-load' }); }
+    }
+    const { resp, loadMs } = r;
 
     evNo += 1;
     const evId = 'EV-' + String(evNo).padStart(4, '0');
@@ -606,6 +720,7 @@ function httpCreds(arg, url) {
       uiIssues.push({ url, kind: 'horizontalOverflow', detail: `scrollWidth ${info.scrollWidth} > viewport ${info.innerWidth}`, evId });
     }
     if (loadMs > SLOW_MS) uiIssues.push({ url, kind: 'slowLoad', detail: `loadMs ${loadMs} > ${SLOW_MS}`, evId });
+    lastOk = url;
   }
 
   // dem loi console / 4xx-5xx theo trang
@@ -618,7 +733,8 @@ function httpCreds(arg, url) {
 
   // ghi output
   const W = (f, s) => fs.writeFileSync(path.join(crawlDir, f), s);
-  W('urls.txt', pages.filter(p => !p.errorPage).map(p => p.url).join('\n') + '\n');
+  const observed = p => !p.errorPage && !(p.sessionKiller && !p.evId);   // trang giet session chua quan sat -> khong vao urls.txt
+  W('urls.txt', pages.filter(observed).map(p => p.url).join('\n') + '\n');
   W('pages.json', JSON.stringify(pages, null, 2));
   W('styles.json', JSON.stringify({ site, viewport, pages: styles }, null, 2));
   W('ui-issues.json', JSON.stringify(uiIssues, null, 2));
@@ -639,9 +755,11 @@ function httpCreds(arg, url) {
 
   console.log(JSON.stringify({
     site, mode, role, viewport: `${viewport.width}x${viewport.height}`,
-    urls: pages.filter(p => !p.errorPage).length, errorPages: pages.filter(p => p.errorPage).length, budget: `${pages.length}/${maxUrls} URL · ${((Date.now() - t0) / 60000).toFixed(1)}/${maxMin} phut`,
+    urls: pages.filter(observed).length, errorPages: pages.filter(p => p.errorPage).length, budget: `${pages.length}/${maxUrls} URL · ${((Date.now() - t0) / 60000).toFixed(1)}/${maxMin} phut`,
     consoleErrors: consoleErrors.length, networkIssues: networkIssues.length,
     uiIssues: uiIssues.length, blocked: blocked.length,
+    ...(cred ? { account: cred.account, user: A.mask(cred.user), relogins, sessionKillers: killers } : {}),
+    ...(stopReason ? { stopped: stopReason } : {}),
     assets: withAssets ? { logos: assetFiles.filter(f => f.kind !== 'icon').length,
       icons: assetFiles.filter(f => f.kind === 'icon').length, dir: assetDir } : 'off',
     ev_range: pages.length ? `EV-${String(evStart).padStart(4, '0')}..EV-${String(evNo).padStart(4, '0')}` : null,

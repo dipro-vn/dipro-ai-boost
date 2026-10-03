@@ -69,17 +69,21 @@ Thiếu 1 ý / trả lời mơ hồ → **hỏi lại để phân loại** (khô
 
 | | TEST đã xác nhận | PRODUCTION / chưa xác nhận |
 |---|---|---|
-| Mật khẩu user dán vào chat | ✅ Được dùng để đăng nhập | ⛔ Không dùng, nhắc user đổi mật khẩu |
-| File tài khoản user chỉ định (VD `inputs/credentials.local.md`) | ✅ Được đọc để đăng nhập | ⛔ Không đọc (`rules/SECURITY.md` §1) |
-| Basic Auth / câu hỏi bảo mật của môi trường | ✅ Được dùng | ⛔ Không dùng |
-| Cách đăng nhập | `login-site.js --form` (credential qua **biến môi trường**) hoặc `--manual` | **Chỉ** `--manual` — user tự gõ |
+| **Cách chuẩn: file `.auth/credentials.local.env`** — user điền, **script đọc trực tiếp**, agent chỉ truyền đường dẫn + tên site/role | ✅ `login-site.js` / `crawl-site.js --cred-file … --site WEB-01 --account <role>` — tự đăng nhập, tự đăng nhập lại khi mất phiên | ⛔ Script **tự từ chối** (exit 3) khi `WEB-xx.ENV ≠ TEST` |
+| Basic Auth / câu hỏi bảo mật của môi trường | ✅ Điền trong cùng file (`WEB-xx.BASIC_USER/PASS`) | ⛔ Không dùng |
+| Mật khẩu user dán vào chat | ⚠️ Không cần — hướng dẫn user chuyển vào file trên, nhắc đổi mật khẩu đã dán | ⛔ Không dùng, nhắc user đổi mật khẩu |
+| Đăng nhập tay | `--manual` vẫn dùng được | **Chỉ** `--manual` — user tự gõ |
+
+**Vì sao agent không tự cầm giá trị credential:** lớp an toàn của Claude Code (auto mode) chặn thao tác mà AI tự gõ / tự đọc mật khẩu — đúng chủ đích, và kit **không** tìm cách lách. Thiết kế đúng là để giá trị đi thẳng từ file của user vào Playwright: agent **không Read**, không `cat`, không `export` file `.auth/credentials.local.env`; chỉ chạy `login-site.js --init-cred-file …` để tạo template rồi nhờ user điền.
+
+**Script thực thi policy (không phụ thuộc agent tự giác):** file phải nằm trong `.auth/`, ngoài `outputs/`, không bị git track · `WEB-xx.ENV` phải là `TEST` · credential chỉ gửi tới đúng origin của `WEB-xx.URL` · file chmod 600 · giá trị không bao giờ in ra / ghi ra output.
 
 **Luôn bắt buộc, kể cả TEST:**
 - Giá trị credential **không bao giờ** xuất hiện trong `outputs/`, docx/xlsx, Figma, claude.ai artifact, run-log, báo cáo cuối — chỉ ghi **tên role** + vai trò người cấp.
-- Không truyền mật khẩu qua tham số CLI — dùng biến môi trường.
+- Không truyền mật khẩu qua tham số CLI hay trong lệnh shell — dùng `--cred-file` (hoặc biến môi trường do **user** tự `export` trong terminal của họ).
 - Phiên đăng nhập chỉ ở `.auth/` (gitignore, quyền 600), **không** copy vào `outputs/`.
 - Ghi vào `run-log.md` mục *Điều kiện chạy*: T1–T3 + vai trò người duyệt.
-- Hết khảo sát: nhắc user xoá file tài khoản + đổi mật khẩu đã dán vào chat.
+- Hết khảo sát: nhắc user xoá `.auth/credentials.local.env` + phiên `.auth/*.json`, đổi mật khẩu nếu đã từng dán vào chat.
 - Ngoại lệ TEST **chỉ** áp dụng cho tài khoản dùng để khảo sát. Secret trong **repo / hệ thống của khách** vẫn cấm: không đọc `.env` / key store / `.git/config` của repo khách (`rules/SECURITY.md`). Cần biết cấu hình → chỉ ghi **tên key** từ `.env.example`.
 
 ---

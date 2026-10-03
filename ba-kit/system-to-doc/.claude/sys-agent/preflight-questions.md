@@ -73,17 +73,20 @@ P2b. Tài khoản đó do ai cấp, và bạn có được PHÉP dùng nó để
 | `[B]` | ⛔ **Không đăng nhập.** Chỉ quét màn public. Mọi màn sau login = `To verify` + Open Q "cần tài khoản test được phép" |
 | `[C]` | Như `[B]`, ghi rõ lý do |
 
-**Cách đăng nhập — phụ thuộc môi trường (`POLICIES.md` §3.2):**
+**Cách đăng nhập — agent KHÔNG cầm mật khẩu (`POLICIES.md` §3.2):**
 
 | Môi trường | Cách |
 |---|---|
-| **TEST đã xác nhận** (T1 dev/staging/test · T2 = P2b `[A]` · T3 = P11 `[A]`) | Agent được dùng tài khoản user dán vào chat hoặc file tài khoản user chỉ định: `login-site.js --form --user-env … --pass-env …` (+ `--http-user-env/--http-pass-env` khi có Basic Auth), giá trị đặt vào biến môi trường, không in ra |
-| **PRODUCTION / chưa chắc** | Chỉ `--manual` — user tự gõ. Không dùng mật khẩu trong chat / file |
+| **TEST đã xác nhận** (T1 dev/staging/test · T2 = P2b `[A]` · T3 = P11 `[A]`) | 1. Agent chạy `node $S/login-site.js --init-cred-file .auth/credentials.local.env --site WEB-01 --url <url> --accounts admin,user [--basic]` → tạo **template** (giá trị trống). 2. Nhờ user mở file, điền tài khoản + ghi `WEB-01.ENV=TEST`, lưu, trả lời "xong". 3. Agent chạy `login-site.js --form --cred-file .auth/credentials.local.env --site WEB-01 --account admin` và `crawl-site.js … --cred-file … --account admin` (mỗi role 1 lần). **Agent không Read / cat file đó** |
+| **PRODUCTION / chưa chắc** | Chỉ `--manual` — user tự gõ trong cửa sổ trình duyệt. Script từ chối `--cred-file` khi `ENV ≠ TEST` |
 
-- `--manual`: `node login-site.js --manual --url <login> --save .auth/WEB-01.json` → mở trình duyệt, **user tự gõ** tài khoản, script lưu phiên.
-- Hoặc user tự `export SITE_USER=... SITE_PASS=...` trong terminal rồi agent chạy `--form --user-env SITE_USER --pass-env SITE_PASS`.
-- User dán mật khẩu vào chat → TEST đã xác nhận: được dùng để đăng nhập, **không ghi ra file**; PRODUCTION / chưa chắc: **không dùng**. Cả hai: nhắc user đổi mật khẩu sau khảo sát.
+- `--manual`: `node $S/login-site.js --manual --url <login> --save .auth/WEB-01.json` → mở trình duyệt, **user tự gõ**, script lưu phiên.
+- User dán mật khẩu vào chat → không dùng lại; hướng dẫn chuyển vào file template, nhắc đổi mật khẩu đã dán.
 - Môi trường chưa rõ là TEST hay PRODUCTION → hỏi lại P1 (phân loại). Vẫn chưa chắc → coi là PRODUCTION.
+- App tự đăng xuất khi vào màn không có quyền → crawler (có `--cred-file`) **tự đăng nhập lại**, ghi URL gây mất phiên (`sessionKiller`) và không quay lại URL đó.
+- Kiểm user đã điền xong: chạy lại `--init-cred-file` → output `emptyKeys` (tên key còn trống, không có giá trị) + `envIsTest`. Giá trị có `#` hoặc dấu cách → đặt trong ngoặc kép.
+- Đăng nhập qua domain khác (SSO) → `--cred-file` không điền form được (chỉ gửi credential tới origin của `WEB-xx.URL`) → dùng `--manual`.
+- Mỗi lần mất phiên, crawler thử lại 1 lần để xác định đúng màn gây mất phiên (tốn 2 / tối đa 5 lần đăng nhập lại). Màn đá phiên bằng JS nằm sát ngay trước 1 màn đá phiên khác có thể không bị gắn cờ → chạy lại với màn đó trong `--forbid`. Kết quả: `crawl-summary.relogins`, `sessionKillers[]`, `stopped`; `blocked.json` kind `session-lost`.
 - Role không đăng nhập được → mọi chức năng của role đó `To verify` + Open Q, **cấm** đoán theo tên menu.
 
 ### P3 — Quyền thao tác ⚠️ gate an toàn
@@ -171,7 +174,7 @@ P8. Bạn muốn tôi vẽ Figma flow dự án (Output 1 Flow tổng quan + Outp
 ## Lượt 5 — Output tuỳ chọn + an toàn dữ liệu
 
 ```
-P9. Có lập Bug list hiện trạng (lỗi giao diện/chức năng mức Medium–High phát hiện khi quét) không?
+P9. Có lập Bug list hiện trạng (lỗi trên MÀN HÌNH phát hiện khi Playwright quét website, mức Urgent / High) không?
     [A] Có — nội bộ review trước (mặc định)  [B] Có — gửi thẳng KH  [C] Không
     → bug_list = YES/NO, bug_recipient
 

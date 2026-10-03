@@ -192,10 +192,10 @@ File `07_BugList/BugList_<sys>_ver<N>.xlsx`, 4 sheet:
 
 | Cột | Enum |
 |---|---|
-| `Category` | `Functional` · `UI/Layout` · `Data` · `Performance` · `Compatibility` · `Security` |
-| `Severity` | `High` · `Medium` (Low không ghi) |
+| `Category` | `Functional` · `UI/Layout` · `Performance` · `Compatibility` |
+| `Severity` | `Urgent` · `High` (Medium / Low không ghi) |
 | `Reproduced` | `Yes — n/n` · `Intermittent` · `No` |
-| `Detected By` | `Playwright` · `Code review` · `DB check` · `Console` |
+| `Detected By` | `Playwright` (lỗi quan sát trên màn khi quét — kể cả console / network của chính trang đó) |
 | `Pre-existing` | `Yes` · `Unknown` |
 | `Report To Customer` | `Yes` · `Internal only` |
 

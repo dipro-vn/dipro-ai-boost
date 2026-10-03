@@ -4,9 +4,10 @@
   python3 verify-bug-list.py <07_BugList/BugList_<sys>_ver<N>.xlsx> --inventory <_internal/inventory.xlsx> [--out report.md]
 
 File nay di ra NGOAI cong ty (bao khach hang) nen nguong bang chung cao.
-Chi ghi nhan bug muc Medium/High (khach yeu cau) — bug Low KHONG ghi.
-Chan: bug thieu buoc tai hien · thieu bang chung · quy ket Security khong co PoC ·
-bug chua tai hien duoc lot sheet gui khach · trung lap · Screen / Module khong tro ve SC-/F-.
+Chi ghi bug QUAN SAT TREN MAN khi Playwright quet website, muc Urgent / High (khach yeu cau).
+Bug doc tu code / API / DB khong ghi o day (nghi van -> Observations, noi bo).
+Chan: thieu buoc tai hien · thieu bang chung man hinh · URL la API · bug chua tai hien lot sheet
+gui khach · trung lap · Screen / Module khong tro ve SC- co that.
 """
 import argparse
 import re
@@ -121,18 +122,25 @@ def main():
     g.check(7, "Sheet '%s' chi chua bug da tai hien duoc" % CUSTOMER_SHEET,
             [r.get("Bug ID") for r in bugs if not r.get("Reproduced", "").startswith("Yes")])
 
-    # 8 — Security phai co PoC
-    g.check(8, "Bug Category=Security phai co PoC (tai hien duoc + co bang chung)",
-            [r.get("Bug ID") for r in bugs if r.get("Category") == "Security"
-             and (not r.get("Reproduced", "").startswith("Yes")
-                  or not r.get("Evidence", "").strip())])
+    # 8 — bug phai quan sat tren MAN (Playwright): URL khong phai API, evidence la anh/console/HAR
+    ev_type = {x.get("EV ID", ""): x.get("Type", "") for x in inv["05_Evidence"]} if inv else {}
+    bad8 = []
+    for r in allb:
+        tag = "%s!%s" % (r["__sheet__"], r.get("Bug ID"))
+        url = r.get("URL / Route", "")
+        if re.search(r"(^|/)api(/|$)", re.sub(r"^https?://[^/]+", "", url), re.I):
+            bad8.append("%s URL '%s' la API — chi ghi bug tren man" % (tag, url))
+        if inv and not [e for e in S.split_ids(r.get("Evidence", ""))
+                        if ev_type.get(e) in S.BUG_SCREEN_EVIDENCE]:
+            bad8.append("%s khong co evidence man hinh (%s)" % (tag, "/".join(S.BUG_SCREEN_EVIDENCE)))
+    g.check(8, "Bug quan sat tren man khi quet (URL man, evidence screenshot/console/HAR)", bad8)
 
     # 9 — Suspected/Observations khong duoc gui khach
     g.check(9, "Sheet Suspected khong duoc danh dau gui khach hang",
             [r.get("Bug ID") for r in susp if r.get("Report To Customer") == "Yes"])
 
     # 10 — moi bug (High/Medium) phai co Business Impact
-    g.check(10, "Bug High/Medium phai ghi Business Impact",
+    g.check(10, "Bug Urgent/High phai ghi Business Impact",
             [r.get("Bug ID") for r in allb
              if r.get("Severity") in S.BUG_SEVERITY
              and not r.get("Business Impact", "").strip()])
@@ -176,11 +184,13 @@ def main():
         bad_ref = []
         for r in allb + obs:
             tag = "%s!%s" % (r["__sheet__"], r.get("Bug ID") or r.get("Obs ID") or r["__row__"])
-            refs = re.findall(r"\b(?:SC|F)-\d{3,}\b", r.get("Screen / Module", ""))
+            pat = r"\b(?:SC|F)-\d{3,}\b" if r["__sheet__"] == "Observations" else r"\bSC-\d{3,}\b"
+            refs = re.findall(pat, r.get("Screen / Module", ""))
             if not refs:
-                bad_ref.append("%s '%s' khong co SC-/F-" % (tag, r.get("Screen / Module", "")))
+                bad_ref.append("%s '%s' khong co %s" % (tag, r.get("Screen / Module", ""),
+                               "SC-/F-" if r["__sheet__"] == "Observations" else "SC- (bug phai gan voi man)"))
             bad_ref += ["%s -> %s khong co trong inventory" % (tag, x) for x in refs if x not in known]
-        g.check(15, "Screen / Module tro ve SC-/F- co that trong inventory", bad_ref)
+        g.check(15, "Screen / Module tro ve SC- co that (Observations: SC-/F-)", bad_ref)
     else:
         g.warn(15, "Screen / Module phan giai", "chua truyen --inventory")
 

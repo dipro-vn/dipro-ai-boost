@@ -1,48 +1,42 @@
 # O7 — Bug list hiện trạng (tuỳ chọn)
 
-> **Yêu cầu:** file xlsx · trong lúc Playwright quét website hiện tại → thống kê **bug giao diện / chức năng mức MEDIUM – HIGH** để nắm sản phẩm đang **tồn đọng gì** trước khi mình nhận maintain.
+> **Yêu cầu:** file xlsx · **chỉ lấy bug của MÀN HÌNH** phát hiện khi dùng Playwright quét website hiện tại — **không** lấy bug của API / code khi quét source · **chỉ mức nghiêm trọng URGENT / HIGH** — để nắm sản phẩm đang tồn đọng gì trước khi nhận maintain.
 >
 > Thành phẩm: `07_BugList/BugList_<sys>_ver<N>.xlsx`. Chỉ chạy khi P9 = Có. Tài liệu có thể đi ra ngoài công ty → ngưỡng bằng chứng cao nhất trong kit.
 
 ---
 
-## 0. Ba điều cấm
+## 0. Phạm vi — cái gì vào, cái gì không
 
-| ❌ Cấm | Vì sao | Thay bằng |
+| ✅ Vào bug list | ❌ Không vào (ghi `Observations` nội bộ nếu đáng điều tra) |
+|---|---|
+| Lỗi **nhìn thấy trên màn** khi Playwright mở trang: trang lỗi / trắng, ảnh hỏng, layout vỡ / tràn che nút, JS error làm hỏng chức năng trên màn, request của **chính trang đó** trả 4xx/5xx khiến màn không hiển thị đúng, link menu chết, tải quá chậm | Lỗi đọc ra từ **source code / API handler** (thiếu `return`, sai SQL, tham số không validate…) mà chưa thấy trên màn |
+| Mức **Urgent** hoặc **High** | Lỗi dữ liệu / toàn vẹn DB · nghi vấn bảo mật (không khai thác, không PoC) · mức Medium / Low |
+
+Ứng viên từ code vẫn có giá trị cho maintain → đưa vào `Observations` (nội bộ) hoặc Open Question, **không** gọi là bug.
+
+## 1. Phát hiện — chỉ thứ đo được trên màn
+
+| Nhóm | Đo bằng | Nguồn |
 |---|---|---|
-| Ghi `Security` mà không có PoC | Cáo buộc lỗ hổng sai = rủi ro pháp lý | Sheet `Observations`: "Cần pentest xác nhận" — **không** tự khai thác |
-| Đưa bug `Reproduced = No` vào sheet gửi KH | Khách thử không ra → mất uy tín cả danh sách | Sheet `Suspected` (nội bộ) |
-| Thao tác phá dữ liệu để tìm bug | Không hoàn tác được | Tuân thủ P3; gặp nút nguy hiểm → G9 |
+| **Giao diện** | ảnh hỏng · tràn ngang ở viewport chuẩn | `recon/crawl/<WEB>/ui-issues.json` |
+| **JS error trên trang** | console listener khi mở trang | `console.json` |
+| **Trang / request lỗi** | HTTP ≥ 400 của trang hoặc request của trang | `network.json` · `pages.json.errorPage` |
+| **Link chết** | crawl | `network.json` |
+| **Hiệu năng** | thời gian tải > 5 s ở màn chính | `pages.json.loadMs` |
+| **Validation thiếu** | submit rỗng / vượt maxlength — *chỉ khi P3 cho submit* | thao tác trên màn |
 
----
+Ứng viên tự động **chưa phải bug**. Mỗi ứng viên phải: (1) tái hiện trên màn `n` lần → `Yes — n/n`; (2) gắn `EV-xxxx` loại **screenshot / console-log / har**; (3) 1 câu tác động nghiệp vụ.
 
-## 1. Phát hiện — chỉ thứ đo được
-
-| Nhóm | Đo bằng | Ngưỡng ứng viên | Nguồn |
-|---|---|---|---|
-| **Giao diện** | ảnh hỏng · tràn ngang ở viewport chuẩn | `brokenImages` · `horizontalOverflow` | `recon/crawl/<WEB>/ui-issues.json` |
-| **JS error** | console listener | mọi `type = error` | `console.json` |
-| **Network** | response listener | `4xx`/`5xx` trong luồng hợp lệ | `network.json` |
-| **Link chết** | crawl | HTTP ≠ 2xx/3xx | `network.json` |
-| **Hiệu năng** | thời gian tải | > 5 s ở màn chính | `pages.json.loadMs` |
-| **Validation thiếu** | submit rỗng / vượt maxlength — *chỉ khi P3 cho submit* | server nhận giá trị lẽ ra phải chặn | thao tác + `code-ref` |
-| **Toàn vẹn dữ liệu** | — | **không chạy**: kit không truy vấn DB của khách | — |
-
-Ứng viên tự động **chưa phải bug**. Mỗi ứng viên phải: (1) tái hiện có chủ đích `n` lần, ghi `Yes — n/n`; (2) gắn `EV-xxxx` (screenshot/console/HAR); (3) viết 1 câu tác động nghiệp vụ.
-
----
-
-## 2. Mức độ — chỉ ghi Medium trở lên
+## 2. Mức độ — chỉ ghi Urgent / High
 
 | Severity | Nghĩa | Ví dụ |
 |---|---|---|
-| **High** | Luồng nghiệp vụ chính không hoàn thành được · mất/hỏng dữ liệu · màn chính không hiển thị được | nút "Đăng nhập" lỗi 500 · trang danh sách trắng do JS error |
-| **Medium** | Chức năng sai/thiếu nhưng có đường vòng · lỗi giao diện làm khó thao tác | ảnh sản phẩm hỏng · layout tràn che nút · link menu chết |
-| ~~Low~~ | Chính tả, lệch vài px, màu hơi khác | **không ghi** (gate V8 chặn) |
+| **Urgent** | Màn chính không dùng được · luồng nghiệp vụ chính bị chặn · lỗi 5xx / trang trắng · nguy cơ mất dữ liệu người dùng thấy được | Bấm "Đăng nhập" ra trang lỗi 500 · màn danh sách trắng vì JS error |
+| **High** | Chức năng trên màn sai / thiếu nhưng còn đường vòng · lỗi giao diện làm khó thao tác rõ rệt | Nút "Lưu" bị che bởi layout tràn · link menu chính dẫn tới 404 · ảnh sản phẩm hỏng trên màn chính |
+| ~~Medium / Low~~ | Lệch nhỏ, chính tả, màu, vài px | **không ghi** — gate V8 chặn |
 
-Chọn theo **tác động nghiệp vụ**, không theo độ khó sửa. Phân vân giữa Medium/Low → không ghi, đưa vào `Observations`.
-
----
+Chọn theo **tác động nghiệp vụ**, không theo độ khó sửa. Phân vân High / Medium → không ghi, đưa `Observations`.
 
 ## 3. Cấu trúc
 
@@ -50,25 +44,25 @@ Chọn theo **tác động nghiệp vụ**, không theo độ khó sửa. Phân 
 
 | Sheet | Nội dung | Gửi KH? |
 |---|---|---|
-| `00_Meta` | như inventory + `bug_scan_scope`, `bug_recipient` (P9) | — |
-| `Bugs` | bug đã tái hiện được | ✅ |
-| `Suspected` | nghi ngờ, chưa tái hiện | ❌ nội bộ |
-| `Observations` | cần điều tra (gồm mọi nghi vấn bảo mật) | ❌ nội bộ |
+| `00_Meta` | như inventory + `bug_scan_scope` (= `Playwright — màn hình`), `bug_recipient` (P9) | — |
+| `Bugs` | bug đã tái hiện trên màn | ✅ |
+| `Suspected` | thấy trên màn nhưng chưa tái hiện ổn định | ❌ nội bộ |
+| `Observations` | nghi vấn từ code / API / DB / bảo mật | ❌ nội bộ |
 
-Cột `Bugs`: `Bug ID` · `Title` · `Screen / Module` (`SC-`/`F-` — trace về inventory) · `URL / Route` · `Category` · `Severity` (High/Medium) · `Repro Steps` (≥ 2 bước đánh số) · `Expected` · `Actual` · `Evidence` · `Reproduced` · `Detected By` · `Business Impact` · `Env` · `Pre-existing` · `Report To Customer` · `Status` · `Note`.
+Cột `Bugs`: `Bug ID` · `Title` · `Screen / Module` (**`SC-` bắt buộc** — bug gắn với màn) · `URL / Route` (URL **màn**, không phải `/api/…`) · `Category` (Functional · UI/Layout · Performance · Compatibility) · `Severity` (**Urgent / High**) · `Repro Steps` (≥ 2 bước trên màn) · `Expected` · `Actual` · `Evidence` (≥ 1 EV screenshot / console-log / har) · `Reproduced` · `Detected By` (`Playwright`) · `Business Impact` · `Env` · `Pre-existing` · `Report To Customer` · `Status` · `Note`.
 
 ```bash
 python3 $S/verify-bug-list.py $V/07_BugList/BugList_<sys>_ver<N>.xlsx --inventory $I/inventory.xlsx --out $I/gates/v8.md
 ```
 
-`bug_recipient = Nội bộ review trước` → báo xong nhưng ghi rõ **chưa gửi KH, chờ người duyệt**.
+Gate V8 chặn: mức ngoài Urgent / High · Category Data / Security · URL là API · không có evidence màn hình (chỉ code-ref) · `Screen / Module` không phải `SC-` có thật · thiếu bước tái hiện · bug chưa tái hiện lọt sheet gửi khách · trùng lặp.
 
----
+`bug_recipient = Nội bộ review trước` → báo xong nhưng ghi rõ **chưa gửi KH, chờ người duyệt**.
 
 ## 4. Ranh giới
 
 | Không phải bug | Là |
 |---|---|
 | `UNKNOWN` ở O1 (chưa quan sát được) | Thiếu bằng chứng, không phải hỏng |
-| Open Question | Cần hỏi khách |
+| Lỗi đọc từ code / API chưa thấy trên màn | `Observations` hoặc Open Question |
 | Hành vi lạ nhưng không biết spec | `Observations` |

@@ -56,7 +56,10 @@ AI sẽ hỏi (chọn đáp án hoặc gõ vào ô *Other*):
 | **Figma** *(tuỳ chọn)* | Link design hiện tại · **link file để vẽ flow** | Link `figma.com/design/...` |
 | Khác | Có làm bug list không · ngôn ngữ · nguồn có dữ liệu thật không | |
 
-> ⚠️ **Mật khẩu không gõ vào chat.** Khi cần đăng nhập, AI mở trình duyệt — bạn tự đăng nhập, AI chỉ lưu phiên vào `.auth/` (không commit, không nằm trong output).
+> ⚠️ **Mật khẩu không gõ vào chat.**
+> - **Môi trường kiểm thử (dev / staging, tài khoản test):** AI tạo file `.auth/credentials.local.env` có sẵn chỗ trống → bạn mở file, điền tài khoản (+ Basic Auth nếu có) và ghi `ENV=TEST` → AI cho Playwright tự đăng nhập và quét toàn bộ màn, **tự đăng nhập lại** nếu app đá phiên. AI không đọc file này; script từ chối nếu không phải `TEST`.
+> - **Production / chưa chắc:** AI mở trình duyệt, bạn tự đăng nhập.
+> - `.auth/` không commit, không nằm trong output. Xong khảo sát thì xoá file và đổi mật khẩu test.
 > ⚠️ Mặc định AI **chỉ đọc** — mọi thao tác ghi bị chặn ở tầng mạng.
 > Thiếu thứ gì (không có DB, không có Figma…) → AI ghi lại và **chạy tiếp** phần còn lại.
 
@@ -72,7 +75,7 @@ AI in **bảng tổng hợp** → bạn trả lời `OK` → AI khảo sát và 
 | **O4** | **Design System** hệ thống cũ (từ website / Figma + source) — **cùng chuẩn với `designer-kit`** và format artifact **Design System** của claude.ai: brand book, màu theo theme, thang chữ, spacing/radius/shadow/size, component có preview, logo/icon, cover; token đặt tên vai trò chuẩn, phần không quan sát được ghi TBD. Nhiều website: chỉ khác màu → 1 Design System mỗi site 1 theme; khác cả phong cách → mỗi website 1 Design System riêng. Đồng ý thì publish thành link private | `04_DesignSystem/` (`STATUS.md` + `project/`) |
 | **O5** | **Figma flow** — Output 1 Flow tổng quan + Output 2 Screen flow | link trong `05_Figma/figma-links.md` |
 | **O6** | **Tài liệu tổng hợp** — đã chạy gì, có gì, ở đâu | `06_Overview/Overview_….docx` |
-| **O7** | **Bug list hiện trạng** mức Medium–High *(nếu chọn)* | `07_BugList/BugList_….xlsx` |
+| **O7** | **Bug list hiện trạng** — chỉ lỗi **trên màn hình** phát hiện khi Playwright quét website, mức **Urgent / High** *(nếu chọn)* | `07_BugList/BugList_….xlsx` |
 | — | **Mục lục version** — mọi output, số lượng, kết quả kiểm tra | `README.md` |
 
 Mọi dòng trong tài liệu gắn với bằng chứng (ảnh chụp, dòng code, schema). Không có bằng chứng → ghi `UNKNOWN` / "cần xác minh", **không viết đại cho đẹp**. Danh sách điểm chưa chắc nằm ở Phụ lục A của O6.
