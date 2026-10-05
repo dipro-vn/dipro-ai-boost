@@ -83,9 +83,9 @@ Output nào không đủ điều kiện (thiếu input) → **không làm DoD fa
 
 | Bước | Việc | Gate |
 |---|---|---|
-| 0 | Tìm version cũ: `version-tool.py latest-baseline --outputs outputs` · có → **G-R** | 🟡 G-R |
+| 0 | **Tự chuẩn bị môi trường** `ensure-env.py --flow 1` (thư viện Python — tự cài nếu thiếu) → tìm version cũ: `version-tool.py latest-baseline --outputs outputs` · có → **G-R** | 🟡 G-R |
 | 1 | **Preflight** — hỏi đủ input theo 4 nhóm Website · Source · DB · Figma + cấu hình output | 🟡 P0–P10 |
-| 2 | **Discovery Brief** → chờ 1 confirm → `version-tool.py next --outputs outputs --slug <slug> --create` | 🟡 Brief |
+| 2 | **Discovery Brief** → chờ 1 confirm → `version-tool.py next --outputs outputs --slug <slug> --create` → `ensure-env.py --flow 1 [--browser khi có website] [--figma khi vẽ O5] --out <ver>/_internal/gates/env.md` | 🟡 Brief |
 | 3 | **Quét nhạy cảm** — `scan-sensitive.py` trên repo / dump / file input | 🔴 S1 (exit 3 → DỪNG) |
 | 4 | **Recon read-only** — login → crawl từng site · scan từng repo · đọc schema · đọc Figma | 🟡 G9 · G10 khi phát sinh |
 | 5 | Dựng **inventory** (Evidence Ledger + 11 sheet) + reconcile UI × Code × DB | 🔴 V1 · V2 |
@@ -174,12 +174,24 @@ Chi tiết: **`sys-agent/flow-2-change-request.md`** (BẮT BUỘC Read trước
 | Bước | Việc | Gate |
 |---|---|---|
 | 0 | Nhận CR (file trong `inputs/cr/` · dán trong chat · link) → lưu nguyên văn vào `<ver>/input/` | — |
-| 1 | `version-tool.py latest-baseline --outputs outputs` + `list --outputs outputs` (CR khác đang mở?) | 🟡 CR-0 xác nhận baseline |
+| 1 | `ensure-env.py --flow 2` (tự cài nếu thiếu) → `version-tool.py latest-baseline --outputs outputs` + `list --outputs outputs` (CR khác đang mở?) | 🟡 CR-0 xác nhận baseline |
 | 2 | Hỏi bổ sung phần CR chưa rõ — không đoán | 🟡 CR-1 |
 | 3 | Phân loại CR / BUG / QUESTION + **giải trình vì sao là CR** (tiêu chí C1–C6, trích baseline) → phân tích **6 trục** System · DB · Business · Screen · Third-party · Mockup (NEW / UPD / DEL / IMPACT + vì sao sửa + mã đơn giá MD) → `_internal/cr.json` | — |
 | 4 | `build-cr-impact.py` → `CR-<id>_Impact.xlsx` (2 sheet Summary + Impact, MD do script tính) → gate | 🔴 V-CR |
-| 5 | Figma: **view MỚI**, chỉ hạng mục Impact + hàng xóm 1 bước, tô màu theo loại, không vẽ đè | 🟡 CR-2 · 🔴 V-CR-FIGMA |
+| 5 | Figma: CR-2 = vẽ → `ensure-env.py --flow 2 --figma` → **view MỚI**, chỉ hạng mục Impact + hàng xóm 1 bước, tô màu theo loại, không vẽ đè | 🟡 CR-2 · 🔴 V-CR-FIGMA |
 | 6 | `detect-pii --scan` + README + run-log | 🔴 H06 scan |
+
+---
+
+### Môi trường — kit tự lo, user KHÔNG phải cài
+
+`ensure-env.py` tự cài thư viện Python (`pip --user`), Playwright + Chromium (`npm` trong folder dự án), tự thêm Figma MCP (`claude mcp add`). Idempotent — đã có thì bỏ qua.
+
+| Trạng thái | Agent làm |
+|---|---|
+| `OK` / `INSTALLED` | Chạy tiếp, không cần báo user |
+| `NEED_AUTH` (Figma) | Phiên đã có tool `mcp__*figma*` gọi được (VD connector claude.ai Figma → `whoami`) → coi là OK. Không có → nhờ user **đúng 1 việc**: gõ `/mcp` → figma → Authenticate. Chưa xác thực → O5 / view CR = ⬜, chạy tiếp phần khác |
+| `BLOCKED` (exit 2) | Output phụ thuộc = `❌ Blocked` + lý do trong README version — **không** chuyển thành hướng dẫn cài cho user (trừ máy chưa có Node.js) |
 
 ---
 
@@ -263,6 +275,7 @@ In nguyên bảng `README.md` của version (sinh bởi `build-version-index.py`
 ## 9. Anti-pattern NGHIÊM CẤM
 
 - ❌ Đoán URL, tài khoản, quyền, đường dẫn repo thay vì hỏi
+- ❌ Bảo user tự chạy `pip install` / `npm i` / `npx playwright install` / `claude mcp add` — `ensure-env.py` tự làm; user chỉ bấm Authenticate Figma khi `NEED_AUTH`
 - ❌ Dùng tài khoản khi user chưa xác nhận **được phép** dùng nó để quét
 - ❌ Crawl khi chưa hỏi P3 — thao tác ghi trên hệ thống thật không hoàn tác được
 - ❌ Đọc code thấy route → ghi chức năng `Confirmed`

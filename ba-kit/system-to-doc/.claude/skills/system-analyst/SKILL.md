@@ -13,6 +13,7 @@ Workflow canonical: `.claude/agents/system-analyst.md`. Skill này chỉ liệt 
 
 | Script | Việc |
 |---|---|
+| `ensure-env.py` | **Tự chuẩn bị môi trường** — thư viện Python · `--browser` Playwright + Chromium · `--figma` Figma MCP. Thiếu → tự cài. Exit 2 = BLOCKED |
 | `scan-sensitive.py` | **S1** — quét secret / dữ liệu thật trong repo, dump, file input **trước khi đọc**. Exit 3 = DỪNG |
 | `login-site.js` | Tạo phiên đăng nhập `.auth/<WEB>.json` (user tự gõ `--manual`, hoặc env var `--form`). Không lưu mật khẩu |
 | `crawl-site.js` | Crawl 1 website read-only (chặn ghi ở tầng network, không theo link logout/xoá): screenshot, item, style, lỗi UI |
@@ -55,11 +56,13 @@ Tên file báo cáo gate quyết định nó được tính cho output nào tron
 
 Thư viện dùng chung: `gate_report.py` · `docx_read.py` · `bd_styles.py` · `ds_roles.py` (token vai trò D1–D7 + component tối thiểu của chuẩn design system chung — sửa cùng `sys-agent/design-system/design-system-format.md`).
 
-## Dependency
+## Dependency — kit tự cài, user không cài tay
 
 ```bash
-pip install openpyxl python-docx matplotlib
-npm i -D playwright && npx playwright install chromium
+python3 $S/ensure-env.py --flow 1 [--browser] [--figma] [--out <ver>/_internal/gates/env.md]   # Luồng 1
+python3 $S/ensure-env.py --flow 2 [--figma]                                                     # Luồng 2
 ```
 
-Thiếu dependency → script exit `2` → output tương ứng `❌ Blocked`, **không** tự chấm PASS.
+Cần: Python `openpyxl` `python-docx` `matplotlib` (Luồng 2 chỉ `openpyxl`) · Playwright + Chromium (crawl website) · Figma MCP (vẽ O5 / view CR).
+Script báo "Thieu … Chay: pip install …" → chạy `ensure-env.py`, **không** chuyển lời nhắc đó cho user.
+`ensure-env.py` exit `2` (BLOCKED) → output tương ứng `❌ Blocked`, **không** tự chấm PASS.

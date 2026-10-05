@@ -13,6 +13,8 @@
 | **1 — Baseline** | `/analyze-system` | `system-analyst.md` §3 |
 | **2 — Change Request** | `/change-request <file / link / nội dung>` | `.claude/sys-agent/flow-2-change-request.md` |
 
+**Môi trường — kit tự cài:** đầu Luồng 1 / Luồng 2 agent chạy `ensure-env.py` (thư viện Python · Playwright + Chromium · Figma MCP), thiếu thì tự cài. User **không** cài tay; chỉ bấm Authenticate Figma (`/mcp`) khi agent nhờ.
+
 **Input Luồng 1** (hỏi bằng `AskUserQuestion`, không đoán): Website (URL · tài khoản + quyền được dùng · READ/WRITE) · Source code (repo · FE/BE · FE↔website) · DB (tuỳ chọn, schema-only) · Figma (tuỳ chọn: design hiện tại + link để vẽ flow).
 
 **Output Luồng 1** → `outputs/ver<N>_<DDMMYY>_<slug>/`:
@@ -51,7 +53,7 @@
 │   ├── design-system/                          chuẩn design system + template (copy từ designer-kit)
 │   └── figma/                                  (copy từ requirement-to-flow)
 ├── skills/
-│   ├── system-analyst/               SKILL.md + scripts/ (recon · render · gate · self-test)
+│   ├── system-analyst/               SKILL.md + scripts/ (ensure-env · recon · render · gate · self-test)
 │   └── ba-figma-output/              (copy từ requirement-to-flow) quy tắc vẽ Figma
 ├── rules/                            DATA-PRIVACY · SECURITY · RELIABILITY · POLICY
 ├── hooks/detect-pii.js               H06 — chặn PII/credential trước khi ghi / đẩy lên Figma

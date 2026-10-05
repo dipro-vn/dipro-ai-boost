@@ -19,14 +19,9 @@
 
 ## Chuẩn bị (1 lần)
 
-```bash
-# 1. Copy toàn bộ folder system-to-doc vào folder dự án
-# 2. Cài dependency
-pip install openpyxl python-docx matplotlib
-npm i -D playwright && npx playwright install chromium
-# 3. (Vẽ Figma) kết nối Figma MCP
-claude mcp add --transport http figma https://mcp.figma.com/mcp
-```
+Copy toàn bộ folder `system-to-doc` vào folder dự án → mở bằng Claude Code. **Không cần cài gì thêm.**
+
+> 🔧 **Kit tự lo môi trường.** Khi chạy `/analyze-system` hoặc `/change-request`, AI tự kiểm tra và **tự cài** những gì còn thiếu: thư viện Python, Playwright + trình duyệt (khi quét website), kết nối Figma MCP (khi vẽ Figma). Việc duy nhất bạn có thể được nhờ: gõ `/mcp` → chọn **figma** → **Authenticate** để đăng nhập Figma (tài khoản có quyền EDIT).
 
 ```
 my-project/

@@ -19,6 +19,7 @@
 
 | Cần | Kiểm bằng | Thiếu thì |
 |---|---|---|
+| Môi trường | `ensure-env.py --flow 2` (+ `--figma` khi CR-2 chọn vẽ) — **tự cài**, user không cài tay | `BLOCKED` → xlsx = `❌ Blocked`; Figma `NEED_AUTH` → nhờ user `/mcp` → Authenticate, chưa xong thì bỏ view CR, chạy tiếp |
 | Baseline | `version-tool.py latest-baseline --outputs outputs` | ⛔ DỪNG — đề nghị chạy Luồng 1 (ít nhất phần site/repo liên quan CR) |
 | `_internal/inventory.xlsx` của baseline | file tồn tại, gate V2 của baseline PASS | ⛔ DỪNG — baseline hỏng thì impact sai |
 | Bảng đơn giá MD | `.claude/config/md-unit-rates.json` | Vẫn chạy; `status ≠ APPROVED` → Summary ghi rõ **"Ước lượng sơ bộ — chưa được PM/Tech Lead duyệt"** |
