@@ -1,0 +1,17 @@
+{
+ "v": 3,
+ "layout": "files",
+ "createdOnFiles": { "v": 1, "at": "<ISO-8601>" },
+ "title": "<Tên dự án>",
+ "namespace": "<TenDuAn>",
+ "libraries": [ { "name": "react", "version": "18" }, { "name": "react-dom", "version": "18" } ],
+ "sections": {},
+ "groups": [ "Logos", "Icons" ],
+ "assetGroups": {
+  "Logos": { "name": "Logos", "tile": "l", "order": [], "files": {} },
+  "Icons": { "name": "Icons", "tile": "xs", "order": [], "files": {} }
+ },
+ "blobs": {},
+ "docs": { "readme": "project/README.md", "sections": [] },
+ "lastChange": { "by": "<tên user>", "at": "<ISO-8601>", "via": "Claude · prototype-to-figma", "note": "<1 dòng>" }
+}

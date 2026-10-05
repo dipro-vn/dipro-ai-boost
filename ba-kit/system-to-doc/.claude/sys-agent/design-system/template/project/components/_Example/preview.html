@@ -1,0 +1,23 @@
+<!-- @dsCard group="Actions" height=200 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=<Font+Chinh>:wght@400;700&display=swap"><style>
+body{margin:0;padding:16px;background:var(--page-bg)}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.stack{display:flex;flex-direction:column;gap:12px}
+.theme{display:grid;grid-template-columns:96px 1fr;gap:12px;align-items:center;padding:12px;background:var(--surface);border-radius:var(--radius-lg)}
+.theme>b{font-size:12px;line-height:20px;color:var(--text-middle)}
+</style></head>
+<body>
+<div id="root"></div>
+<script>
+var D = window.<TenDuAn>, h = React.createElement;
+var THEMES = [["<theme-id>", "<Tên>"]];
+function perTheme(fn){ return h('div',{className:'stack'}, THEMES.map(function(t){ return h('div',{key:t[0],'data-theme':t[0],className:'theme'}, h('b',null,t[1]), h('div',{className:'row'}, fn(t))); })); }
+ReactDOM.createRoot(document.getElementById('root')).render(perTheme(function(){ return [
+ h(D.Button,{key:1},'<Nhãn thật>'),
+ h(D.Button,{key:2,variant:'outline'},'<Nhãn thật>'),
+ h(D.Button,{key:3,disabled:true},'<Nhãn thật>')]; }));
+</script>
+</body>
+</html>

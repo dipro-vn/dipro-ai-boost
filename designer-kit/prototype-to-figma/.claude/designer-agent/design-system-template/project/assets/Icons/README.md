@@ -1,0 +1,1 @@
+<N> icon <bộ icon> (độ đậm <…>, khung <W×H>) xuất từ <nguồn>. File SVG vẽ bằng một màu mực `text-high` #……. Trong code dùng component `Icon` (cùng path, tô `currentColor`) để icon nhận màu theo ngữ cảnh; chỉ dùng file SVG khi cần `<img>` tĩnh.

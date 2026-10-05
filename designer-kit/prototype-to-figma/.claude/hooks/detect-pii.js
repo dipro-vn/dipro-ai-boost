@@ -4,7 +4,6 @@
 // Hai che do:
 //   1) Hook PreToolUse  : doc payload tu stdin, exit 2 => tool call bi chan
 //   2) CLI scan         : node detect-pii.js --scan <path...>  => quet file truoc khi ban giao
-//                         (ca .xlsx/.docx/.pptx: doc text trong XML cua file zip, khong can npm)
 //
 // Nguon pattern: .claude/config/pii-patterns.json (dung chung voi rules/DATA-PRIVACY.md)
 // Rule: POLICIES.md §3.6 · .claude/rules/DATA-PRIVACY.md
@@ -17,7 +16,6 @@
 
 const fs = require('fs');
 const path = require('path');
-const zlib = require('zlib');
 
 const CFG = path.join(__dirname, '..', 'config', 'pii-patterns.json');
 
@@ -100,52 +98,6 @@ function report(hits, where) {
   return lines.join('\n');
 }
 
-// ---------------- Doc text tu xlsx/docx/pptx (zip) — chi dung built-in ----------------
-const OOXML_PART = /^(xl\/sharedStrings\.xml|xl\/worksheets\/[^/]+\.xml|xl\/comments\d*\.xml|word\/(document|header\d*|footer\d*|footnotes|endnotes|comments)\.xml|ppt\/(slides|notesSlides)\/[^/]+\.xml)$/;
-
-/** Doc central directory cua zip -> [{name, data}] cho cac part khop filter. */
-function readZip(buf, filter) {
-  let eocd = -1;
-  for (let i = buf.length - 22; i >= Math.max(0, buf.length - 65557); i--) {
-    if (buf.readUInt32LE(i) === 0x06054b50) { eocd = i; break; }
-  }
-  if (eocd < 0) throw new Error('khong phai zip');
-  const total = buf.readUInt16LE(eocd + 10);
-  let off = buf.readUInt32LE(eocd + 16);
-  const out = [];
-  for (let k = 0; k < total; k++) {
-    if (buf.readUInt32LE(off) !== 0x02014b50) throw new Error('central directory hong');
-    const method = buf.readUInt16LE(off + 10);
-    const csize = buf.readUInt32LE(off + 20);
-    const nlen = buf.readUInt16LE(off + 28), xlen = buf.readUInt16LE(off + 30), clen = buf.readUInt16LE(off + 32);
-    const lho = buf.readUInt32LE(off + 42);
-    const name = buf.toString('utf8', off + 46, off + 46 + nlen);
-    off += 46 + nlen + xlen + clen;
-    if (!filter(name)) continue;
-    const start = lho + 30 + buf.readUInt16LE(lho + 26) + buf.readUInt16LE(lho + 28);
-    const raw = buf.subarray(start, start + csize);
-    if (method === 0) out.push({ name, data: raw });
-    else if (method === 8) out.push({ name, data: zlib.inflateRawSync(raw) });
-  }
-  return out;
-}
-
-/** XML -> text: het paragraph/cell/row xuong dong, bo tag, giai entity. */
-function xmlText(xml) {
-  return xml
-    .replace(/<\/(w:p|a:p|si|c|row|w:tc)>/g, '\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
-    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(+d))
-    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'").replace(/&amp;/g, '&');
-}
-
-function ooxmlText(file) {
-  return readZip(fs.readFileSync(file), (n) => OOXML_PART.test(n))
-    .map((e) => xmlText(e.data.toString('utf8'))).join('\n');
-}
-
 // ---------------- CLI mode ----------------
 if (process.argv.includes('--scan')) {
   const cfg = loadCfg();
@@ -164,22 +116,14 @@ if (process.argv.includes('--scan')) {
         if (f === '.claude' && !process.argv.includes('--all')) continue;
         walk(path.join(p, f));
       }
-    } else if (/\.(md|html|json|csv|txt|ts|js|py|xlsx|xlsm|docx|pptx)$/i.test(p)) files.push(p);
+    } else if (/\.(md|html|json|csv|txt|ts|js|py)$/i.test(p)) files.push(p);
   };
   targets.forEach(walk);
 
   let bad = 0;
   for (const f of files) {
     if (cfg._allowPath.some((r) => r.test(f))) continue;
-    let text;
-    try {
-      text = /\.(xlsx|xlsm|docx|pptx)$/i.test(f) ? ooxmlText(f) : fs.readFileSync(f, 'utf8');
-    } catch (e) {
-      bad += 1;   // khong doc duoc = khong chung minh duoc sach
-      console.log(`\nH06: khong doc duoc ${f} (${e.message}) — kiem tay`);
-      continue;
-    }
-    const hits = scanText(text, cfg);
+    const hits = scanText(fs.readFileSync(f, 'utf8'), cfg);
     if (hits.length) {
       bad += 1;
       console.log('\n' + report(hits, f));

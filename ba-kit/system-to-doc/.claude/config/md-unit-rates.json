@@ -1,0 +1,258 @@
+{
+  "_comment": "Bảng đơn giá MD cho CR Impact (Luồng 2). AI chỉ CHỌN mã dòng + số lượng; MD = md × qty do script tính. Sửa số ở đây, không sửa trong file xlsx.",
+  "version": 1,
+  "status": "DRAFT",
+  "approved_by": "",
+  "approved_at": "",
+  "scope_note": "MD = dev + unit test + review code của 1 dev quen codebase. CHƯA gồm: QA test, PM/BrSE, deploy, buffer. Số liệu DRAFT — PM / Tech Lead phải duyệt trước khi gửi khách.",
+  "rates": [
+    {
+      "code": "SCR-NEW-S",
+      "axis": "Screen",
+      "change_type": "NEW",
+      "item": "Màn mới đơn giản (≤ 10 item, 1 API)",
+      "unit": "màn",
+      "md": 1.5
+    },
+    {
+      "code": "SCR-NEW-M",
+      "axis": "Screen",
+      "change_type": "NEW",
+      "item": "Màn mới trung bình (form / list có tìm kiếm, 2–3 API)",
+      "unit": "màn",
+      "md": 3.0
+    },
+    {
+      "code": "SCR-NEW-L",
+      "axis": "Screen",
+      "change_type": "NEW",
+      "item": "Màn mới phức tạp (nhiều bước, nhiều trạng thái, > 3 API)",
+      "unit": "màn",
+      "md": 5.0
+    },
+    {
+      "code": "SCR-UPD-S",
+      "axis": "Screen",
+      "change_type": "UPD",
+      "item": "Sửa nhỏ trên màn (thêm / bỏ 1–3 item, đổi nhãn, đổi validation)",
+      "unit": "màn",
+      "md": 0.5
+    },
+    {
+      "code": "SCR-UPD-M",
+      "axis": "Screen",
+      "change_type": "UPD",
+      "item": "Sửa vừa trên màn (đổi bố cục, thêm khối, đổi luồng xử lý)",
+      "unit": "màn",
+      "md": 1.5
+    },
+    {
+      "code": "SCR-DEL",
+      "axis": "Screen",
+      "change_type": "DEL",
+      "item": "Bỏ màn (gỡ route, link, menu)",
+      "unit": "màn",
+      "md": 0.5
+    },
+    {
+      "code": "SCR-IMP",
+      "axis": "Screen",
+      "change_type": "IMPACT",
+      "item": "Màn không sửa nhưng bị ảnh hưởng — kiểm lại / chỉnh nhỏ",
+      "unit": "màn",
+      "md": 0.25
+    },
+    {
+      "code": "API-NEW",
+      "axis": "System",
+      "change_type": "NEW",
+      "item": "API mới (CRUD đơn)",
+      "unit": "API",
+      "md": 1.0
+    },
+    {
+      "code": "API-UPD",
+      "axis": "System",
+      "change_type": "UPD",
+      "item": "Sửa API (thêm field, đổi logic)",
+      "unit": "API",
+      "md": 0.5
+    },
+    {
+      "code": "API-DEL",
+      "axis": "System",
+      "change_type": "DEL",
+      "item": "Bỏ API + nơi gọi",
+      "unit": "API",
+      "md": 0.25
+    },
+    {
+      "code": "API-IMP",
+      "axis": "System",
+      "change_type": "IMPACT",
+      "item": "API không sửa nhưng bị ảnh hưởng — kiểm lại",
+      "unit": "API",
+      "md": 0.25
+    },
+    {
+      "code": "BATCH-NEW",
+      "axis": "System",
+      "change_type": "NEW",
+      "item": "Batch / job mới",
+      "unit": "job",
+      "md": 1.5
+    },
+    {
+      "code": "BATCH-UPD",
+      "axis": "System",
+      "change_type": "UPD",
+      "item": "Sửa batch / job",
+      "unit": "job",
+      "md": 0.75
+    },
+    {
+      "code": "SYS-IMP",
+      "axis": "System",
+      "change_type": "IMPACT",
+      "item": "Module / cấu hình bị ảnh hưởng — kiểm lại",
+      "unit": "module",
+      "md": 0.25
+    },
+    {
+      "code": "DB-TBL-NEW",
+      "axis": "DB",
+      "change_type": "NEW",
+      "item": "Bảng mới + migration",
+      "unit": "bảng",
+      "md": 0.5
+    },
+    {
+      "code": "DB-COL-NEW",
+      "axis": "DB",
+      "change_type": "NEW",
+      "item": "Cột mới + migration",
+      "unit": "cột",
+      "md": 0.25
+    },
+    {
+      "code": "DB-COL-UPD",
+      "axis": "DB",
+      "change_type": "UPD",
+      "item": "Đổi kiểu / ràng buộc cột đang dùng (có chuyển dữ liệu)",
+      "unit": "cột",
+      "md": 0.75
+    },
+    {
+      "code": "DB-DEL",
+      "axis": "DB",
+      "change_type": "DEL",
+      "item": "Bỏ cột / bảng (kiểm nơi đang dùng)",
+      "unit": "đối tượng",
+      "md": 0.5
+    },
+    {
+      "code": "DB-IMP",
+      "axis": "DB",
+      "change_type": "IMPACT",
+      "item": "Bảng / cột không đổi nhưng dữ liệu bị ảnh hưởng — kiểm lại",
+      "unit": "đối tượng",
+      "md": 0.25
+    },
+    {
+      "code": "BIZ-NEW",
+      "axis": "Business",
+      "change_type": "NEW",
+      "item": "Business rule / luồng nghiệp vụ mới",
+      "unit": "rule",
+      "md": 1.0
+    },
+    {
+      "code": "BIZ-UPD",
+      "axis": "Business",
+      "change_type": "UPD",
+      "item": "Đổi business rule / validation đang chạy",
+      "unit": "rule",
+      "md": 0.5
+    },
+    {
+      "code": "BIZ-DEL",
+      "axis": "Business",
+      "change_type": "DEL",
+      "item": "Bỏ business rule",
+      "unit": "rule",
+      "md": 0.25
+    },
+    {
+      "code": "BIZ-IMP",
+      "axis": "Business",
+      "change_type": "IMPACT",
+      "item": "Nghiệp vụ không đổi nhưng bị ảnh hưởng — kiểm lại",
+      "unit": "luồng",
+      "md": 0.25
+    },
+    {
+      "code": "EXT-NEW",
+      "axis": "ThirdParty",
+      "change_type": "NEW",
+      "item": "Liên kết bên thứ 3 mới (SDK / API ngoài)",
+      "unit": "liên kết",
+      "md": 3.0
+    },
+    {
+      "code": "EXT-UPD",
+      "axis": "ThirdParty",
+      "change_type": "UPD",
+      "item": "Sửa liên kết bên thứ 3 đang có",
+      "unit": "liên kết",
+      "md": 1.0
+    },
+    {
+      "code": "EXT-DEL",
+      "axis": "ThirdParty",
+      "change_type": "DEL",
+      "item": "Bỏ liên kết bên thứ 3",
+      "unit": "liên kết",
+      "md": 0.5
+    },
+    {
+      "code": "EXT-IMP",
+      "axis": "ThirdParty",
+      "change_type": "IMPACT",
+      "item": "Liên kết đang có bị ảnh hưởng — kiểm lại",
+      "unit": "liên kết",
+      "md": 0.5
+    },
+    {
+      "code": "UI-NEW",
+      "axis": "Mockup",
+      "change_type": "NEW",
+      "item": "Mockup màn mới theo Design System cũ",
+      "unit": "màn",
+      "md": 0.5
+    },
+    {
+      "code": "UI-UPD",
+      "axis": "Mockup",
+      "change_type": "UPD",
+      "item": "Sửa mockup màn đang có",
+      "unit": "màn",
+      "md": 0.25
+    },
+    {
+      "code": "UI-TOKEN-NEW",
+      "axis": "Mockup",
+      "change_type": "NEW",
+      "item": "Token / component mới chưa có trong Design System (cần designer)",
+      "unit": "đối tượng",
+      "md": 0.5
+    },
+    {
+      "code": "UI-IMP",
+      "axis": "Mockup",
+      "change_type": "IMPACT",
+      "item": "Mockup / component bị ảnh hưởng — kiểm lại",
+      "unit": "đối tượng",
+      "md": 0.1
+    }
+  ]
+}

@@ -1,0 +1,443 @@
+> **SOURCE:** `ba-kit/requirement-to-flow/.claude/ba-agent/figma-outputs/shared-rules.md` @ a8509b9 — copy self-contained cho kit system-to-doc. Đọc kèm `o5-figma.md` (bảng thay SPEC.md → inventory). Sửa quy tắc vẽ chung thì sửa CẢ HAI nơi.
+
+# Ba Agent — Figma Outputs Shared Rules
+
+> Rules dùng chung cho Output 1 / 2 / 3. BẮT BUỘC đọc trước khi vẽ bất kỳ output nào.
+
+---
+
+## ⚠️ Sequential Rule cho Output 1 → 2 → 3 (BẮT BUỘC — không parallel)
+
+Output 1, 2, 3 PHẢI vẽ theo thứ tự tuần tự, KHÔNG được vẽ song song:
+
+1. **Output 1** — Flow Tổng Quan phải vẽ XONG trước (đây là source of truth về số business flows N)
+2. **Output 2** — Screen Flow dựa vào Output 1: PHẢI vẽ N screen-flows tương ứng với N business flows từ Output 1 (VD Output 1 có 5 flows → Output 2 có 5 screen-flows). Bảng SCREEN INDEX tổng hợp vẫn giữ. **Ngoại lệ Shared Cluster:** nếu M trong N flows dùng chung 1 cụm màn hình (VD Auth) → gộp thành 1 group duy nhất thay vì lặp lại M lần (chi tiết `output-2-screen-flow.md` + SKILL.md §5.1) — khi đó "N" ở cross-verification dưới đây tính theo **số cụm màn hình độc lập**, không phải số flow thô.
+3. **Output 3** — Screens + Items PHẢI group theo cùng cấu trúc groups đó ở Output 2 (mỗi group Output 2 → 1 group Output 3 tương ứng, kể cả group là shared cluster)
+
+Cross-verification bắt buộc:
+- Số business flows Output 1 = số screen-flow groups Output 2 = số groups Output 3 (đã tính gộp shared cluster nếu có)
+- Nếu không khớp → refactor để khớp, KHÔNG bỏ qua
+
+**Cross-verification SỐ HỌC bổ sung (bắt buộc chạy ở Quality Gate mỗi output — chống kết luận "đủ" bằng cảm tính):**
+
+| Output | Phép kiểm | PASS khi | Rule nguồn |
+|---|---|---|---|
+| O1 | Sitemap không mất mục khi gộp flow | `số mục Hành động Sitemap` ≥ `số candidate thô trong Flow Candidate Matrix` | `output-1-flow.md` |
+| O2 | Non-Happy coverage | `số NG node` ≥ `số Non-Happy Case trong SPEC ## Screen Details` | `output-2-screen-flow.md` |
+| O2 | Screen lỗi riêng | `số Screen Code màn hình lỗi` = `số dòng NH cần Screen Code riêng` | `spec-template.md` |
+| O2 | Node coverage (khi tách > 1 Combined Detail) | `distinct node các Group` = `distinct node các Combined Detail` | `SKILL.md` §5.0 |
+| O3 | Item đủ per screen | `số item bảng ITEMS` ≥ `số row Components trong SPEC Screen Details` | `output-3-screens.md` Phép 1 |
+| O3 | Navigation đảo chiều | `số item có Action ≠ "—"` = `số row Navigation Mapping` | `output-3-screens.md` Phép 4 |
+| O1/O2/O3 | **Empty check** (màn hình trống) | `0` screen có `child < 3` hoặc `tổng ký tự = 0` | `recheck.md` Tiêu chí 6 |
+
+**Verdict 3 mức thay cho PASS/FAIL nhị phân** (mượn từ skill *Business Analyst Reviewer* trên marketplace):
+
+| Verdict | Khi nào | Hành động |
+|---|---|---|
+| ✅ `Complete` | Mọi phép kiểm PASS | In block gate, chuyển output kế |
+| ⚠️ `Needs Revision` | FAIL nhưng sửa được trong scope hiện tại | BA tự sửa → rerun Quality Gate. **KHÔNG in block WAITING_APPROVAL** |
+| ❌ `Critical Gaps` | Thiếu **dữ liệu nguồn** (SPEC thiếu Non-Happy, thiếu `ACTOR_LIST`, thiếu tech stack) | **DỪNG hỏi user bổ sung** — không tự bịa để lấp |
+
+---
+
+## ⚠️ Gate Rules — BẮT BUỘC hỏi user giữa các output (không được chạy liền tù tì)
+
+> **Nguyên tắc:** BA không được tự động chạy tất cả Output 1→2→3 liền không hỏi. Sau mỗi output PHẢI có gate để user review + quyết định tiếp. Chi phí gate = 1-2 câu hỏi; chi phí không gate = user phát hiện Output 2 sai định hướng khi đã vẽ xong Output 3 → refactor toàn bộ.
+
+### Gate A — Sau Output 1 (BẮT BUỘC — mọi SCOPE_TYPE)
+
+Sau khi vẽ Output 1 xong + PASS visual verify (Bước 5.5 mini-check), BA PHẢI DỪNG và hiển thị block dưới đây trước khi bắt đầu Output 2:
+
+```
+✅ Output 1 — Flow Tổng Quan đã vẽ xong: <Figma node URL>
+
+Screenshot verify: <✅ N business flows rõ ràng, gap 100px đủ, không đè>
+Số business flows detected: N = <số>
+
+3 outputs BA sẽ tạo (giải thích ngắn):
+  📊 Output 1 (VỪA XONG) — Flow Tổng Quan
+     Mục đích: cho stakeholder thấy Actor → Trigger → Function → Technology → Outcome + Sitemap WBS
+     Ai dùng: PM/Tech Lead review scope, chốt tech stack
+
+  🔀 Output 2 (KẾ TIẾP) — Screen Flow
+     Mục đích: mỗi business flow → luồng đi qua các screens (Happy + Non-Happy) + Bảng Index tổng
+     Ai dùng: Designer / Dev / QC — biết cần vẽ / build / test những màn nào
+
+  🖼 Output 3 — Screens + Items + Error Scenarios
+     Mục đích: mỗi screen → mockup phone + bảng liệt kê chi tiết items UI + error scenarios
+     Ai dùng: Designer làm HiFi, Dev build UI, QC viết test case
+
+Bạn muốn:
+  [1] Tiếp tục Output 2 → Output 3 (default)
+  [2] Chỉnh Output 1 trước (paste comment cụ thể)
+  [3] Dừng ở Output 1, không cần Output 2/3
+```
+
+Chờ user chọn. KHÔNG được tự chạy tiếp Output 2 khi chưa có confirm.
+
+**Sau khi user trả lời Gate A — BẮT BUỘC chạy `Bước 5.4 — Output OQ`** (`.claude/ba-agent/open-questions.md`): các business rule **vẫn chưa có câu trả lời** sau lượt hỏi này phải được gom thành `OQ-REGISTER.md` → export `open_questions.xlsx` bằng script → `n ≤ 20` thì vẽ thêm Figma OQ view (Section riêng dưới Output 1, gap ≥ 300px), `n > 20` thì chỉ giao xlsx kèm đường dẫn folder. Không còn câu nào → in `Output OQ: N/A`. Bỏ qua bước này = business rule chốt muộn ở Output 2/3 → vẽ lại.
+
+### Gate B1 — Sau Output 1, chỉ khi SCOPE_TYPE = `[B]/[C]` multi-flow (BẮT BUỘC)
+
+Nếu `SCOPE_TYPE` (từ Câu 0.4 Bước 2b) = `[B]` (cụm) hoặc `[C]` (toàn hệ thống) VÀ Output 1 detect N > 1 business flows → sau Gate A user chọn [1] tiếp tục → BA hỏi thêm:
+
+```
+⚠️ Feature này có N = <số> business flows (scope: <B - cụm / C - toàn hệ thống>).
+
+Output 2 vẽ scope nào?
+  [A] TOÀN BỘ N flows (recommended nếu deliverable cần đủ scope cho stakeholder)
+      Effort: ~<N × 15> phút, Figma frame chiều dài ~<N × 800>px
+
+  [B] CHỈ 1 flow cụ thể — user chỉ định flow name (VD "Flow 2 — Scout")
+      Lưu ý: các flow còn lại → note trong bảng status "⚠️ Partial — user chọn vẽ 1 flow"
+
+  [C] BATCH — vẽ M flows / lượt (M < N), user review từng batch trước khi vẽ tiếp
+```
+
+Chờ user chọn. KHÔNG được tự vẽ toàn bộ hoặc tự chọn 1 flow.
+
+### Gate B2 — Sau Output 2 (BẮT BUỘC — mọi SCOPE_TYPE)
+
+Sau khi vẽ Output 2 xong + verify, BA PHẢI DỪNG hỏi:
+
+```
+✅ Output 2 — Screen Flow đã vẽ xong: <Figma node URL>
+
+Screenshot verify: <✅ N screen-flow groups + Bảng Index đủ N screens>
+Số screens tổng detected trong Bảng Index: M = <số>
+
+Bạn muốn:
+  [1] Tiếp tục Output 3 (mockup + items + error scenarios cho từng screen)
+      Effort: ~<M × 5> phút vẽ, Figma frame chiều dài ~<M × 400>px
+  [2] Chỉnh Output 2 trước (paste comment)
+  [3] Dừng ở Output 2, không cần Output 3 (VD: chỉ cần flow overview cho stakeholder meeting)
+```
+
+**Thêm question nếu SCOPE_TYPE = `[B]/[C]` VÀ Output 2 có N groups:**
+
+```
+Nếu chọn [1] Tiếp tục Output 3:
+
+Output 3 vẽ scope nào?
+  [A] TOÀN BỘ N flows (mọi group Output 2 → tương ứng group Output 3)
+  [B] CHỈ 1 flow cụ thể — user chỉ định flow name
+  [C] BATCH — vẽ M screens / lượt, user review từng batch
+```
+
+Chờ user chọn. KHÔNG được tự vẽ Output 3 khi chưa có confirm scope.
+
+---
+
+### Gate flow summary
+
+```
+Vẽ Output 1
+   ↓
+Gate A (giải thích 3 outputs + xin phép Output 2)  ← MỌI SCOPE
+   ↓ user chọn [1]
+Bước 5.4 — Output OQ: còn business rule chưa trả lời?
+   → có: OQ-REGISTER.md → export open_questions.xlsx (script) → n ≤ 20 thì vẽ Figma OQ view
+   → không: in "Output OQ: N/A" rồi đi tiếp
+   ↓
+Gate B1 (nếu multi-flow) — Output 2 toàn bộ hay 1 flow?
+   ↓ user chọn scope
+Vẽ Output 2
+   ↓
+Gate B2 (xin phép Output 3 + scope nếu multi-flow)
+   ↓ user chọn [1] + scope
+Vẽ Output 3
+   ↓
+Bước 5.5 Visual Recheck → Bước 5.6 Self-Feedback → Output 4 HTML → Report final
+```
+
+**Anti-pattern NGHIÊM CẤM:**
+- ❌ Vẽ liền Output 1 → 2 → 3 không dừng gate nào
+- ❌ Tự đoán "user chắc muốn toàn bộ" khi SCOPE multi-flow → vẽ hết N flows không hỏi
+- ❌ Skip Gate B2 khi user "trông có vẻ" đã ok Output 2
+- ❌ Sang Output 2 khi còn open question mà chưa export Output OQ (Bước 5.4) — hoặc gom câu hỏi lại để "hỏi 1 lần ở cuối"
+
+---
+
+## ⚠️ Strict Mode — Human Approval Gate sau mỗi Output (BẮT BUỘC khi SCOPE_TYPE = [B]/[C])
+
+> **Trigger:** `SCOPE_TYPE = [B]` (cụm chức năng) hoặc `[C]` (toàn hệ thống). Không áp dụng cho `[A]` (đơn lẻ) — dùng Gate A/B1/B2 nhẹ ở trên là đủ.
+>
+> **Mục đích:** cho stakeholder Nhật / BRSE / dự án enterprise — mỗi output phải formal approve trước khi chuyển tiếp. Chống drift + audit trail.
+
+### 5 Approval Gate cứng (Strict Mode)
+
+Sau mỗi output, BA PHẢI in block dưới đây rồi DỪNG hoàn toàn — chỉ chạy tiếp khi user reply `Approve` / `OK` / `Next`. Reply mơ hồ (VD "ok à", "tiếp") → hỏi lại confirm.
+
+```
+✅ Output <N> completed
+Quality Gate: <PASS / FAIL (list issues)>
+Artifacts:
+  - <path/URL 1>
+  - <path/URL 2>
+Status: WAITING FOR BRSE APPROVAL
+
+Reply:
+  - "Approve" hoặc "Next" → BA chuyển sang Output <N+1>
+  - "Reject: <lý do>" → BA sửa output hiện tại rồi lại chờ approve
+  - "Skip Output <N+1>" → BA note vào status + jump gate kế
+```
+
+**Trạng thái state machine per output:**
+
+| State | Ý nghĩa | Transition rules |
+|---|---|---|
+| `DRAFT` | Đang vẽ, chưa xong | → `QUALITY_PASS` khi Bước 5.5 verify pass |
+| `QUALITY_PASS` | Đã qua Bước 5.5 recheck, chờ user approve | → `WAITING_APPROVAL` khi in block gate |
+| `WAITING_APPROVAL` | Đã in block gate, đang chờ user reply | → `APPROVED` khi user Approve · → `DRAFT` khi user Reject |
+| `APPROVED` | User đã reply Approve → chuyển output kế | → `STALE` khi upstream thay đổi · → `WAITING_APPROVAL` khi scoped update |
+| `BLOCKED` | Thiếu prerequisite (VD: Output 2 chờ Output 1 approve) | → `DRAFT` khi prerequisite resolve |
+| `STALE` | Đã `APPROVED` nhưng upstream output đã thay đổi → nội dung hiện tại lỗi thời | → `DRAFT` khi user quyết regenerate · → `APPROVED` khi user note "ignore upstream change, giữ nguyên" |
+
+**Rule state `STALE` (BẮT BUỘC):**
+
+Khi upstream output N thay đổi (VD user request scoped update Output 2), tất cả downstream output đã `APPROVED` tham chiếu N tự động chuyển sang `STALE`:
+
+| Upstream thay đổi | Downstream tự mark `STALE` |
+|---|---|
+| Output 1 (Flow Tổng Quan) | Output 2 + Output 3 + Output 4 + Output 5 |
+| Output 2 (Screen Flow, Bảng Index, Exception Matrix) | Output 3 + Output 4 + Output 5 |
+| Output 3 (Screens, Items, States, Navigation) | Output 4 + Output 5 (chỉ phần **ảnh UI**, không phải nội dung item) |
+| Output 4 (HTML Prototype) | **Không có downstream** — O4 không phải input của O5 |
+| SPEC.md `## Screens` / `## Screen Details` | Output 5 (nội dung sheet: item, behavior, error reference) |
+| SPEC.md `## Source Register` | Output 5 — block `■トレーサビリティ` trong `B4` của working sheet liên quan |
+
+BA phải in block sau khi phát hiện `STALE`:
+
+```
+⚠️ Downstream STALE detected sau khi update Output <N>:
+  - Output <N+1>: STALE — <lý do: transition ID xxx đã đổi>
+  - Output <N+2>: STALE — <lý do>
+
+Xử lý:
+  [A] Regenerate downstream (theo scoped update, không phá phần không liên quan)
+  [B] Giữ nguyên downstream — accept gap, note vào Known Gaps
+  [C] Rollback change Output <N>
+```
+
+Chờ user chọn. KHÔNG được silent regenerate hoặc silent ignore.
+
+### Strict Mode gate flow
+
+```
+Vẽ Output 1 → Quality Gate O1 → WAITING_APPROVAL → [user Approve]
+   ↓
+Vẽ Output 2 → Quality Gate O2 → WAITING_APPROVAL → [user Approve]
+   ↓
+Vẽ Output 3 → Quality Gate O3 → WAITING_APPROVAL → [user Approve]
+   ↓
+Vẽ Output 4 (HTML) → Quality Gate O4 → WAITING_APPROVAL → [user Approve]
+   ↓
+(Output 5 — Basic Design: ON-DEMAND, không nằm trong chuỗi này)
+```
+
+> **Output 5 (Basic Design) KHÔNG tự chạy sau Output 4.** Nó là nhánh downstream on-demand: điều kiện là Output 1 + Output 2 `APPROVED`, và user phải đồng ý ở Proposal Gate. Có thể chạy ngay sau Output 2 (sheet không ảnh) hoặc sau Output 3 (sheet có ảnh). Chi tiết: `.claude/ba-agent/basic-design/output-5-basic-design.md`.
+
+**Anti-pattern NGHIÊM CẤM khi Strict Mode:**
+- ❌ Batch 2+ output rồi mới xin approve 1 lần
+- ❌ Tự chạy Output N+1 khi user reply "ok" mà chưa confirm rõ ràng (mơ hồ = chưa approve)
+- ❌ Skip 1 gate vì "output nhỏ, chắc user không quan tâm"
+- ❌ Nếu user không reply trong 2 turn → tự chạy tiếp (KHÔNG được — phải nhắc lại gate mỗi turn cho đến khi có Approve/Reject)
+
+### Chọn mode nhanh
+
+| SCOPE_TYPE | Mode gate |
+|---|---|
+| `[A]` | **Light Mode** — Gate A + B2 (2 gate) |
+| `[B]` | **Strict Mode** — 5 Approval Gate + Gate B1/B2 vẫn giữ |
+| `[C]` | **Strict Mode** — 5 Approval Gate + Gate B1/B2 vẫn giữ |
+
+BA phải in ra đầu Bước 5:
+
+```
+Mode gate: <Light / Strict> (dựa vào SCOPE_TYPE = <A/B/C>)
+Sẽ có <2 / 5> gate hỏi trong quá trình vẽ.
+```
+
+---
+
+## Bước 5 preamble — Figma Design Output (BẮT BUỘC sau Bước 4.6)
+
+> Dùng **Figma Design file** (`/design/` URL) từ `FIGMA_OUTPUT_URL` đã hỏi ở Bước 2b.
+> Tất cả outputs trên **page do user cung cấp**. KHÔNG tạo page mới.
+
+**Load skill bắt buộc trước khi code:**
+```
+skill: ba-figma-output   ← đọc TOÀN BỘ trước khi viết use_figma call nào
+skill: figma:figma-use   ← đọc trước use_figma (rule quan trọng về font, textAutoResize, page switching)
+```
+
+**Figma Design = default cho tất cả outputs** vì:
+- Pixel-perfect layout, đều tay, professional hơn FigJam
+- HiFi phone screens (dark/light) trông thật hơn FigJam shapes
+- Spec table text readable hơn FigJam stickies
+
+**FigJam chỉ dùng khi:** user explicitly yêu cầu brainstorm/workshop real-time.
+
+---
+
+## Reference examples — BẮT BUỘC xem trước khi vẽ
+
+BA phải xem example images trong `.claude/skills/ba-figma-output/examples/`:
+
+| File | Xem để hiểu |
+|---|---|
+| `example_output_1.png` | **Sitemap kiểu WBS tree** — actor icon + hành động, có illustration (icon người/xe/laptop...) |
+| `final_output_2.png` (= `example_output_2_screen_flow.png`) | **Output 2 — Screen Flow (Merged Branch).** Flow hợp nhất phân nhánh (NHÁNH A/B) + NG inline + System (xanh lá) + Edge/Exceptional Panel riêng bên cạnh — chi tiết SKILL.md §5 |
+| `example_output_3.png` | **Mô tả màn hình** — mỗi item trên UI đều đánh số + text bên cạnh (Title / Mô tả / Mục đích) — KHÔNG lược bỏ item nào |
+
+Load bằng `Read` tool trước khi bắt đầu Output tương ứng.
+
+### ⛔ GATE ẢNH MẪU — chặn cứng trước MỌI `use_figma` call (BẮT BUỘC)
+
+> **Lỗ hổng đã xảy ra thực tế — nguyên nhân gốc của 1 lần phải vẽ lại toàn bộ Output 2.** Agent đã đọc **đầy đủ** rule dạng chữ (`SKILL.md §5`, `output-2-screen-flow.md`, file này) nhưng **không mở ảnh mẫu**, rồi vẽ screen thành các "chip" xếp lưới **không có một mũi tên nào** — đúng cái anti-pattern mà chính kit đang cấm. Kết luận: rule dạng chữ KHÔNG đủ để agent hình dung ra bố cục; **phải nhìn ảnh**.
+
+**Quy trình bắt buộc, không được rút gọn:**
+
+1. `Read` ảnh mẫu tương ứng Output sắp vẽ (`final_output_1.png` / `final_output_2.png` / `final_output_3.png`)
+2. **IN RA** block xác nhận dưới đây — đây là *điều kiện cần* để được phép gọi `use_figma`:
+
+```
+⛔ GATE ẢNH MẪU — Output <N>
+  [x] Đã mở: .claude/skills/ba-figma-output/examples/final_output_<N>.png
+  Mô tả lại bố cục nhìn thấy trong ảnh (3-5 gạch đầu dòng, bằng lời của mình):
+    - <VD: Start ▶ trên cùng giữa, mũi tên dọc xuống screen đầu tiên>
+    - <VD: Decision ◇ cam, 2 nhánh YES/NO có nhãn ngay trên đường kẻ>
+    - <VD: NG đỏ nét đứt nằm NGAY BÊN PHẢI decision, mũi tên ngắn từ nhánh NO>
+    - <VD: cuối flow merge decision → fan-out N terminal theo kiểu comb>
+  → Bố cục tôi sắp vẽ khớp với ảnh mẫu ở: <liệt kê>
+  → Khác ảnh mẫu ở: <liệt kê + lý do chính đáng>
+```
+
+3. Nếu **không mô tả lại được** bố cục trong ảnh → **chưa được vẽ**, phải mở ảnh lại
+
+**Anti-pattern NGHIÊM CẤM:**
+- ❌ Đọc rule chữ rồi tự suy ra bố cục, bỏ qua ảnh ("đã hiểu rồi, khỏi xem ảnh")
+- ❌ Chỉ ghi "[x] đã xem ảnh" mà không mô tả lại được gì → coi như chưa xem
+- ❌ Xem ảnh Output 1 rồi vẽ luôn Output 2/3 (mỗi Output có ảnh mẫu RIÊNG, bố cục khác hẳn nhau)
+
+---
+
+## API khác nhau giữa 2 tool (BẮT BUỘC đọc trước khi code)
+
+| Tính năng | FigJam (`/board/`) | Figma Design (`/design/`) |
+|---|---|---|
+| Node có text tích hợp | `figma.createShapeWithText()` | Tạo riêng: `createRectangle()` + `createText()` |
+| Arrow / Connector thật | `figma.createConnector()` | Không có — dùng `createVector()` hoặc `createRectangle()` |
+| Post-it note | `figma.createSticky()` | Không có |
+| Nhóm vùng làm việc | `figma.createSection()` | `figma.createSection()` (cùng API) |
+| Tạo page mới | ❌ `figma.createPage()` không hoạt động | ✅ Hoạt động |
+| `get_metadata` tool | ❌ Không hỗ trợ FigJam | ✅ Hoạt động |
+
+**Detect loại file từ URL:**
+- `figma.com/board/...` → FigJam → dùng `createShapeWithText` + `createConnector`
+- `figma.com/design/...` → Figma Design → dùng `createRectangle` + `createText` + `createVector`
+
+---
+
+## Visual conventions — NHẤT QUÁN giữa cả 2 tool
+
+Màu sắc và ý nghĩa KHÔNG thay đổi dù dùng FigJam hay Design. Bảng dưới áp dụng cho Output 1 và Output 3 (theo actor). Output 2 dùng bảng riêng theo loại node — xem ngay dưới.
+
+| Element | Màu fill | Màu stroke | Ý nghĩa |
+|---|---|---|---|
+| Actor / người dùng | `#E8F4FD` (Actor A — Caller) · `#EDFDF0` (Actor B — Receiver) | `#0969DA` · `#1A7F37` | Ai thực hiện |
+| Trigger / Action | `#E8F4FD` | `#0969DA` | Điều gì kích hoạt |
+| Function / System | `#FFF9EB` | `#F4860C` | Xử lý gì |
+| Technology / SDK | `#FFF9EB` | `#F4860C` | Công nghệ nào |
+| Outcome / Result | `#F6F8FA` | `#D0D7DE` | Kết quả |
+| Error / Non-happy | `#FFF6F5` | `#CF222E` | Lỗi, edge case |
+| Popup / Modal | `#FBEEFF` | `#6639BA` | Overlay |
+| Arrow happy path | — | `#0969DA` | Luồng chính |
+| Arrow error | — | `#CF222E` (dashed) | Luồng lỗi |
+| Arrow cross-actor | — | `#6639BA` | Kết nối 2 actor |
+
+**Output 2 (Merged Branch)** dùng biến thể theo LOẠI NODE thay vì theo actor (chi tiết SKILL.md §1 + §5):
+
+| Node type | Fill | Stroke | Ý nghĩa |
+|---|---|---|---|
+| Screen | `#E8F4FD` | `#0969DA` | Màn hình user thao tác |
+| Decision | `#FFF9EB` | `#F4860C` | Điểm rẽ nhánh |
+| System | `#EDFDF0` | `#1A7F37` | Hành động backend tự động — KHÔNG phải Actor B |
+| NG | `#FFF6F5` | `#CF222E` (dashed) | Lỗi ĐÃ ĐỊNH NGHĨA rõ (FACT), vẽ inline tại điểm phát sinh |
+| Edge / Exceptional | `#FBEEFF` | `#6639BA` (dashed) | Case CHƯA rõ hành vi (UNKNOWN/INFERENCE), tách panel riêng bên cạnh |
+
+---
+
+## Post-Delivery requirement — Update SPEC.md ## BA Deliverables (BẮT BUỘC — entry point cho downstream)
+
+> **Nguyên tắc:** SPEC.md là **single source of truth** cho Tech Lead / Designer / QC downstream. Toàn bộ 5 outputs của BA PHẢI được liệt kê trong SPEC.md để downstream agents đọc SPEC là có đủ context — không phải tìm kiếm scattered files.
+
+Sau khi hoàn thành 5 outputs, BA agent PHẢI edit `SPEC.md` thêm section **`## BA Deliverables`** **ngay sau section `## Mô tả nghiệp vụ`** (trước `## Actors & Preconditions`). Section này chứa link clickable, stakeholder + downstream agents click từ browser mở thẳng deliverable.
+
+**Format bắt buộc (đủ 5 outputs, không thiếu output nào):**
+
+```markdown
+## BA Deliverables
+
+> Toàn bộ output của BA cho feature này. Đây là entry point cho Tech Lead / Designer / QC downstream — mọi agent PHẢI đọc section này trước khi bắt đầu.
+
+### Docs
+
+| # | Output | Path / URL | Note |
+|---|---|---|---|
+| 0 | **SPEC.md** (file này) | `<output-folder>/SPEC.md` | Chính là file bạn đang đọc |
+
+### Figma outputs (Bước 5 — Design output)
+
+| # | Output | Nội dung | Figma Frame |
+|---|---|---|---|
+| 1 | **Flow Tổng Quan** | Business Logic Flow + Technology Table + Sitemap WBS | [Mở Figma](<URL frame Output 1>) |
+| 2 | **Screen Flow** | N screen-flow groups (matching N business flows) + Bảng Index tổng | [Mở Figma](<URL frame Output 2>) |
+| 3 | **Screens + Items** | Grouped by business flow, đủ N screens, Bảng ITEMS + Bảng ERROR SCENARIOS | [Mở Figma](<URL frame Output 3>) |
+
+**Figma file:** [<Tên file>](<URL Figma file gốc>)
+**Page:** `<Tên page user cung cấp>`
+
+### Interactive prototype
+
+| # | Output | Path / URL | Cách chạy |
+|---|---|---|---|
+| 4 | **HTML Prototype** | `<output-folder>/prototype/index.html` | `open <output-folder>/prototype/index.html` — standalone, không cần build |
+
+### Open Questions (Output OQ — bỏ hẳn section này khi không còn open question)
+
+| # | Output | Path / URL | Note |
+|---|---|---|---|
+| OQ | **Open Questions — Register** | `<output-folder>/open-questions/OQ-REGISTER.md` | Source of truth, `n = <n>` câu · Blocker `<a>` · High `<b>` |
+| OQ | **Open Questions — Excel giao KH** | `<output-folder>/open-questions/open_questions.xlsx` | Sheet `Guideline` hướng dẫn cách trả lời · sheet `Open Questions` để KH điền |
+| OQ | **Figma OQ view** | [Mở Figma](<URL frame OQ>) — hoặc `❌ Skipped — n = <n> > 20 (chỉ export xlsx)` | Card theo mức chặn, có ô `Trả lời:` để comment |
+
+> Folder gửi KH: `<output-folder>/open-questions/`. Chi tiết rule → `.claude/ba-agent/open-questions.md`.
+
+### Basic Design (Output 5 — chỉ thêm section này khi đã chạy)
+
+| # | Output | Workbook | Sheets | Trạng thái |
+|---|---|---|---|---|
+| 5 | **Basic Design** | `<đường dẫn master workbook>` | Created: `<list>` · Updated: `<list>` | Quality Gate O5: `<N checks · X PASS · 0 FAIL>` — `<WAITING FOR BRSE APPROVAL / APPROVED>` |
+
+> Chưa chạy Output 5 → **bỏ hẳn section này**, không thêm row `❌ Skipped` (Output 5 là on-demand, không phải output bị skip).
+
+### Downstream instructions
+
+- **Tech Lead agent** — dùng `## Screens` (list) + `## Screen Details` (per-screen data) + Figma Frame 3 (Items) để thiết kế DB schema, API contract, service layer
+- **Designer agent** — dùng Figma Frame 1/2/3 làm reference low-fi → tạo high-fidelity screens, điền cột "Figma Link" trong `## Screens`
+- **Mọi downstream agent** — đọc `## Open Questions` TRƯỚC khi implement: câu chưa trả lời = business rule chưa chốt, KHÔNG được tự giả định để code/design/test
+- **QC agent** — dùng `## Acceptance Criteria` + `## Alternative Flows & Edge Cases` + HTML Prototype để test manual + Figma Frame 3 để verify Error Scenarios
+```
+
+**Cách lấy URL Figma frame:** sau khi `use_figma` tạo node, dùng `figma.currentPage.selection = [node]` hoặc lấy `node.id`, sau đó format URL:
+```
+https://www.figma.com/design/<FILE_KEY>/<FILE_NAME>?node-id=<NODE_ID_URL_ENCODED>
+```
+- `FILE_KEY`, `FILE_NAME` lấy từ URL gốc user cung cấp
+- `NODE_ID` = `node.id` (dạng `123:456`), encode thành `123-456` trong URL
+
+**Nếu skip Output nào** (VD Figma MCP unavailable → skip Output 1-3):
+- Vẫn giữ section `## BA Deliverables` với đủ 5 rows
+- Row bị skip: cột `Path / URL` ghi `❌ Skipped — <lý do>`, cột `Note` ghi hướng dẫn user hoàn thành
+- KHÔNG được xóa row (downstream cần biết output nào có/không để plan work)
