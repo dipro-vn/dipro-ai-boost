@@ -201,7 +201,7 @@ def main():
             ws.add_image(copy.copy(im))
     # 8. _meta (an)
     mt = wb.create_sheet("_meta")
-    rows = [("source_file", os.path.basename(a.src)), ("source_sheet", a.sheet),
+    rows = [("source_file", "見積書 (ten file nguon khong luu — co ten khach hang)"), ("source_sheet", a.sheet),
             ("row_header", hdr), ("row_section", OUT_ROW["section"]), ("row_item", ir),
             ("row_total", tr), ("row_month", mr), ("row_notes", OUT_ROW["notes"]),
             ("ratio_K_要件定義", meta["ratio_K"]), ("ratio_L_UI", meta["ratio_L"]),
