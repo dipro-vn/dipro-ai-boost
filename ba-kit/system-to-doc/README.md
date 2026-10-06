@@ -108,7 +108,7 @@ Mọi dòng trong tài liệu gắn với bằng chứng (ảnh chụp, dòng co
 
 > MD = đơn giá trong `.claude/config/md-unit-rates.json` × số lượng (AI chỉ chọn loại hạng mục, không tự gõ số). Bảng đơn giá đang **DRAFT** — PM / Tech Lead duyệt rồi đổi `status` thành `APPROVED`.
 
-CR đã được làm xong trong hệ thống → chạy `/analyze-system` chọn **Delta** để có baseline mới.
+CR đã được làm xong trong hệ thống → chạy `/analyze-system` (hoặc nói *"CR-001 đã code xong"*) — AI tự thấy CR đang mở và đề xuất **Delta** để có baseline mới.
 
 ---
 
@@ -120,7 +120,10 @@ outputs/
 ├── ver2_151026_CR-001-them-coupon/    Luồng 2 — trỏ về ver1
 └── ver3_201026_baseline-delta/        Luồng 1 Delta sau khi CR-001 đã code xong
 ```
-Không bao giờ sửa version cũ. Muốn góp ý → ghi vào mục **Feedback** trong `run-log.md` của version rồi chạy lại.
+**AI tự quản version — bạn không phải làm gì:**
+- Mỗi lần chạy, AI tự đọc **version mới nhất** (baseline mới nhất, CR đang mở, góp ý chưa xử lý) — không cần chỉ folder.
+- Muốn góp ý → **nói thẳng trong chat**. AI tạo version mới từ bản mới nhất, sửa, và ghi góp ý vào `run-log.md`. Không bao giờ sửa version cũ.
+- CR đã code xong → AI tự đề xuất Delta khi bạn chạy `/analyze-system`.
 
 ---
 

@@ -10,12 +10,15 @@
 
 ---
 
-## G-R — Resume (chỉ khi `version-tool.py latest-baseline` tìm thấy baseline)
+## G-R — Resume (chỉ khi `version-tool.py context` có `latest_baseline`)
+
+Agent **tự** chạy `context`, Read file trong `read`, rồi mới hỏi — không bắt user chỉ version.
 
 ```
 Đã có baseline ver<K> (<DD/MM/YYYY>): <a> site · <m> màn · <p> API · <t> bảng · <q> câu hỏi còn mở.
+Version mới nhất: ver<N> (<loại>). CR mở sau baseline: <CR-001 (ver..), …> | không có. Feedback chưa xử lý: <n> | không có.
 Lần này bạn muốn:
-  [A] Delta — quét bổ sung phần thiếu + kiểm lại phần cũ   (mặc định)
+  [A] Delta — quét bổ sung phần thiếu + kiểm lại phần cũ + áp feedback   (mặc định = suggest.flow1_mode)
   [B] Chạy lại toàn bộ — hệ thống đã đổi nhiều
   [C] Không quét — chỉ đọc lại ver<K> để trả lời câu hỏi
   [D] Thực ra tôi có 1 yêu cầu thay đổi (CR) → chuyển Luồng 2
@@ -23,7 +26,7 @@ Lần này bạn muốn:
 
 | Chọn | `run_mode` | Hành vi |
 |---|---|---|
-| `[A]` | `DELTA` | Giữ dòng cũ + `Note = Carried from ver<K>`; evidence > 30 ngày → chụp lại nếu dòng đó `Confirmed`. Câu trả lời P0–P11 cũ làm **mặc định đề xuất** |
+| `[A]` | `DELTA` | Giữ dòng cũ + `Note = Carried from ver<K>`; evidence > 30 ngày → chụp lại nếu dòng đó `Confirmed`. Câu trả lời P0–P11 cũ làm **mặc định đề xuất**. Có `open_crs` → hỏi thêm (multiSelect) *CR nào đã lên hệ thống?* → quét lại phần CR đó chạm. Có `pending_feedback` → áp dụng + ghi **Feedback đã xử lý** |
 | `[B]` | `FULL` | Bỏ dữ liệu cũ, vẫn đề xuất câu trả lời cũ |
 | `[C]` | `READ_ONLY_REVIEW` | Không crawl, **không** tạo version mới |
 | `[D]` | — | Đọc `flow-2-change-request.md`, chạy Luồng 2 |

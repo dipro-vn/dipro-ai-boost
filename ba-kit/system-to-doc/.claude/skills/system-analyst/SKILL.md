@@ -27,7 +27,7 @@ Workflow canonical: `.claude/agents/system-analyst.md`. Skill này chỉ liệt 
 |---|---|
 | `inv_schema.py` | Hợp đồng schema dùng chung (inventory 12 sheet, bug list, CR impact) — đổi cột chỉ sửa ở đây |
 | `build-inventory.py` | Workbook rỗng đúng schema: inventory · `--bug-list` · `--cr` |
-| `version-tool.py` | `next` (tên folder version) · `latest-baseline` · `list` (CR đang mở) |
+| `version-tool.py` | **`context`** (chạy đầu MỌI lần: version mới nhất · baseline · CR mở · feedback treo · mode đề xuất · file cần đọc) · `next` (tên folder version) · `latest-baseline` · `list` |
 | `build-api-doc.py` | O2 — API Documentation xlsx |
 | `render-codemap.py` | O2 — sơ đồ map code FE → API → BE → DB (png + md) |
 | `build-db-doc.py` | O3 — Database Documentation xlsx + ERD png |

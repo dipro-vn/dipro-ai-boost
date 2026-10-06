@@ -66,7 +66,7 @@ Folder CR **không** copy lại baseline — nó trỏ tới baseline bằng `ba
 
 ## 4. Quy tắc
 
-1. **Trước khi chạy:** `version-tool.py latest-baseline --outputs outputs` (Luồng 1: G-R · Luồng 2: baseline để đối chiếu) và `version-tool.py list --outputs outputs` (CR nào đang mở sau baseline).
+1. **Trước khi chạy — agent tự làm, không hỏi user:** `version-tool.py context --outputs outputs --flow <1|2> [--cr-id]` → Read mọi file trong `read`. Luôn lấy **version mới nhất** (§6).
 2. **Tạo folder mới** chỉ sau khi user confirm Discovery Brief (Luồng 1) / CR-0 (Luồng 2).
 3. **Không bao giờ** sửa, ghi đè, xoá nội dung version cũ — kể cả "sửa lỗi chính tả". Sai → tạo version mới.
 4. **Đóng version:** chạy `build-version-index.py <ver>` → `README.md` + `_internal/index.json`; ghi `run-log.md`.
@@ -114,13 +114,37 @@ run_mode: FULL | DELTA
 | Output | Lý do |
 |---|---|
 
+## Feedback đã xử lý
+| Từ | Nội dung | Đã làm |
+|---|---|---|
+| ver<K>_<...> / chat | <tóm tắt> | <sửa gì ở version này> |
+
 ## Feedback của user
-(để trống — user ghi vào đây; lần chạy sau agent đọc)
+(để trống — agent tự ghi khi user góp ý trong chat; user cũng có thể ghi tay)
 ```
 
 ---
 
-## 6. Resume — lần chạy sau đọc gì
+## 6. Resume — agent tự lấy version mới nhất
+
+Đầu **mọi** lần chạy (Luồng 1 và 2), trước câu hỏi đầu tiên:
+
+```bash
+python3 .claude/skills/system-analyst/scripts/version-tool.py context --outputs outputs --flow 1            # Luồng 1
+python3 .claude/skills/system-analyst/scripts/version-tool.py context --outputs outputs --flow 2 --cr-id CR-001   # Luồng 2 (--cr-id khi CR đã có)
+```
+
+| Trường | Agent dùng để |
+|---|---|
+| `latest` · `latest_type` | Version mới nhất bất kỳ loại — in 1 dòng tình hình cho user |
+| `latest_baseline` | Baseline **mới nhất** — Luồng 1 Delta kế thừa từ đây · Luồng 2 đối chiếu với đây. Không bao giờ dùng baseline cũ hơn trừ khi user chỉ định ở CR-0 [C] |
+| `open_crs` | CR sau baseline (mỗi CR 1 bản mới nhất). G-R hỏi CR nào đã code xong → Delta cập nhật AS-IS; Luồng 2 kiểm xung đột CR-vs-CR |
+| `latest_by_cr` · `suggest.flow2_rerun_of` | CR đã có → chạy lại từ `cr.json` bản mới nhất của CR đó, không làm lại từ đầu |
+| `pending_feedback` | Feedback trong run-log chưa version nào xử lý → áp dụng ở lần này, ghi vào **Feedback đã xử lý** |
+| `suggest.flow1_mode` | Mode đề xuất mặc định cho G-R (`FULL` khi chưa có baseline, còn lại `DELTA`) |
+| `read` | Danh sách file phải Read trước khi hỏi / phân tích |
+
+Rồi đọc trong version mới nhất:
 
 | Đọc | Để biết |
 |---|---|
@@ -132,3 +156,15 @@ run_mode: FULL | DELTA
 
 ❌ Bỏ qua version cũ rồi quét lại từ đầu = mất câu trả lời user đã cho, tốn budget.
 ❌ Copy dòng cũ sang mà không đánh `Carried from ver<K>` = che giấu việc chưa kiểm lại.
+❌ Bắt user tự chỉ version, tự mở `run-log.md` để ghi góp ý, tự nhớ chọn Delta — đều là việc của agent.
+
+---
+
+## 7. Feedback & chạy lại — user chỉ cần nói trong chat
+
+| User | Agent tự làm |
+|---|---|
+| Góp ý trong chat (VD "MD màn coupon cao quá", "thiếu màn đổi mật khẩu") | Xác định version bị góp ý (mặc định = version **mới nhất** cùng loại) → tạo version MỚI (`next`) kế thừa bản đó → sửa → ghi góp ý vào **Feedback đã xử lý** của version mới. Không sửa version cũ |
+| Ghi tay vào mục *Feedback của user* trong `run-log.md` (vẫn được) | `context` báo trong `pending_feedback` → lần chạy sau tự áp dụng |
+| Báo "CR-001 đã code xong" — hoặc chạy `/analyze-system` khi còn `open_crs` | G-R đề xuất **Delta**, hỏi CR nào đã lên hệ thống → quét lại phần CR chạm → baseline mới cho các CR sau |
+

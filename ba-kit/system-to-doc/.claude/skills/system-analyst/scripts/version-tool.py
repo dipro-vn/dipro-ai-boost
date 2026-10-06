@@ -4,10 +4,16 @@
   python3 version-tool.py next --outputs <project>/outputs --slug baseline [--cr-id CR-001] [--date DDMMYY] [--create]
   python3 version-tool.py latest-baseline --outputs <project>/outputs
   python3 version-tool.py list --outputs <project>/outputs [--json]
+  python3 version-tool.py context --outputs <project>/outputs [--flow 1|2] [--cr-id CR-001]
 
 next            -> JSON {n, folder, path} ; --create moi mkdir folder + _internal/{gates,recon,evidence}
 latest-baseline -> JSON {folder, path, n, inventory, outputs:{O1..O7: bool}} ; exit 1 neu khong co baseline
 list            -> bang version + CR mo sau baseline moi nhat (canh bao xung dot CR-vs-CR)
+context         -> JSON agent doc o DAU MOI LAN CHAY (user khong phai tu tim version):
+                   latest (version moi nhat bat ky loai) · latest_baseline (+ inventory, outputs) ·
+                   open_crs (CR sau baseline moi nhat) · latest_by_cr · pending_feedback (muc
+                   "Feedback cua user" trong run-log chua co version sau nao ghi "Feedback da xu ly") ·
+                   suggest (mode de xuat cho Luong 1 / version doc lai cho Luong 2) · read (file can doc)
 KHONG BAO GIO sua folder version cu.
 """
 import argparse
@@ -119,6 +125,31 @@ def scan(outputs):
     return vers
 
 
+FB_HEAD = re.compile(r"^##\s*Feedback c\w* user\s*$", re.I | re.M)
+FB_DONE_HEAD = re.compile(r"^##\s*Feedback \S+ x\S+ l\S+\s*$", re.I | re.M)  # "## Feedback đã xử lý"
+PLACEHOLDER = re.compile(r"^\s*(\(.*\)|<!--.*-->|-|—)?\s*$")
+
+
+def _section(txt, head_re):
+    m = head_re.search(txt)
+    if not m:
+        return ""
+    rest = txt[m.end():]
+    nxt = re.search(r"^##\s", rest, re.M)
+    return rest[:nxt.start()] if nxt else rest
+
+
+def read_runlog(path):
+    """-> (feedback text user ghi, set folder da xu ly feedback)."""
+    rl = os.path.join(path, "run-log.md")
+    if not os.path.isfile(rl):
+        return "", set()
+    txt = open(rl, encoding="utf8", errors="ignore").read()
+    fb = "\n".join(l for l in _section(txt, FB_HEAD).splitlines() if not PLACEHOLDER.match(l)).strip()
+    done = set(re.findall(r"ver\d+_\d{6}_[^\s|`)\]]+", _section(txt, FB_DONE_HEAD)))
+    return fb, done
+
+
 def outputs_exist(path):
     res = {}
     for k, pats in OUTPUT_GLOBS.items():
@@ -199,6 +230,80 @@ def cmd_list(a):
     return 0
 
 
+def cmd_context(a):
+    vers = scan(a.outputs)
+    b = latest_baseline(vers)
+    by_cr = {}
+    for v in vers:
+        if v["type"] == "CR" and v["cr_id"]:
+            by_cr[v["cr_id"].upper()] = v["folder"]
+    # CR mo sau baseline — moi CR chi lay version MOI NHAT (CR chay lai nhieu lan khong dem trung)
+    open_crs = [v for v in vers if v["type"] == "CR" and b and v["n"] > b["n"]
+                and (not v["cr_id"] or by_cr.get(v["cr_id"].upper()) == v["folder"])]
+    logs = {v["folder"]: read_runlog(v["path"]) for v in vers}
+    pending = []
+    for v in vers:
+        fb = logs[v["folder"]][0]
+        if not fb:
+            continue
+        handled = any(v["folder"] in logs[w["folder"]][1] for w in vers if w["n"] > v["n"])
+        if not handled:
+            pending.append({"folder": v["folder"], "type": v["type"], "cr_id": v["cr_id"], "feedback": fb})
+    ctx = {
+        "outputs": os.path.abspath(a.outputs),
+        "versions": len(vers),
+        "latest": vers[-1]["folder"] if vers else None,
+        "latest_type": vers[-1]["type"] if vers else None,
+        "latest_baseline": None,
+        "open_crs": [{"folder": v["folder"], "cr_id": v["cr_id"], "impact": v["impact"],
+                      "baseline_ref": v["baseline_ref"]} for v in open_crs],
+        "latest_by_cr": by_cr,
+        "pending_feedback": pending,
+        "next_n": max([v["n"] for v in vers] or [0]) + 1,
+    }
+    if b:
+        inv = os.path.join(b["path"], "_internal", "inventory.xlsx")
+        ctx["latest_baseline"] = {"folder": b["folder"], "path": b["path"], "n": b["n"],
+                                  "inventory": inv, "inventory_exists": os.path.isfile(inv),
+                                  "outputs": outputs_exist(b["path"])}
+    flow = str(a.flow or "")
+    read, suggest = [], {}
+    if b:
+        read += [os.path.join(b["path"], "_internal", "inventory.xlsx"), os.path.join(b["path"], "run-log.md")]
+    if flow != "2":
+        if not b:
+            suggest["flow1_mode"] = "FULL"
+            suggest["why"] = "chua co baseline"
+        elif open_crs or pending:
+            suggest["flow1_mode"] = "DELTA"
+            why = []
+            if open_crs:
+                why.append("%d CR sau baseline (%s) — CR nao da code xong thi Delta cap nhat AS-IS"
+                           % (len(open_crs), ", ".join(v["cr_id"] or v["folder"] for v in open_crs)))
+            if pending:
+                why.append("%d feedback chua xu ly" % len(pending))
+            suggest["why"] = " · ".join(why)
+        else:
+            suggest["flow1_mode"] = "DELTA"
+            suggest["why"] = "da co baseline, khong co CR / feedback moi"
+    if flow != "1":
+        cid = norm_cr_id(a.cr_id) if a.cr_id else None
+        if cid and cid in by_cr:
+            prev = next(v for v in vers if v["folder"] == by_cr[cid])
+            suggest["flow2_rerun_of"] = prev["folder"]
+            read += [os.path.join(prev["path"], "_internal", "cr.json"), os.path.join(prev["path"], "run-log.md")]
+            if prev["baseline_ref"] and b and prev["baseline_ref"] != b["folder"]:
+                suggest["flow2_warn"] = ("%s doi chieu %s nhung baseline moi nhat la %s — dung baseline moi nhat"
+                                         % (prev["folder"], prev["baseline_ref"], b["folder"]))
+        suggest["flow2_baseline"] = b["folder"] if b else None
+    for p in pending:
+        read.append(os.path.join(os.path.abspath(a.outputs), p["folder"], "run-log.md"))
+    ctx["suggest"] = suggest
+    ctx["read"] = [r for i, r in enumerate(read) if os.path.exists(r) and r not in read[:i]]
+    print(json.dumps(ctx, ensure_ascii=False, indent=2))
+    return 0
+
+
 def main():
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -213,8 +318,13 @@ def main():
     p = sub.add_parser("list")
     p.add_argument("--outputs", required=True)
     p.add_argument("--json", action="store_true")
+    p = sub.add_parser("context")
+    p.add_argument("--outputs", required=True)
+    p.add_argument("--flow", choices=["1", "2"], default=None)
+    p.add_argument("--cr-id", default=None)
     a = ap.parse_args()
-    return {"next": cmd_next, "latest-baseline": cmd_latest, "list": cmd_list}[a.cmd](a)
+    return {"next": cmd_next, "latest-baseline": cmd_latest, "list": cmd_list,
+            "context": cmd_context}[a.cmd](a)
 
 
 if __name__ == "__main__":

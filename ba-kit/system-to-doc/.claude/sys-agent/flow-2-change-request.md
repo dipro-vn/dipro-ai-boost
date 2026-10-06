@@ -20,7 +20,7 @@
 | Cần | Kiểm bằng | Thiếu thì |
 |---|---|---|
 | Môi trường | `ensure-env.py --flow 2` (+ `--figma` khi CR-2 chọn vẽ) — **tự cài**, user không cài tay | `BLOCKED` → xlsx = `❌ Blocked`; Figma `NEED_AUTH` → nhờ user `/mcp` → Authenticate, chưa xong thì bỏ view CR, chạy tiếp |
-| Baseline | `version-tool.py latest-baseline --outputs outputs` | ⛔ DỪNG — đề nghị chạy Luồng 1 (ít nhất phần site/repo liên quan CR) |
+| Baseline | `version-tool.py context --outputs outputs --flow 2 [--cr-id]` → `latest_baseline` (luôn bản **mới nhất**) | ⛔ DỪNG — đề nghị chạy Luồng 1 (ít nhất phần site/repo liên quan CR) |
 | `_internal/inventory.xlsx` của baseline | file tồn tại, gate V2 của baseline PASS | ⛔ DỪNG — baseline hỏng thì impact sai |
 | Bảng đơn giá MD | `.claude/config/md-unit-rates.json` | Vẫn chạy; `status ≠ APPROVED` → Summary ghi rõ **"Ước lượng sơ bộ — chưa được PM/Tech Lead duyệt"** |
 | Template estimation | `templates/template_estimation.xlsx` (bóc từ 見積書 công ty bằng `extract-estimation-template.py`) | ⛔ build từ chối — bóc template trước (§4.5) |
@@ -45,7 +45,7 @@
 | Bước | Việc | Gate |
 |---|---|---|
 | 0 | Nhận CR (§1), tách thành **danh sách item** `CR-001.1, .2…` | — |
-| 1 | `latest-baseline` + `list --outputs outputs` → in tình hình baseline + CR đang mở | 🟡 **CR-0** |
+| 1 | `context --flow 2 [--cr-id]` → Read file trong `read` → in tình hình baseline mới nhất + CR đang mở + feedback treo. CR này đã có version (`suggest.flow2_rerun_of`) → **chạy lại**: lấy `cr.json` bản mới nhất làm điểm xuất phát, áp feedback, đối chiếu baseline **mới nhất** (`flow2_warn` nếu bản cũ dùng baseline khác) | 🟡 **CR-0** |
 | 2 | **Phân loại + giải trình** từng item (§3) | — |
 | 3 | Item mơ hồ → hỏi | 🟡 **CR-1** |
 | 4 | `version-tool.py next --outputs outputs --cr-id CR-<id> --slug <slug> --create` | — |
@@ -57,6 +57,7 @@
 ```
 CR: "<tiêu đề>" — <n> item. Đối chiếu với baseline ver<K>_<...> (<ngày>): <a> site · <m> màn · <p> API · <t> bảng.
 CR đang mở sau baseline: <CR-xxx (ver..), ...> hoặc "không có".
+Feedback chưa xử lý: <ver.. — tóm tắt> hoặc "không có".   CR này đã có bản trước: <ver..> → chạy lại từ bản đó / "chưa có".
   [A] Đúng baseline này, mã CR = CR-<id>  (Other: đổi mã/tiêu đề)
   [B] Hệ thống đã đổi so với baseline — chạy Luồng 1 DELTA trước
   [C] Dùng baseline khác — chỉ định
