@@ -560,7 +560,8 @@ def index_cases(tmp):
                "impacts": [{"id": "IMP-001", "axis": "Screen", "change_type": "UPD", "baseline_ref": "SC-001",
                             "item": "Dang nhap", "change": "Them OTP", "why_change": "Yeu cau CR muc 1",
                             "impact_on_current": "Luong login", "conflict": "No", "risk": "Low",
-                            "rate_code": "SCR-UPD-M", "qty": 2, "evidence": "input/CR-001.md"}]},
+                            "rate_code": "SCR-UPD-M", "qty": 2, "evidence": "input/CR-001.md",
+                            "cr_item": "CR-001.1"}]},
               open(cj, "w"))
     rates = os.path.abspath(os.path.join(HERE, "..", "..", "..", "..", S.MD_RATES_PATH))
     rc, o = sh("build-cr-impact.py", "--cr-json", cj, "--rates", rates,

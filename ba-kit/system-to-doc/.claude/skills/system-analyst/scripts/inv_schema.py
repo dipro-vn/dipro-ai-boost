@@ -124,8 +124,11 @@ ID_PATTERNS = {
     "11_Repo": ("Repo ID", r"^REPO-\d{2,}$"),
 }
 
-# --- Change Request impact workbook (Luong 2) — 2 sheet: Summary + Impact ---
+# --- Change Request impact workbook (Luong 2) — 7 sheet ---
 # Nguon du lieu: <ver>/_internal/cr.json (agent viet) -> build-cr-impact.py render xlsx.
+# Summary (chi cong so + so doi tuong doi + link) · Estimation (theo templates/template_estimation.xlsx)
+# · Screen / API / Database / Figma (hang muc theo truc) · Q&A (vi sao la CR, cau hoi KH, khong thuoc CR).
+# Truc Business + ThirdParty khong co sheet rieng — chi nam trong Estimation (Flow da the hien tren Figma).
 CR_META_KEYS = [
     "cr_id", "cr_title", "baseline_version", "cr_version", "source_type",
     "source_ref", "received_date", "requested_by", "overall_risk", "recommendation",
@@ -145,7 +148,12 @@ CR_CRITERIA = {
 }
 CR_NOT_CR_LABEL = ["BUG", "QUESTION"]
 CR_SHEET_SUMMARY = "Summary"
-CR_SHEET_IMPACT = "Impact"
+CR_SHEET_ESTIMATION = "Estimation"
+CR_SHEET_QA = "Q&A"
+CR_AXIS_SHEETS = [("Screen", ["Screen"]), ("API", ["System"]), ("Database", ["DB"]), ("Figma", ["Mockup"])]
+CR_SHEETS = [CR_SHEET_SUMMARY, CR_SHEET_ESTIMATION] + [s for s, _ in CR_AXIS_SHEETS] + [CR_SHEET_QA]
+CR_ESTIMATION_ONLY_AXES = ["Business", "ThirdParty"]
+ESTIMATION_TEMPLATE_PATH = "templates/template_estimation.xlsx"
 CR_IMPACT_COLS = [  # header hien thi cho khach -> tieng Viet co dau
     "No", "Impact ID", "Trục", "Loại", "Baseline Ref", "Hạng mục",
     "Nội dung thay đổi", "Vì sao phải sửa", "Ảnh hưởng tới hiện tại",

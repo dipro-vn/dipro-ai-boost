@@ -11,7 +11,7 @@
 > | **ThirdParty** | Có thêm liên kết nào? Ảnh hưởng liên kết hiện tại không? |
 > | **Mockup** | Màn mới / sửa có nhất quán với Design System hệ thống cũ không? |
 >
-> Kết quả: folder version MỚI với **1 file `CR-<id>_Impact.xlsx` (2 sheet)**. **Không sửa baseline, không vẽ đè Figma cũ.**
+> Kết quả: folder version MỚI với **1 file `CR-<id>_Impact.xlsx` (7 sheet: Summary · Estimation · Screen · API · Database · Figma · Q&A)** + view CR trên Figma theo **format Output 1 / Output 2** + màn đề xuất bám Design System. **Không sửa baseline, không vẽ đè Figma cũ.**
 
 ---
 
@@ -23,6 +23,7 @@
 | Baseline | `version-tool.py latest-baseline --outputs outputs` | ⛔ DỪNG — đề nghị chạy Luồng 1 (ít nhất phần site/repo liên quan CR) |
 | `_internal/inventory.xlsx` của baseline | file tồn tại, gate V2 của baseline PASS | ⛔ DỪNG — baseline hỏng thì impact sai |
 | Bảng đơn giá MD | `.claude/config/md-unit-rates.json` | Vẫn chạy; `status ≠ APPROVED` → Summary ghi rõ **"Ước lượng sơ bộ — chưa được PM/Tech Lead duyệt"** |
+| Template estimation | `templates/template_estimation.xlsx` (bóc từ 見積書 công ty bằng `extract-estimation-template.py`) | ⛔ build từ chối — bóc template trước (§4.5) |
 | Nội dung CR | §1 | Hỏi user |
 
 ---
@@ -48,8 +49,8 @@
 | 2 | **Phân loại + giải trình** từng item (§3) | — |
 | 3 | Item mơ hồ → hỏi | 🟡 **CR-1** |
 | 4 | `version-tool.py next --outputs outputs --cr-id CR-<id> --slug <slug> --create` | — |
-| 5 | Phân tích 6 trục (§4) → ghi `<ver>/_internal/cr.json` → `build-cr-impact.py` → `CR-<id>_Impact.xlsx` | 🔴 **V-CR** |
-| 6 | Figma view CR (§5) | 🟡 **CR-2** · 🔴 **V-CR-FIGMA** |
+| 5 | Phân tích 6 trục (§4) → ghi `<ver>/_internal/cr.json` → `build-cr-impact.py` → `CR-<id>_Impact.xlsx` (7 sheet) | 🔴 **V-CR** |
+| 6 | Figma view CR (§5 + `figma/cr-view.md`): CR-1 Flow (Output 1) · CR-2 Screen Flow (Output 2) · CR Change Table (thống kê) · CR-3 màn đề xuất (đọc Design System trước) | 🟡 **CR-2 · CR-3 · CR-3b** · 🔴 **V-CR-FIGMA** |
 | 7 | `detect-pii.js --scan <ver>` · `build-version-index.py <ver>` · run-log · report | 🔴 H06 |
 
 ### CR-0 — xác nhận baseline (AskUserQuestion)
@@ -72,7 +73,7 @@ Hỏi đúng chỗ thiếu. User không trả lời được → câu hỏi `CQ-
 
 | Nhãn | Dấu hiệu (đối chiếu baseline) | Xử lý |
 |---|---|---|
-| **CR** | Thoả ≥ 1 tiêu chí C1–C6 (§3.2) | Giải trình (§3.3) + vào sheet Impact |
+| **CR** | Thoả ≥ 1 tiêu chí C1–C6 (§3.2) | Giải trình (§3.3) + hạng mục impact (§4) |
 | **BUG** | Khách mô tả hành vi *đúng như baseline đã ghi là phải có* (`Confirmed` / tài liệu đã duyệt) nhưng hệ thống chạy sai | Không phải CR → `not_cr`, đề nghị đưa vào bug list |
 | **QUESTION** | Hỏi hệ thống đang làm gì | Trả lời từ baseline (ID + evidence) → `not_cr`; baseline không có → CQ |
 | **CHƯA RÕ** | Vùng baseline `UNKNOWN` / `To verify` | Hỏi CR-1, **không** tự chọn nhãn |
@@ -132,23 +133,28 @@ Screen ──Entry From──▶ màn dẫn tới nó
  "questions": [{"id":"CQ-001","question","why","axis","owner","status"}],
  "impacts": [{"id":"IMP-001","axis","change_type":"NEW|UPD|DEL|IMPACT","baseline_ref","item","change",
               "why_change","impact_on_current","conflict":"Yes|No|UNKNOWN","conflict_detail","risk",
-              "rate_code","qty","md_note","evidence","question"}]}
+              "rate_code","qty","md_note","evidence","question",
+              "cr_item":"CR-001.3","option":false}]}
 ```
 
 ```bash
 python3 $S/build-cr-impact.py --cr-json $V/_internal/cr.json --rates .claude/config/md-unit-rates.json \
-    --out $V/CR-<id>_Impact.xlsx
+    --out $V/CR-<id>_Impact.xlsx          # [--template templates/template_estimation.xlsx]
 python3 $S/verify-cr-impact.py $V/CR-<id>_Impact.xlsx --cr-json $V/_internal/cr.json \
     --baseline outputs/<baseline-folder> [--other-cr outputs/<CR khác đang mở>/_internal/cr.json] \
     --out $V/_internal/gates/v-cr.md
 ```
 
-### 4.3 Workbook — đúng **2 sheet**
+### 4.3 Workbook — đúng **7 sheet** (thứ tự cố định, `inv_schema.CR_SHEETS`)
 
 | Sheet | Nội dung (script sinh, agent không gõ tay) |
 |---|---|
-| **`Summary`** | ① Khối đầu: CR · tiêu đề · baseline · nguồn · ngày · người yêu cầu (vai trò) · mức ảnh hưởng chung · đề xuất. ② **Vì sao đây là Change Request** (bảng §3.3). ③ **Tổng MD** — ma trận Trục × Loại + tổng, dòng đơn giá (`DRAFT` → cảnh báo "ước lượng sơ bộ"). ④ Trục không ảnh hưởng + lý do. ⑤ Câu hỏi cần khách trả lời. ⑥ Không thuộc CR (BUG / QUESTION) — nếu có |
-| **`Impact`** | 1 dòng / hạng mục: `No · Impact ID · Trục · Loại · Baseline Ref · Hạng mục · Nội dung thay đổi · Vì sao phải sửa · Ảnh hưởng tới hiện tại · Xung đột · Chi tiết xung đột · Rủi ro · Mã đơn giá · Số lượng · MD · Ghi chú MD · Evidence · Câu hỏi` + dòng **Tổng MD** |
+| **`Summary`** | **Chỉ cơ bản**: khối đầu (CR · baseline · nguồn · ngày · người yêu cầu (vai trò) · mức ảnh hưởng) · **1. Công số thay đổi**: 実装 MD (= tổng đơn giá × số lượng), 総工数 人日 + 人月 (**công thức link** `='Estimation'!P<合計>`), tách 最小改修案 / 拡張案 (theo cờ `option`), link **→ sheet Estimation**, dòng đơn giá (DRAFT → cảnh báo) · **2. Số đối tượng thay đổi**: Màn hình · API · Batch · Bảng DB · Cột DB · Rule nghiệp vụ · Liên kết bên thứ 3 · Mockup · Token DS × `NEW / UPD / DEL / IMPACT / Tổng / 実装 MD` · **3. Link** tới từng sheet chi tiết |
+| **`Estimation`** | Copy nguyên khung `templates/template_estimation.xlsx` (letterhead, 御見積書, ■件名/■見積日, header 2 dòng, validation). 1 section `◆ CR-001.x — <yêu cầu>` / item justification, 1 dòng / hạng mục: `No.` = Impact ID · 項目(大) = trục (loại) · 項目(中) = Baseline Ref · 項目(小) = hạng mục · 改修内容 · QA/Note (CQ chờ, xung đột, ghi chú MD) · Tái sử dụng / Phát triển mới (NEW → phát triển mới) · option (= `option`) · **実装 = MD** · 要件定義 / UI・UX / テスト / 管理 / 小計 = **công thức hệ số của template** · cột Q = căn cứ (mã đơn giá × SL) · 合計 人日 + 人月 · ◆前提条件 |
+| **`Screen`** · **`API`** · **`Database`** · **`Figma`** | Hạng mục trục Screen · System · DB · Mockup — 1 dòng / hạng mục: `No · Impact ID · Trục · Loại · Baseline Ref · Hạng mục · Nội dung thay đổi · Vì sao phải sửa · Ảnh hưởng tới hiện tại · Xung đột · Chi tiết xung đột · Rủi ro · Mã đơn giá · Số lượng · MD · Ghi chú MD · Evidence · Câu hỏi` + dòng **Tổng MD**. Trục không có hạng mục → 1 dòng lý do (`no_impact_axes`) |
+| **`Q&A`** | Mức ảnh hưởng + đề xuất · **Vì sao đây là Change Request** (bảng §3.3) · **Câu hỏi cần khách trả lời** (CQ) · Trục không ảnh hưởng · Không thuộc CR (BUG / QUESTION) |
+
+Trục **Business** + **ThirdParty** không có sheet riêng (luồng nghiệp vụ đã thể hiện ở Figma CR-1) — vẫn đủ dòng trong **Estimation** và trong thống kê Summary.
 
 ### 4.4 Luật
 
@@ -164,46 +170,34 @@ python3 $S/verify-cr-impact.py $V/CR-<id>_Impact.xlsx --cr-json $V/_internal/cr.
 | Mockup | Màn `NEW` / `UPD` trỏ ≥ 1 `DS:` / `DS-component:` dùng lại. Cần màu / component chưa có (hoặc đang TBD trong `STATUS.md`) → dòng `UI-TOKEN-NEW` + CQ cho designer, **không** tự chế |
 | `Xung đột = Yes` / `Rủi ro = High` | Có chi tiết + (câu hỏi hoặc ghi chú hướng xử lý) |
 | Evidence | Trích đoạn CR (`input/<file> §2`) hoặc file baseline (`ver1/_internal/inventory.xlsx 07_API API-022`) |
+| `cr_item` | Mọi hạng mục gắn 1 item justification (`CR-001.3`) → section của Estimation; mọi item CR có ≥ 1 hạng mục |
+| `option` | `true` = hạng mục thuộc 拡張案 (phương án mở rộng) → cột option + tách 最小改修案 / 拡張案 trên Summary. Không đoán: KH chưa nói rõ phương án → hỏi CR-1 |
 
-Gate V-CR chặn mọi vi phạm trên + **MD / tổng trong xlsx khác đơn giá × số lượng** (sửa tay). WARN: đơn giá chưa `APPROVED`; CR khác đang mở cũng sửa cùng thứ (phải nêu ở mục đề xuất).
+Gate V-CR chặn mọi vi phạm trên + **MD / tổng trong xlsx khác đơn giá × số lượng** (sửa tay) + Summary gõ số thay vì link Estimation + công thức Estimation khác hệ số template + bảng số đối tượng lệch + Q&A thiếu giải trình / CQ. WARN: đơn giá chưa `APPROVED`; CR khác đang mở cũng sửa cùng thứ (phải nêu ở mục đề xuất).
+
+### 4.5 Template estimation — bóc 1 lần từ 見積書 của công ty
+
+```bash
+python3 $S/extract-estimation-template.py --src "<見積書 đã gửi KH>.xlsx" --sheet "見積書(VN)" \
+    --out templates/template_estimation.xlsx
+```
+Giữ letterhead / logo / header / validation / ◆前提条件; bỏ dữ liệu dự án (khách, tên dự án, ngày, từng dòng, số tiền) → placeholder. **Hệ số công đoạn đọc từ công thức** dòng hạng mục đầu của file nguồn (VD 要件定義 = 実装 × 0.2 · UI/UX × 0.2 · テスト × 0.5 · 管理 = tổng × 0.2 · 人月 = 人日 / 20) → sheet ẩn `_meta`. Đổi hệ số = sửa / bóc lại template, **không sửa code**. Kit **không tính tiền** (ô 合計金額 để trống — việc của PM).
 
 ---
 
-## 5. Figma — view CR mới, chỉ phần liên quan trực tiếp
+## 5. Figma — view CR mới, đúng format Output 1 / Output 2 (chi tiết: `figma/cr-view.md`)
 
-### CR-2 (AskUserQuestion)
-```
-Vẽ view CR lên Figma?
-  [A] Có — cùng file flow của baseline: <figma_output_url của baseline>
-  [B] Có — file/page khác (Other: link)
-  [C] Không vẽ lần này
-```
+### CR-2 / CR-3 / CR-3b (AskUserQuestion — wording ở `figma/cr-view.md` §3)
+- **CR-2** vẽ hay không, file nào. **CR-3** phạm vi màn đề xuất (NEW / NEW + UPD / chọn màn / không). **CR-3b** khi màn cần component Design System site chưa có (mượn site khác hay UI-TOKEN-NEW + CQ). Không tự chọn thay user.
 
-### Luật vẽ (khung kỹ thuật copy từ requirement-to-flow — `skills/ba-figma-output/SKILL.md` + `sys-agent/figma/`)
-
-- **Section mới** `CR-<id> — <tiêu đề> (baseline ver<K>)`, cách bbox thấp nhất của mọi node hiện có **≥ 400 px** (đo bằng `get_metadata`). Nhiều CR → mỗi CR 1 section, cách nhau ≥ 400 px.
-- **Không** remove / move / resize / recolor / relabel node nào của Output 1/2 hay CR trước.
-- **Phạm vi — POLICY:** chỉ vẽ (a) hạng mục có dòng trong sheet Impact (`NEW` / `UPD` / `DEL` / `IMPACT`) và (b) hàng xóm **đúng 1 bước** của chúng để thấy chỗ nối (`AS-IS`). Không vẽ lại toàn hệ thống, không vẽ "cho đẹp". **Máy kiểm** bằng V-CR-FIGMA.
-- **Tô màu — mỗi node đúng 1 badge, tên node `<BADGE> · <REF> · <nhãn>`** (`REF` = Baseline Ref của dòng Impact; hạng mục `NEW` chưa có trong baseline → dùng Impact ID, VD `NEW · IMP-004 · Ô mã giảm giá`). Mỗi node gắn thêm `setSharedPluginData("cr", "kind", "screen|flow|table-row|other")` để script đọc ngược phân loại được:
-
-| Badge | Màu (fill / stroke) | Dùng cho |
-|---|---|---|
-| `NEW` | `#EDFDF0` / `#1A7F37` | thêm mới |
-| `UPD` | `#FFF9EB` / `#F4860C` nét đứt, ghi "cũ → mới" | sửa |
-| `DEL` | `#FFF6F5` / `#CF222E` nét đứt, gạch ngang | xoá |
-| `IMPACT` | `#FBEEFF` / `#6639BA` nét đứt, ghi "bị ảnh hưởng qua <API-xxx / table:…>" | không sửa nhưng **bị kéo theo**, cần kiểm lại |
-| `AS-IS` | `#F6F8FA` / `#D0D7DE`, opacity 0.6 | hàng xóm không đổi, chỉ để thấy chỗ nối |
-
-- Sub-view: **CR-1 Flow** (đoạn luồng bị đổi) · **CR-2 Screen Flow** (màn bị đổi + hàng xóm) · **CR Change Table** (bắt buộc: Impact ID · badge · Baseline Ref · nội dung · MD).
-- Mockup màn `NEW` / `UPD` (khi user yêu cầu): dùng **token / type style / component Design System của baseline** đúng tên trong README của nó.
-- **Kiểm sau khi vẽ — không bằng mắt:**
-```bash
-# 1. use_figma đọc ngược section CR → $V/_internal/cr-figma-nodes.json (snippet trong docstring verify-cr-figma.py)
-# 2. bbox không chồng node cũ: script Tiêu chí 7 trong sys-agent/figma/recheck.md
-python3 $S/verify-cr-figma.py --nodes $V/_internal/cr-figma-nodes.json --cr-json $V/_internal/cr.json \
-    --baseline outputs/<baseline-folder> --out $V/_internal/gates/v-cr-figma.md
-```
-  V-CR-FIGMA chặn: node ngoài phạm vi (không phải hạng mục Impact, không phải hàng xóm 1 bước) · badge khác `Loại` của dòng Impact · màn / chức năng bị đổi mà không vẽ · số dòng CR Change Table ≠ số hạng mục đã vẽ.
+### Luật vẽ (tóm tắt — đầy đủ ở `figma/cr-view.md`)
+- **Section mới** `CR-<id> — <tiêu đề> (baseline ver<K> → ver<N>)`, cách bbox thấp nhất của mọi node hiện có **≥ 400 px**. **Không** remove / move / resize / recolor / relabel node của Output 1/2 hay CR trước.
+- **CR-1 Flow** = Output 1 Phần A (lane `FL-xx` bị chạm: ACTOR → TRIGGER → FUNCTION → TECHNOLOGY → OUTCOME · EDGE) + Phần B Technology. **CR-2 Screen Flow** = Output 2 (Group · Start · Screen · Decision · System · NG inline · Terminal · Edge/Exceptional · ④ Screen Index). Mọi node nối bằng **mũi tên thật**.
+- **Phạm vi — POLICY:** chỉ hạng mục có dòng Impact + hàng xóm **đúng 1 bước** / lane `FL-xx` baseline làm ngữ cảnh (`AS-IS`).
+- **CR Change Table = THỐNG KÊ**: số đối tượng NEW / UPD / DEL / IMPACT (Màn hình · API · Bảng DB · Cột DB · …) + 実装 MD · 総工数 人日 · 人月 · 最小改修案 / 拡張案. **Không** liệt kê lại từng hạng mục (đã có trong xlsx).
+- **CR-3 màn đề xuất**: **đọc Design System trước** (README → tokens.json → component README → STATUS.md, khai vào `screens.ds_read`) → chỉ token / component của DS; thiếu → theo CR-3b. Máy kiểm màu ⊆ token.
+- Mỗi node đúng 1 badge, tên `<BADGE> · <REF> · <nhãn>`, `setSharedPluginData("crkit", "kind", …)` (Figma bắt buộc namespace ≥ 3 ký tự).
+- **Không tự viết JS vẽ**: agent viết `_internal/cr-figma.json` → `render-cr-figma.py` sinh JS → `use_figma` → `99-readback.js` → `verify-cr-figma.py` `FAIL = 0`.
 - Ghi link node vào `<ver>/05_Figma/figma-links.md`.
 
 ---
@@ -215,9 +209,9 @@ ver<N>_<DDMMYY>_CR-<id>-<slug>/
 ├── README.md                  mục lục (build-version-index)
 ├── run-log.md                 baseline: ver<K>_…
 ├── input/                     CR nguyên văn
-├── CR-<id>_Impact.xlsx        2 sheet: Summary · Impact   ← gửi khách được
+├── CR-<id>_Impact.xlsx        7 sheet: Summary · Estimation · Screen · API · Database · Figma · Q&A   ← gửi khách được
 ├── 05_Figma/figma-links.md    (nếu vẽ)
-└── _internal/  cr.json · cr-figma-nodes.json · gates/
+└── _internal/  cr.json · cr-figma.json · figma-js/ · cr-figma-nodes.json · gates/
 ```
 
 ---
@@ -233,3 +227,7 @@ ver<N>_<DDMMYY>_CR-<id>-<slug>/
 - ❌ Vẽ ngoài phạm vi CR, vẽ lại toàn bộ flow, sửa / di chuyển node Figma cũ
 - ❌ Tự chế màu / component mới cho mockup mà không ghi dòng `UI-TOKEN-NEW` + CQ
 - ❌ Lưu tên / email người gửi CR — dùng vai trò
+- ❌ Vẽ view CR theo bố cục tự chế (lưới thẻ không mũi tên) thay vì khung Output 1 / Output 2 — lỗi đã xảy ra ở CR-001
+- ❌ CR Change Table liệt kê lại từng hạng mục — chỉ thống kê
+- ❌ Vẽ màn đề xuất trước khi đọc Design System / dùng màu, component không có trong DS mà không hỏi CR-3b
+- ❌ Gõ số công số vào Summary thay vì link sheet Estimation; sửa hệ số công đoạn trong code thay vì template

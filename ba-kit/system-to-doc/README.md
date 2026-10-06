@@ -99,10 +99,12 @@ Mọi dòng trong tài liệu gắn với bằng chứng (ảnh chụp, dòng co
 | Mockup | Màn mới có nhất quán với Design System cũ không? |
 
 **Output Luồng 2** (`outputs/ver<N>_<DDMMYY>_CR-<id>-<tên>/`):
-- `CR-<id>_Impact.xlsx` — **2 sheet**, gửi khách được:
-  - `Summary`: **vì sao đây là CR** (đối chiếu hệ thống hiện tại, theo tiêu chí C1–C6) · **tổng MD** theo trục × loại · trục không ảnh hưởng · câu hỏi cần khách trả lời
-  - `Impact`: từng hạng mục — trục · loại (thêm / sửa / xoá / bị ảnh hưởng) · **vì sao phải sửa** · ảnh hưởng tới cái đang có · xung đột · rủi ro · **MD**
-- Figma **view CR mới** — chỉ phần thay đổi + phần bị ảnh hưởng, tô màu theo loại, không vẽ đè bản cũ.
+- `CR-<id>_Impact.xlsx` — **7 sheet**, gửi khách được:
+  - `Summary`: chỉ cơ bản — **công số thay đổi** (実装 MD · 総工数 人日 · 人月, link sang Estimation; tách 最小改修案 / 拡張案) · **số đối tượng thay đổi** (màn hình / API / bảng DB / cột DB / rule / liên kết ngoài / mockup) × thêm / sửa / xoá / bị ảnh hưởng · link tới từng sheet
+  - `Estimation`: đúng khung 見積書 của công ty (`templates/template_estimation.xlsx`, bóc bằng `extract-estimation-template.py`) — 1 dòng / hạng mục, 要件定義 / UI・UX / テスト / 管理 tính bằng hệ số của template
+  - `Screen` · `API` · `Database` · `Figma`: từng hạng mục của trục — loại · **vì sao phải sửa** · ảnh hưởng tới cái đang có · xung đột · rủi ro · **MD**
+  - `Q&A`: **vì sao đây là CR** (C1–C6) · câu hỏi cần khách trả lời · trục không ảnh hưởng · mục không thuộc CR
+- Figma **view CR mới** (`.claude/sys-agent/figma/cr-view.md`) — CR-1 Flow theo khung Output 1 · CR-2 Screen Flow theo khung Output 2 (mũi tên thật) · CR Change Table = **thống kê** · CR-3 **màn đề xuất** dựng từ Design System baseline (AI đọc Design System trước, hỏi phạm vi) — chỉ phần thay đổi + phần bị ảnh hưởng, không vẽ đè bản cũ.
 
 > MD = đơn giá trong `.claude/config/md-unit-rates.json` × số lượng (AI chỉ chọn loại hạng mục, không tự gõ số). Bảng đơn giá đang **DRAFT** — PM / Tech Lead duyệt rồi đổi `status` thành `APPROVED`.
 

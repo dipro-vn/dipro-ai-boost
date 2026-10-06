@@ -217,7 +217,7 @@ def img_flow2(path):
     _box(ax, P, 6.6, 1.6, 2.2, 1.2, "Phân tích\n6 trục impact", ORANGE_BG, ORANGE, bold=True)
     _arrow(ax, 8.8, 2.2, 9.4, 2.2)
     _box(ax, P, 9.4, 0.7, 2.4, 3.0,
-         "ver<N>_…_CR-001/\n\nCR-001_Impact.xlsx\n(Summary + Impact, MD)\nFigma view CR mới", GREEN_BG, GREEN)
+         "ver<N>_…_CR-001/\n\nCR-001_Impact.xlsx\n(7 sheet: Summary · Estimation …)\nFigma view CR mới", GREEN_BG, GREEN)
     _save(plt, fig, path)
 
 
@@ -637,7 +637,7 @@ def build(kit, samples, source_guide, shots):
         ["O5 Figma flow", "link Figma", "05_Figma/figma-links.md"],
         ["O6 Tài liệu tổng hợp", "docx", "06_Overview/Overview_….docx"],
         ["O7 Bug list (tuỳ chọn)", "xlsx", "07_BugList/BugList_….xlsx"],
-        ["CR (Luồng 2)", "xlsx (2 sheet) + link Figma view CR", "ver<N>_…_CR-<id>-…/"],
+        ["CR (Luồng 2)", "xlsx (7 sheet) + link Figma view CR", "ver<N>_…_CR-<id>-…/"],
     ])
     g.note("ảnh O1–O6 dưới đây chụp từ 1 dự án thật, phần thông tin dự án đã được che. "
            "Ô ghi UNKNOWN / \"cần xác minh\" là chỗ AI chưa có bằng chứng — không phải lỗi.")
@@ -689,16 +689,21 @@ def build(kit, samples, source_guide, shots):
 
     # ---- BUOC 7
     g.h1("BƯỚC 7 — NHẬN KẾT QUẢ LUỒNG 2")
-    g.h3("CR-<id>_Impact.xlsx — 2 sheet")
-    g.bullets(["**Summary** — vì sao đây là CR (đối chiếu hệ thống hiện tại) · tổng MD theo Trục × Loại · "
-               "câu hỏi cần khách trả lời. Gửi khách được.",
-               "**Impact** — từng hạng mục: thêm / sửa / xoá / bị ảnh hưởng, vì sao phải sửa, xung đột, rủi ro, MD."])
+    g.h3("CR-<id>_Impact.xlsx — 7 sheet")
+    g.bullets(["**Summary** — công số thay đổi (実装 MD · 総工数 人日 · 人月, link sang Estimation) · số màn / API / "
+               "bảng DB … thêm / sửa / xoá / bị ảnh hưởng · link tới từng sheet.",
+               "**Estimation** — đúng khung 見積書 của công ty (templates/template_estimation.xlsx), 1 dòng / hạng mục.",
+               "**Screen · API · Database · Figma** — từng hạng mục của trục: vì sao phải sửa, xung đột, rủi ro, MD.",
+               "**Q&A** — vì sao đây là CR · câu hỏi cần khách trả lời · mục không thuộc CR."])
     g.note("MD = đơn giá trong .claude/config/md-unit-rates.json × số lượng — AI không tự gõ số. "
            "Bảng đơn giá đang DRAFT, PM / Tech Lead duyệt trước khi gửi khách.")
     g.image(I("mau_CR_impact-summary.png"), "Sheet Summary của CR-001 (dữ liệu giả ShopDemo)")
     g.h3("Figma — view CR mới")
     g.bullets(["1 section mới đặt dưới bản baseline — bản cũ giữ nguyên.",
-               "Chỉ vẽ phần thay đổi + phần bị ảnh hưởng + màn bên cạnh 1 bước; tô màu theo badge, kèm CR Change Table."])
+               "CR-1 Flow theo khung Output 1, CR-2 Screen Flow theo khung Output 2 (mũi tên thật); chỉ phần thay đổi "
+               "+ phần bị ảnh hưởng + màn bên cạnh 1 bước; tô màu theo badge.",
+               "CR Change Table = thống kê số màn / API / bảng thay đổi + công số (không liệt kê chi tiết).",
+               "CR-3 màn đề xuất dựng từ Design System của baseline — AI đọc Design System trước, hỏi phạm vi."])
     g.image(I("07_badge-cr.png"), "Ký hiệu trên Figma view CR", width_cm=13)
     g.image(I("mau_CR_figma-view.png"), "Figma view CR-001 (dữ liệu giả ShopDemo)")
 

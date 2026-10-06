@@ -177,8 +177,8 @@ Chi tiết: **`sys-agent/flow-2-change-request.md`** (BẮT BUỘC Read trước
 | 1 | `ensure-env.py --flow 2` (tự cài nếu thiếu) → `version-tool.py latest-baseline --outputs outputs` + `list --outputs outputs` (CR khác đang mở?) | 🟡 CR-0 xác nhận baseline |
 | 2 | Hỏi bổ sung phần CR chưa rõ — không đoán | 🟡 CR-1 |
 | 3 | Phân loại CR / BUG / QUESTION + **giải trình vì sao là CR** (tiêu chí C1–C6, trích baseline) → phân tích **6 trục** System · DB · Business · Screen · Third-party · Mockup (NEW / UPD / DEL / IMPACT + vì sao sửa + mã đơn giá MD) → `_internal/cr.json` | — |
-| 4 | `build-cr-impact.py` → `CR-<id>_Impact.xlsx` (2 sheet Summary + Impact, MD do script tính) → gate | 🔴 V-CR |
-| 5 | Figma: CR-2 = vẽ → `ensure-env.py --flow 2 --figma` → **view MỚI**, chỉ hạng mục Impact + hàng xóm 1 bước, tô màu theo loại, không vẽ đè | 🟡 CR-2 · 🔴 V-CR-FIGMA |
+| 4 | `build-cr-impact.py` → `CR-<id>_Impact.xlsx` (7 sheet: Summary · Estimation · Screen · API · Database · Figma · Q&A; Estimation theo `templates/template_estimation.xlsx`; MD do script tính) → gate | 🔴 V-CR |
+| 5 | Figma (`sys-agent/figma/cr-view.md`): CR-2 = vẽ → `ensure-env.py --flow 2 --figma` → **section MỚI**: CR-1 Flow (format Output 1) · CR-2 Screen Flow (format Output 2) · CR Change Table (**thống kê**) · CR-3 màn đề xuất (**đọc Design System trước**, hỏi CR-3 / CR-3b) — agent viết `cr-figma.json`, `render-cr-figma.py` sinh JS, không vẽ đè | 🟡 CR-2 · CR-3 · CR-3b · 🔴 V-CR-FIGMA |
 | 6 | `detect-pii --scan` + README + run-log | 🔴 H06 scan |
 
 ---
@@ -248,8 +248,8 @@ Bảng mức xử lý đầy đủ: `POLICIES.md` §5.
 | **V8** | `verify-bug-list.py` | O7 thiếu repro/evidence, Low lọt vào, Security không PoC |
 | **V3** | `verify-overview.py` | O6 thiếu chương, số liệu ≠ inventory, index ≠ file thật |
 | **V5** | `verify-flow-png.py` | Node flow không map về ID có thật |
-| **V-CR** | `verify-cr-impact.py` | Không đủ 2 sheet, trục bị bỏ trống, giải trình CR không trích được baseline, sửa/xoá thứ không có trong baseline, MD ≠ đơn giá × số lượng, xung đột không khai |
-| **V-CR-FIGMA** | `verify-cr-figma.py` | View CR vẽ ngoài phạm vi (không phải hạng mục Impact / hàng xóm 1 bước), badge sai loại, hạng mục đổi mà không vẽ |
+| **V-CR** | `verify-cr-impact.py` | Không đủ 7 sheet, Summary gõ số thay vì link Estimation, Estimation sai hệ số template, bảng số đối tượng lệch, trục bị bỏ trống, giải trình CR không trích được baseline, sửa/xoá thứ không có trong baseline, MD ≠ đơn giá × số lượng, xung đột không khai |
+| **V-CR-FIGMA** | `verify-cr-figma.py` | View CR vẽ ngoài phạm vi (không phải hạng mục Impact / hàng xóm 1 bước), badge sai loại, hạng mục đổi mà không vẽ, node không mũi tên (lệch format Output 1/2), Change Table không phải thống kê / lệch số, màn đề xuất dùng màu ngoài Design System hoặc chưa khai đọc DS |
 | **V9** | `selftest-*.py` | Gate rỗng — tiêm lỗi, gate phải bắt |
 
 Verdict: `✅ Complete` (FAIL = 0) · `⚠️ Needs Revision` (tự sửa, chạy lại) · `❌ Critical Gaps` (thiếu **nguồn** → DỪNG hỏi user, không bịa để lấp).

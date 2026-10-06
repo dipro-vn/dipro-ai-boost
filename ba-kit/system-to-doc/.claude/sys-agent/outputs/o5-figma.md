@@ -43,7 +43,7 @@
 
 | Nhắc trong file copy | Ở kit này |
 |---|---|
-| Output 3 (HiFi screens), Output 4 (HTML prototype), Output 5 (Basic Design) | Không vẽ. Basic Design là O1 xlsx |
+| Output 3 (HiFi screens), Output 4 (HTML prototype), Output 5 (Basic Design) | **Luồng 1: không vẽ** (O1 xlsx là Basic Design). **Luồng 2: có** — CR-3 *màn đề xuất* cho màn NEW / UPD, bắt buộc đọc Design System baseline trước + hỏi CR-3 / CR-3b (`figma/cr-view.md`) |
 | Bước 5.4 Output OQ (`open-questions.md`, `open_questions.xlsx`) | Câu hỏi treo nằm ở `06_OpenQuestions` → Phụ lục A của O6. Không vẽ OQ view |
 | Câu preflight 0.x của BA | Đã có P0–P11 của kit này |
 | Gate B1/B2 chọn vẽ 1 hay nhiều flow | Vẫn áp dụng khi N flow > 10 — hỏi user bằng `AskUserQuestion` |
@@ -79,4 +79,4 @@ File: <figma_output_url>
 
 - ⚠️ **Figma là cloud bên ngoài.** Chỉ vẽ: tên màn, ID, nhãn chức năng, message lỗi (văn bản hệ thống). **Không** vẽ dữ liệu người dùng, không upload screenshot có dữ liệu thật.
 - Hook H06 chặn PII trong mọi call `mcp__*figma*`. Bị chặn → thay dữ liệu mẫu rồi vẽ lại, không lách.
-- Luồng 2 (CR) **không bao giờ** sửa frame này — vẽ section CR mới (`flow-2-change-request.md` §5).
+- Luồng 2 (CR) **không bao giờ** sửa frame này — vẽ section CR mới **theo đúng khung Output 1 / Output 2 ở file này** (`flow-2-change-request.md` §5 · `figma/cr-view.md`).
