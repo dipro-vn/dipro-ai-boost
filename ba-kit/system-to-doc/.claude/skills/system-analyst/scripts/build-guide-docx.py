@@ -708,10 +708,14 @@ def build(kit, samples, source_guide, shots):
     g.image(I("mau_CR_figma-view.png"), "Figma view CR-001 (dữ liệu giả ShopDemo)")
 
     # ---- BUOC 8
-    g.h1("BƯỚC 8 — VERSION VÀ CHẠY LẠI")
-    g.bullets(["Mỗi lần chạy = 1 folder mới ver<N>_<ngày>_<tên>. Không bao giờ sửa folder cũ.",
-               "Muốn góp ý: ghi vào mục Feedback trong run-log.md của version rồi chạy lại.",
-               "CR đã code xong → /analyze-system chọn Delta để có baseline mới cho các CR sau."])
+    g.h1("BƯỚC 8 — VERSION VÀ CHẠY LẠI (AI TỰ LÀM)")
+    g.p("Bạn không phải chỉ version, không phải mở run-log.md. AI tự quản lý version:")
+    g.bullets(["Mỗi lần chạy, AI tự đọc version mới nhất: baseline mới nhất, CR đang mở, góp ý chưa xử lý.",
+               "Mỗi lần chạy = 1 folder mới ver<N>_<ngày>_<tên>, AI tự đặt tên. Không bao giờ sửa folder cũ.",
+               "Muốn góp ý: nói thẳng trong chat (VD \"MD màn coupon cao quá\"). AI tạo version mới từ bản mới nhất, "
+               "sửa và ghi góp ý vào run-log.md.",
+               "CR đã code xong: chạy /analyze-system (hoặc nói \"CR-001 đã code xong\") — AI thấy CR đang mở, "
+               "đề xuất Delta để có baseline mới cho các CR sau."])
 
     # ---- LOI
     g.h1("MỘT SỐ LỖI KHI DÙNG")
