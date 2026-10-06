@@ -32,7 +32,27 @@ NOT_CR_FIELDS = ["item", "label", "reason", "baseline_ref"]
 Q_FIELDS = ["id", "question", "why", "axis", "owner", "status"]
 IMPACT_FIELDS = ["id", "axis", "change_type", "baseline_ref", "item", "change", "why_change",
                  "impact_on_current", "conflict", "conflict_detail", "risk", "rate_code", "qty",
-                 "md_note", "evidence", "question"]
+                 "md_note", "evidence", "question", "cr_item", "option"]
+# cr_item = item cua justification ma hang muc phuc vu (CR-001.3) -> nhom section tren sheet Estimation.
+# option  = true khi hang muc thuoc 拡張案 (phuong an mo rong) -> cot option tren Estimation.
+
+# --- nhan tren Summary / Estimation (verify + index doc lai theo cac nhan nay) ---
+L_IMPL = "実装 (MD — đơn giá × số lượng)"
+L_TOTAL_PD = "総工数 (人日 — gồm 要件定義・UI/UX・テスト・管理)"
+L_TOTAL_PM = "人月"
+L_MIN_PLAN = "trong đó 最小改修案 (option = FALSE) — 実装"
+L_EXT_PLAN = "trong đó 拡張案 (option = TRUE) — 実装"
+L_OBJ_HDR = "Đối tượng"
+L_LINK_EST = "→ Xem chi tiết công số: sheet Estimation"
+
+# Doi tuong dem tren Summary + CR Change Table Figma. Dem = qty (so doi tuong theo don vi cua dong don gia).
+OBJECT_ORDER = ["Màn hình", "API", "Batch / job", "Module / cấu hình", "Bảng DB", "Cột DB",
+                "Đối tượng DB khác", "Rule nghiệp vụ", "Liên kết bên thứ 3", "Mockup màn",
+                "Token / component DS"]
+OBJECT_BY_RATE = [("SCR-", "Màn hình"), ("API-", "API"), ("BATCH-", "Batch / job"),
+                  ("SYS-", "Module / cấu hình"), ("DB-TBL-", "Bảng DB"), ("DB-COL-", "Cột DB"),
+                  ("BIZ-", "Rule nghiệp vụ"), ("EXT-", "Liên kết bên thứ 3"), ("UI-TOKEN-", "Token / component DS"),
+                  ("UI-IMP", "Token / component DS"), ("UI-", "Mockup màn")]
 
 
 def refs_of(value):
@@ -93,6 +113,77 @@ def md_matrix(impacts, rates):
     return m, row_tot, col_tot, round(sum(row_tot.values()), 2)
 
 
+def object_of(imp, rates):
+    """Doi tuong dem cua 1 hang muc. rate co key 'object' thi dung; DB-DEL / DB-IMP xet loai ref."""
+    code = txt(imp.get("rate_code"))
+    r = rates.get(code) or {}
+    if txt(r.get("object")):
+        return txt(r["object"])
+    if code in ("DB-DEL", "DB-IMP"):
+        refs = [x.lower() for x in refs_of(imp.get("baseline_ref"))]
+        if refs and all(x.startswith("table:") for x in refs):
+            return "Bảng DB"
+        if refs and all(x.startswith("column:") for x in refs):
+            return "Cột DB"
+        return "Đối tượng DB khác"
+    for pre, label in OBJECT_BY_RATE:
+        if code.startswith(pre):
+            return label
+    return "Đối tượng DB khác" if imp.get("axis") == "DB" else txt(imp.get("axis"))
+
+
+def object_stats(impacts, rates):
+    """-> [(doi tuong, {NEW,UPD,DEL,IMPACT: so luong, 'total': so luong, 'md': MD 実装})] theo OBJECT_ORDER
+    + dong cuoi ('Tổng', ...). So luong = tong qty."""
+    st = {}
+    for imp in impacts:
+        o = object_of(imp, rates)
+        d = st.setdefault(o, {t: 0.0 for t in S.CR_CHANGE_TYPE + ["total", "md"]})
+        q = qty_of(imp) or 0.0
+        if imp.get("change_type") in S.CR_CHANGE_TYPE:
+            d[imp["change_type"]] += q
+        d["total"] += q
+        d["md"] += md_of(imp, rates) or 0.0
+    order = [o for o in OBJECT_ORDER if o in st] + sorted(o for o in st if o not in OBJECT_ORDER)
+    out = [(o, {k: round(v, 2) for k, v in st[o].items()}) for o in order]
+    tot = {k: round(sum(d[k] for _, d in out), 2) for k in S.CR_CHANGE_TYPE + ["total", "md"]}
+    return out + [(L_TOTAL, tot)]
+
+
+def plan_md(impacts, rates):
+    """-> (MD 最小改修案, MD 拡張案) theo co option."""
+    ext = sum(md_of(i, rates) or 0.0 for i in impacts if i.get("option") is True)
+    tot = sum(md_of(i, rates) or 0.0 for i in impacts)
+    return round(tot - ext, 2), round(ext, 2)
+
+
+def load_estimation_template(path):
+    """-> (workbook openpyxl, meta {row_item, ratio_K...}) tu templates/template_estimation.xlsx."""
+    from openpyxl import load_workbook
+    wb = load_workbook(path)
+    if "Estimation" not in wb.sheetnames or "_meta" not in wb.sheetnames:
+        raise ValueError("template %s thieu sheet Estimation / _meta — boc lai bang "
+                         "extract-estimation-template.py" % path)
+    meta = {}
+    for k, v in wb["_meta"].iter_rows(values_only=True):
+        if k:
+            key = str(k).split("_要件")[0].split("_UI")[0].split("_テスト")[0].split("_管理")[0]
+            meta[key] = v
+    for k in ("row_header", "row_section", "row_item", "row_total", "row_month", "row_notes",
+              "ratio_K", "ratio_L", "ratio_N", "ratio_O", "md_per_month"):
+        if meta.get(k) is None:
+            raise ValueError("template _meta thieu %s" % k)
+    return wb, meta
+
+
+def find_template(arg, kit_root):
+    """--template > ./templates/... > <kit>/templates/..."""
+    for p in (arg, S.ESTIMATION_TEMPLATE_PATH, os.path.join(kit_root, S.ESTIMATION_TEMPLATE_PATH)):
+        if p and os.path.isfile(p):
+            return p
+    return None
+
+
 def fmt_md(v):
     return ("%.2f" % v).rstrip("0").rstrip(".") if v is not None else ""
 
@@ -144,6 +235,16 @@ def validate_cr(cr, rates):
             if txt(imp.get(f)) not in enum:
                 err.append("%s %s=%s (chi %s)" % (tag, f, imp.get(f), "/".join(enum)))
         err += rate_errors(imp, rates, tag)
+        if "option" in imp and not isinstance(imp.get("option"), bool):
+            err.append("%s option=%r phai la true/false" % (tag, imp.get("option")))
+    items = {txt(j.get("item")) for j in cr.get("justification") or [] if isinstance(j, dict)}
+    for i, imp in enumerate(cr.get("impacts") or []):
+        ci = txt(imp.get("cr_item"))
+        if not ci:
+            err.append("%s thieu cr_item (item justification ma hang muc phuc vu)" % (txt(imp.get("id")) or i))
+        elif items and ci not in items:
+            err.append("%s cr_item=%s khong co trong justification (%s)" % (
+                txt(imp.get("id")), ci, ",".join(sorted(items))))
     return err
 
 

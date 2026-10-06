@@ -13,6 +13,8 @@
 | **1 — Baseline** | `/analyze-system` | `system-analyst.md` §3 |
 | **2 — Change Request** | `/change-request <file / link / nội dung>` | `.claude/sys-agent/flow-2-change-request.md` |
 
+**Môi trường — kit tự cài:** đầu Luồng 1 / Luồng 2 agent chạy `ensure-env.py` (thư viện Python · Playwright + Chromium · Figma MCP), thiếu thì tự cài. User **không** cài tay; chỉ bấm Authenticate Figma (`/mcp`) khi agent nhờ.
+
 **Input Luồng 1** (hỏi bằng `AskUserQuestion`, không đoán): Website (URL · tài khoản + quyền được dùng · READ/WRITE) · Source code (repo · FE/BE · FE↔website) · DB (tuỳ chọn, schema-only) · Figma (tuỳ chọn: design hiện tại + link để vẽ flow).
 
 **Output Luồng 1** → `outputs/ver<N>_<DDMMYY>_<slug>/`:
@@ -27,7 +29,7 @@
 | O6 | docx tổng hợp | V3 · V5 |
 | O7 | Bug list màn hình (quét Playwright) mức Urgent–High (tuỳ chọn) | V8 |
 
-**Output Luồng 2** → `outputs/ver<N>_<DDMMYY>_CR-<id>-<slug>/`: `CR-<id>_Impact.xlsx` (2 sheet: `Summary` giải trình CR + tổng MD · `Impact` từng hạng mục + vì sao sửa + MD) · Figma view CR mới (badge NEW/UPD/DEL/IMPACT/AS-IS, chỉ phần liên quan). Gate V-CR · V-CR-FIGMA. Đơn giá MD: `.claude/config/md-unit-rates.json`.
+**Output Luồng 2** → `outputs/ver<N>_<DDMMYY>_CR-<id>-<slug>/`: `CR-<id>_Impact.xlsx` (7 sheet: `Summary` công số + số đối tượng thay đổi + link · `Estimation` theo `templates/template_estimation.xlsx` (bóc từ 見積書) · `Screen` · `API` · `Database` · `Figma` · `Q&A` giải trình CR + câu hỏi KH) · Figma view CR mới (`sys-agent/figma/cr-view.md`): CR-1 Flow format Output 1 · CR-2 Screen Flow format Output 2 · CR Change Table thống kê · CR-3 màn đề xuất bám Design System (badge NEW/UPD/DEL/IMPACT/AS-IS, chỉ phần liên quan). Gate V-CR · V-CR-FIGMA. Đơn giá MD: `.claude/config/md-unit-rates.json`.
 
 `_internal/inventory.xlsx` trong mỗi version = bộ nhớ máy đọc của agent (schema: [`inventory-spec.md`](.claude/sys-agent/inventory-spec.md)). Không phải deliverable, không nhắc trong tài liệu cho user.
 
@@ -43,22 +45,22 @@
 │   └── change-request.md             /change-request   (Luồng 2)
 ├── sys-agent/
 │   ├── preflight-questions.md        G-R · P0–P11 · G9 · G10
-│   ├── flow-2-change-request.md      Luồng 2: nhận CR, 6 trục impact, Figma view CR
+│   ├── flow-2-change-request.md      Luồng 2: nhận CR, 6 trục impact, xlsx 7 sheet, Figma view CR
 │   ├── versioning.md                 folder ver<N>_<DDMMYY>_<slug>, README, run-log
 │   ├── source-rules.md · evidence-ledger.md · inventory-spec.md
 │   ├── outputs/o1-screens.md … o7-bug-list.md
 │   ├── basic-design/workbook-structure.md      (copy từ requirement-to-flow)
 │   ├── design-system/                          chuẩn design system + template (copy từ designer-kit)
-│   └── figma/                                  (copy từ requirement-to-flow)
+│   └── figma/                                  (copy từ requirement-to-flow) + cr-view.md (view CR Luồng 2 — riêng kit này)
 ├── skills/
-│   ├── system-analyst/               SKILL.md + scripts/ (recon · render · gate · self-test)
+│   ├── system-analyst/               SKILL.md + scripts/ (ensure-env · recon · render · gate · self-test)
 │   └── ba-figma-output/              (copy từ requirement-to-flow) quy tắc vẽ Figma
 ├── rules/                            DATA-PRIVACY · SECURITY · RELIABILITY · POLICY
 ├── hooks/detect-pii.js               H06 — chặn PII/credential trước khi ghi / đẩy lên Figma
 ├── config/pii-patterns.json
 └── settings.json                     nối H06 vào PreToolUse
 docs/                                 hướng dẫn sử dụng (docx)
-templates/                            sample_basic_design.xlsx · high-level-template.docx
+templates/                            sample_basic_design.xlsx · high-level-template.docx · template_estimation.xlsx (sheet Estimation Luồng 2)
 ```
 
 ---

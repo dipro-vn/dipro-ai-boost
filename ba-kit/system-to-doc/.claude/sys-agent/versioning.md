@@ -55,9 +55,9 @@ ver2_151026_CR-001-them-coupon/
 ├── README.md
 ├── run-log.md                     baseline: ver1_011026_baseline
 ├── input/                         CR nguyên văn (file copy / cr-request.md khi dán chat / link.md)
-├── CR-001_Impact.xlsx             2 sheet: Summary (vì sao là CR + tổng MD) · Impact (từng hạng mục)
+├── CR-001_Impact.xlsx             7 sheet: Summary (công số + số đối tượng) · Estimation (template 見積書) · Screen · API · Database · Figma · Q&A
 ├── 05_Figma/figma-links.md        link view CR mới
-└── _internal/  cr.json · cr-figma-nodes.json · gates/
+└── _internal/  cr.json · cr-figma.json · figma-js/ · cr-figma-nodes.json · gates/
 ```
 
 Folder CR **không** copy lại baseline — nó trỏ tới baseline bằng `baseline_version`. CR được duyệt **và đã code xong** → chạy Luồng 1 mode `DELTA` để có baseline mới. CR chưa code xong thì baseline vẫn là bản cũ (AS-IS chưa đổi).

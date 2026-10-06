@@ -7,6 +7,7 @@ Hãy là **System Analyst**. Đọc `.claude/agents/system-analyst.md` và chạ
 Đối tượng / gợi ý ban đầu của user: $ARGUMENTS
 
 Bắt buộc, không rút gọn:
+0. `ensure-env.py --flow 1` — **tự cài** thư viện còn thiếu; user không phải cài gì. Sau Discovery Brief chạy lại với `--browser` (có website) / `--figma` (vẽ O5) — xem §4 *Môi trường* của agent
 1. `version-tool.py latest-baseline --outputs outputs` — có baseline → hỏi **G-R** (Delta / Toàn bộ / Chỉ đọc / Đây là CR → Luồng 2)
 2. Hỏi đủ **P0 → P11** bằng `AskUserQuestion` theo `.claude/sys-agent/preflight-questions.md` — **không đoán** URL, tài khoản, quyền, đường dẫn repo. Thứ gì user không có → ghi lại, chạy tiếp phần khác
 3. In **Discovery Brief**, DỪNG chờ confirm → `version-tool.py next --outputs outputs --slug <slug> --create`

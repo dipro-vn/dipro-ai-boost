@@ -265,12 +265,21 @@ def baseline_outputs(ver, data, meta, sysname, n, gates, skips):
 
 
 def cr_outputs(ver, impact, gates, skips):
-    """CR folder: CR-<id>_Impact.xlsx (Summary + Impact) · Figma CR · input/."""
+    """CR folder: CR-<id>_Impact.xlsx (Summary · Estimation · Screen · API · Database · Figma · Q&A) · Figma CR · input/."""
     outs = []
     wb = load_xlsx(impact)
     n_imp, md = 0, 0.0
-    if S.CR_SHEET_IMPACT in wb.sheetnames:
-        ws = wb[S.CR_SHEET_IMPACT]
+    for name, _axes in S.CR_AXIS_SHEETS + [(S.CR_SHEET_ESTIMATION, None)]:
+        if name not in wb.sheetnames:
+            continue
+        ws = wb[name]
+        if name == S.CR_SHEET_ESTIMATION:      # B = Impact ID, M = 実装 (MD)
+            ids = [(str(r[1] or ""), r[12]) for r in ws.iter_rows(values_only=True) if len(r) > 12]
+            ids = [(i, m) for i, m in ids if re.match(S.CR_IMPACT_ID, i)]
+            if ids:                              # Estimation du moi hang muc -> dung lam nguon dem
+                n_imp = len(ids)
+                md = sum(float(m) for _i, m in ids if isinstance(m, (int, float)))
+            continue
         hdr = [str(c.value or "").strip() for c in ws[1]]
         ci, cm = hdr.index("Impact ID") if "Impact ID" in hdr else 1, hdr.index("MD") if "MD" in hdr else None
         for r in ws.iter_rows(min_row=2, values_only=True):
@@ -295,7 +304,7 @@ def cr_outputs(ver, impact, gates, skips):
             pass
     meta.setdefault("baseline_version", summ.get(C.L_BASELINE, ""))
     meta.setdefault("cr_id", summ.get(C.L_CR, ""))
-    outs.append(finish(entry("CR", "CR Impact", "Giải trình CR + ảnh hưởng 6 trục + MD (Summary · Impact)",
+    outs.append(finish(entry("CR", "CR Impact", "Công số + ảnh hưởng 6 trục (%s)" % " · ".join(S.CR_SHEETS),
                              [rel(ver, impact)], "%d hạng mục · %s MD (đơn giá %s)" % (
                                  n_imp, C.fmt_md(round(md, 2)), rate_st),
                              True, count_value=n_imp, md=round(md, 2), rates_status=rate_st), gates, skips))

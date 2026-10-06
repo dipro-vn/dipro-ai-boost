@@ -28,7 +28,7 @@ LINE = "#D0D7DE"
 INK = "#1F2328"
 XL_HEAD = "#1F4E79"
 FONT = "Arial"
-DRIVE_LINK = "<sẽ cập nhật>"
+DRIVE_LINK = "https://drive.google.com/drive/folders/1yBlhC4bjsEO2--PLfjy4KvmKk1utvZ2X?usp=sharing"
 DS_LINK_EXAMPLE = "https://claude.ai/artifact/L6VfhzcbZmpfo1wfpYoD2E"
 
 
@@ -217,7 +217,7 @@ def img_flow2(path):
     _box(ax, P, 6.6, 1.6, 2.2, 1.2, "Phân tích\n6 trục impact", ORANGE_BG, ORANGE, bold=True)
     _arrow(ax, 8.8, 2.2, 9.4, 2.2)
     _box(ax, P, 9.4, 0.7, 2.4, 3.0,
-         "ver<N>_…_CR-001/\n\nCR-001_Impact.xlsx\n(Summary + Impact, MD)\nFigma view CR mới", GREEN_BG, GREEN)
+         "ver<N>_…_CR-001/\n\nCR-001_Impact.xlsx\n(7 sheet: Summary · Estimation …)\nFigma view CR mới", GREEN_BG, GREEN)
     _save(plt, fig, path)
 
 
@@ -574,16 +574,17 @@ def build(kit, samples, source_guide, shots):
            "bấm Shift + Command + . để hiện, hoặc mở bằng VS Code.")
     g.image(I("src_tao-folder.png"), "Tạo folder dự án trên máy", width_cm=6.5)
     g.image(I("02_thu-muc.png"), "Cấu trúc folder dự án sau khi đặt kit", width_cm=13)
-    g.h3("1.2 Cài thư viện (1 lần trên máy)")
-    g.code("pip install openpyxl python-docx matplotlib\n"
-           "npm i -D playwright && npx playwright install chromium\n"
-           "claude mcp add --transport http figma https://mcp.figma.com/mcp   # nếu muốn AI vẽ Figma")
-    g.h3("1.3 Mở Claude Code")
+    g.h3("1.2 Mở Claude Code")
     g.bullets(["VS Code → Extensions → tìm Claude Code for VS Code (Anthropic) → Install.",
                "Mở panel Claude Code → Sign in bằng tài khoản Claude trả phí (Pro / Max / Team / Enterprise).",
                "Hoặc dùng Terminal: cd my-project rồi gõ claude."])
     g.image(I("src_cai-claude-code.png"), "Cài extension Claude Code trên VS Code", width_cm=10)
     g.image(I("src_dang-nhap-claude.png"), "Đăng nhập Claude Code", width_cm=6)
+    g.h3("1.3 Không cần cài thư viện — kit tự lo")
+    g.p("Khi chạy /analyze-system hoặc /change-request, AI tự kiểm tra và tự cài những gì còn thiếu: "
+        "thư viện Python, Playwright + trình duyệt (khi quét website), kết nối Figma MCP (khi vẽ Figma).")
+    g.note("việc duy nhất bạn có thể được nhờ: gõ /mcp → chọn figma → Authenticate, đăng nhập Figma "
+           "bằng tài khoản công ty cấp (liên hệ QA) có quyền EDIT file cần vẽ.")
 
     # ---- BUOC 2
     g.h1("BƯỚC 2 — CHẠY LUỒNG 1 VÀ TRẢ LỜI CÂU HỎI")
@@ -636,7 +637,7 @@ def build(kit, samples, source_guide, shots):
         ["O5 Figma flow", "link Figma", "05_Figma/figma-links.md"],
         ["O6 Tài liệu tổng hợp", "docx", "06_Overview/Overview_….docx"],
         ["O7 Bug list (tuỳ chọn)", "xlsx", "07_BugList/BugList_….xlsx"],
-        ["CR (Luồng 2)", "xlsx (2 sheet) + link Figma view CR", "ver<N>_…_CR-<id>-…/"],
+        ["CR (Luồng 2)", "xlsx (7 sheet) + link Figma view CR", "ver<N>_…_CR-<id>-…/"],
     ])
     g.note("ảnh O1–O6 dưới đây chụp từ 1 dự án thật, phần thông tin dự án đã được che. "
            "Ô ghi UNKNOWN / \"cần xác minh\" là chỗ AI chưa có bằng chứng — không phải lỗi.")
@@ -688,16 +689,21 @@ def build(kit, samples, source_guide, shots):
 
     # ---- BUOC 7
     g.h1("BƯỚC 7 — NHẬN KẾT QUẢ LUỒNG 2")
-    g.h3("CR-<id>_Impact.xlsx — 2 sheet")
-    g.bullets(["**Summary** — vì sao đây là CR (đối chiếu hệ thống hiện tại) · tổng MD theo Trục × Loại · "
-               "câu hỏi cần khách trả lời. Gửi khách được.",
-               "**Impact** — từng hạng mục: thêm / sửa / xoá / bị ảnh hưởng, vì sao phải sửa, xung đột, rủi ro, MD."])
+    g.h3("CR-<id>_Impact.xlsx — 7 sheet")
+    g.bullets(["**Summary** — công số thay đổi (実装 MD · 総工数 人日 · 人月, link sang Estimation) · số màn / API / "
+               "bảng DB … thêm / sửa / xoá / bị ảnh hưởng · link tới từng sheet.",
+               "**Estimation** — đúng khung 見積書 của công ty (templates/template_estimation.xlsx), 1 dòng / hạng mục.",
+               "**Screen · API · Database · Figma** — từng hạng mục của trục: vì sao phải sửa, xung đột, rủi ro, MD.",
+               "**Q&A** — vì sao đây là CR · câu hỏi cần khách trả lời · mục không thuộc CR."])
     g.note("MD = đơn giá trong .claude/config/md-unit-rates.json × số lượng — AI không tự gõ số. "
            "Bảng đơn giá đang DRAFT, PM / Tech Lead duyệt trước khi gửi khách.")
     g.image(I("mau_CR_impact-summary.png"), "Sheet Summary của CR-001 (dữ liệu giả ShopDemo)")
     g.h3("Figma — view CR mới")
     g.bullets(["1 section mới đặt dưới bản baseline — bản cũ giữ nguyên.",
-               "Chỉ vẽ phần thay đổi + phần bị ảnh hưởng + màn bên cạnh 1 bước; tô màu theo badge, kèm CR Change Table."])
+               "CR-1 Flow theo khung Output 1, CR-2 Screen Flow theo khung Output 2 (mũi tên thật); chỉ phần thay đổi "
+               "+ phần bị ảnh hưởng + màn bên cạnh 1 bước; tô màu theo badge.",
+               "CR Change Table = thống kê số màn / API / bảng thay đổi + công số (không liệt kê chi tiết).",
+               "CR-3 màn đề xuất dựng từ Design System của baseline — AI đọc Design System trước, hỏi phạm vi."])
     g.image(I("07_badge-cr.png"), "Ký hiệu trên Figma view CR", width_cm=13)
     g.image(I("mau_CR_figma-view.png"), "Figma view CR-001 (dữ liệu giả ShopDemo)")
 
@@ -709,17 +715,16 @@ def build(kit, samples, source_guide, shots):
 
     # ---- LOI
     g.h1("MỘT SỐ LỖI KHI DÙNG")
-    g.h3("1- Kết nối với FIGMA")
-    g.bullets(["Dùng tài khoản Figma công ty cấp (liên hệ QA), có quyền EDIT file cần vẽ.",
-               "Bước 1: copy lệnh dưới đây dán vào Claude Code, làm theo hướng dẫn:"])
-    g.code("claude mcp add --transport http figma https://mcp.figma.com/mcp")
-    g.bullets(["Bước 2: gõ /mcp hoặc /figma. Thấy Needs Auth → bấm vào → Allow trên trình duyệt. "
-               "Kết quả figma ✔ Connected là OK.",
-               "Bước 3: còn lỗi → kiểm tra Figma đã đăng nhập đúng tài khoản có quyền EDIT chưa."])
+    g.h3("1- AI nhờ xác thực Figma")
+    g.bullets(["AI đã tự thêm kết nối Figma, chỉ còn bước đăng nhập phải do người bấm.",
+               "Gõ /mcp → chọn figma. Thấy Needs Auth → bấm vào → Allow trên trình duyệt. "
+               "Kết quả figma ✔ Connected là OK. Không thấy figma trong /mcp → khởi động lại Claude Code.",
+               "Còn lỗi → kiểm tra Figma đã đăng nhập đúng tài khoản công ty cấp (liên hệ QA), có quyền EDIT chưa."])
     g.image(I("src_figma-needs-auth.png"), "Figma MCP chưa xác thực (Needs Auth)", width_cm=8)
     g.image(I("src_figma-connected.png"), "Figma MCP đã kết nối", width_cm=7)
-    g.h3("2- Thiếu Playwright / trình duyệt")
-    g.code("npm i -D playwright && npx playwright install chromium")
+    g.h3("2- AI báo không tự cài được môi trường (BLOCKED)")
+    g.p("Thường do máy chưa có Node.js (cần khi quét website) hoặc mạng chặn tải thư viện. "
+        "Gửi nguyên thông báo của AI cho người phụ trách kit / IT; phần không phụ thuộc vẫn chạy tiếp.")
     g.h3("3- AI báo \"dump có dữ liệu\" và dừng")
     g.p("Xuất lại chỉ cấu trúc: mysqldump --no-data … hoặc pg_dump --schema-only …")
     g.h3("4- AI dừng vì phát hiện .env / key trong repo")

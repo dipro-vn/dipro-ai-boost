@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""GATE V-CR — CR Impact (Luong 2): cr.json + CR-<id>_Impact.xlsx (2 sheet Summary + Impact).
+"""GATE V-CR — CR Impact (Luong 2): cr.json + CR-<id>_Impact.xlsx (7 sheet inv_schema.CR_SHEETS).
 
   python3 verify-cr-impact.py <ver>/CR-001_Impact.xlsx --cr-json <ver>/_internal/cr.json \
       --baseline <outputs>/verK_... [--rates .claude/config/md-unit-rates.json] \
@@ -8,7 +8,9 @@
 Baseline Ref: SC-/F-/API-/EXT-/WEB- · table:orders · column:orders.status · DS:<token> · DS-component:<Comp>
 · DS:WEB-01:<token> / DS-component:WEB-01:<Comp> (chon site) · — ; nhieu ref cach nhau ';'.
 Design system baseline: 04_DesignSystem/project/ (1 bo) hoac 04_DesignSystem/WEB-xx/project/ (moi site 1 bo).
---rates mac dinh: <kit>/.claude/config/md-unit-rates.json. Tom tat impact in ra stderr.
+--rates mac dinh: <kit>/.claude/config/md-unit-rates.json. --template mac dinh templates/template_estimation.xlsx
+(he so cong doan cua Estimation doc tu _meta cua template). Cong thuc Excel duoc kiem bang TEXT (khong can
+Excel / LibreOffice tinh lai). Tom tat impact in ra stderr.
 """
 import argparse
 import os
@@ -24,26 +26,50 @@ from gate_report import Gate  # noqa: E402
 KIT = os.path.abspath(os.path.join(HERE, "..", "..", "..", ".."))
 
 
+def read_axis_sheet(ws):
+    hdr = [C.txt(c.value) for c in ws[1]]
+    rows, total = [], None
+    for i, r in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+        d = {h: r[k] if k < len(r) else None for k, h in enumerate(hdr) if h}
+        iid = C.txt(d.get("Impact ID"))
+        if iid == C.L_TOTAL_MD:
+            total = d.get("MD")
+        elif re.match(S.CR_IMPACT_ID, iid):
+            d["__row__"] = i
+            rows.append(d)
+    return hdr, rows, total
+
+
 def read_xlsx(path):
-    """-> (sheetnames, impact header, impact rows {col: value}, total MD row, summary rows [list])."""
+    """-> dict: names, axis {sheet: (hdr, rows, total)}, summary rows (gia tri + cell), estimation rows, qa text."""
     from openpyxl import load_workbook
-    wb = load_workbook(path, data_only=True)
-    names = wb.sheetnames
-    hdr, rows, total, summ = [], [], None, []
-    if S.CR_SHEET_IMPACT in names:
-        ws = wb[S.CR_SHEET_IMPACT]
-        hdr = [C.txt(c.value) for c in ws[1]]
-        for i, r in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
-            d = {h: r[k] if k < len(r) else None for k, h in enumerate(hdr) if h}
-            iid = C.txt(d.get("Impact ID"))
-            if iid == C.L_TOTAL_MD:
-                total = d.get("MD")
-            elif iid:
-                d["__row__"] = i
-                rows.append(d)
-    if S.CR_SHEET_SUMMARY in names:
-        summ = [list(r) for r in wb[S.CR_SHEET_SUMMARY].iter_rows(values_only=True)]
-    return names, hdr, rows, total, summ
+    wb = load_workbook(path)                      # cong thuc giu dang text
+    out = {"names": wb.sheetnames, "axis": {}, "summ": [], "summ_links": [], "est": None, "qa": set()}
+    for name, _axes in S.CR_AXIS_SHEETS:
+        if name in wb.sheetnames:
+            out["axis"][name] = read_axis_sheet(wb[name])
+    if S.CR_SHEET_SUMMARY in wb.sheetnames:
+        ws = wb[S.CR_SHEET_SUMMARY]
+        out["summ"] = [list(r) for r in ws.iter_rows(values_only=True)]
+        out["summ_links"] = [(C.txt(c.value), c.hyperlink.location if c.hyperlink and c.hyperlink.location
+                              else (c.hyperlink.target if c.hyperlink else ""))
+                             for r in ws.iter_rows() for c in r if c.hyperlink]
+    if S.CR_SHEET_ESTIMATION in wb.sheetnames:
+        ws = wb[S.CR_SHEET_ESTIMATION]
+        items, tot = [], None
+        for r in range(1, ws.max_row + 1):
+            b = C.txt(ws.cell(row=r, column=2).value)
+            if re.match(S.CR_IMPACT_ID, b):
+                items.append({"row": r, "id": b, "J": ws.cell(row=r, column=10).value,
+                              **{col: ws["%s%d" % (col, r)].value for col in "KLMNOP"}})
+            elif b.startswith("合計") and tot is None and items:
+                tot = r
+        out["est"] = {"items": items, "total_row": tot,
+                      "total": {col: ws["%s%d" % (col, tot)].value for col in "KLMNOP"} if tot else {},
+                      "month": {col: ws["%s%d" % (col, tot + 1)].value for col in "KLMNOP"} if tot else {}}
+    if S.CR_SHEET_QA in wb.sheetnames:
+        out["qa"] = {C.txt(r[0]) for r in wb[S.CR_SHEET_QA].iter_rows(values_only=True) if r and r[0]}
+    return out
 
 
 def num(v):
@@ -53,31 +79,30 @@ def num(v):
         return None
 
 
-def summary_matrix(summ):
-    """Doc bang Truc x Loai tren Summary -> ({axis: [NEW,UPD,DEL,IMPACT,Tong]}, tong hang, Tong MD dau trang)."""
-    mat, tot, head_total = {}, None, None
-    start = None
+def summary_value(summ, label):
+    for r in summ:
+        if r and C.txt(r[0]) == label and len(r) > 1:
+            return r[1]
+    return None
+
+
+def summary_objects(summ):
+    """Bang 'Doi tuong x NEW/UPD/DEL/IMPACT/Tong/MD' tren Summary -> [(doi tuong, [6 so])]."""
+    out, start = [], None
     for i, r in enumerate(summ):
-        a = C.txt(r[0] if r else "")
-        if a == C.L_TOTAL_MD and head_total is None and len(r) > 1:
-            head_total = num(r[1])
-        if a == C.L_AXIS_HDR and [C.txt(x) for x in r[1:5]] == S.CR_CHANGE_TYPE:
+        if r and C.txt(r[0]) == C.L_OBJ_HDR and [C.txt(x) for x in r[1:5]] == S.CR_CHANGE_TYPE:
             start = i
             break
     if start is None:
-        return None, None, head_total
+        return None
     for r in summ[start + 1:]:
-        a = C.txt(r[0])
-        vals = [num(x) for x in (list(r[1:6]) + [None] * 5)[:5]]
+        a = C.txt(r[0] if r else "")
+        if not a:
+            break
+        out.append((a, [num(x) for x in (list(r[1:7]) + [None] * 6)[:6]]))
         if a == C.L_TOTAL:
-            tot = vals
             break
-        m = re.search(r"\((\w+)\)\s*$", a)
-        if m:
-            mat[m.group(1)] = vals
-        else:
-            break
-    return mat, tot, head_total
+    return out
 
 
 def main():
@@ -87,6 +112,7 @@ def main():
     ap.add_argument("--baseline", required=True)
     ap.add_argument("--rates", default=os.path.join(KIT, S.MD_RATES_PATH))
     ap.add_argument("--other-cr", action="append", default=[])
+    ap.add_argument("--template", default=None)
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
     try:
@@ -98,7 +124,10 @@ def main():
     cr = C.load_json(a.cr_json)
     rates_meta, rates = C.load_rates(a.rates)
     B = C.load_baseline(a.baseline)
-    names, hdr, xrows, xtotal, summ = read_xlsx(a.impact)
+    X = read_xlsx(a.impact)
+    names, summ = X["names"], X["summ"]
+    tpl = C.find_template(a.template, KIT)
+    est_meta = C.load_estimation_template(tpl)[1] if tpl else None
     g = Gate("GATE V-CR — %s" % os.path.basename(a.impact))
     meta = cr.get("meta") or {}
     J = cr.get("justification") or []
@@ -109,11 +138,13 @@ def main():
 
     # 1. Workbook
     bad = []
-    if names != [S.CR_SHEET_SUMMARY, S.CR_SHEET_IMPACT]:
-        bad.append("sheet = %s (phai dung %s, %s)" % (names, S.CR_SHEET_SUMMARY, S.CR_SHEET_IMPACT))
-    if S.CR_SHEET_IMPACT in names and [h for h in hdr if h] != S.CR_IMPACT_COLS:
-        bad.append("header Impact khac CR_IMPACT_COLS: %s" % [h for h in hdr if h])
-    g.check(1, "Workbook dung 2 sheet Summary + Impact, header Impact dung schema", bad)
+    if names != S.CR_SHEETS:
+        bad.append("sheet = %s (phai dung %s)" % (names, S.CR_SHEETS))
+    for name, (hdr, _r, _t) in X["axis"].items():
+        if [h for h in hdr if h] != S.CR_IMPACT_COLS:
+            bad.append("header %s khac CR_IMPACT_COLS: %s" % (name, [h for h in hdr if h]))
+    g.check(1, "Workbook dung %d sheet %s, header sheet hang muc dung schema" % (
+        len(S.CR_SHEETS), " · ".join(S.CR_SHEETS)), bad)
 
     # 2. Meta
     bad = ["meta.%s rong/UNKNOWN" % k for k in S.CR_META_KEYS
@@ -242,48 +273,119 @@ def main():
         bad += C.rate_errors(imp, rates, tag(imp))
     g.check(10, "rate_code co trong bang don gia, dung truc + loai; qty > 0", bad)
 
-    # 11. Sheet Impact khop cr.json, MD = rate x qty
+    # 11. Sheet Screen / API / Database / Figma khop cr.json, MD = rate x qty
     bad = []
-    by_id = {C.txt(r.get("Impact ID")): r for r in xrows}
-    if [C.txt(r.get("Impact ID")) for r in xrows] != [tag(i) for i in IMP]:
-        bad.append("Impact ID tren sheet %s != cr.json %s — chay lai build-cr-impact.py" % (
-            list(by_id), [tag(i) for i in IMP]))
-    for imp in IMP:
-        r = by_id.get(tag(imp))
-        if not r:
-            continue
-        loc = "Impact!%s" % r["__row__"]
-        for col, f in (("Trục", "axis"), ("Loại", "change_type"), ("Mã đơn giá", "rate_code")):
-            if C.txt(r.get(col)) != C.txt(imp.get(f)):
-                bad.append("%s %s=%s != cr.json %s" % (loc, col, r.get(col), imp.get(f)))
-        if num(r.get("Số lượng")) != num(imp.get("qty")):
-            bad.append("%s Số lượng=%s != qty %s" % (loc, r.get("Số lượng"), imp.get("qty")))
-        want = C.md_of(imp, rates)
-        if want is not None and num(r.get("MD")) != want:
-            bad.append("%s %s MD=%s != %s x %s = %s" % (loc, tag(imp), r.get("MD"),
-                       C.fmt_md(rates[imp["rate_code"]].get("md")), imp.get("qty"), C.fmt_md(want)))
+    for name, axes in S.CR_AXIS_SHEETS:
+        hdr, xrows, xtotal = X["axis"].get(name, ([], [], None))
+        want_imp = [i for i in IMP if i.get("axis") in axes]
+        by_id = {C.txt(r.get("Impact ID")): r for r in xrows}
+        if [C.txt(r.get("Impact ID")) for r in xrows] != [tag(i) for i in want_imp]:
+            bad.append("%s: Impact ID %s != cr.json %s — chay lai build-cr-impact.py" % (
+                name, list(by_id), [tag(i) for i in want_imp]))
+        for imp in want_imp:
+            r = by_id.get(tag(imp))
+            if not r:
+                continue
+            loc = "%s!%s" % (name, r["__row__"])
+            for col, f in (("Trục", "axis"), ("Loại", "change_type"), ("Mã đơn giá", "rate_code")):
+                if C.txt(r.get(col)) != C.txt(imp.get(f)):
+                    bad.append("%s %s=%s != cr.json %s" % (loc, col, r.get(col), imp.get(f)))
+            if num(r.get("Số lượng")) != num(imp.get("qty")):
+                bad.append("%s Số lượng=%s != qty %s" % (loc, r.get("Số lượng"), imp.get("qty")))
+            want = C.md_of(imp, rates)
+            if want is not None and num(r.get("MD")) != want:
+                bad.append("%s %s MD=%s != %s x %s = %s" % (loc, tag(imp), r.get("MD"),
+                           C.fmt_md(rates[imp["rate_code"]].get("md")), imp.get("qty"), C.fmt_md(want)))
+        sub = round(sum(C.md_of(i, rates) or 0.0 for i in want_imp), 2)
+        if num(xtotal) != sub:
+            bad.append("%s: dong Tong MD=%s != %s" % (name, xtotal, C.fmt_md(sub)))
     m, row_tot, col_tot, grand = C.md_matrix(IMP, rates)
-    if num(xtotal) != grand:
-        bad.append("dong Tong MD sheet Impact=%s != %s" % (xtotal, C.fmt_md(grand)))
-    g.check(11, "Sheet Impact khop cr.json; MD = don gia x so luong; dong Tong MD dung", bad)
+    g.check(11, "Sheet Screen/API/Database/Figma khop cr.json; MD = don gia x so luong; dong Tong MD dung", bad)
 
-    # 12. Tong tren Summary
+    # 12. Summary: cong so + so doi tuong + link Estimation
     bad = []
-    smat, stot, shead = summary_matrix(summ)
-    if smat is None:
-        bad.append("Summary khong co bang Truc x NEW/UPD/DEL/IMPACT")
+    if num(summary_value(summ, C.L_IMPL)) != grand:
+        bad.append("%s=%s != tong MD %s" % (C.L_IMPL, summary_value(summ, C.L_IMPL), C.fmt_md(grand)))
+    mn, ex = C.plan_md(IMP, rates)
+    if num(summary_value(summ, C.L_MIN_PLAN)) != mn or num(summary_value(summ, C.L_EXT_PLAN)) != ex:
+        bad.append("最小改修案 / 拡張案 = %s / %s != %s / %s (theo co option)" % (
+            summary_value(summ, C.L_MIN_PLAN), summary_value(summ, C.L_EXT_PLAN), mn, ex))
+    est = X["est"] or {}
+    for label, key in ((C.L_TOTAL_PD, 0), (C.L_TOTAL_PM, 1)):
+        f = C.txt(summary_value(summ, label)).replace(" ", "")
+        want_row = (est.get("total_row") or 0) + key
+        if f != "='%s'!P%d" % (S.CR_SHEET_ESTIMATION, want_row):
+            bad.append("%s phai la cong thuc ='%s'!P%d (dang: %r)" % (label, S.CR_SHEET_ESTIMATION, want_row, f))
+    objs = summary_objects(summ)
+    want_objs = [(o, [d[t] for t in S.CR_CHANGE_TYPE] + [d["total"], d["md"]])
+                 for o, d in C.object_stats(IMP, rates)]
+    if objs is None:
+        bad.append("Summary khong co bang Doi tuong x NEW/UPD/DEL/IMPACT")
+    elif objs != want_objs:
+        bad.append("bang Doi tuong %s != %s" % (objs, want_objs))
+    targets = [loc for _t, loc in X["summ_links"]]
+    for sheet in [S.CR_SHEET_ESTIMATION] + [n for n, _ in S.CR_AXIS_SHEETS] + [S.CR_SHEET_QA]:
+        if not any(("'%s'!" % sheet) in (loc or "") for loc in targets):
+            bad.append("Summary thieu link toi sheet %s" % sheet)
+    g.check(12, "Summary: 実装 = tong MD, 総工数/人月 link Estimation, bang so doi tuong dung, du link sheet", bad)
+
+    # 22. Estimation theo template
+    bad = []
+    if not est:
+        bad.append("khong co sheet Estimation")
+    elif not est_meta:
+        bad.append("khong thay template Estimation de doi chieu he so (%s)" % S.ESTIMATION_TEMPLATE_PATH)
     else:
-        for ax in S.CR_AXES:
-            got = smat.get(ax)
-            want = [m[ax][t] for t in S.CR_CHANGE_TYPE] + [row_tot[ax]]
-            if got != want:
-                bad.append("%s: %s != %s" % (ax, got, want))
-        want = [col_tot[t] for t in S.CR_CHANGE_TYPE] + [grand]
-        if stot != want:
-            bad.append("dong Tong: %s != %s" % (stot, want))
-    if shead != grand:
-        bad.append("Tong MD dau trang=%s != %s" % (shead, C.fmt_md(grand)))
-    g.check(12, "Summary: tong MD theo truc / loai / tong chung = tong cac dong", bad)
+        got_ids = [x["id"] for x in est["items"]]
+        if sorted(got_ids) != sorted(tag(i) for i in IMP) or len(set(got_ids)) != len(got_ids):
+            bad.append("Estimation co dong hang muc %d (%d khac nhau) != %d impact cua cr.json" % (
+                len(got_ids), len(set(got_ids)), len(IMP)))
+        byid = {i["id"]: i for i in IMP}
+        for x in est["items"]:
+            imp, r = byid.get(x["id"]), x["row"]
+            if not imp:
+                bad.append("Estimation!B%d %s khong co trong cr.json" % (r, x["id"]))
+                continue
+            if num(x["M"]) != C.md_of(imp, rates):
+                bad.append("Estimation!M%d (実装) = %s != MD %s" % (r, x["M"], C.fmt_md(C.md_of(imp, rates))))
+            want = {"K": "=M%d*%s" % (r, est_meta["ratio_K"]), "L": "=M%d*%s" % (r, est_meta["ratio_L"]),
+                    "N": "=M%d*%s" % (r, est_meta["ratio_N"]),
+                    "O": "=SUM(K%d:N%d)*%s" % (r, r, est_meta["ratio_O"]), "P": "=SUM(K%d:O%d)" % (r, r)}
+            for col, f in want.items():
+                if C.txt(x[col]).replace(" ", "") != f:
+                    bad.append("Estimation!%s%d = %r != %s (he so template)" % (col, r, x[col], f))
+            if bool(x["J"]) != bool(imp.get("option")):
+                bad.append("Estimation!J%d option=%s != cr.json %s" % (r, x["J"], bool(imp.get("option"))))
+        if est["items"]:
+            f0, f1 = est["items"][0]["row"], est["items"][-1]["row"]
+            for col in "KLMNOP":
+                if C.txt(est["total"].get(col)).replace(" ", "") != "=SUM(%s%d:%s%d)" % (col, f0, col, f1):
+                    bad.append("Estimation dong 合計 %s = %r khong phu du %d..%d" % (col, est["total"].get(col), f0, f1))
+                want = "=%s%d/%s" % (col, est["total_row"], C.fmt_md(est_meta["md_per_month"]))
+                if C.txt(est["month"].get(col)).replace(" ", "") != want:
+                    bad.append("Estimation dong 人月 %s = %r != %s" % (col, est["month"].get(col), want))
+    g.check(22, "Estimation: 1 dong / hang muc, 実装 = MD, cong thuc he so dung template, 合計/人月 phu du", bad)
+
+    # 23. cr_item / option
+    bad = []
+    items = {C.txt(j.get("item")) for j in J}
+    for imp in IMP:
+        if C.txt(imp.get("cr_item")) not in items:
+            bad.append("%s cr_item=%r khong co trong justification" % (tag(imp), imp.get("cr_item")))
+        if "option" in imp and not isinstance(imp.get("option"), bool):
+            bad.append("%s option=%r phai true/false" % (tag(imp), imp.get("option")))
+    used = {C.txt(i.get("cr_item")) for i in IMP}
+    bad += ["justification %s khong co hang muc impact nao" % x for x in sorted(items - used)]
+    g.check(23, "Moi impact gan cr_item co that; moi item CR co >= 1 impact; option la bool", bad)
+
+    # 24. Q&A
+    bad = []
+    qa = X["qa"]
+    bad += ["Q&A thieu giai trinh %s" % C.txt(j.get("item")) for j in J if C.txt(j.get("item")) not in qa]
+    bad += ["Q&A thieu cau hoi %s" % C.txt(q.get("id")) for q in Q if C.txt(q.get("id")) not in qa]
+    bad += ["Q&A thieu muc khong thuoc CR %s" % C.txt(n.get("item")) for n in cr.get("not_cr") or []
+            if C.txt(n.get("item")) not in qa]
+    g.check(24, "Q&A: du giai trinh CR, cau hoi KH, muc khong thuoc CR", bad)
 
     q_ids = [C.txt(q.get("id")) for q in Q]
     q_set = set(q_ids)

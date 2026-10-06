@@ -19,6 +19,7 @@ import tempfile
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import inv_schema as S  # noqa: E402
+import cr_common as C  # noqa: E402
 
 BASE = "ver1_011026_baseline"
 KIT_RATES = os.path.abspath(os.path.join(HERE, "..", "..", "..", "..", S.MD_RATES_PATH))
@@ -107,7 +108,7 @@ def imp(iid, axis, ct, ref, item, code, qty=1, **kw):
          "change": "Thay doi %s" % item, "why_change": "Yeu cau CR muc 1 bat buoc sua %s" % item,
          "impact_on_current": "Luong hien tai cua %s" % item, "conflict": "No", "conflict_detail": "",
          "risk": "Low", "rate_code": code, "qty": qty, "md_note": "", "evidence": "input/CR-001.md §1",
-         "question": ""}
+         "question": "", "cr_item": "CR-001.1", "option": False}
     d.update(kw)
     return d
 
@@ -138,7 +139,7 @@ def valid_cr():
             imp("IMP-006", "Screen", "UPD", "SC-001", "Gio hang", "SCR-UPD-S"),
             imp("IMP-007", "Screen", "IMPACT", "SC-002", "Danh sach don", "SCR-IMP", qty=2),
             imp("IMP-008", "Mockup", "NEW", "DS:WEB-01:primary;DS-component:Button;DS:space-4",
-                "Mockup man OTP", "UI-NEW"),
+                "Mockup man OTP", "UI-NEW", option=True),
         ]}
 
 
@@ -169,23 +170,27 @@ def x_extra_sheet(path):
     wb.save(path)
 
 
-def x_cell(sheet, finder, col):
+def x_cell(sheet, finder, col, value=99):
     def f(path):
         from openpyxl import load_workbook
         wb = load_workbook(path)
         ws = wb[sheet]
         for r in range(1, ws.max_row + 1):
             if finder(ws, r):
-                ws.cell(row=r, column=col).value = 99
+                ws.cell(row=r, column=col).value = value
                 break
         wb.save(path)
     return f
 
 
+def est_row(iid):
+    return lambda ws, r: ws.cell(row=r, column=2).value == iid
+
+
 MD_COL = S.CR_IMPACT_COLS.index("MD") + 1
 # (ten, mutation cr.json, mutation xlsx, check, muc, build phai tu choi)
 CASES = [
-    ("workbook 3 sheet", None, x_extra_sheet, "1", "FAIL", False),
+    ("workbook thua 1 sheet", None, x_extra_sheet, "1", "FAIL", False),
     ("truc ThirdParty bo trong", m_set("no_impact_axes", []), None, "4", "FAIL", False),
     ("truc vua impact vua khong anh huong",
      lambda cr: cr["no_impact_axes"].append({"axis": "DB", "reason": "khong anh huong gi toi DB ca"}),
@@ -199,13 +204,25 @@ CASES = [
     ("rate_code khong ton tai", m_imp("IMP-001", rate_code="API-XXL"), None, "10", "FAIL", True),
     ("rate_code sai truc", m_imp("IMP-001", rate_code="SCR-UPD-S"), None, "10", "FAIL", True),
     ("qty = 0", m_imp("IMP-001", qty=0), None, "10", "FAIL", True),
-    ("MD bi sua tay tren sheet Impact", None,
-     x_cell("Impact", lambda ws, r: ws.cell(row=r, column=2).value == "IMP-004", MD_COL), "11", "FAIL", False),
-    ("dong Tong MD sheet Impact bi sua", None,
-     x_cell("Impact", lambda ws, r: ws.cell(row=r, column=2).value == "Tổng MD", MD_COL), "11", "FAIL", False),
-    ("Tong MD tren Summary bi sua", None,
-     x_cell("Summary", lambda ws, r: ws.cell(row=r, column=1).value == "Tổng" and
-            ws.cell(row=r, column=6).value is not None, 6), "12", "FAIL", False),
+    ("MD bi sua tay tren sheet API", None,
+     x_cell("API", lambda ws, r: ws.cell(row=r, column=2).value == "IMP-001", MD_COL), "11", "FAIL", False),
+    ("dong Tong MD sheet Screen bi sua", None,
+     x_cell("Screen", lambda ws, r: ws.cell(row=r, column=2).value == "Tổng MD", MD_COL), "11", "FAIL", False),
+    ("実装 tren Summary bi sua", None,
+     x_cell("Summary", lambda ws, r: ws.cell(row=r, column=1).value == C.L_IMPL, 2), "12", "FAIL", False),
+    ("bang so doi tuong tren Summary bi sua", None,
+     x_cell("Summary", lambda ws, r: ws.cell(row=r, column=1).value == "Màn hình", 2), "12", "FAIL", False),
+    ("総工数 tren Summary go so thay vi link Estimation", None,
+     x_cell("Summary", lambda ws, r: ws.cell(row=r, column=1).value == C.L_TOTAL_PD, 2), "12", "FAIL", False),
+    ("Estimation 実装 (M) bi sua tay", None, x_cell("Estimation", est_row("IMP-004"), 13), "22", "FAIL", False),
+    ("Estimation cong thuc テスト doi he so", None,
+     x_cell("Estimation", est_row("IMP-004"), 14, "=M30*0.9"), "22", "FAIL", False),
+    ("Estimation option khac cr.json", None, x_cell("Estimation", est_row("IMP-008"), 10, False), "22", "FAIL", False),
+    ("Q&A mat cau hoi CQ-001", None,
+     x_cell("Q&A", lambda ws, r: ws.cell(row=r, column=1).value == "CQ-001", 1, "—"), "24", "FAIL", False),
+    ("impact thieu cr_item", m_imp("IMP-001", cr_item=""), None, "23", "FAIL", True),
+    ("cr_item khong co trong justification", m_imp("IMP-001", cr_item="CR-001.7"), None, "23", "FAIL", True),
+    ("option khong phai bool", m_imp("IMP-001", option="yes"), None, "23", "FAIL", True),
     ("High risk khong CQ / md_note", m_imp("IMP-001", risk="High"), None, "14", "FAIL", False),
     ("CQ treo (CQ-009)", m_imp("IMP-004", question="CQ-009"), None, "15", "FAIL", False),
     ("Mockup khong bam DS", m_imp("IMP-008", baseline_ref="—"), None, "16d", "FAIL", False),
@@ -220,23 +237,47 @@ CASES = [
 ]
 
 
-def valid_nodes():
-    def n(i, badge, ref, kind, label="x"):
-        return {"id": "1:%d" % i, "name": "%s · %s · %s" % (badge, ref, label), "badge": badge,
-                "ref": ref, "kind": kind}
-    return [n(1, "UPD", "SC-001", "screen"), n(2, "NEW", "IMP-005", "screen"),
-            n(3, "IMPACT", "SC-002", "screen"), n(4, "UPD", "F-001", "flow"),
-            n(5, "AS-IS", "SC-003", "screen"),
-            n(6, "UPD", "SC-001", "table-row", "row"), n(7, "NEW", "IMP-005", "table-row", "row"),
-            n(8, "IMPACT", "SC-002", "table-row", "row"), n(9, "UPD", "F-001", "table-row", "row")]
+def valid_nodes(cr, rates_path):
+    """Ket qua readback hop le cho fixture: CR-1 (F-001), CR-2 (SC-001/SC-002/IMP-005 + AS-IS SC-003), thong ke."""
+    def n(i, badge, ref, kind, label="x", **kw):
+        d = {"id": "1:%d" % i, "name": "%s · %s · %s" % (badge, ref, label), "badge": badge, "ref": ref, "kind": kind}
+        d.update(kw)
+        return d
+    nodes = [n(1, "UPD", "SC-001", "screen"), n(2, "NEW", "IMP-005", "screen"),
+             n(3, "IMPACT", "SC-002", "screen"), n(4, "UPD", "F-001", "flow"), n(5, "AS-IS", "SC-003", "screen"),
+             n(6, "NEW", "IMP-005", "mockup", ds="DS:WEB-01:primary;DS-component:WEB-01:Button", site="WEB-01",
+               colors=["#1a7f37", "#ffffff"])]
+    arrows = [{"id": "9:1", "from": "1:5", "to": "1:1"}, {"id": "9:2", "from": "1:1", "to": "1:2"},
+              {"id": "9:3", "from": "1:1", "to": "1:3"}, {"id": "9:4", "from": "1:4", "to": "1:1"}]
+    _m, rates = C.load_rates(rates_path)
+    stats = []
+    for o, d in C.object_stats(cr["impacts"], rates):
+        for c, v in zip(S.CR_CHANGE_TYPE + ["Tổng", "実装 MD"], [d[t] for t in S.CR_CHANGE_TYPE] + [d["total"], d["md"]]):
+            stats.append({"name": "STAT · %s · %s" % (o, c), "value": str(v)})
+    stats.append({"name": "STAT · TOTAL · 実装 — MD", "value": str(C.object_stats(cr["impacts"], rates)[-1][1]["md"])})
+    return {"nodes": nodes, "arrows": arrows, "stats": stats, "legend": 1, "unbadged": [], "overlap": []}
+
+
+def f_nodes(fn):
+    def m(d):
+        fn(d["nodes"])
+    return m
 
 
 FIG_CASES = [
-    ("AS-IS SC-009 ngoai pham vi", lambda ns: ns.append(
-        {"id": "1:20", "name": "AS-IS · SC-009 · Cai dat", "badge": "AS-IS", "ref": "SC-009", "kind": "screen"}), "4"),
-    ("badge NEW tren SC-001 (impact la UPD)", lambda ns: ns[0].update(name="NEW · SC-001 · x", badge="NEW"), "2"),
-    ("man SC-002 bi anh huong chua ve", lambda ns: ns.pop(2), "3"),
-    ("CR Change Table thieu 1 dong", lambda ns: ns.pop(), "5"),
+    ("AS-IS SC-009 ngoai pham vi", f_nodes(lambda ns: ns.append(
+        {"id": "1:20", "name": "AS-IS · SC-009 · Cai dat", "badge": "AS-IS", "ref": "SC-009", "kind": "screen"})), "4"),
+    ("badge NEW tren SC-001 (impact la UPD)", f_nodes(lambda ns: ns[0].update(name="NEW · SC-001 · x", badge="NEW")), "2"),
+    ("man SC-002 bi anh huong chua ve", f_nodes(lambda ns: ns.pop(2)), "3"),
+    ("man NEW IMP-005 chua ve tren CR-2", f_nodes(lambda ns: ns.pop(1)), "3"),
+    ("thong ke Man hinh / NEW sai", lambda d: d["stats"][0].update(value="9"), "5"),
+    ("con dong chi tiet table-row", f_nodes(lambda ns: ns.append(
+        {"id": "1:30", "name": "UPD · SC-001 · IMP-006", "badge": "UPD", "ref": "SC-001", "kind": "table-row"})), "5"),
+    ("node CR-2 khong co mui ten", lambda d: d.__setitem__("arrows", d["arrows"][:1]), "7"),
+    ("thieu legend", lambda d: d.__setitem__("legend", 0), "8"),
+    ("chong node cu", lambda d: d.__setitem__("overlap", ["Output 1"]), "9"),
+    ("mockup dung mau ngoai DS", f_nodes(lambda ns: ns[5].update(colors=["#ff00ff"])), "10"),
+    ("mockup khong ghi DS", f_nodes(lambda ns: ns[5].update(ds="")), "10"),
 ]
 
 
@@ -291,9 +332,15 @@ def main():
         from openpyxl import load_workbook
         wb = load_workbook(xl)
         flat = [str(c) for r in wb["Summary"].iter_rows(values_only=True) for c in r if c is not None]
-        record("Summary co canh bao 'Ước lượng sơ bộ' khi DRAFT + tong MD 5",
-               any("Ước lượng sơ bộ" in x for x in flat) and wb.sheetnames == ["Summary", "Impact"]
-               and ("5" in flat or "5.0" in flat), "sheets=%s" % wb.sheetnames)
+        grand = sum(C.md_of(i, C.load_rates(rates)[1]) for i in c0["impacts"])
+        record("Summary co canh bao 'Ước lượng sơ bộ' khi DRAFT + 実装 = tong MD + du %d sheet" % len(S.CR_SHEETS),
+               any("Ước lượng sơ bộ" in x for x in flat) and wb.sheetnames == S.CR_SHEETS
+               and any(r and r[0] == C.L_IMPL and r[1] == grand for r in wb["Summary"].iter_rows(values_only=True)),
+               "sheets=%s" % wb.sheetnames)
+        est = [r for r in wb["Estimation"].iter_rows(values_only=True) if r and len(r) > 2 and
+               str(r[1] or "").startswith("IMP-")]
+        record("Estimation 1 dong / hang muc (%d)" % len(c0["impacts"]), len(est) == len(c0["impacts"]),
+               "nhan %d" % len(est))
 
         for name, mj, mx, chk, level, rejects in CASES:
             c = copy.deepcopy(c0)
@@ -347,14 +394,14 @@ def main():
 
         def fig(nodes):
             json.dump(nodes, open(nj, "w"), ensure_ascii=False)
-            return sh("verify-cr-figma.py", "--nodes", nj, "--cr-json", cj, "--baseline", base)
-        code, out = fig(valid_nodes())
+            return sh("verify-cr-figma.py", "--nodes", nj, "--cr-json", cj, "--baseline", base, "--rates", rates)
+        code, out = fig(valid_nodes(c0, rates))
         bad = {k: v for k, v in results(out).items() if v != "PASS"}
         record("figma hop le -> V-CR-FIGMA PASS", code == 0 and not bad, "khong PASS: %s" % bad)
         for name, mut, chk in FIG_CASES:
-            ns = valid_nodes()
-            mut(ns)
-            code, out = fig(ns)
+            d = valid_nodes(c0, rates)
+            mut(d)
+            code, out = fig(d)
             got = results(out).get(chk)
             record("figma %s -> check %s FAIL" % (name, chk), got == "FAIL" and code == 1,
                    "nhan %s (exit %d)" % (got, code))
