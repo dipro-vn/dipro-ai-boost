@@ -1,6 +1,6 @@
 ---
 name: testing-jest-unit-test-generation
-description: 
+description: Viết unit test và component test với Jest và React Testing Library — query theo role và label, userEvent, waitFor cho async, test theo hành vi người dùng thay vì chi tiết nội bộ. Dùng khi tạo test cho function, component, hoặc custom hook.
 ---
 
 # Unit Test Generation

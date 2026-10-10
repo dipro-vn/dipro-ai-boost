@@ -1,6 +1,6 @@
 ---
 name: html-css-css-architecture
-description: 
+description: Tổ chức CSS cho dự án lớn — quy ước đặt tên class, kiểm soát scope, tránh xung đột và specificity war. Dùng khi thiết lập CSS cho dự án mới hoặc dọn CSS global đang rối.
 ---
 
 # CSS Architecture

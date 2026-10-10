@@ -1,6 +1,6 @@
 ---
 name: performance-memoization
-description: 
+description: Memoization đúng chỗ — useMemo cho tính toán nặng, useCallback giữ tham chiếu ổn định, React.memo cho component, và khi nào memo hóa là thừa. Dùng khi Profiler chỉ ra tính toán lặp lại tốn kém.
 ---
 
 # Memoization

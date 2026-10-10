@@ -1,6 +1,6 @@
 ---
 name: react-accessibility
-description: 
+description: Accessibility cho UI tương tác trong React — dùng thẻ semantic thay div onClick, quản lý focus khi mở/đóng modal, aria-live cho nội dung động, hỗ trợ bàn phím. Dùng khi làm modal, dropdown, tab, hoặc widget tương tác.
 ---
 
 # Accessibility

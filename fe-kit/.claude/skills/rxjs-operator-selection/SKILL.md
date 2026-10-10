@@ -1,6 +1,6 @@
 ---
 name: rxjs-operator-selection
-description: 
+description: Chọn đúng operator RxJS — map, switchMap, mergeMap, concatMap, exhaustMap khác nhau ra sao, debounceTime và distinctUntilChanged cho input. Dùng khi cần biến đổi hoặc làm phẳng luồng Observable.
 ---
 
 # Operator Selection

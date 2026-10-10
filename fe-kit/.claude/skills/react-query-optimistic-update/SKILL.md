@@ -1,6 +1,6 @@
 ---
 name: react-query-optimistic-update
-description: 
+description: Cập nhật lạc quan với TanStack Query — onMutate cập nhật cache trước, cancelQueries, rollback khi lỗi qua context, đồng bộ lại ở onSettled. Dùng khi cần UI phản hồi tức thì cho like, toggle, hoặc sửa nhanh.
 ---
 
 # Optimistic Update

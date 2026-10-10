@@ -1,6 +1,6 @@
 ---
 name: nextjs-client-component
-description: 
+description: Dùng Client Component trong Next.js App Router — khi nào cần chỉ thị 'use client', đẩy ranh giới client xuống thấp nhất có thể, truyền prop serializable từ server. Dùng khi component cần useState, useEffect, event handler, hoặc browser API.
 ---
 
 # Client Component
@@ -8,9 +8,11 @@ description:
 **Category:** nextjs · **Status:** 🟢 Active
 
 ## When to use
+
 Khi cần state, event handler, hook, hoặc browser API → thêm `'use client'`.
 
 ## Steps
+
 1. Đặt `'use client'` ở dòng đầu file khi cần useState/useEffect/onClick.
 2. Giữ client component nhỏ, đặt ở "lá" của cây để giảm JS gửi xuống.
 3. Nhận data từ Server Component qua props thay vì fetch lại.
@@ -18,6 +20,7 @@ Khi cần state, event handler, hook, hoặc browser API → thêm `'use client'
 5. Có thể nhận `children` là Server Component để giữ phần tĩnh ở server.
 
 ## Template
+
 ```tsx
 'use client';
 import { useState } from 'react';
@@ -29,10 +32,12 @@ export function Counter({ initial }: { initial: number }) {
 ```
 
 ## Example
+
 **Good:** Button/counter nhỏ ở lá, nhận initial từ server qua props.
-**Avoid:** 'use client' ở layout gốc, fetch lại data đã có ở server.
+**Avoid:** Không áp dụng 'use client' cho toàn bộ layout gốc; chỉ dùng cho các component tương tác cụ thể trong layout. Không fetch lại data đã có ở server.
 
 ## Checklist
+
 - [ ] 'use client' chỉ ở nơi cần tương tác
 - [ ] Component nhỏ, đặt ở lá
 - [ ] Nhận data qua props

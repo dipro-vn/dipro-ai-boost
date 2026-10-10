@@ -1,6 +1,6 @@
 ---
 name: form-react-hook-form
-description: 
+description: Build form với React Hook Form — useForm, register, handleSubmit, Controller, tối ưu số lần re-render. Dùng khi tạo form mới hoặc refactor form controlled sang uncontrolled để giảm re-render.
 ---
 
 # React Hook Form

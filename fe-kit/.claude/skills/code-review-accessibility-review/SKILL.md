@@ -1,6 +1,6 @@
 ---
 name: code-review-accessibility-review
-description: 
+description: Review accessibility của code đã viết — semantic HTML, label cho input, thứ tự focus, độ tương phản màu, điều hướng bàn phím. Dùng khi review PR có thay đổi UI, form, modal, hoặc component tương tác.
 ---
 
 # Accessibility Review

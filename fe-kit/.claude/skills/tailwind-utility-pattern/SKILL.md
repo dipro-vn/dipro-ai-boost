@@ -1,6 +1,6 @@
 ---
 name: tailwind-utility-pattern
-description: 
+description: CHỈ dùng khi dự án dùng Tailwind CSS. Style theo tư duy utility-first — compose class trực tiếp trên markup, dùng token từ config thay vì arbitrary value, khi nào mới nên tách abstraction. Dùng khi style component bằng Tailwind.
 ---
 
 # Utility Pattern

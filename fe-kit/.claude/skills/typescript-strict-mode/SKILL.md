@@ -1,6 +1,6 @@
 ---
 name: typescript-strict-mode
-description: 
+description: Bật và tuân thủ strict mode TypeScript — strictNullChecks, noImplicitAny, noUncheckedIndexedAccess và cách xử lý lỗi phát sinh. Dùng khi cấu hình tsconfig cho dự án mới hoặc siết dần type safety cho dự án cũ.
 ---
 
 # Strict Mode

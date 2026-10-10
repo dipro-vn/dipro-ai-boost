@@ -1,6 +1,6 @@
 ---
 name: rxjs-stream-design
-description: 
+description: Thiết kế luồng RxJS theo hướng declarative — nguồn, pipe biến đổi, output; tránh subscribe lồng nhau, tách side-effect ra tap. Dùng khi dựng data flow phức tạp bằng Observable.
 ---
 
 # Stream Design

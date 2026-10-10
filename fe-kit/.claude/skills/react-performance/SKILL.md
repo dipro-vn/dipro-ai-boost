@@ -1,6 +1,6 @@
 ---
 name: react-performance
-description: 
+description: Tối ưu hiệu năng React — chẩn đoán re-render thừa, memo hóa có chọn lọc, virtualize list lớn, tách state để thu hẹp vùng render. Dùng khi component chậm, list dài lag, hoặc tính toán nặng lặp lại.
 ---
 
 # Performance

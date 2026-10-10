@@ -1,6 +1,6 @@
 ---
 name: security-input-validation
-description: 
+description: Validate mọi input không kiểm soát — dữ liệu form, query param, response API, dữ liệu từ localStorage; validate ở cả client và server, dùng allowlist thay vì blocklist. Dùng khi nhận bất kỳ dữ liệu nào từ bên ngoài.
 ---
 
 # Input Validation

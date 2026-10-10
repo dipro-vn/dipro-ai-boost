@@ -1,6 +1,6 @@
 ---
 name: react-query-error-handling
-description: 
+description: Xử lý lỗi cho query và mutation trong TanStack Query — phân loại lỗi mạng và lỗi nghiệp vụ, cấu hình retry, kết hợp Error Boundary, hiển thị toast. Dùng khi cần xử lý trạng thái lỗi của data fetching.
 ---
 
 # Error Handling

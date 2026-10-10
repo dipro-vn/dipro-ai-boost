@@ -1,6 +1,6 @@
 ---
 name: code-review-security-review
-description: 
+description: Review bảo mật code — validate input, phòng XSS, xử lý token, kiểm tra phân quyền. Dùng khi review PR chạm tới auth, form nhận input người dùng, gọi API, hoặc render HTML động.
 ---
 
 # Security Review

@@ -1,6 +1,6 @@
 ---
 name: mui-theme-customization
-description: 
+description: CHỈ dùng khi dự án dùng Material UI. Tùy biến theme ở cấp toàn app — palette, typography, spacing, defaultProps và styleOverrides cho component. Dùng khi thiết lập design system hoặc đổi style mặc định toàn cục.
 ---
 
 # Theme Customization

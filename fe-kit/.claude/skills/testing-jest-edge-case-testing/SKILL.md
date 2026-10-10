@@ -1,6 +1,6 @@
 ---
 name: testing-jest-edge-case-testing
-description: 
+description: Viết test cho trường hợp biên — giá trị boundary, null và mảng rỗng, lỗi async, race condition, input dài hoặc ký tự đặc biệt. Dùng khi bổ sung test cho phần logic dễ vỡ hoặc sau khi liệt kê edge case.
 ---
 
 # Edge Case Testing

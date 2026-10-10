@@ -1,6 +1,6 @@
 ---
 name: code-review-architecture-review
-description: 
+description: Review kiến trúc code — tách layer, mức độ coupling, cơ hội reuse, đặt file đúng tầng shared hay feature. Dùng khi review PR thêm module mới, tạo abstraction, hoặc thay đổi cấu trúc thư mục.
 ---
 
 # Architecture Review

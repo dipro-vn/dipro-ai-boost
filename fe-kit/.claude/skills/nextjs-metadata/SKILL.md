@@ -1,6 +1,6 @@
 ---
 name: nextjs-metadata
-description: 
+description: Cấu hình SEO và Open Graph bằng Metadata API của Next.js — export metadata tĩnh, generateMetadata động, title template, og:image. Dùng khi cần SEO cho route hoặc chia sẻ link lên mạng xã hội.
 ---
 
 # Metadata

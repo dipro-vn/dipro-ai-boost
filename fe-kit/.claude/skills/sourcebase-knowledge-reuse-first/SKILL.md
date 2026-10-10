@@ -1,6 +1,6 @@
 ---
 name: sourcebase-knowledge-reuse-first
-description: 
+description: Nguyên tắc reuse-first — luôn search codebase tìm component, hook, service, util giải quyết cùng vấn đề trước khi viết mới; ưu tiên mở rộng hơn clone; trích xuất abstraction khi logic lặp trên ba nơi. Dùng trước mọi lần viết code mới.
 ---
 
 # Reuse First

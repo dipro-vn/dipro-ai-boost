@@ -1,6 +1,6 @@
 ---
 name: form-form-state
-description: 
+description: Quản lý trạng thái form — dirty, touched, isSubmitting, defaultValues, reset sau submit. Dùng khi cần disable nút submit, cảnh báo rời trang khi chưa lưu, hoặc reset form về giá trị ban đầu.
 ---
 
 # Form State

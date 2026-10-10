@@ -1,6 +1,6 @@
 ---
 name: nextjs-server-actions
-description: 
+description: Mutate data bằng Server Action thay vì tự tạo API route — chỉ thị 'use server', validate input, revalidatePath và revalidateTag, useFormStatus và useActionState. Dùng khi submit form hoặc thay đổi dữ liệu từ UI.
 ---
 
 # Server Actions

@@ -1,6 +1,6 @@
 ---
 name: security-secure-api-consumption
-description: 
+description: Gọi API an toàn từ FE — cấu hình transport và timeout, không để secret trong bundle client, xử lý CORS, rate limit, không log dữ liệu nhạy cảm. Dùng khi thiết lập API client hoặc thêm endpoint mới.
 ---
 
 # Secure Api Consumption
