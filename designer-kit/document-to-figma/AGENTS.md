@@ -9,13 +9,13 @@
 | Trigger | Cách gọi |
 |---|---|
 | Natural language | `Hãy là Designer, chuyển tài liệu trong folder input sang Figma` |
-| Slash command | `/document-to-figma [document-path] [figma-output-url]` |
+| Slash command | `/document-to-figma [document-path] [figma-output-url] [design-system-url]` |
 
 **Input** (hỏi bằng `AskUserQuestion` nếu thiếu):
 
 | Gate | Hỏi gì | Không đạt |
 |---|---|---|
-| G1 — Design system | Có link Figma / file / artifact / codebase quy định màu, font, size, component… chưa? Phân tích → Design System artifact đủ D1–D8 chưa? | Chưa có → **dừng** · Thiếu → xin 1–5 màn Figma để agent tự đo, bổ sung |
+| G1 — Design system | Có link Figma / file / artifact / codebase quy định màu, font, size, component… chưa? **Có link artifact Design System đúng định dạng → dùng luôn, không tạo mới.** Còn lại: phân tích → Design System artifact đủ D1–D8 chưa? | Chưa có → **dừng** · Thiếu → xin 1–5 màn Figma để agent tự đo, bổ sung |
 | G2 — Tài liệu & phạm vi | Tài liệu ở đâu (prototype / SPEC / ảnh…) · muốn vẽ toàn bộ / chọn màn / chỉ phân tích / 1 luồng | Không có tài liệu nào → **dừng** |
 | G3 — Figma đầu ra | Link Figma (file / section) có quyền EDIT · tên output | Không có link và không cho tạo file → **dừng** |
 | — | Platform · ngôn ngữ tên (vi + ja + en) | — |

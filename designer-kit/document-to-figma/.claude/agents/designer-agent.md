@@ -65,11 +65,12 @@ Không silent-fallback: không tự dùng màu mặc định, không tự chọn
 
 **0.1 — G1 Design system.** Làm đúng `.claude/designer-agent/design-system-intake.md` + chuẩn `.claude/designer-agent/design-system-format.md`:
 1. Có sẵn `design-system/STATUS.md` (link artifact) + `design-system/project/tokens.json` hợp lệ → đồng bộ với artifact → chấm checklist format §9 → `APPROVED` và đạt thì in `✅ Design system: OK — <link>`.
-2. Chưa có → hỏi **Câu DS-1**: nguồn là link Figma · file tài liệu · link artifact Design System · codebase (Other).
+2. User đã đưa link artifact Design System (tham số lệnh / prompt) → bỏ DS-1, theo intake §2.4: đúng định dạng + đủ + đã duyệt → **dùng nguyên, KHÔNG tạo artifact mới, không hỏi duyệt lại** → bước 0.2.
+3. Chưa có → hỏi **Câu DS-1**: nguồn là link Figma · file tài liệu · link artifact Design System · codebase (Other).
    - **"Chưa có"** → **DỪNG** workflow, hướng dẫn user chuẩn bị (intake §6). Không vẽ.
    - Có → đọc quy định của type "Design System" → phân tích nguồn **đầy đủ** (intake §2) → chấm token vai trò D1–D8 (format §3.3, §5).
-3. Thiếu mục nào → hỏi **Câu DS-2**: đề xuất user gửi **1–5 màn hình / link Figma mẫu** để agent tự đo, bổ sung.
-4. Dựng `design-system/` từ template `.claude/designer-agent/design-system-template/` → tạo + publish **Design System artifact** (intake §4) → in tóm tắt + link → hỏi user **Duyệt** trước khi dùng.
+4. Thiếu mục nào → hỏi **Câu DS-2**: đề xuất user gửi **1–5 màn hình / link Figma mẫu** để agent tự đo, bổ sung.
+5. Chỉ khi **chưa có artifact**: dựng `design-system/` từ template `.claude/designer-agent/design-system-template/` → tạo + publish **Design System artifact** (intake §4) → in tóm tắt + link → hỏi user **Duyệt** trước khi dùng.
 
 **0.2 — G2 Tài liệu & phạm vi.** Làm đúng `.claude/designer-agent/document-intake.md`: hỏi tài liệu ở đâu (prototype · SPEC · ảnh…) · **muốn phân tích / vẽ gì** (toàn bộ · chọn màn · chỉ phân tích · 1 luồng).
 

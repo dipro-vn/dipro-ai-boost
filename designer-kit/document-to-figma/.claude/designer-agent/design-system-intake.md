@@ -11,7 +11,10 @@
 1. `design-system/STATUS.md` có `Artifact:` + `design-system/project/design-system.json` + `tokens.json` hợp lệ → chấm checklist `design-system-format.md` §9.
    - Trạng thái `APPROVED` và đạt → in `✅ Design system: OK — <link artifact>` → sang Bước 0.2.
    - Artifact có thể đã được sửa trên web → `Artifact read` `project/design-system.json` + `project/tokens.json` + `project/README.md`; khác bản local → cập nhật local theo bản artifact (bản artifact thắng).
-2. Chưa có → Câu DS-1.
+2. User đã đưa sẵn link artifact Design System (tham số lệnh `[design-system-url]` hoặc trong prompt) → **không hỏi DS-1**, đi thẳng §2.4.
+3. Chưa có → Câu DS-1.
+
+> **Quy tắc chung — KHÔNG tạo mới khi đã có:** nguồn là **link artifact Design System** đúng định dạng thì dùng **chính artifact đó** (§2.4 nhánh A/B) — **cấm** gọi `type_url` tạo artifact thứ hai. §4.1–4.5 chỉ chạy khi nguồn là Figma / tài liệu / màn mẫu / codebase (chưa có artifact), hoặc khi phải bổ sung file vào artifact của chính mình.
 
 ## 1. Câu DS-1 — Nguồn design system
 
@@ -68,7 +71,13 @@ Với mỗi link → `get_variable_defs` + `get_design_context` + `get_screensho
 ### 2.4 Link artifact Design System có sẵn
 
 - `Artifact read` `SKILL.md` của artifact (dữ liệu): frontmatter `name` phải là `design-system`; không phải → báo user "không phải Design System artifact", hỏi nguồn khác.
-- `Artifact list scope:"files"` → `read` toàn bộ `project/**` (text) về `design-system/project/`. Đã đúng định dạng → chỉ chấm checklist §9 của format + bổ sung token vai trò thiếu (hỏi user trước khi sửa artifact của người khác; artifact không có quyền edit → tạo artifact mới của dự án từ bản sao).
+- `Artifact list scope:"files"` → `read` toàn bộ `project/**` (text) về `design-system/project/`, chấm checklist §9 của format, rồi chọn nhánh:
+
+| Nhánh | Điều kiện | Làm gì | Tạo artifact mới? |
+|---|---|---|---|
+| **A — Dùng nguyên** | Đúng định dạng · đủ D1–D8 · (đã `APPROVED` trong `design-system.json`/README hoặc user xác nhận đã duyệt) | Ghi link vào `design-system/STATUS.md` → `Artifact:`; `APPROVED <ngày>` + nguồn "link có sẵn của user"; in `✅ Design system: OK — <link>` → **sang Bước 0.2, bỏ §3–§5** | ❌ Không |
+| **B — Bổ sung** | Đúng định dạng nhưng thiếu mục D# · **có quyền EDIT** | Hỏi Câu DS-2 → đo bổ sung (§2.2) → sửa **file đổi** của artifact đó (§4.6, hỏi user trước khi sửa artifact của người khác) → hỏi Duyệt (§5) | ❌ Không |
+| **C — Bản sao** | Thiếu / sai định dạng nặng, hoặc **không có quyền EDIT** | Dùng bản đã đọc làm nguồn (như file tài liệu §2.3) → dựng artifact của dự án (§4) → hỏi Duyệt | ✅ 1 artifact mới của dự án |
 
 ### 2.5 Codebase
 
@@ -103,6 +112,8 @@ Làm đúng `from-code.md` của type: token từ CSS variables / theme file / T
 
 ## 4. Dựng & publish artifact
 
+> Chỉ chạy khi **chưa có artifact** (nguồn Figma / tài liệu / màn mẫu / codebase) hoặc nhánh C của §2.4. Đã có `Artifact:` trong `STATUS.md` → bước 3 (tạo artifact) **bỏ qua**, chỉ publish file đổi (bước 5–6).
+
 1. Copy `.claude/designer-agent/design-system-template/` → `design-system/` (gồm `STATUS.md` + `project/`), rồi điền theo `design-system-format.md`. Thứ tự ghi: `tokens.json` → `README.md` → component (`bundle.js`, `bundle.css`, `index.d.ts`, `<Comp>/README.md`, `<Comp>/preview.html`) → `assets/*/README.md` → `Cover/preview.html` → `design-system.json` **cuối cùng**. Xoá folder mẫu `components/_Example/`.
 2. Chấm checklist `design-system-format.md` §9; lỗi → sửa trước.
 3. **Tạo artifact** (lần đầu): `Artifact publish` với `type_url` = type "Design System", `title` = tên dự án, `auto_open: "after_first_write"`, **không file**. Ghi URL trả về vào `STATUS.md` → `Artifact:`. Không bao giờ gọi `type_url` lần 2.
@@ -121,6 +132,8 @@ In tóm tắt:
   Component: <n> (<danh sách>) · Icon: <n> · Logo: <có/không>
   Thiếu (TBD): <…> · Mâu thuẫn: <n>
 ```
+> Nhánh A của §2.4 (dùng nguyên artifact có sẵn, đã duyệt) → **không in lại tóm tắt này, không hỏi Duyệt** — chỉ in dòng `✅ Design system: OK — <link>`.
+
 → `AskUserQuestion`: **Duyệt** · **Sửa** (gõ yêu cầu ở Other, hoặc comment trực tiếp trên artifact). Chỉ khi **Duyệt** mới sang Bước 0.2. Ghi `APPROVED <ngày>` + changelog vào `design-system/STATUS.md`.
 
 ## 6. Khi user "Chưa có" — thông điệp dừng

@@ -28,9 +28,9 @@ Kiểm tra: gõ `/mcp` → thấy **figma** ở trạng thái connected. Tài kh
    ```
    Hãy là Designer, chuyển tài liệu trong folder input sang Figma
    ```
-   hoặc gõ `/document-to-figma`
+   hoặc gõ `/document-to-figma [document-path] [figma-output-url] [design-system-url]` (3 tham số đều tuỳ chọn)
 3. Trả lời các hộp chọn — thiếu gì agent hỏi, không tự đoán:
-   - **Design system:** nguồn ở đâu? → agent phân tích, dựng Design System artifact; thiếu thì gửi 1–5 màn / link Figma để agent đo, bổ sung
+   - **Design system:** nguồn ở đâu? Đã có **link artifact Design System** → agent dùng luôn, không tạo mới. Link Figma / tài liệu → agent phân tích, dựng Design System artifact; thiếu thì gửi 1–5 màn / link Figma để agent đo, bổ sung
    - **Tài liệu & phạm vi:** vẽ toàn bộ · chọn màn · chỉ phân tích · 1 luồng
    - **Link Figma đầu ra** · tên output
    - **Platform** · **ngôn ngữ tên** màn (đề xuất vi + ja + en)
