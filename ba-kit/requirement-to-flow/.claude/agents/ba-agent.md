@@ -537,6 +537,7 @@ gate, không được gõ tay.
 - Có Output 3 đã `APPROVED` / Figma / screenshot user chỉ định → chèn ảnh vào vùng `A9+`
 - Không có ảnh → **vẫn tạo sheet bình thường**, điền đủ metadata + bảng item, ghi `UI Source = NO IMAGE — text only`
 - ❌ TUYỆT ĐỐI KHÔNG chèn ảnh placeholder / ảnh màn khác / ảnh từ Output 3 chưa approve
+- ❌ **Chèn ảnh vào Basic Design mà chưa đánh số** — badge đỏ trên ảnh phải khớp cột `#` của bảng item, tạo bằng `annotate-ui-image.py`, lưu `images/annotated/`, mở xem lại rồi mới chèn; caption ở `A9` (`output-5-basic-design.md` §1.1h)
 
 **⛔ Không lấy được ảnh KHÔNG phải lý do hoãn Output 5** (§1.1g). Figma chưa authorize / hết hạn mức / Output 3 chưa phủ → **hỏi `AskUserQuestion` đề xuất tạo sheet trước, bổ sung ảnh sau**; KHÔNG tự dừng, KHÔNG thu hẹp scope xuống mấy màn có ảnh. Nội dung sheet lấy từ `SPEC ## Screen Details`, không lấy từ ảnh — thiếu ảnh chỉ mất phần minh hoạ.
 

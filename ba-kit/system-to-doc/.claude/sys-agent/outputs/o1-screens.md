@@ -67,7 +67,7 @@ Cột `R`: `EV-0031; EV-0102` hoặc `⚠ UNKNOWN — bị chặn theo P3 (Q-007
 | 3 | Lập **Screen Creation Plan** từ `02_Screen` của site | Mọi màn có `Status` |
 | 4 | Duplicate `Sample` → 1 sheet / màn (tên sheet = Screen ID) | `Sample` không bị chạm |
 | 5 | Neutralize: xoá banner `A8:F8`, `F6 → WORKING_SCREEN`, điền `F1..F5` | — |
-| 6 | Metadata → ảnh (`A9+`, ≤ 840×900 px, map ảnh theo URL, **cấm** đoán theo nội dung ảnh) → bảng item | Mọi item có `EV` ở `R` hoặc `UNKNOWN` |
+| 6 | Metadata → ảnh (`A9` caption, `A10+` ảnh, ≤ 840×900 px, map ảnh theo URL, **cấm** đoán theo nội dung ảnh) → bảng item. **Ảnh phải đánh số trước khi chèn** (badge đỏ = cột `#` của bảng item) bằng `scripts/annotate-ui-image.py`, lưu `annotated/<Screen ID>.png`, mở xem lại — xem `../basic-design/workbook-structure.md` §2.3a | Mọi item có `EV` ở `R` hoặc `UNKNOWN` |
 | 7 | Catalog message: dùng lại `Common mesage` trước, thêm `Screen Error message` | Mọi code trong `P`/`Q` tồn tại |
 | 8 | `Screen Index` (đủ màn, `UI Source`) + `Change History`: thêm dòng **Change ID tiếp theo** sau dòng cuối của template (template có sẵn `CHG-0001…0005` → dòng mới `CHG-0006`, nội dung "AS-IS baseline ver<N>") | gate check 12: ID liên tục |
 | 9 | Gate | `FAIL = 0` |
@@ -94,5 +94,6 @@ python3 $S/selftest-basic-design.py "$V/01_Screens/BasicDesign_WEB-01_ver<N>.xls
 - ❌ Gộp nhiều website vào 1 workbook
 - ❌ Bỏ màn vì "chưa có ảnh" — tạo sheet, ghi `NO IMAGE — text only`
 - ❌ Chèn ảnh đoán theo nội dung nhìn thấy thay vì map bằng URL
+- ❌ Chèn ảnh chưa đánh số (không badge / badge không khớp cột `#`)
 - ❌ Chèn screenshot có dữ liệu người dùng thật (P11 `[B]/[C]`)
 - ❌ Ghi `→ SC-xxx` mà màn đích không có trong `02_Screen`

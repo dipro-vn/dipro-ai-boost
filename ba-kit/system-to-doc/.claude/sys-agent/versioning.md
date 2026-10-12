@@ -9,11 +9,11 @@
 ```
 my-project/
 ├── CLAUDE.md · POLICIES.md · AGENTS.md · templates/ · .claude/     ← kit
-├── inputs/
+├── inputs/            kit có sẵn các folder con — user chỉ việc bỏ file vào
+│   ├── repo/          source code (mỗi repo 1 folder con)
 │   ├── db/            schema-only dump (.sql)
-│   ├── docs/          tài liệu KH (nếu có)
 │   └── cr/            yêu cầu thay đổi (Luồng 2)
-├── .auth/             phiên đăng nhập Playwright — KHÔNG commit, KHÔNG copy vào outputs
+├── .auth/             credentials.local.env (tài khoản TEST) + phiên Playwright — KHÔNG commit, KHÔNG copy vào outputs
 └── outputs/
     ├── ver1_011026_baseline/
     ├── ver2_151026_CR-001-them-coupon/

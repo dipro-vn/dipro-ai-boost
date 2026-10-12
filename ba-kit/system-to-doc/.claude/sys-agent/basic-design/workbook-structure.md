@@ -66,6 +66,18 @@
 
 Quy ước: **ảnh UI nằm cột A–F bên trái, bảng item nằm cột H–R bên phải, cùng dòng**.
 
+### 2.3a Đánh số ảnh — bắt buộc trước khi chèn
+
+> Mẫu chuẩn: `BD_01_Login.xlsx` → sheet `DA_AUTHEN_001_Login`.
+
+| Quy tắc | Giá trị |
+|---|---|
+| Số trên ảnh | = cột `#` (H) của bảng item cùng sheet. Item không hiện trên ảnh → không đặt badge, ghi `R`: `Không hiển thị trên ảnh` |
+| Kiểu badge | Tròn đỏ `#C41230`, chữ trắng đậm, viền trắng, đường kính ≈ 4.5% rộng ảnh (≥ 28 px), đặt góc trên-phải trong vùng item, không che nội dung |
+| File | Ảnh gốc giữ nguyên; bản đánh số lưu `annotated/<Screen ID>.png` và **chỉ bản này được chèn** |
+| Caption | `A9`: `Ảnh <nguồn> #<NN>-<MM> — <Screen ID> · <tên màn> · số đỏ trên ảnh = # trong bảng item`; ảnh anchor từ `A10` |
+| Công cụ | `python3 .claude/skills/system-analyst/scripts/annotate-ui-image.py <gốc> <annotated> --marks "1:0.5,0.18;2:0.93,0.22" --expect <N item hiển thị>` — x,y = tâm badge (0–1 theo tỉ lệ ảnh, >1 = px). Chạy xong **mở ảnh xem lại** từng badge |
+
 **Kích thước vùng ảnh (đo thật):**
 
 | | Giá trị |

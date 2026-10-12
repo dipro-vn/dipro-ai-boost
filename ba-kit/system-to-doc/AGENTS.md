@@ -59,6 +59,9 @@
 ├── hooks/detect-pii.js               H06 — chặn PII/credential trước khi ghi / đẩy lên Figma
 ├── config/pii-patterns.json
 └── settings.json                     nối H06 vào PreToolUse
+inputs/                               có sẵn repo/ · db/ · cr/ — user bỏ file vào (AI tự tìm trước khi hỏi); README trong từng folder
+.auth/                                credentials.example.env (mẫu) → credentials.local.env (user điền, AI không đọc) · KHÔNG commit
+outputs/                              AI tự tạo mỗi lần chạy 1 folder ver<N>_...
 docs/                                 hướng dẫn sử dụng (docx)
 templates/                            sample_basic_design.xlsx · high-level-template.docx · template_estimation.xlsx (sheet Estimation Luồng 2)
 ```

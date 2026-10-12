@@ -63,6 +63,8 @@
 
 Quy ước: **ảnh UI nằm cột A–F bên trái, bảng item nằm cột H–R bên phải, cùng dòng**.
 
+> 🔢 **Ảnh phải được đánh số trước khi chèn**: badge đỏ trên ảnh = cột `#` (H) của bảng item; `A9` là caption, ảnh anchor từ `A10`. Quy tắc + script: `output-5-basic-design.md` §1.1h. Mẫu: `BD_01_Login.xlsx` → `DA_AUTHEN_001_Login`.
+
 **Kích thước vùng ảnh (đo thật):**
 
 | | Giá trị |

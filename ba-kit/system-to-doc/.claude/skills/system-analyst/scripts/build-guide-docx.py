@@ -125,19 +125,22 @@ def img_two_flows(path):
 
 
 def img_folder(path):
-    plt, P, fig, ax = _canvas(10, 5.6)
+    plt, P, fig, ax = _canvas(11, 6.9)
     lines = [
         ("my-project/", 0, True), ("CLAUDE.md · POLICIES.md · AGENTS.md · README.md", 1, False),
         (".claude/ · templates/ · docs/            ← kit, không sửa", 1, False),
-        ("inputs/", 1, True), ("db/schema.sql        ← (tuỳ chọn) dump CHỈ cấu trúc", 2, False),
-        ("cr/                  ← bỏ file yêu cầu thay đổi vào đây (Luồng 2)", 2, False),
-        (".auth/                ← phiên + file tài khoản test — KHÔNG commit", 1, False),
+        ("inputs/               ← CÓ SẴN — bạn chỉ việc bỏ file vào", 1, True),
+        ("repo/                ← source code, mỗi repo 1 folder con", 2, False),
+        ("db/                  ← schema.sql (chỉ cấu trúc, không dữ liệu)", 2, False),
+        ("cr/                  ← file yêu cầu thay đổi (Luồng 2)", 2, False),
+        (".auth/                ← CÓ SẴN — tài khoản test, KHÔNG commit", 1, True),
+        ("credentials.local.env ← bạn điền (copy từ credentials.example.env)", 2, False),
         ("outputs/              ← AI tự tạo, mỗi lần chạy 1 folder", 1, True),
         ("ver1_011026_baseline/", 2, False), ("ver2_151026_CR-001-them-coupon/", 2, False),
     ]
     for i, (t, lvl, bold) in enumerate(lines):
         name, _, note = t.partition("←")
-        y = 5.2 - i * 0.5
+        y = 6.5 - i * 0.5
         color = BLUE if bold else INK
         ax.text(0.3 + lvl * 0.5, y, ("├─ " if lvl else "") + name.strip(), fontsize=12,
                 weight="bold" if bold else "normal", color=color)
@@ -163,7 +166,7 @@ def img_flow1_steps(path):
 def img_credentials(path):
     plt, P, fig, ax = _canvas(13, 4.6)
     ax.text(0.2, 4.3, "Môi trường TEST (dev / staging, tài khoản test)", fontsize=12, weight="bold", color=GREEN)
-    steps = [("AI tạo template\n.auth/credentials.local.env\n(giá trị trống)", BLUE_BG, BLUE),
+    steps = [("Có sẵn .auth/\ncredentials.example.env\n→ copy .local.env", BLUE_BG, BLUE),
              ("Bạn mở file, điền\ntài khoản (+ Basic Auth)\nghi ENV=TEST → lưu", ORANGE_BG, ORANGE),
              ("Script tự đăng nhập\n(AI không đọc file)", GREEN_BG, GREEN),
              ("Quét toàn bộ màn\nbị đá phiên →\ntự đăng nhập lại", GREEN_BG, GREEN)]
@@ -569,7 +572,14 @@ def build(kit, samples, source_guide, shots):
     g.bullets(["Tạo 1 folder riêng cho mỗi hệ thống cần khảo sát, VD: my-project.",
                "Tải kit và giải nén, copy toàn bộ nội dung folder system-to-doc vào my-project."])
     g.bold_line("Link tải kit (Google Drive): " + DRIVE_LINK)
-    g.bullets(["Tạo thêm inputs/db/ (nếu có file schema) và inputs/cr/ (để bỏ yêu cầu thay đổi sau này)."])
+    g.p("Kit đã có sẵn các folder để bỏ file vào (mỗi folder có README.md hướng dẫn riêng):")
+    g.table(["Folder", "Bỏ gì vào"],
+            [["inputs/repo/", "Source code hệ thống — mỗi repo 1 folder con (web-fe/, api/, batch/…). Không bỏ .env, key, node_modules."],
+             ["inputs/db/", "File schema.sql CHỈ cấu trúc (mysqldump --no-data / pg_dump --schema-only)."],
+             ["inputs/cr/", "File yêu cầu thay đổi của khách (.docx .pdf .xlsx .md, ảnh) — dùng ở Luồng 2."],
+             [".auth/credentials.local.env", "Tài khoản test website: copy từ .auth/credentials.example.env rồi điền (xem Bước 3)."]])
+    g.note("Folder inputs/ và .auth/ đã được .gitignore — file bạn bỏ vào không bị commit. "
+           "Có folder nào để trống, AI hỏi đường dẫn khác ở bước 2.")
     g.note("phải có folder .claude/ nằm ngay trong my-project. Trên Mac folder này bị ẩn — "
            "bấm Shift + Command + . để hiện, hoặc mở bằng VS Code.")
     g.image(I("src_tao-folder.png"), "Tạo folder dự án trên máy", width_cm=6.5)
@@ -594,9 +604,9 @@ def build(kit, samples, source_guide, shots):
     g.table(["Nhóm", "AI hỏi", "Bạn chuẩn bị"], [
         ["Website", "Số site, URL, staging hay production; tài khoản role nào, ai cấp, được phép dùng để quét không; "
                     "chỉ ĐỌC hay được CREATE/UPDATE; vùng cấm", "URL + tài khoản TEST"],
-        ["Source code", "Số repo, đường dẫn, FE hay BE, repo FE thuộc website nào", "Đường dẫn repo trên máy"],
+        ["Source code", "Repo nào (AI tự liệt kê từ inputs/repo/), FE hay BE, repo FE thuộc website nào", "Repo đã bỏ vào inputs/repo/"],
         ["Database (tuỳ chọn)", "File schema / chỉ có migration / không có",
-         "mysqldump --no-data hoặc pg_dump --schema-only"],
+         "File .sql chỉ cấu trúc trong inputs/db/ (mysqldump --no-data / pg_dump --schema-only)"],
         ["Figma (tuỳ chọn)", "Link design hiện tại; link file để AI vẽ flow; có publish Design System không",
          "Link figma.com/design/..."],
         ["Khác", "Có làm bug list không; ngôn ngữ; nguồn có dữ liệu người dùng thật không", ""],
@@ -608,8 +618,8 @@ def build(kit, samples, source_guide, shots):
     # ---- BUOC 3
     g.h1("BƯỚC 3 — TÀI KHOẢN ĐĂNG NHẬP WEBSITE")
     g.p("Mật khẩu không bao giờ gõ vào chat. AI chọn cách đăng nhập theo môi trường bạn đã xác nhận:")
-    g.bullets(["**Môi trường TEST** — AI tạo file .auth/credentials.local.env có sẵn chỗ trống → bạn mở file, "
-               "điền tài khoản (+ Basic Auth nếu có), ghi ENV=TEST, lưu rồi trả lời \"xong\".",
+    g.bullets(["**Môi trường TEST** — điền sẵn file .auth/credentials.local.env (copy từ credentials.example.env; chưa có thì AI tạo với chỗ trống) → bạn mở file, "
+               "điền URL, tài khoản (+ Basic Auth nếu có), ghi ENV=TEST, lưu rồi trả lời \"xong\".",
                "**Sau đó** — script tự đăng nhập và quét toàn bộ màn, tự đăng nhập lại khi bị app đá phiên. "
                "AI chỉ truyền đường dẫn file cho script, không đọc nội dung.",
                "**Production / chưa chắc** — AI mở cửa sổ trình duyệt, bạn tự đăng nhập; AI chỉ lưu phiên vào .auth/."])
@@ -736,7 +746,7 @@ def build(kit, samples, source_guide, shots):
     g.h3("5- Đăng nhập không được (trang 1 URL, SPA)")
     g.p("Báo AI phần tử hiển thị sau khi đăng nhập (VD tên menu) để AI dùng --success-selector.")
     g.h3("6- Claude Code chặn khi dùng tài khoản test")
-    g.p("Không gõ tài khoản vào chat. Dùng file .auth/credentials.local.env: AI tạo template → bạn điền, "
+    g.p("Không gõ tài khoản vào chat. Dùng file .auth/credentials.local.env: copy từ mẫu (hoặc AI tạo template) → bạn điền, "
         "ghi ENV=TEST → script tự đăng nhập (xem Bước 3).")
 
     path = os.path.join(out_dir, "Hướng dẫn sử dụng System to Doc.docx")

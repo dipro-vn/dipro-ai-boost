@@ -115,7 +115,7 @@ S=.claude/skills/system-analyst/scripts
 V=outputs/ver<N>_<DDMMYY>_<slug>; I=$V/_internal
 
 # Bước 3 — quét nhạy cảm TRƯỚC khi đọc bất cứ nguồn nào (exit 3 → DỪNG, xem §6)
-python3 $S/scan-sensitive.py --path <repo-1> --path <repo-2> --path inputs/ --out $I/gates/sensitive.md
+python3 $S/scan-sensitive.py --path <repo-1> --path <repo-2> --path inputs/   # repo mặc định: inputs/repo/*/ --out $I/gates/sensitive.md
 
 # Website — mỗi site 1 lần, chain --ev-start bằng next_ev của lần trước
 # Tài khoản — TEST đã xác nhận: template → user điền → script tự đọc (agent KHÔNG đọc file credential)
@@ -131,7 +131,7 @@ node $S/crawl-site.js --site WEB-01 --url <url> --out $I --mode read-only \
 python3 $S/scan-repo.py <repo> --repo-id REPO-01 --out $I --ev-start <next_ev> --api-start 1
 
 # DB — chỉ dump schema-only (dump có dữ liệu → script từ chối, exit 3)
-python3 $S/read-schema.py --dump inputs/db/schema.sql --out $I --ev-start <next_ev>
+python3 $S/read-schema.py --dump inputs/db/<file>.sql --out $I --ev-start <next_ev>
 
 # Design tokens quan sát được (cho O4) + tokens.json khởi đầu đúng format type Design System
 python3 $S/extract-design-tokens.py --crawl $I/recon/crawl --css-root REPO-01@WEB-01=<fe-repo> --out $I/recon/design \
