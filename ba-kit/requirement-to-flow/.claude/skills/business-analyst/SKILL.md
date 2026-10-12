@@ -126,6 +126,7 @@ See [REFERENCE.md](REFERENCE.md) for detailed interview frameworks and technique
 - **[scripts/discovery-checklist.sh](scripts/discovery-checklist.sh)** - Interactive discovery questions
 - **[scripts/validate-brief.sh](scripts/validate-brief.sh)** - Validate brief completeness
 - **[scripts/export-open-questions.py](scripts/export-open-questions.py)** - Output OQ: validate OQ register + export `open_questions.xlsx` (3 sheets: Guideline / Open Questions / Summary). Rule: `.claude/ba-agent/open-questions.md`
+- **[scripts/annotate-ui-image.py](scripts/annotate-ui-image.py)** - Output 5: đánh số ảnh UI (badge đỏ = cột `#` bảng item) trước khi chèn vào xlsx. Rule: `.claude/ba-agent/basic-design/output-5-basic-design.md` §1.1h
 
 ## Workflow Process
 

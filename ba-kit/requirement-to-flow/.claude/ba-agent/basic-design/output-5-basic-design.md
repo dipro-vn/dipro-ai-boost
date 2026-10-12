@@ -134,7 +134,8 @@ get_screenshot(node-id = <node của màn>)  → lưu thành PNG
 
 ```
 <feature>/basic-design/images/
-├── CM_AUTH_001.png              ← 1 màn 1 ảnh
+├── CM_AUTH_001.png              ← 1 màn 1 ảnh (ảnh GỐC, không sửa)
+├── annotated/CM_AUTH_001.png    ← bản ĐÃ ĐÁNH SỐ — chỉ bản này được chèn vào xlsx (§1.1h)
 ├── CM_AUTH_002_step1.png        ← màn nhiều state: <Screen ID>_<state>.png
 ├── CM_AUTH_002_step2.png
 └── CM_AUTH_002_step3.png
@@ -155,7 +156,7 @@ get_screenshot(node-id = <node của màn>)  → lưu thành PNG
 | Chiều rộng hiển thị tối đa | **840 px** (chừa lề 14 px) |
 | Chiều cao hiển thị tối đa | **900 px** |
 | Scale | Giữ nguyên tỷ lệ. Fit theo chiều rộng trước; nếu cao vượt 900 px thì fit lại theo chiều cao |
-| Anchor | Cột **A**, tại row đầu của khối ảnh (`A9` cho ảnh đầu tiên) |
+| Anchor | Cột **A**. `A9` = dòng caption (§1.1h); ảnh đầu tiên anchor ngay dưới, từ `A10` |
 | Merge | `A<r>:F<r+k>` cho vùng ảnh, `k` đủ chứa chiều cao ảnh |
 | Row height | Tổng row height của vùng ≥ chiều cao ảnh. Đổi đơn vị: `pt = px × 0.75` |
 
@@ -175,6 +176,8 @@ Màn wizard / nhiều step nằm **cùng 1 sheet** (§3 Granularity). Mỗi stat
 - ❌ Chèn ảnh của màn khác cho "đỡ trống"
 - ❌ Chèn ảnh từ Output 3 **chưa** approve
 - ❌ Chèn ảnh rộng hơn 840 px (đè bảng item — gate check 13 bắt)
+- ❌ **Chèn ảnh chưa đánh số** (không badge, hoặc badge không khớp cột `#`) — xem §1.1h
+- ❌ Ghi đè ảnh gốc bằng bản đã đánh số; hoặc vẽ badge bằng tay/công cụ khác thay vì `annotate-ui-image.py`
 - ❌ Chèn ảnh mà không map chắc chắn được Screen ID
 - ❌ Suy business rule từ ảnh rồi ghi vào `P`/`Q` như FACT (ảnh là **visual source**, không phải rule source — Rule R8)
 
@@ -193,6 +196,43 @@ Khi Figma không truy cập được (chưa authorize, hết hạn mức, offlin
 **Lý do:** nội dung sheet lấy từ `SPEC ## Screen Details`, **không** lấy từ ảnh (Rule R8 — ảnh là visual source, không phải rule source). Thiếu ảnh chỉ làm mất phần minh hoạ, không mất nội dung spec.
 
 Bổ sung ảnh sau là thao tác nhẹ, không phải tạo lại — xem **§1.3**.
+
+#### h) 🔢 Đánh số ảnh — BẮT BUỘC mỗi khi chèn ảnh vào workbook
+
+> Khi user yêu cầu lấy ảnh đưa vào Basic Design: **ảnh phải được đánh số TRƯỚC khi chèn**. Ảnh trần không có số thì người đọc không biết dòng nào của bảng item ứng với vùng nào trên màn. Tham chiếu chuẩn: `BD_01_Login.xlsx` → sheet `DA_AUTHEN_001_Login` (badge đỏ 1–6 trên ảnh = cột `#` ở `H`).
+
+**Quy tắc:**
+
+| Quy tắc | Giá trị |
+|---|---|
+| Số trên ảnh | = **cột `#` (H)** của bảng item cùng sheet. Item 3 ở bảng → badge `3` trên ảnh. Không đánh số riêng |
+| Phủ | Mọi item có **vị trí nhìn thấy** trên ảnh đều có badge. Item không hiện trên ảnh (hành vi ẩn, background, logic) → **không** đặt badge, ghi `Comment` (`R`) `Không hiển thị trên ảnh` |
+| Không số thừa | Không có badge nào không tương ứng một item của bảng |
+| Kiểu badge | Hình tròn đỏ `#C41230`, chữ trắng đậm, viền trắng. Đường kính ≈ 4.5% chiều rộng ảnh (tối thiểu 28 px) |
+| Vị trí | Góc trên-phải **bên trong** vùng item, không che chữ/icon của item. Hai item sát nhau (VD ô nhập + icon mắt) → so le, không chồng lên nhau |
+| Ảnh gốc | **Giữ nguyên** `images/<Screen ID>.png`. Bản đánh số lưu riêng `images/annotated/<Screen ID>.png` và **chỉ bản này được chèn** vào xlsx |
+| Caption | Ô `A9` ghi: `Ảnh <nguồn> #<NN>-<MM> — <Screen ID> · <tên màn> · <node/ảnh> · số đỏ trên ảnh = # trong bảng item`. Ảnh anchor ngay dưới, từ `A10` |
+
+**Trình tự:**
+
+```
+1. Điền xong bảng item (cột H = #)               ← số trên ảnh lấy từ đây
+2. Xác định toạ độ từng item trên ảnh
+     ưu tiên: Figma get_metadata → bbox node của item (x,y,w,h tương đối frame) ÷ kích thước frame
+     fallback: xem ảnh rồi ước lượng — BẮT BUỘC bước 4
+3. Chạy script:
+     python3 .claude/skills/business-analyst/scripts/annotate-ui-image.py \
+         images/<Screen ID>.png images/annotated/<Screen ID>.png \
+         --marks "1:0.50,0.18;2:0.93,0.22;..." --expect <số item hiển thị trên ảnh>
+     (toạ độ 0–1 = tỉ lệ theo ảnh, > 1 = pixel; x,y là TÂM badge)
+4. MỞ ảnh vừa sinh ra xem (Read) — kiểm từng badge: đúng item, không che nội dung, không ra ngoài ảnh
+5. Resize theo §1.1d rồi chèn bản annotated; ghi caption vào A9
+```
+
+- Script exit 1 (thiếu/thừa số, trùng số, toạ độ ngoài ảnh) → **sửa danh sách `--marks`, chạy lại**. Không chèn ảnh khi script chưa OK.
+- Badge sai chỗ sau bước 4 → chỉnh toạ độ chạy lại, **không** chèn "tạm" rồi để đó.
+- Ảnh đã có số sẵn từ nguồn (Figma frame có annotation) → vẫn phải khớp cột `#`; không khớp → đánh số lại trên bản gốc chưa có số, hoặc báo user.
+- Sheet nhiều state (§1.1e): mỗi ảnh đánh số **liên tục theo cột `#` của nhóm item state đó**, không reset về 1 ở mỗi ảnh.
 
 ### 1.2 Khởi tạo master từ file mẫu — PHẢI loại sheet không thuộc dự án
 
@@ -230,7 +270,7 @@ File mẫu chứa **sheet ví dụ** để minh hoạ format — `Login_Sample` 
 |---|---|---|
 | 0 | Backup master (§4 Bước 0) | Bắt buộc như mọi lần ghi |
 | 1 | Resolve sheet theo **Screen ID** qua `Screen Index` | Không dùng tên hiển thị |
-| 2 | Chèn ảnh vào `A9+`, resize theo §1.1d | **Chỉ vùng ảnh** |
+| 2 | **Đánh số ảnh (§1.1h)** rồi chèn từ `A9` (caption) / `A10` (ảnh), resize theo §1.1d | **Chỉ vùng ảnh** |
 | 3 | Cập nhật `Screen Index` cột `I` (`UI Source`) + cột `L` (`Notes`) | `NO IMAGE — text only` → nguồn ảnh thật |
 | 4 | `F3` Version +1 · `B3`/`D3` người sửa + ngày · `F4` → `WAITING APPROVAL` | Metadata của sheet đó |
 | 5 | Append `Change History`, `Change Type = UPDATE_SCREEN` | 1 row |
@@ -342,7 +382,7 @@ Lý do: `openpyxl` **không bảo toàn 100%** conditional formatting, một s�
 | 4 | Build **Screen Creation Plan** — bảng 3 nhóm: NEW / EXISTING / NEED CONFIRM | Mọi Screen ID trong scope đã được phân nhóm. `NEED CONFIRM` ≠ rỗng → hỏi user, không tự tạo |
 | 5 | Duplicate `Sample` → 1 sheet / screen NEW | `Sample` **không bị chạm** (§6 kiểm bằng script) |
 | 6 | Neutralize sheet vừa duplicate | Xóa banner `A8:F8`; đổi `F6` → `WORKING_SCREEN`; điền `F1..F5` |
-| 7 | Populate: metadata (rows 1–6) → ảnh (`A9+`, nếu có) → bảng item (`H9:R19`, mở rộng nếu > 11 item) | Mọi item trace về SPEC `## Screen Details`. Không suy rule chỉ từ ảnh |
+| 7 | Populate: metadata (rows 1–6) → ảnh **đã đánh số §1.1h** (`A9` caption, `A10+` ảnh, nếu có) → bảng item (`H9:R19`, mở rộng nếu > 11 item) | Mọi item trace về SPEC `## Screen Details`. Không suy rule chỉ từ ảnh |
 | 8 | Update catalog: reuse `Common mesage` trước → append `Screen Error message` theo block category | Mọi code trỏ trong cột `P`/`Q` đều tồn tại thật |
 | 9 | Append `Screen Index` (1 row/sheet) + `Change History` (1 row/lần chạy) | Không thiếu row nào |
 

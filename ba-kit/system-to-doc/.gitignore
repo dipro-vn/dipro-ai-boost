@@ -1,2 +1,16 @@
-# Phien dang nhap Playwright — chua cookie/token, KHONG commit
-.auth/
+# Phien dang nhap Playwright + tai khoan test — chua cookie/token/mat khau, KHONG commit
+.auth/*
+!.auth/.gitkeep
+!.auth/README.md
+!.auth/credentials.example.env
+
+# Du lieu khach hang user bo vao — KHONG commit (giu lai README + .gitkeep de folder ton tai)
+inputs/repo/*
+inputs/db/*
+inputs/cr/*
+!inputs/repo/.gitkeep
+!inputs/repo/README.md
+!inputs/db/.gitkeep
+!inputs/db/README.md
+!inputs/cr/.gitkeep
+!inputs/cr/README.md

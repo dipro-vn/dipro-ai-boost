@@ -89,6 +89,13 @@ def has_border(c):
     return True
 
 
+def _fold(s):
+    """Bo dau + lower de so khop caption khong phu thuoc dau tieng Viet."""
+    import unicodedata
+    s = unicodedata.normalize("NFD", s.replace("đ", "d").replace("Đ", "D"))
+    return "".join(c for c in s if unicodedata.category(c) != "Mn").lower()
+
+
 def img_size_px(im):
     """Kich thuoc Excel THUC SU render (EMU trong anchor.ext), fallback im.width/height.
 
@@ -484,9 +491,19 @@ def run(master_path, before_path, expect_screens, approved, rep, asis_mode=False
                 f"{len(bad_img)} van de: " + "; ".join(bad_img[:6])
                 + ". Resize giu ty le theo output-5-basic-design.md muc 1.1d.")
     elif n_img:
-        rep.add(13, "Anh UI vua vung A-F", "PASS",
-                f"{n_img} anh, deu nam trong {IMG_MAX_W}x{IMG_MAX_H}px "
-                f"(do bang anchor.ext — kich thuoc Excel thuc su render)")
+        # anh phai duoc danh so (badge do = cot # cua bang item): caption o A9 phai noi ro
+        no_cap = [ws.title for ws in ws_list
+                  if getattr(ws, "_images", [])
+                  and "so do tren anh" not in _fold(str(ws["A9"].value or ""))]
+        if no_cap:
+            rep.add(13, "Anh UI vua vung A-F", "WARN",
+                    f"{n_img} anh vua khung, NHUNG {len(no_cap)} sheet thieu caption A9 "
+                    f"'so do tren anh = # trong bang item' (anh chua duoc danh so?): "
+                    + "; ".join(no_cap[:6]) + ". Xem output-5-basic-design.md muc 1.1h.")
+        else:
+            rep.add(13, "Anh UI vua vung A-F", "PASS",
+                    f"{n_img} anh, deu nam trong {IMG_MAX_W}x{IMG_MAX_H}px, co caption danh so "
+                    f"(do bang anchor.ext — kich thuoc Excel thuc su render)")
     else:
         rep.add(13, "Anh UI vua vung A-F", "WARN",
                 "Khong co anh nao de kiem (moi sheet deu NO IMAGE)")

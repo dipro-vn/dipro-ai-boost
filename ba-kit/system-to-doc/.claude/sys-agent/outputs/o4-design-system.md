@@ -1,6 +1,6 @@
 # O4 — Design System của hệ thống cũ
 
-> **Yêu cầu:** O4 ra **đúng chuẩn design system chung của công ty** — cùng chuẩn với `designer-kit/prototype-to-figma`, là format của Artifact type **Design System** trên claude.ai (bản mẫu: https://claude.ai/artifact/ModdSpJmnWd9yA4onTCtpp). Chỉ tạo khi **có đọc từ website hoặc Figma**; nguồn gồm website + source code (+ Figma).
+> **Yêu cầu:** O4 ra **đúng chuẩn design system chung của công ty** — cùng chuẩn với `designer-kit/document-to-figma`, là format của Artifact type **Design System** trên claude.ai (bản mẫu: https://claude.ai/artifact/ModdSpJmnWd9yA4onTCtpp). Chỉ tạo khi **có đọc từ website hoặc Figma**; nguồn gồm website + source code (+ Figma).
 >
 > Dùng lại về sau: `designer-kit` copy thẳng `04_DesignSystem/` thành `design-system/` để vẽ màn mới · Luồng 2 trục **Mockup** đối chiếu với nó.
 
@@ -124,7 +124,7 @@ P7b = Không → giữ file local, `STATUS.md` ghi `- Artifact: — (chưa publi
 
 **Version sau:** không tạo artifact mới — revise artifact cũ theo `SKILL.md` § Revising (đọc index + file sẽ sửa, gửi chỉ file đổi, index cuối, `lastChange.note`); Changelog trong `STATUS.md`.
 
-**Sang designer-kit:** `single` / `themes` → copy `04_DesignSystem/` → `designer-kit/prototype-to-figma/design-system/`; `per-site` → copy `04_DesignSystem/WEB-xx/` của site đang vẽ. Cùng cấu trúc. Designer duyệt → `STATUS.md` `APPROVED <ngày>`.
+**Sang designer-kit:** `single` / `themes` → copy `04_DesignSystem/` → `designer-kit/document-to-figma/design-system/`; `per-site` → copy `04_DesignSystem/WEB-xx/` của site đang vẽ. Cùng cấu trúc. Designer duyệt → `STATUS.md` `APPROVED <ngày>`.
 
 ---
 

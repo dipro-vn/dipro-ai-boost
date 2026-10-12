@@ -121,6 +121,7 @@ Có URL / chức năng nào tuyệt đối không được chạm? (VD /admin/ba
 ## Lượt 3 — Source code (P5) + Database (P6)
 
 ### P5 — Source code
+> **Agent tự `Glob inputs/repo/*/` trước khi hỏi.** Có folder con → coi mỗi folder là 1 repo (`REPO-01…`), in danh sách để user xác nhận (đặt option `[A]`/`[B]` theo số folder) thay vì bắt gõ lại đường dẫn. Để trống → hỏi đường dẫn nơi khác.
 ```
 P5a. Có source code để quét không? Bao nhiêu repo, ở đâu?
      [A] 1 repo  [B] Nhiều repo (FE / BE / batch riêng)  [C] Không có
@@ -134,6 +135,7 @@ P5b. (chỉ khi có repo FE) Repo FE nào là của website nào?
 - Repo có trong đường dẫn nhưng `scan-sensitive.py` báo HIGH → xem §6 agent.
 
 ### P6 — Database (tuỳ chọn)
+> **Agent tự `Glob inputs/db/*.sql` trước khi hỏi.** Có file → đề xuất `[A]` với đường dẫn đó. Chưa có → nhắc user lệnh xuất schema-only (`inputs/db/README.md`).
 ```
 Có thông tin database không?
   [A] Có file schema-only (.sql) — đường dẫn?  (khuyến nghị đặt ở inputs/db/)

@@ -23,14 +23,30 @@ Copy toàn bộ folder `system-to-doc` vào folder dự án → mở bằng Clau
 
 > 🔧 **Kit tự lo môi trường.** Khi chạy `/analyze-system` hoặc `/change-request`, AI tự kiểm tra và **tự cài** những gì còn thiếu: thư viện Python, Playwright + trình duyệt (khi quét website), kết nối Figma MCP (khi vẽ Figma). Việc duy nhất bạn có thể được nhờ: gõ `/mcp` → chọn **figma** → **Authenticate** để đăng nhập Figma (tài khoản có quyền EDIT).
 
+Kit **có sẵn các folder để bạn bỏ file vào** — AI tự tìm ở đó trước khi hỏi lại đường dẫn:
+
 ```
 my-project/
 ├── CLAUDE.md · POLICIES.md · AGENTS.md · templates/ · .claude/    ← kit (không sửa)
-├── inputs/
-│   ├── db/schema.sql      ← (tuỳ chọn) dump CHỈ CẤU TRÚC, không dữ liệu
-│   └── cr/                ← nơi bỏ file yêu cầu thay đổi (Luồng 2)
-└── outputs/               ← AI tự tạo, mỗi lần chạy 1 folder version
+├── inputs/                      ← có sẵn, mỗi folder con có README.md hướng dẫn
+│   ├── repo/                    ← source code: mỗi repo 1 folder con (web-fe/, api/, batch/…)
+│   ├── db/                      ← schema.sql — dump CHỈ CẤU TRÚC, không dữ liệu
+│   └── cr/                      ← file yêu cầu thay đổi của khách (Luồng 2)
+├── .auth/                       ← tài khoản test + phiên đăng nhập — KHÔNG commit
+│   ├── credentials.example.env  ← mẫu; copy thành credentials.local.env rồi điền
+│   └── credentials.local.env    ← bạn điền; script đọc, AI không đọc
+└── outputs/                     ← AI tự tạo, mỗi lần chạy 1 folder version
 ```
+
+| Bạn có | Bỏ vào đâu |
+|---|---|
+| Source code | `inputs/repo/<tên-repo>/` (không có `.env`, key, `node_modules/`) |
+| File DB | `inputs/db/schema.sql` — `mysqldump --no-data` / `pg_dump --schema-only` |
+| Tài khoản test website | `.auth/credentials.local.env` (xem bên dưới) |
+| Yêu cầu thay đổi | `inputs/cr/` |
+| Website · Figma | Chỉ cần URL — AI hỏi khi chạy |
+
+Nội dung `inputs/repo|db|cr/` và `.auth/` đã `.gitignore` — không bị commit.
 
 ---
 
@@ -46,13 +62,13 @@ AI sẽ hỏi (chọn đáp án hoặc gõ vào ô *Other*):
 | Nhóm | AI hỏi | Chuẩn bị sẵn |
 |---|---|---|
 | **Website** | Bao nhiêu site · URL · staging/production · tài khoản role nào · **ai cấp, có được phép dùng để quét không** · chỉ ĐỌC hay được CREATE/UPDATE · vùng cấm | URL, tài khoản **test** |
-| **Source code** | Bao nhiêu repo · đường dẫn · FE/BE · repo FE thuộc website nào | Đường dẫn repo trên máy |
-| **Database** *(tuỳ chọn)* | Có file schema / quyền đọc DB / chỉ có migration / không có | `mysqldump --no-data` hoặc `pg_dump --schema-only` |
+| **Source code** | Repo nào (AI tự liệt kê từ `inputs/repo/`) · FE/BE · repo FE thuộc website nào | Repo đã bỏ vào `inputs/repo/` |
+| **Database** *(tuỳ chọn)* | Có file schema / quyền đọc DB / chỉ có migration / không có | File `.sql` chỉ cấu trúc trong `inputs/db/` |
 | **Figma** *(tuỳ chọn)* | Link design hiện tại · **link file để vẽ flow** | Link `figma.com/design/...` |
 | Khác | Có làm bug list không · ngôn ngữ · nguồn có dữ liệu thật không | |
 
 > ⚠️ **Mật khẩu không gõ vào chat.**
-> - **Môi trường kiểm thử (dev / staging, tài khoản test):** AI tạo file `.auth/credentials.local.env` có sẵn chỗ trống → bạn mở file, điền tài khoản (+ Basic Auth nếu có) và ghi `ENV=TEST` → AI cho Playwright tự đăng nhập và quét toàn bộ màn, **tự đăng nhập lại** nếu app đá phiên. AI không đọc file này; script từ chối nếu không phải `TEST`.
+> - **Môi trường kiểm thử (dev / staging, tài khoản test):** điền sẵn `.auth/credentials.local.env` (copy từ `credentials.example.env`; chưa có thì AI tạo file với chỗ trống) → bạn mở file, điền URL, tài khoản (+ Basic Auth nếu có) và ghi `ENV=TEST` → AI cho Playwright tự đăng nhập và quét toàn bộ màn, **tự đăng nhập lại** nếu app đá phiên. AI không đọc file này; script từ chối nếu không phải `TEST`.
 > - **Production / chưa chắc:** AI mở trình duyệt, bạn tự đăng nhập.
 > - `.auth/` không commit, không nằm trong output. Xong khảo sát thì xoá file và đổi mật khẩu test.
 > ⚠️ Mặc định AI **chỉ đọc** — mọi thao tác ghi bị chặn ở tầng mạng.
