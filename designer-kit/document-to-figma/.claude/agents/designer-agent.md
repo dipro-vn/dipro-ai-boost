@@ -140,6 +140,9 @@ Dựng **1 frame `Screen Index — <Feature> · <platform>`** cùng page với c
 ### Bước 5.6 — Field Description Table trên Figma (K8) — BẮT BUỘC sau Screen Index
 Output thứ 2 của Designer: bảng mô tả **từng trường (item)** của mỗi màn hình chính, JP | VI song song (format theo node `34325:198362`, file `VKAAOyoSPvgoB3H2qdeeV3`). `Read` `.claude/designer-agent/field-table-spec.md` trước. **KHÔNG SUY DIỄN**: lấy nguyên văn từ item trong tài liệu (prototype HTML, vd `KD_DATA.views[].rows[]`) / tài liệu thiết kế / `SPEC.md ## Screen Details`; không có nguồn → DỪNG, `AskUserQuestion`. 1 khối `Fields · <Screen Code>` (banner "Flow note" hyperlink tới frame + Table 24 cột) / màn hình chính, đặt trong SECTION `Mô tả trường` ngay dưới section màn hình (file Design không có `createTable` → dựng bằng auto-layout). Kiểm tra số hàng = số dòng nguồn + `get_screenshot`. Chưa có → chưa được báo hoàn thành.
 
+### Bước 5.7 — Flow Connectors: nối liền các màn hình (K9) — BẮT BUỘC sau Field Table
+Vẽ xong frame phải **nối thành luồng**: mỗi chuyển tiếp = 1 đường nối xanh `#0A69D9` (nét 3 px, mũi tên ở đích) + 1 nhãn 2 dòng JP/VN (Medium 14 px), kèm legend. Chuyển tiếp lấy **từ nguồn** (không suy; nguồn không nói → `AskUserQuestion`). Không frame mồ côi, không đường xuyên thân frame (quét bbox bằng script). Format theo node `34847:83576`, file `VKAAOyoSPvgoB3H2qdeeV3`. `Read` `.claude/designer-agent/flow-connector-spec.md` trước (style đo, hình học ngang/dọc/khuỷu/vòng/tỏa nhánh, DoD). Ghi bảng chuyển tiếp + node ID đường vào `figma-screens.md`.
+
 ### Bước 6 — Output (K6)
 Ghi `output/<feature>/figma-screens.md` theo `.claude/designer-agent/output-template.md`: Screen Inventory · Figma link từng frame · **link frame Screen Index** · **node ID các Field Table** · Design notes `[Design]` (điểm mơ hồ, component đề xuất mới, token TBD). In link Figma section + link Screen Index cho user.
 
@@ -155,3 +158,4 @@ User dán link frame + yêu cầu sửa → **chỉ sửa frame đó** (scoped u
 - Mọi quyết định của user (nguồn design system, phạm vi, TBD) ghi vào đầu `figma-screens.md`.
 - **Bắt buộc có Field Description Table (nguyên văn từ nguồn, không suy diễn) cho mọi màn hình chính** (Bước 5.6 · `.claude/designer-agent/field-table-spec.md`).
 - **Bắt buộc có frame Screen Index trên Figma sau khi vẽ xong** (Bước 5.5 · `.claude/designer-agent/screen-index-spec.md`) — thiếu là chưa hoàn thành.
+- **Bắt buộc nối các màn hình bằng Flow Connectors** (Bước 5.7 · `.claude/designer-agent/flow-connector-spec.md`) — không frame mồ côi, mỗi đường có nhãn JP/VN, không xuyên thân frame.
