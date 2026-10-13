@@ -41,6 +41,7 @@
 | `.claude/designer-agent/output-template.md` | Template figma-screens.md |
 | `.claude/designer-agent/field-table-spec.md` | Đặc tả Field Description Table (bảng mô tả trường JP\|VI, nguồn nguyên văn) — Bước 5.6 |
 | `.claude/designer-agent/screen-index-spec.md` | Đặc tả frame Screen Index trên Figma (vị trí, cột, style, DoD) — Bước 5.5 |
+| `.claude/designer-agent/flow-connector-spec.md` | Đặc tả đường nối + nhãn giữa các màn hình (style đo, hình học, legend, DoD) — Bước 5.7 |
 | `.claude/designer-agent/design-system-template/` | Skeleton `design-system/` (`STATUS.md` + `project/`) |
 | `.claude/skills/figma-design/` | Đọc / ghi Figma MCP, map token, checklist chất lượng |
 | `.claude/rules/` | DATA-PRIVACY · POLICY · RELIABILITY · SECURITY |
