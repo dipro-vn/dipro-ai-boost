@@ -19,7 +19,7 @@ testing/[module]/test-cases.md (đã có, từ /gen-tcs) → /gen-automation
 **Nguyên tắc cốt lõi:**
 - **Không đoán locator** — mọi locator phải lấy từ DOM thật qua Playwright MCP, verify bằng thao tác thử.
 - **Output là code tĩnh, chạy độc lập** — sau khi sinh xong, test chạy bằng `npx playwright test`, không phụ thuộc MCP/agent nữa.
-- **Tự sửa lỗi (auto-heal)** — khi test FAIL, agent tự đọc lỗi, tự sửa, chạy lại, tối đa 5 vòng, không hỏi user giữa chừng trừ trường hợp chặn cứng (xem Section 5).
+- **Tự sửa lỗi phía script (auto-heal)** — khi test FAIL do lỗi script (locator, timeout, compile, data), agent tự sửa và chạy lại TC fail, tối đa 2 vòng. **Assertion fail không heal** — đó là nghi bug, giao QC quyết định (xem Section 5).
 - **1 project Playwright dùng chung** cho toàn bộ kit — tại `automation/` ở root, lớn dần theo từng module được automate.
 
 ---
@@ -39,7 +39,7 @@ Sử dụng skill này khi:
 
 # Section 1: Setup & Scaffold
 
-**Input:** `testing/[module]/test-cases.md` (bắt buộc), `testing/[module]/plan-tcs.md` (nên có), `context.md` (tùy).
+**Input:** `testing/[module]/test-cases.md` (bắt buộc), `testing/[module]/plan-tcs.md` (nên có), `CLAUDE.md` (tùy).
 
 1. Kiểm tra `automation/package.json` đã tồn tại chưa.
 
@@ -48,7 +48,7 @@ Sử dụng skill này khi:
 **Chưa tồn tại (lần chạy đầu tiên của cả kit):**
 
 2. Xác định base URL:
-   - Đọc `context.md` nếu có trường URL/domain của ứng dụng.
+   - Đọc `CLAUDE.md` nếu có trường URL/domain của ứng dụng.
    - Nếu không có → hỏi user: "Base URL của ứng dụng cần automate là gì?"
 
 3. Tạo cấu trúc thư mục:
@@ -144,7 +144,7 @@ Sử dụng skill này khi:
    }
 
    export function uniqueEmail(prefix: string): string {
-     return `${prefix}_${Date.now()}@test.com`;
+     return `tester+${prefix}_${Date.now()}@dipro.vn`;
    }
    ```
 
@@ -158,28 +158,28 @@ Sử dụng skill này khi:
     - [ ] MCP Recon
     - [ ] Sinh code
     - [ ] Run & Auto-heal
-    - [ ] Cleanup & Report
+    - [ ] Report
     ```
 
 ---
 
 # Section 2: Chọn phạm vi TC
 
-1. Đọc `testing/[module]/test-cases.md`, liệt kê toàn bộ TC (ID, Title, Priority/Risk nếu có).
-2. Đọc `testing/[module]/plan-tcs.md` (nếu có) để lấy Risk Level per Screen/Component.
+1. Đọc `testing/[module]/test-cases.md`, liệt kê toàn bộ TC (ID, Test Scenario, Traceability ID).
+2. Đọc mục `## High Risk & E2E` ở cuối `test-cases.md` (nếu có): Bảng 1 (nhóm TC high risk) và Bảng 2 (luồng E2E cần work trước).
 3. Đề xuất phạm vi cho user chọn — **luôn hỏi, đây là checkpoint bắt buộc duy nhất trước khi tự động chạy hết các bước sau:**
 
    | Chế độ | Khi dùng |
    |---|---|
-   | **A. Risk cao nhất (mặc định)** | Tự đề xuất danh sách TC priority P1 / Risk Level cao nhất |
+   | **A. High Risk & E2E (mặc định)** | Tự đề xuất TC thuộc Bảng 2 (E2E) trước, rồi Bảng 1 (nhóm high risk) |
    | **B. Chỉ định ID cụ thể** | User liệt kê TC ID muốn automate |
    | **C. Toàn bộ TC của module** | Automate hết — dùng khi module đã ổn định, cần phủ regression |
 
-4. Hiển thị danh sách TC đã chọn (ID + Title) kèm số lượng, chờ user xác nhận trước khi sang Section 3.
+4. Hiển thị danh sách TC đã chọn (ID + Test Scenario) kèm số lượng, chờ user xác nhận trước khi sang Section 3.
 5. Cập nhật `automation/task.md` với bảng TC đang automate:
    ```markdown
    ## Test Cases to Automate
-   | TC ID | Title | Screen | Status |
+   | TC ID | Test Scenario | Screen | Status |
    |---|---|---|---|
    ```
 
@@ -241,7 +241,7 @@ Sử dụng skill này khi:
    import { <Screen>Page } from '../../pages/<module>/<Screen>.page';
 
    test.describe('<module> — <feature>', () => {
-     test('<Traceability ID>: <mô tả TC>', async ({ page }) => {
+     test('<TC ID> (<Traceability ID>): <mô tả TC>', async ({ page }) => {
        // Arrange
        const screenPage = new <Screen>Page(page);
        await page.goto('/'); // Điều chỉnh path nếu Screen không nằm ở route gốc (vd: '/login')
@@ -254,7 +254,7 @@ Sử dụng skill này khi:
      });
    });
    ```
-3. Mỗi test PHẢI có comment liên kết Traceability ID gốc từ `test-cases.md`.
+3. Mỗi test PHẢI mang **TC ID** (cột `ID`, VD `HRD-004`) trong tên test và có comment liên kết cả hai ID gốc từ `test-cases.md`, dạng `// TC: HRD-004 | Trace: AC-03, Q-HRD-003`. TC ID dùng để map kết quả về `automation-report.md` và `BUG-<TC ID>`; Traceability ID chỉ để trace nguồn (nhiều TC dùng chung một AC).
 4. Test data unique dùng `utils/test-data.ts`; credentials đọc từ `process.env`, không hardcode. Convention đặt tên biến credential: `<MODULE_NAME_UPPERCASE>_USERNAME` / `<MODULE_NAME_UPPERCASE>_PASSWORD` (module name viết hoa, ký tự không phải chữ/số thay bằng `_`) — thêm vào `.env` (và document dạng placeholder có comment trong `.env.example`) ngay lần đầu module cần đến.
 5. Mỗi test độc lập — không phụ thuộc thứ tự chạy hay state của test khác.
 
@@ -262,60 +262,82 @@ Sử dụng skill này khi:
 
 # Section 5: Run & Auto-heal
 
-1. Chạy: `cd automation && npx playwright test tests/<module>/`
+> **Mục đích workflow:** hỗ trợ QC phát hiện lỗi theo TC, không phải bộ regression bàn giao. Vì vậy auto-heal chỉ sửa lỗi **phía script**; assertion fail là tín hiệu nghi bug, không được "sửa cho PASS".
 
-2. **Nếu PASS:**
-   - Chạy lại để xác nhận ổn định: `npx playwright test tests/<module>/ --repeat-each=2`
-   - Cập nhật `task.md`: TC status → ✅ PASS.
+1. Chạy full module: `cd automation && npx playwright test tests/<module>/`
 
-3. **Nếu FAIL → vòng lặp Auto-heal (tối đa 5 vòng):**
+2. **Nếu PASS hết:** cập nhật `task.md`: TC status → ✅ PASS, sang Section 6.
+
+3. **Nếu có FAIL → phân loại từng TC fail:**
+
+   | Lỗi | Nhóm | Hành động |
+   |---|---|---|
+   | Locator not found | Script | Mở lại Playwright MCP → browser_snapshot → xác nhận/thay locator |
+   | Timeout | Script | Thêm wait condition cụ thể (không tăng timeout mù quáng) |
+   | Test data conflict | Script | Sinh lại data qua uniqueValue()/uniqueEmail() |
+   | Compile/import error | Script | Sửa import, kiểm tra tên class/method |
+   | Assertion fail (Actual ≠ Expected của TC) | **Nghi bug** | **KHÔNG sửa assertion/Expected.** Ghi nhận vào nhóm "Nghi bug" (xem Section 6), giữ evidence |
+   | CAPTCHA/2FA, app không truy cập được | Không chạy được | Ghi nhận, không heal |
+
+4. **Vòng auto-heal (tối đa 2 vòng, chỉ cho TC nhóm Script):**
 
    ```
-   VÒNG N (N ≤ 5):
-     1. Đọc error output / trace.
-     2. Phân loại lỗi:
-        | Lỗi | Hành động |
-        |---|---|
-        | Locator not found | Mở lại Playwright MCP → browser_snapshot → xác nhận/thay locator |
-        | Timeout | Thêm wait condition cụ thể (không tăng timeout mù quáng) |
-        | Assertion fail | Đối chiếu Expected Result trong TC gốc — nếu app đúng, TC sai → hỏi user (business logic mâu thuẫn) |
-        | Test data conflict | Sinh lại data qua uniqueValue()/uniqueEmail() |
-        | Compile/import error | Sửa import, kiểm tra tên class/method |
-     3. Sửa code.
-     4. Chạy lại bước 1.
-     5. Ghi vào task.md: "Vòng N: <mô tả fix> → PASS/FAIL"
+   VÒNG N (N ≤ 2):
+     1. Đọc error output / trace của các TC fail nhóm Script.
+     2. Sửa code theo bảng trên.
+     3. Chạy lại CHỈ TC fail: npx playwright test tests/<module>/ --last-failed
+     4. Ghi vào task.md: "Vòng N: <mô tả fix> → PASS/FAIL"
    ```
 
-4. **CẤM hỏi user trong lúc auto-heal.** Chỉ dừng và hỏi khi:
-   - Business logic mâu thuẫn (TC nói A, app hiển thị B — không rõ đâu đúng).
+   - TC nghi bug **không** đưa vào vòng chạy lại.
+   - Không chạy full lại để xác nhận và không `--repeat-each` (chỉ chạy khi QC yêu cầu).
+   - Hết 2 vòng mà TC vẫn FAIL do lỗi script → chuyển vào nhóm "Không chạy được", kèm nguyên nhân dự đoán.
+
+5. **CẤM hỏi user trong lúc auto-heal.** Chỉ dừng và hỏi khi:
    - Gặp CAPTCHA/2FA hoặc app không truy cập được.
-   - Đã hết 5 vòng mà vẫn FAIL.
+   - Không phân biệt được lỗi script hay nghi bug (ví dụ element có nhưng nội dung khác Expected không rõ lý do).
 
 ---
 
-# Section 6: Cleanup & Report
+# Section 6: Report
 
-1. Cleanup bắt buộc trước khi bàn giao:
-   - [ ] Xóa `console.log()` debug.
-   - [ ] Xóa locator không dùng.
-   - [ ] Xóa code comment thừa / commented-out code.
+1. Kiểm tra nhanh trước khi giao (script phục vụ QC chạy lại để tái hiện lỗi, không cần dọn như code bàn giao):
    - [ ] Không còn `waitForTimeout()`.
-   - [ ] Không hardcode credentials/test data.
+   - [ ] Không hardcode credentials.
 
-2. Cập nhật `automation/task.md` với kết quả cuối:
+2. Cập nhật `automation/task.md` (log nội bộ của agent):
    ```markdown
    ## Kết quả
-   | TC ID | Title | Status | Stability | Ghi chú |
-   |---|---|---|---|---|
+   | TC ID | Test Scenario | Status | Ghi chú |
+   |---|---|---|---|
 
    ## Files Created/Modified
    ```
 
-3. Báo cáo cho user:
-   - Tổng X TC PASS / Y FAIL / Z SKIP.
-   - Danh sách file đã tạo/sửa.
-   - Bảng Locator Collection (reference).
-   - Known issues / limitations.
+3. Sinh `testing/[module]/automation-report.md` — file QC đọc:
+   ```markdown
+   # Automation Report — [module]
+
+   ## Tóm tắt: X PASS / Y nghi bug / Z không chạy được
+
+   ## Nghi bug
+   | Bug ID | TC ID | Tag TC | Expected | Actual | Evidence | Bước tái hiện |
+   |---|---|---|---|---|---|---|
+
+   ## Không chạy được
+   | TC ID | Lý do |
+   |---|---|
+
+   ## PASS
+   | TC ID | Script |
+   |---|---|
+   ```
+   - **Bug ID** = `BUG-<TC ID>` (ví dụ TC `HRD-002` → `BUG-HRD-002`). 1 TC nhiều bug → hậu tố `-a`, `-b`. Nhiều TC cùng 1 nguyên nhân → gom 1 dòng, ID theo TC đầu, liệt kê TC còn lại.
+   - **Tag TC**: giữ nguyên `[ASSUMED]` / `[UNCONFIRMED]` của TC gốc (nếu có) để QC biết mức tin cậy — Expected có thể sai chứ không phải app sai.
+   - **Evidence**: đường dẫn tới screenshot/trace trong `automation/test-results/`, không copy.
+   - Cần report chi tiết thành ticket → chạy `/gen-bug-report`.
+
+4. Báo cáo trong chat: tóm tắt 3 nhóm + đường dẫn `automation-report.md` + danh sách file đã tạo/sửa. Không lặp lại toàn bộ bảng.
 
 ---
 
@@ -323,6 +345,6 @@ Sử dụng skill này khi:
 
 - `automation/` project (scaffold nếu lần đầu, hoặc mở rộng nếu đã có).
 - Page Object classes — locator verified từ DOM thật.
-- Test classes — chạy PASS, ổn định 2/2.
-- `automation/task.md` — checklist + kết quả.
-- Báo cáo PASS/FAIL/SKIP + bảng Locator Collection.
+- Test classes — chạy lại được bằng `npx playwright test`.
+- `testing/[module]/automation-report.md` — PASS / Nghi bug / Không chạy được.
+- `automation/task.md` — log nội bộ của agent.

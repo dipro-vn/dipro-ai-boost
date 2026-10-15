@@ -1,5 +1,5 @@
 ---
-description: Sinh & chạy Playwright automation script từ test-cases.md có sẵn, dùng Playwright MCP để recon DOM thật. Có vòng lặp auto-heal khi test FAIL. Bắt buộc phải có test-cases.md trước khi chạy.
+description: Sinh & chạy Playwright automation script từ test-cases.md có sẵn, dùng Playwright MCP để recon DOM thật. Auto-heal lỗi phía script (tối đa 2 vòng), assertion fail được báo là nghi bug. Bắt buộc phải có test-cases.md trước khi chạy.
 skills:
   - automation_engineer
 ---
@@ -25,7 +25,7 @@ Thực hiện **Section 1** từ skill `automation_engineer`:
 ## Bước 2 — Chọn phạm vi TC
 
 Thực hiện **Section 2**:
-- Liệt kê TC từ `test-cases.md`, đề xuất phạm vi mặc định (Risk cao nhất theo `plan-tcs.md` nếu có).
+- Liệt kê TC từ `test-cases.md`, đề xuất phạm vi mặc định theo mục `## High Risk & E2E`: TC của Bảng 2 (E2E) trước, rồi Bảng 1 (nhóm high risk) nếu có.
 - **Hỏi user xác nhận danh sách TC** trước khi sang Bước 3 — đây là checkpoint bắt buộc duy nhất.
 
 ## Bước 3 — MCP Recon
@@ -34,16 +34,16 @@ Thực hiện **Section 3**: mở Playwright MCP, đi qua từng bước của T
 
 ## Bước 4 — Sinh code
 
-Thực hiện **Section 4**: sinh Page Object (`automation/pages/<module>/`) + Test (`automation/tests/<module>/`) từ Locator Collection, gắn Traceability ID gốc.
+Thực hiện **Section 4**: sinh Page Object (`automation/pages/<module>/`) + Test (`automation/tests/<module>/`) từ Locator Collection, gắn TC ID (cột `ID`) vào tên test và ghi kèm Traceability ID trong comment.
 
 ## Bước 5 — Run & Auto-heal
 
-Thực hiện **Section 5**: chạy `npx playwright test`, nếu FAIL thì tự sửa tối đa 5 vòng (không hỏi user, trừ business logic mâu thuẫn / CAPTCHA-2FA / hết 5 vòng). PASS xong verify ổn định 2 lần.
+Thực hiện **Section 5**: chạy `npx playwright test`; TC fail được phân loại — lỗi phía script thì tự sửa tối đa 2 vòng, chỉ chạy lại TC fail (`--last-failed`). **Assertion fail không heal**, ghi nhận là nghi bug. Không hỏi user trừ CAPTCHA-2FA / không phân biệt được lỗi script hay nghi bug.
 
-## Bước 6 — Cleanup & Report
+## Bước 6 — Report
 
-Thực hiện **Section 6**: dọn code, cập nhật `automation/task.md`, báo cáo PASS/FAIL/SKIP + Locator Collection cho user.
+Thực hiện **Section 6**: cập nhật `automation/task.md`, sinh `testing/[module]/automation-report.md` (PASS / Nghi bug / Không chạy được, ID `BUG-<TC ID>`), tóm tắt trong chat.
 
 ## Output
 
-`automation/` project (mới hoặc mở rộng), Page Object + Test classes đã chạy PASS, `automation/task.md`, báo cáo kết quả.
+`automation/` project (mới hoặc mở rộng), Page Object + Test classes, `testing/[module]/automation-report.md`, `automation/task.md`.
