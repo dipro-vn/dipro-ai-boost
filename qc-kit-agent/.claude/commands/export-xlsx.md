@@ -45,11 +45,15 @@ $PYTHON .claude/scripts/md_to_xlsx.py <file_path>
 ### `test-cases.md` (dùng template thật `template/*_Testcase_ForWeb|ForApp_V3.0.xlsx`)
 
 - Load nguyên workbook template (Web hoặc App) làm base — giữ nguyên `Test view point`, dropdown/data validation có sẵn
-- Mỗi `##` section **có bảng TC** (cột `ID` + `Test Scenario`) → 1 sheet riêng, clone từ sheet `Screen name` gốc (giữ nguyên dropdown), tên sheet lấy theo heading (bỏ số thứ tự đầu, cắt tối đa 31 ký tự). Sheet evidence tương ứng (`<tên sheet>_evidence`) đi kèm ngay sau mỗi sheet TC
+- Mỗi `##` section **có bảng TC** (cột `ID` + `Test Scenario`) → 1 sheet riêng, clone từ sheet `Screen name` gốc (giữ nguyên dropdown), tên sheet lấy theo heading (bỏ số thứ tự đầu, cắt tối đa 31 ký tự). Chỉ có **1 sheet `Screen name_evidence` dùng chung** cho cả workbook, đặt sau sheet TC cuối cùng (không nhân bản theo từng sheet TC)
 - TC data map vào đúng cột theo **tên header** (không theo thứ tự cột)
-- Section **không phải bảng TC** (VD `Test Data Reference`, ghi chú...) → vẫn xuất thành sheet (kiểu generic, giống artifact khác) nhưng **chèn ở cuối workbook**, sau tất cả sheet TC — không đưa vào `Summary`
+- Section **không phải bảng TC** (VD `Test Data Reference`, ghi chú...) → vẫn xuất thành sheet (kiểu generic, giống artifact khác) nhưng **chèn sau tất cả sheet TC** (trước `High Risk & E2E` và sheet evidence) — không đưa vào `Summary`
+- Section **`## High Risk & E2E`** (Bảng 1 nhóm TC high risk, Bảng 2 test E2E) → **một sheet `High Risk & E2E`** đứng ngay trước sheet `Screen name_evidence` (sheet evidence là sheet cuối workbook), hai bảng ngăn cách bằng dòng nhãn đậm; không freeze panes. Dấu `**` trong ô được bỏ (Excel không render markdown)
+- Phần mở đầu của `test-cases.md` (tiêu đề `# Test Cases: ...` và ghi chú, không có bảng) **không** được đưa vào xlsx; script in thông báo khi bỏ qua
+- Bảng TC không còn cột `Risk Level` và `Priority`; template cần bỏ hai cột này. Script khớp cột theo tên header nên chỉ cần template và md thống nhất tên cột; cột trong md không có trong template bị bỏ qua và báo
 - `Summary!C4, C5, ...`: tự điền tên từng sheet TC theo đúng thứ tự — formula "TCs plan" có sẵn trong template (`COUNTA`/`INDIRECT` theo tên sheet) tự đếm lại, kể cả khi QC sửa TC thủ công sau này. Hyperlink quick-nav ở `C4` (nếu có) được cập nhật trỏ đúng sheet mới
-- Dropdown (Result, Bug type, Bug Roots) và công thức "No." chỉ có sẵn tới dòng 97 (fixed range theo template gốc); `Summary` chỉ hỗ trợ tối đa 14 sheet TC (dòng 4–17) — vượt quá sẽ được báo trong output nhưng không tự mở rộng
+- Template chỉ dựng sẵn dropdown (Result) và công thức "No." tới dòng 97; khi 1 sheet có nhiều TC hơn, script **tự kéo dài** range dropdown và công thức "No." tới hết TC của sheet đó. `Summary` hỗ trợ tối đa 14 sheet TC (dòng 4–17) — vượt quá sẽ được báo trong output nhưng không tự mở rộng
+- Cột "TCs plan" trong `Summary` của template App đếm `COUNTA(...)*2` (cho 2 platform iOS/Android), nên số trên Summary = số TC thực × 2
 - Cột OK/NG/Pending và `Test view point` giữ nguyên để QC tự điền khi thực thi — script không tự tính
 
 ### Artifact khác (generic)

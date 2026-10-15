@@ -8,16 +8,20 @@ Convert markdown artifact to Excel.
   - Mỗi ## section có bảng TC (cột ID + Test Scenario) -> 1 sheet TC riêng
     (clone từ template, giữ dropdown), liệt kê vào Summary.
   - Section khác (Test Data Reference, ghi chú...) -> sheet generic, chèn
-    cuối workbook, không đưa vào Summary.
+    sau các sheet TC, không đưa vào Summary.
+  - Section `High Risk & E2E` -> sheet generic đứng sau cùng trong nhóm này,
+    ngay trước sheet `Screen name_evidence` (sheet cuối workbook).
 """
 
 import sys
 import re
 import copy
+import html
 from pathlib import Path
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.cell_range import MultiCellRange
 
 TEMPLATE_DIR = Path(__file__).resolve().parent.parent.parent / "template"
 TEMPLATE_FILES = {
@@ -31,10 +35,11 @@ SUMMARY_SCREEN_NAME_COL = 3  # cột C — formula "TCs plan" đọc tên sheet 
 SUMMARY_FIRST_ROW = 4
 SUMMARY_LAST_ROW = 17  # template chỉ dựng sẵn formula Summary tới dòng này (fixed range)
 # md header (lowercase) -> template header (lowercase) alias, khi tên không khớp 1-1
-TC_HEADER_ALIASES = {
-    "risk level": "risk",
-}
-# Formula/dropdown trong template chỉ có sẵn tới dòng này (fixed range, đã confirm với user)
+# (bảng TC không còn cột Risk Level/Priority; cột md không có trong template sẽ bị bỏ qua và báo)
+TC_HEADER_ALIASES = {}
+PRIORITY_SHEET_HEADING = "high risk & e2e"  # section 2 bảng high risk/E2E -> 1 sheet, đứng ngay trước sheet evidence
+# Formula/dropdown trong template chỉ có sẵn tới dòng này. Khi 1 sheet có nhiều TC hơn
+# (module gom về ít sheet), script tự kéo dài công thức "No." và range dropdown.
 TC_TEMPLATE_MAX_ROW = 97
 
 HEADER_FONT = Font(bold=True, color="FFFFFF", size=10)
@@ -50,14 +55,14 @@ ORDINAL_PREFIX_RE = re.compile(r"^\d+\.\s*")
 
 def parse_markdown(content):
     sections = []
-    current = {"heading": None, "lines": []}
+    current = {"heading": None, "lines": [], "level": 0}
 
     for line in content.split("\n"):
-        m = re.match(r"^#{1,3}\s+(.+)$", line)
+        m = re.match(r"^(#{1,3})\s+(.+)$", line)
         if m:
             if current["heading"] or current["lines"]:
                 sections.append(current)
-            current = {"heading": m.group(1).strip(), "lines": []}
+            current = {"heading": m.group(2).strip(), "lines": [], "level": len(m.group(1))}
         else:
             current["lines"].append(line)
 
@@ -121,8 +126,16 @@ def extract_blocks(lines):
     return blocks
 
 
+def strip_md_bold(text):
+    """Excel không render markdown: bỏ cặp ** quanh chữ (VD **Phân quyền:** -> Phân quyền:)."""
+    return re.sub(r"\*\*(.+?)\*\*", r"\1", text)
+
+
 def convert_br(text):
-    return re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
+    text = re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
+    # Chuỗi test (XSS/injection) trong md thường viết dạng entity (&lt; &gt; &amp;) để khỏi vỡ bảng
+    # markdown -> khi vào Excel phải là ký tự thật.
+    return html.unescape(text)
 
 
 def clean_heading(heading):
@@ -213,6 +226,7 @@ def classify_sections(content, fallback_heading):
     sections = parse_markdown(content)
     tc_sections = []
     other_sections = []
+    skipped = []
 
     for section in sections:
         heading = section["heading"] or fallback_heading
@@ -227,9 +241,16 @@ def classify_sections(content, fallback_heading):
         if tc_headers:
             tc_sections.append({"heading": heading, "headers": tc_headers, "rows": tc_rows})
         elif blocks:
+            has_table = any(b["type"] == "table" for b in blocks)
+            if section.get("level", 0) <= 1 and not has_table:
+                # Phần mở đầu (tiêu đề `# Test Cases: ...` + ghi chú): không đưa vào xlsx
+                skipped.append(heading)
+                continue
             other_sections.append({"heading": heading, "lines": section["lines"]})
 
-    return tc_sections, other_sections
+    # Section "High Risk & E2E" luôn đứng sau cùng trong các sheet tham khảo (trước sheet evidence)
+    other_sections.sort(key=lambda sec: clean_heading(sec["heading"]).strip().lower() == PRIORITY_SHEET_HEADING)
+    return tc_sections, other_sections, skipped
 
 
 def build_col_map(headers):
@@ -243,16 +264,22 @@ def build_col_map(headers):
     return col_map
 
 
-def populate_generic_sheet(ws, lines):
+def populate_generic_sheet(ws, lines, freeze=True):
     ws.sheet_view.showGridLines = True
     row = 1
 
     for block in extract_blocks(lines):
         if block["type"] == "text":
-            cell = ws.cell(row=row, column=1, value=block["content"])
-            cell.alignment = TEXT_ALIGN
-            cell.font = Font(size=10, italic=True, color="555555")
-            row += 2
+            content = block["content"]
+            if content.startswith("**") and content.rstrip().endswith("**"):
+                # Dòng nhãn đậm (VD "**Bảng 1 — ...**") ngăn cách các bảng trong cùng 1 sheet
+                cell = ws.cell(row=row, column=1, value=content.strip().strip("*").strip())
+                cell.font = Font(size=11, bold=True)
+            else:
+                cell = ws.cell(row=row, column=1, value=content)
+                cell.font = Font(size=10, italic=True, color="555555")
+            cell.alignment = Alignment(vertical="top", wrap_text=False)
+            row += 1 if content.startswith("**") else 2
 
         elif block["type"] == "table":
             headers = block["headers"]
@@ -265,13 +292,14 @@ def populate_generic_sheet(ws, lines):
                 cell.alignment = HEADER_ALIGN
                 cell.border = BORDER
 
-            ws.freeze_panes = ws.cell(row=row + 1, column=1)
+            if freeze:
+                ws.freeze_panes = ws.cell(row=row + 1, column=1)
             ws.row_dimensions[row].height = 24
             row += 1
 
             for r_data in rows:
                 for col, val in enumerate(r_data, 1):
-                    cell = ws.cell(row=row, column=col, value=convert_br(val))
+                    cell = ws.cell(row=row, column=col, value=strip_md_bold(convert_br(val)))
                     cell.alignment = CELL_ALIGN
                     cell.border = BORDER
                 row += 1
@@ -298,6 +326,18 @@ def write_xlsx(sections, output_path):
         populate_generic_sheet(ws, section["lines"])
 
     wb.save(output_path)
+
+
+def extend_template_ranges(ws, last_row):
+    """Kéo dài range dropdown của template (kết thúc ở TC_TEMPLATE_MAX_ROW) tới last_row."""
+    end = str(TC_TEMPLATE_MAX_ROW)
+    for dv in ws.data_validations.dataValidation:
+        tokens = []
+        for token in str(dv.sqref).split():
+            if token.endswith(end) and ":" in token:
+                token = token[: -len(end)] + str(last_row)
+            tokens.append(token)
+        dv.sqref = MultiCellRange(" ".join(tokens))
 
 
 def write_tc_from_template(template_path, tc_sections, other_sections, output_path):
@@ -341,10 +381,8 @@ def write_tc_from_template(template_path, tc_sections, other_sections, output_pa
         tc_sheet_titles.append(title)
         ordered_sheet_names.append(title)
 
-    # Chỉ giữ 1 sheet evidence duy nhất (dùng chung cho mọi sheet TC) — đặt ngay sau
-    # sheet TC cuối cùng, không nhân bản theo từng sheet TC.
-    if template_evidence_ws is not None:
-        ordered_sheet_names.append(template_evidence_ws.title)
+    # Chỉ giữ 1 sheet evidence duy nhất (dùng chung cho mọi sheet TC), không nhân bản theo
+    # từng sheet TC. Đặt cuối cùng của workbook, sau sheet `High Risk & E2E` (xem cuối hàm).
 
     # Pha 2: điền data — an toàn vì mọi sheet đã được clone xong từ bản pristine ở Pha 1.
     for title, ws, tc_section in sheet_infos:
@@ -362,8 +400,11 @@ def write_tc_from_template(template_path, tc_sections, other_sections, output_pa
                 if idx in real_col_map:
                     ws.cell(row=r, column=real_col_map[idx], value=convert_br(val))
             if r > TC_TEMPLATE_MAX_ROW:
-                # Ngoài phạm vi dropdown/formula cố định của template -> vẫn ghi số thứ tự thô
-                ws.cell(row=r, column=1, value=r - 1)
+                # Ngoài phạm vi formula có sẵn của template -> ghi cùng formula cột "No."
+                ws.cell(row=r, column=1, value="=row()-2")
+        last_row = 1 + len(tc_section["rows"])
+        if last_row > TC_TEMPLATE_MAX_ROW:
+            extend_template_ranges(ws, last_row)
 
     overflow = []
     if SUMMARY_SHEET_NAME in wb.sheetnames:
@@ -386,8 +427,13 @@ def write_tc_from_template(template_path, tc_sections, other_sections, output_pa
     for section in other_sections:
         title = unique_sheet_name(wb, smart_sheet_name(clean_heading(section["heading"]) or "Sheet"))
         ws = wb.create_sheet(title=title)
-        populate_generic_sheet(ws, section["lines"])
+        is_priority = clean_heading(section["heading"]).strip().lower() == PRIORITY_SHEET_HEADING
+        populate_generic_sheet(ws, section["lines"], freeze=not is_priority)
         ordered_sheet_names.append(title)
+
+    # Thứ tự cuối: ... sheet TC, (sheet tham khảo khác), `High Risk & E2E`, `Screen name_evidence`
+    if template_evidence_ws is not None:
+        ordered_sheet_names.append(template_evidence_ws.title)
 
     wb._sheets = [wb[name] for name in ordered_sheet_names]
 
@@ -420,7 +466,7 @@ def main():
             sys.exit(1)
 
         fallback_heading = guess_module_name(content, input_path)
-        tc_sections, other_sections = classify_sections(content, fallback_heading)
+        tc_sections, other_sections, skipped = classify_sections(content, fallback_heading)
         if not tc_sections:
             print("Không tìm thấy bảng Test Case hợp lệ (cần cột 'ID' và 'Test Scenario') trong file.")
             sys.exit(1)
@@ -429,6 +475,8 @@ def main():
         total_tcs = sum(len(s["rows"]) for s in tc_sections)
         sheet_names = [clean_heading(s["heading"]) for s in tc_sections]
         print(f"Done ({platform} template, {total_tcs} TCs -> {len(tc_sections)} sheet: {sheet_names}): {output_path}")
+        if skipped:
+            print(f"Bỏ qua phần mở đầu (tiêu đề/ghi chú, không có bảng): {skipped}")
         if other_sections:
             print(f"Đã thêm {len(other_sections)} sheet tham khảo (không thuộc Summary): "
                   f"{[clean_heading(s['heading']) for s in other_sections]}")
