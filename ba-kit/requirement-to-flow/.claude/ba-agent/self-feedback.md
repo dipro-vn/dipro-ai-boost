@@ -15,7 +15,8 @@
 - Screen Code trong SPEC có khớp với Screen Code trong Figma bảng Index không?
 - Có link Figma nào bị hỏng / chưa điền không?
 - Số liệu trong Output 2 bảng "Tổng: N màn hình" có khớp với `## Screens` không?
-- **Non-Happy đã ở dạng BẢNG 4 cột chưa, hay còn văn xuôi?** Đếm: `số screen có bảng Non-Happy` phải `= tổng số screen` (100%). Còn screen nào ghi kiểu `giống <CODE>` / `theo pattern chuẩn` / `(rút gọn)` → **FAIL**, phải viết bảng thật (xem `spec-template.md` → Rule FORMAT Non-Happy)
+- **Non-Happy đã ở dạng BẢNG 5 cột (`ID · Nhóm · Trigger · Hiển thị · Message`) chưa, hay còn văn xuôi?** Đếm: `số screen có bảng Non-Happy` phải `= tổng số screen` (100%). Còn screen nào ghi kiểu `giống <CODE>` / `theo pattern chuẩn` / `(rút gọn)` → **FAIL**, phải viết bảng thật (xem `spec-template.md` → Rule FORMAT Non-Happy)
+- **Cột `ID` (`E-nnn`) có duy nhất toàn SPEC, không đánh lại số so với version trước không?** Mọi `E-nnn` AC tham chiếu có tồn tại trong bảng Non-Happy không?
 - **Cột `Message` có phải nội dung THẬT user nhìn thấy không**, hay chỉ là mô tả chung chung ("báo lỗi cho user")? Mô tả chung chung → FAIL
 - **Thống kê màn hình đã cộng Toast/Modal/Popup/Banner/Full screen/Empty state chưa?** `TỔNG` trong SPEC `## Screens` phải khớp `TỔNG` in trên Figma Output 2 — lệch → FAIL
 - **Bảng ⑦ ERROR/POPUP INDEX trên Figma có đủ 100% error display của SPEC không** (không rút gọn), và ID `E-xxx` có trace 1-1 về SPEC không?
@@ -23,6 +24,14 @@
 - Actor color có nhất quán giữa Output 1/2/3 không?
 - Có bước nào trong `## Flow Tổng Quan` chưa xuất hiện trong Figma Output 1 flow?
 - **FR Coverage — đã in `THIẾU: []` chưa?** `set(FR nguồn) − set(FR trong bảng `## Screens`) = ∅`, và mỗi Hành động ở Sitemap Output 1 có tag `#N` chưa? (`recheck.md` Tiêu chí 8). **Đây là phép duy nhất bắt được "chức năng đáng lẽ phải có mà không có" — các phép còn lại chỉ đối chiếu nội bộ giữa các artifact với nhau.**
+
+**Câu 2b — `## Acceptance Criteria` có đạt chuẩn không? (chạy checklist `ac-standard.md` §9 — tự rà, KHÔNG có script gate)**
+- Mọi AC có `Trace` (FR · Screen Code · Flow) và FR đó có thật trong FR Register chưa?
+- Mỗi flow có Happy + Edge + Negative (hoặc `N/A — lý do`)? Mỗi Non-Happy mức Modal/Popup/Full screen/Toast/Banner/Empty state có AC chưa?
+- Có AC nào **chép message** thay vì tham chiếu `E-nnn` không? Có từ cấm (`ac-standard.md` §7) không?
+- Có AC nào dựa trên `INFERENCE`/`UNKNOWN`/`CONFLICT` mà không phải `PENDING-OQ` không?
+- Dòng `> Tổng:` có khớp số AC thực tế không?
+- Phải **liệt kê từng mục đã kiểm** trong report — không chỉ ghi "AC PASS"
 
 **Câu 3 — Output 4 có thật sự dùng được không? (không được trả lời bằng cảm tính)**
 

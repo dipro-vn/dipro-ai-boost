@@ -49,6 +49,7 @@ Không chắc → **mặc định coi là confidential**, hỏi PM.
 | **Figma Frame 1/2/3** | ⚠️ **Figma là dịch vụ cloud bên ngoài** — mọi thứ vẽ lên đó là đã đưa ra ngoài | ❌ Không vẽ dữ liệu thật lên mockup. Mọi label/list/record trên frame dùng dữ liệu mẫu |
 | **HTML Prototype** | Hard-code dữ liệu thật vào mock data | Dùng dữ liệu mẫu |
 | **Basic Design (.xlsx)** | Ảnh UI chèn vào sheet chứa dữ liệu member thật | Như hàng Screenshot ở §2 |
+| **AC (`## Acceptance Criteria`) · User Stories (.xlsx)** | Ví dụ trong `Given/When/Then`, persona, cột `Ghi chú` lấy nguyên tên/email/số tiền thật từ nguồn; file xlsx thường được gửi tiếp cho KH/Dev | Dùng dữ liệu mẫu ở §4; quét `detect-pii.js --scan` trước khi gửi xlsx |
 | **`versions/` snapshot** | PII bị đóng băng vĩnh viễn trong lịch sử | Rà trước khi snapshot — sửa sau khi snapshot là đã muộn |
 | **Backlog / MCP** | Đẩy nội dung có PII lên service ngoài | Chỉ gửi nội dung đã làm sạch |
 

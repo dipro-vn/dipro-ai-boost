@@ -24,7 +24,10 @@
     │   ├── output_cr.md              ← BẮT BUỘC khi có item CR (nhiều CR → output_cr_<ID>.md)
     │   ├── OQ-REGISTER.md            ← BẮT BUỘC khi còn open question (Output OQ)
     │   ├── open_questions.xlsx       ← BẮT BUỘC khi còn open question — bản giao KH
-    │   └── oq-export.md              ← report gate của export-open-questions.py
+    │   ├── oq-export.md              ← report gate của export-open-questions.py
+    │   ├── USER-STORIES.md           ← CHỈ khi đã chạy Output US (on-demand) — Rule 2e
+    │   ├── user_stories.xlsx         ← CHỈ khi đã chạy Output US
+    │   └── us-export.md              ← report gate của export-user-stories.py
     ├── v2_<DDMMYYYY>/
     │   └── ...
     └── ...
@@ -90,6 +93,24 @@ Mỗi lần chạy: copy `OQ-REGISTER.md` + `open_questions.xlsx` + `oq-export.m
 - Câu đã được trả lời → chuyển sang `FACT` trong SPEC `## Source Register`, xoá khỏi bảng OQ ở version sau, và ghi 1 dòng trong `Diff so với version trước` (VD `OQ-03 đã chốt: huỷ đơn sau 15 phút`).
 - `ba-outputs-log.md` ghi `Figma OQ view: DRAW` hoặc `SKIP (n > 20)` — không để trống.
 - Chi tiết rule: `.claude/ba-agent/open-questions.md`.
+
+### Rule 2e — Output US (Danh sách User Story, on-demand): canonical + snapshot
+
+Canonical (LATEST) nằm ngoài `versions/` — giống Output OQ:
+
+```
+<output-folder>/user-stories/
+├── USER-STORIES.md     ← source of truth (markdown, BA viết)
+└── user_stories.xlsx   ← do export-user-stories.py sinh, KHÔNG gõ tay
+```
+
+Chỉ khi Output US đã chạy: copy `USER-STORIES.md` + `user_stories.xlsx` + `us-export.md` (report gate) vào `versions/v<N>_<DDMMYYYY>/`.
+
+- `US ID` **không đánh lại số** giữa các version. Story bị bỏ → giữ dòng, ghi `Ghi chú: đã bỏ ở v<N>`.
+- Story đã tách → Story gốc ghi `đã tách → <ID con>` (`story-splitting.md` §3).
+- AC / `## Screens` đổi ở version mới → danh sách US thành `STALE`; hỏi user trước khi scoped update (`POLICIES.md` §4.6). **Không** tự xuất lại.
+- Chưa chạy Output US → **không** có folder `user-stories/`, `ba-outputs-log.md` ghi `US: ⬜ Not requested` (không phải `❌ Skipped`).
+- Output US **không** thuộc nhóm "5 outputs" ở Rule 2 và **không** là điều kiện của DoD.
 
 ### Rule 3 — Format `<DDMMYYYY>`
 

@@ -96,6 +96,7 @@ Hãy là BA, đọc file requirements/feature_A.docx và làm SPEC cho feature n
 | 4 | **HTML Prototype** (standalone, mở bằng `open index.html`) | `<output-folder>/prototype/index.html` |
 | 5 | **Basic Design** — ghi spec vào master Excel ⬜ **ON-DEMAND, BA sẽ hỏi trước** | master workbook do bạn chỉ định |
 | OQ | **Open Questions** — các business rule BA chưa có câu trả lời 🔶 *chỉ khi còn câu chưa chốt* | `<output-folder>/open-questions/` (`OQ-REGISTER.md` + `open_questions.xlsx`) + Figma OQ view khi ≤ 20 câu |
+| US | **Danh sách User Story** ⬜ **ON-DEMAND** — Epic → User Story (xlsx), không vẽ Figma | `<output-folder>/user-stories/` (`USER-STORIES.md` + `user_stories.xlsx`) |
 
 3. **Snapshot vào `versions/v<N>_<DDMMYYYY>/`** — mỗi lần chạy tự lưu snapshot để user feedback + so sánh với version trước
 
@@ -166,6 +167,9 @@ Câu **không được trả lời** sẽ nằm ở `SPEC.md ## Open Questions` 
 | 7 | **Snapshot version** | Copy toàn bộ outputs trên vào folder version + `ba-outputs-log.md` (input + feedback) | `<output>/versions/v<N>_<DDMMYYYY>/` |
 | 8 | **Open Questions** 🔶 *chỉ khi sau khi BA hỏi vẫn còn business rule chưa chốt* | Register `OQ-REGISTER.md` + **`open_questions.xlsx`** (3 sheet: `Guideline` hướng dẫn trả lời · `Open Questions` để bạn điền · `Summary`) + **Figma OQ view** khi ≤ 20 câu (> 20 câu → chỉ xlsx) | `<output>/open-questions/` + Figma node |
 | 9 | **CR view + `output_cr.md`** 🔴 *chỉ khi feedback được phân loại là ChangeRequest* | Figma view RIÊNG cho CR (badge NEW / UPD / DEL / AS-IS + CR Change Table) + tài liệu trao đổi KH "vì sao đây là CR" (ngắn gọn, gạch đầu dòng, reference file) | Figma node mới + `<output>/versions/v<N+1>_<DDMMYYYY>/output_cr.md` |
+| 10 | **Danh sách User Story** ⬜ *on-demand — gõ `/user-stories` hoặc nói "tạo danh sách user story"* | Bảng phẳng **Epic → User Story** (`As a / I want to / So that` · `FR No.` · `Screen Code` · `AC ref` · INVEST · Spike). Epic là tuỳ chọn. **Không chia Level 1-2-3, không vẽ lên Sitemap/Figma, không đổi Output 1/2/3.** AC chỉ tham chiếu ID; cột `Estimate` / `Ưu tiên` để trống cho Dev / PO | `<output>/user-stories/` (`USER-STORIES.md` + `user_stories.xlsx`) |
+
+> **Về Acceptance Criteria:** `SPEC.md ## Acceptance Criteria` viết theo chuẩn Given / When / Then có `Trace` về FR · Screen Code · Flow (xem `.claude/ba-agent/ac-standard.md` và ví dụ `.claude/ba-agent/examples/spec-sample.md`). Kit **chưa có script kiểm chất lượng AC** — BA tự rà theo checklist và liệt kê từng mục đã kiểm trong report.
 
 
 ---
