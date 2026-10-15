@@ -9,15 +9,25 @@ description: Checklist testing theo platform — dùng kết hợp với rbt_man
 
 Skill này **không dùng độc lập** — dùng kết hợp với `rbt_manual_testing`.
 
-Trước khi sinh TCs, AI phải hỏi:
+Trước khi sinh TCs, AI xác định 3 điều sau — **suy ra từ file, không hỏi user** (trừ trường hợp ở dưới):
 
 ```
-1. Feature này chạy trên platform nào? (Web / Mobile / Desktop / Nhiều platform?)
-2. App có hỗ trợ multi-language không?
-3. Có tính năng đặc thù nào không? (push notification, offline mode, v.v.)
+1. Platform: Web / Mobile / Desktop / Nhiều platform?
+   → analysis.md Summary (Platform) → CLAUDE.md (Platform chính) → Quick Mode: spec.
+   → Cả hai nguồn đều trống hoặc còn [...] : hỏi user MỘT lần trước khi sinh TC.
+2. Multi-language: spec/CLAUDE.md (Locale) có nhắc đa ngôn ngữ không?
+   → Không có dấu hiệu: không áp section Multi-Language.
+3. Tính năng đặc thù (push notification, offline mode, v.v.): spec/AC có nhắc không?
+   → Không nhắc: không áp dimension đó.
 ```
 
 Sau đó áp các section tương ứng bên dưới như **lớp bổ sung** lên bộ TCs từ base skill.
+
+**Phạm vi áp dụng — theo module, không theo Screen:**
+- Áp **một lần cho cả module**, gom vào nhóm riêng `Platform – [tên platform]` ở cuối bảng TC. Không lặp lại ở từng Screen/Component.
+- Chọn dimension theo **rủi ro thật của module** (module có tác vụ dài/ghi dữ liệu dở dang mới cần background/kill app/mất mạng giữa chừng). Bỏ dimension không có điểm bám trong spec/AC.
+- Mỗi dimension tối đa **1 TC đại diện**; chỉ thêm TC thứ hai khi hành vi mong đợi khác nhau theo spec.
+- Một kịch bản đã có chủ sở hữu ở `component_checklist` hoặc `rbt_manual_testing` (VD XSS/SQL ở Field-Level Validation, Empty state ở Table) thì **không sinh lại** từ section Cross-Platform ở đây.
 
 ---
 

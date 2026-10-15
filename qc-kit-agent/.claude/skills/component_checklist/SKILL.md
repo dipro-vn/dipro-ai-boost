@@ -17,6 +17,8 @@ Skill này **không dùng độc lập** — dùng kết hợp với `rbt_manual
 | Dialog/Popup, Breadcrumb, Pager, Tooltip, Hyperlink/Link, Progress bar | **Section B — Layout Components** |
 | Table/List (Search, Paging, Sort, Filter) | **Section C — Data Display** |
 
+> **Lọc trước khi sinh TC (theo "UI Policy" trong `rbt_manual_testing`):** bỏ phần "style phân biệt rõ", màu, icon, border, cursor, vị trí hiển thị của các dòng checklist — phần đó thuộc 1 TC UI của Screen. Chỉ giữ phần **hành vi** (không tap/chọn được, đổi giá trị, message đúng nội dung). Mỗi dòng checklist phải qua **TC Gate** của `/gen-tcs` (có nguồn hợp lệ và Expected đo được) trước khi thành TC; spec im lặng và không có nguồn thì không đoán Expected.
+
 > Nếu Component Type không khớp entry cụ thể nào trong 3 Section trên (component đặc thù, ít gặp): dùng section gần nhất làm nền, tự bổ sung scenario theo đặc tính riêng của component đó — không bỏ qua bước checklist.
 
 ---
@@ -24,6 +26,8 @@ Skill này **không dùng độc lập** — dùng kết hợp với `rbt_manual
 ## Section A — Form Components
 
 ### Textbox / Input Field
+
+> **Locale = JP:** các dòng về ký tự đặc biệt/ngôn ngữ, max length, whitespace, copy/paste bên dưới được thay bằng **Bộ khung TC cho mỗi field text** trong `.claude/skills/jp_validation/SKILL.md` — không sinh trùng từ cả hai nơi. Các dòng còn lại (Readonly, Disabled, Mask) vẫn áp bình thường.
 
 | Scenario | Cần verify |
 |----------|-----------|
