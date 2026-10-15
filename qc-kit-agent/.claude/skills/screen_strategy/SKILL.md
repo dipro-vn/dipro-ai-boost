@@ -12,7 +12,7 @@ Skill này **không dùng độc lập** — chỉ được `/plan-tcs` gọi t�
 **Quy trình:**
 1. Xác định archetype của Screen từ Summary + AC trong `analysis.md`: **List/Search**, **Form (Create/Edit)**, **Detail/View**, hoặc không khớp archetype nào → dùng **Fallback**.
 2. Đọc section tương ứng bên dưới.
-3. Viết Strategy Summary 3-5 bullet cho Screen đó — **bắt buộc tham chiếu tên component hoặc AC ID thật** đã xác định cho Screen này. Không paste nguyên bullet mẫu bên dưới mà không điều chỉnh.
+3. Viết Strategy Summary 2-5 bullet cho Screen đó — **chỉ ghi quyết định chiến lược** (phạm vi không test, tổ hợp ưu tiên, cách xử lý điểm TBD, lưu ý kiểm thử không hiển nhiên), **không lặp lại ánh xạ AC → hành vi** vì `analysis.md` đã có. **Bắt buộc tham chiếu tên component hoặc AC ID thật** đã xác định cho Screen này (AC ID để nêu nguồn của quyết định). Không paste nguyên bullet mẫu bên dưới mà không điều chỉnh.
 4. Self-check trước khi lưu: nếu bullet nào không gắn với component/AC cụ thể nào của Screen đang xử lý → viết lại, không hỏi user.
 
 ---

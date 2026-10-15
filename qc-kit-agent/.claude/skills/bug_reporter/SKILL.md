@@ -109,6 +109,8 @@ Precondition: Đăng nhập tài khoản admin@test.com, đang ở trang /users/
 
 ## Output Format
 
+> **Quy ước Bug ID:** bug phát hiện từ test case → `BUG-<TC ID>` (VD TC `HRD-002` → `BUG-HRD-002`; 1 TC nhiều bug → hậu tố `-a`, `-b`). Bug không gắn TC → `BUG-<MODULE>-NNN`.
+
 ```markdown
 ## [BUG-MODULE-001] Tiêu đề ngắn gọn
 
