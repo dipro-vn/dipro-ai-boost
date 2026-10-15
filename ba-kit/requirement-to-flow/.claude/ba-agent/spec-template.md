@@ -50,6 +50,7 @@ Cấu trúc bắt buộc:
 **⚠️ `## BA Deliverables` — vị trí + nội dung:**
 - Đặt NGAY SAU `## Mô tả nghiệp vụ`, TRƯỚC `## Actors & Preconditions`
 - Chứa đủ 5 outputs (SPEC.md + 3 Figma Frames + HTML Prototype) với path/URL clickable. **Output 5 (Basic Design) chỉ thêm section riêng khi đã thực sự chạy** — on-demand, không phải row `❌ Skipped`
+- **Output US (Danh sách User Story, xlsx) cũng on-demand:** chỉ thêm 1 row `User Stories` (path `user-stories/user_stories.xlsx`) khi đã chạy — chưa chạy thì **không** ghi row, không ghi `❌ Skipped`. Số row bắt buộc vẫn là 5
 - Có "Downstream instructions" — chỉ rõ TL Design / Designer / QC dùng phần nào của SPEC + Figma
 - Format chi tiết → xem `.claude/ba-agent/figma-outputs/shared-rules.md` section "Post-Delivery requirement"
 - Bước 4 của ba-agent tạo skeleton (rows với `<URL>` placeholder). Bước 5 fill Figma URLs. Cuối cùng tất cả 5 rows đều có value hoặc `❌ Skipped — <lý do>`.
@@ -122,24 +123,31 @@ Nhóm nào không áp dụng → ghi `N/A — <lý do>`. Nhóm nào chưa có ev
 > Lỗ hổng: agent viết Non-Happy dạng văn xuôi 1 dòng (`**Non-Happy Case (rút gọn):** Empty state → "Chưa có dữ liệu"`) cho phần lớn screen. Hệ quả: (1) không đếm được, (2) không vẽ được lên Figma, (3) không biết message thật hiển thị cho user là gì. Khi audit phát hiện 40/53 screen ở dạng này → phải làm lại toàn bộ.
 
 - ❌ **CẤM** viết Non-Happy dạng câu văn, dạng `giống <SCREEN_CODE>`, dạng `theo pattern chuẩn`, dạng `(rút gọn)`
-- ✅ **MỌI screen** (100%, kể cả màn tĩnh/List/Settings đơn giản) PHẢI có bảng đúng 4 cột:
+- ✅ **MỌI screen** (100%, kể cả màn tĩnh/List/Settings đơn giản) PHẢI có bảng đúng 5 cột (`ID` + 4 cột nội dung):
 
 ```markdown
 **Non-Happy Case:**
-| Nhóm | Trigger | Hiển thị | Message |
-|---|---|---|---|
-| 5 Empty | Chưa có thông báo nào được đăng | Empty state | "Chưa có thông báo nào" |
-| 3 Network | Mất mạng khi tải danh sách | Banner | "Không tải được danh sách. Kéo để thử lại." |
+| ID | Nhóm | Trigger | Hiển thị | Message |
+|---|---|---|---|---|
+| E-001 | 5 Empty | Chưa có thông báo nào được đăng | Empty state | "Chưa có thông báo nào" |
+| E-002 | 3 Network | Mất mạng khi tải danh sách | Banner | "Không tải được danh sách. Kéo để thử lại." |
 ```
+
+> **Cột `ID` — nguồn duy nhất của `E-nnn`** (AC, bảng ⑦ ở Output 2 và `window.__PROTO__.errs` ở prototype đều tham chiếu ID này):
+> - Đánh **liên tục toàn SPEC** (`E-001`, `E-002`…), không reset theo màn. Lần viết đầu: theo thứ tự xuất hiện trong `## Screen Details`.
+> - **ID cố định.** Thêm dòng sau này → nhận số **kế tiếp** (không chèn, không đánh lại). Bỏ dòng → giữ số, ghi `(đã bỏ ở v<N>)` ở cột `Message`. Giống `OQ ID` / `AC-NN`.
+> - Dòng `Hiển thị = UNKNOWN` **chưa có ID** — ghi `—` ở cột `ID`; có câu trả lời mới cấp ID.
+> - SPEC cũ chưa có cột `ID`: ở lần scoped update đầu tiên, thêm cột theo thứ tự dòng hiện có, **không đổi nội dung**.
 
 | Cột | Bắt buộc chứa gì | Sai ví dụ |
 |---|---|---|
+| `ID` | `E-nnn` (3 chữ số), duy nhất toàn SPEC, không đánh lại số | để trống, `1`, `E1`, trùng ID giữa 2 màn |
 | `Nhóm` | Số + tên nhóm theo checklist 8 nhóm ở trên (`3 Network`) | để trống, ghi "lỗi mạng" |
 | `Trigger` | Nguyên nhân cụ thể gây lỗi | "lỗi hệ thống" (quá chung) |
 | `Hiển thị` | **1 giá trị enum**: `Toast` · `Modal` · `Popup` · `Banner` · `Full screen` · `Empty state` · `Inline error` · `Button disabled` · `Tooltip` · `Chặn UI` | "Toast, disable button khi đang xử lý" (2 giá trị trong 1 ô) |
-| `Message` | **Nội dung text THẬT user nhìn thấy**, đặt trong `" "` | "báo lỗi cho user" (mô tả, không phải nội dung) |
+| `Message` | **Nội dung text THẬT user nhìn thấy**, đặt trong `" "`. Nguồn **không có** text → ghi `[PROPOSAL — chờ BRSE approve] "<đề xuất>"` (vào `## Source Register` là `PROPOSAL`) hoặc `UNKNOWN — OQ-<yy>`; **không** ghi như thể đã chốt | "báo lỗi cho user" (mô tả, không phải nội dung) |
 
-Screen nào thực sự không có case của 1 nhóm → vẫn giữ 1 dòng, ghi `N/A — <lý do>` ở cột Trigger và `—` ở 2 cột còn lại.
+Screen nào thực sự không có case của 1 nhóm → vẫn giữ 1 dòng, ghi `N/A — <lý do>` ở cột Trigger và `—` ở 3 cột còn lại (`ID`, `Hiển thị`, `Message`). Dòng `N/A` **không** được cấp ID và **không** tính vào thống kê.
 
 ---
 
@@ -160,7 +168,7 @@ Toast · Modal · Popup · Banner · Full screen · Empty state **ĐỀU LÀ MÀ
 > | **Tổng error display định nghĩa** | **<B+C>** | |
 ```
 
-Mỗi error display được đánh ID `E-001`…`E-<n>` theo thứ tự xuất hiện trong `## Screen Details` để trace 1-1 sang Output 2. **Thiếu block thống kê này → Bước 4.6 FAIL, không được sang Bước 5.**
+Mỗi error display có ID `E-001`…`E-<n>` ở **cột `ID` của bảng Non-Happy** (cố định, không đánh lại số — xem rule ở trên) để trace 1-1 sang Output 2, AC và prototype. **Thiếu block thống kê này → Bước 4.6 FAIL, không được sang Bước 5.**
 
 ---
 
@@ -233,9 +241,9 @@ Mỗi screen trong bảng Screens phải có 1 block chi tiết theo format sau.
 - Animation đề xuất: <fade-in / slide-up / skeleton loader / none>
 
 **Non-Happy Case:**
-| Trigger | Hiển thị | Message |
-|---|---|---|
-| <điều kiện gây lỗi> | <Toast / Modal / Inline error / Banner> | "<nội dung message>" |
+| ID | Nhóm | Trigger | Hiển thị | Message |
+|---|---|---|---|---|
+| E-<nnn> | <số + tên nhóm> | <điều kiện gây lỗi> | <Toast / Modal / Inline error / Banner> | "<nội dung message>" |
 ```
 
 Ví dụ:
@@ -256,11 +264,11 @@ Ví dụ:
 - Animation đề xuất: Skeleton loader trong 300ms
 
 **Non-Happy Case:**
-| Trigger | Hiển thị | Message |
-|---|---|---|
-| Sai email/password | Toast error | "Email hoặc mật khẩu không đúng" |
-| Account locked | Modal | "Tài khoản đã bị khoá. Liên hệ admin." |
-| Mất mạng | Banner | "Không có kết nối mạng. Thử lại." |
+| ID | Nhóm | Trigger | Hiển thị | Message |
+|---|---|---|---|---|
+| E-001 | 1 Validation | Sai email/password | Toast | "Email hoặc mật khẩu không đúng" |
+| E-002 | 2 Auth | Account locked | Modal | "Tài khoản đã bị khoá. Liên hệ admin." |
+| E-003 | 3 Network | Mất mạng | Banner | "Không có kết nối mạng. Thử lại." |
 ```
 
 ---
@@ -294,6 +302,34 @@ Sử dụng đúng viewport chuẩn theo `TARGET_PLATFORM` (đã hỏi ở Bư�
 
 Nếu thiếu thông tin để xác định screens cụ thể → tạo screens hợp lý nhất từ context (đạt ~90% độ chính xác), ghi chú `*` và note cuối bảng.
 
+
+---
+
+**Hướng dẫn điền `## Acceptance Criteria`:**
+
+> **BẮT BUỘC Read** `.claude/ba-agent/ac-standard.md` trước khi viết section này. Ví dụ đầy đủ: `.claude/ba-agent/examples/spec-sample.md`.
+
+Tóm tắt (chi tiết ở `ac-standard.md`):
+- Mỗi AC dạng **Given / When / Then**, 1 AC = 1 scenario, `When` = 1 hành động. ID `AC-<NN>` không đánh lại số giữa các version.
+- Mỗi AC có dòng `Trace:` → `FR #<n>` · `Screen Code` · `Flow <N>`; tag loại `[Happy]` / `[Edge]` / `[Negative]`.
+- Mỗi flow có đủ Happy + Edge + Negative (hoặc `N/A — lý do`). Cùng nhóm/cùng cách xử lý → **1 AC + bảng Examples**.
+- **Không chép message lỗi** — chỉ tham chiếu `E-nnn` của `## Screen Details`.
+- Chỉ từ statement `FACT`. Rule còn `UNKNOWN` → placeholder `PENDING-OQ-<yy>`, không bịa.
+- **Không tạo heading `##` riêng** cho AC / User Story (AC chỉ là `###` trong section này).
+
+```markdown
+## Acceptance Criteria
+
+> Tổng: <n> AC · Happy <a> · Edge <b> · Negative <c> · PENDING-OQ <d>
+
+### AC-01 — <tên scenario> `[Happy]`
+- **Trace:** FR #12 · AX_FEAT_002 · Flow 1
+- **Given** <tiền điều kiện>
+- **When** <1 hành động>
+- **Then** <kết quả quan sát được / E-nnn>
+```
+
+> Danh sách User Story (nếu user yêu cầu) là **file riêng** (`user-stories.md`), không phải section của SPEC.
 
 ---
 

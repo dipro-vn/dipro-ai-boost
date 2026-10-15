@@ -24,6 +24,9 @@
 | 4 | **HTML Prototype** (standalone, mở bằng `open index.html`) | `<output-folder>/prototype/index.html` |
 | 5 | **Basic Design** — ghi spec vào master Excel của công ty ⬜ **ON-DEMAND** | master workbook do user chỉ định |
 | OQ | **Open Questions** — register `.md` + `open_questions.xlsx` (+ Figma OQ view khi ≤ 20 câu) 🔶 **CONDITIONAL** | `<output-folder>/open-questions/` |
+| US | **Danh sách User Story** — register `.md` + `user_stories.xlsx` (**Epic → User Story**, không Level 1-2-3, **không vẽ Figma**) ⬜ **ON-DEMAND** | `<output-folder>/user-stories/` |
+
+> **Output US (User Story)** chỉ chạy khi user yêu cầu (`/user-stories`). Sinh từ SPEC đã có; Story **chỉ tham chiếu** `AC ref` / `FR No.` / `Screen Code` — không chép AC, không gắn lên Sitemap, **không làm đổi Output 1/2/3**. `Estimate` / `Ưu tiên` để trống cho Dev / PO. Số Story không phải mốc "đã đủ chức năng" (mốc vẫn là FR Register). Chi tiết: `.claude/ba-agent/user-stories.md` · `story-splitting.md`.
 
 > **Output OQ (Open Questions)** chạy ngay trong giai đoạn Output 1: sau khi BA hỏi user bằng `AskUserQuestion`, các business rule vẫn chưa có câu trả lời được gom thành register + export `open_questions.xlsx` bằng script (kèm sheet `Guideline` hướng dẫn KH cách trả lời). `n ≤ 20` → vẽ thêm **Figma OQ view**; `n > 20` → **chỉ xlsx** + in đường dẫn folder. Chỉ chứa **câu hỏi nghiệp vụ** — câu hỏi kỹ thuật chuyển Tech Lead. Chi tiết: `.claude/ba-agent/open-questions.md`.
 
@@ -54,6 +57,7 @@ Hãy là BA, đọc file <path-to-requirement> và làm SPEC cho <feature>
 ```
 /create-spec <feature>          ← Output 0→4
 /basic-design [Screen ID...]    ← Output 5 (on-demand)
+/user-stories [Epic / phạm vi]  ← Output US — danh sách User Story xlsx (on-demand)
 ```
 
 ---
@@ -88,7 +92,7 @@ Chi tiết trong `.claude/ba-agent/preflight-questions.md`.
 |---|---|---|
 | ⛔ **Gate ảnh mẫu** | Trước MỌI `use_figma`: phải mở ảnh mẫu trong `.claude/skills/ba-figma-output/examples/` **và mô tả lại bố cục bằng lời của mình**. Đọc rule dạng chữ mà không xem ảnh → vẽ sai bố cục (đã xảy ra) | `figma-outputs/shared-rules.md` |
 | 🔗 **Connector thật** | Mọi screen node phải nối nhau bằng arrow vẽ thật. Liệt kê chip/card rời rạc không mũi tên → **FAIL** | `agents/ba-agent.md` |
-| 📊 **Đếm màn lỗi** | `Toast` · `Modal` · `Popup` · `Banner` · `Full screen` · `Empty state` **ĐỀU tính là màn hình**, phải có trong thống kê tổng. Non-Happy bắt buộc dạng **bảng 4 cột** có message thật, cấm văn xuôi | `ba-agent/spec-template.md` |
+| 📊 **Đếm màn lỗi** | `Toast` · `Modal` · `Popup` · `Banner` · `Full screen` · `Empty state` **ĐỀU tính là màn hình**, phải có trong thống kê tổng. Non-Happy bắt buộc dạng **bảng 5 cột** (`ID` `E-nnn` cố định + Nhóm · Trigger · Hiển thị · Message) có message thật, cấm văn xuôi | `ba-agent/spec-template.md` |
 | 📐 **Quét bbox** | Kết luận "không chồng đè" phải bằng **script quét toạ độ**, không bằng mắt nhìn screenshot | `ba-agent/recheck.md` Tiêu chí 7 |
 | 🔢 **Gate FR Coverage** | Mốc đối chiếu "đã đủ" phải là **số dòng chức năng gốc trong nguồn**, không phải số nhóm / số flow do BA tự gom. Kiểm bằng **phép trừ tập hợp** có in `THIẾU: []`, không bằng phép so số lượng. Bảng `## Screens` bắt buộc có cột `FR No.` | `ba-agent/granularity-principles.md` § GATE FR COVERAGE · `recheck.md` Tiêu chí 8 |
 
@@ -105,6 +109,11 @@ Chi tiết trong `.claude/ba-agent/preflight-questions.md`.
 | `.claude/ba-agent/versioning.md` | Rule snapshot `versions/v<N>_<DDMMYYYY>/` (gồm Rule 2c — version sinh từ feedback/CR) |
 | `.claude/ba-agent/open-questions.md` | **Output OQ** — rule lọc câu hỏi nghiệp vụ, OQ Register, export xlsx, Figma OQ view (ngưỡng 20 câu), guideline trả lời |
 | `.claude/skills/business-analyst/scripts/export-open-questions.py` | Export + validate Output OQ → xlsx 3 sheet. `FAIL > 0` = không ghi file |
+| `.claude/ba-agent/ac-standard.md` | **Chuẩn `## Acceptance Criteria`** — Given/When/Then, Trace, `E-nnn`, `Examples`, `PENDING-OQ`, checklist tự rà (chưa có script gate) |
+| `.claude/ba-agent/user-stories.md` | **Output US** — Input Gate, register `USER-STORIES.md` (Epic → Story), INVEST, gate cấu trúc của script |
+| `.claude/ba-agent/story-splitting.md` | Tách Story, Spike (BA không ước lượng), **ranh giới với granularity Flow/Screen** |
+| `.claude/ba-agent/examples/spec-sample.md` | Ví dụ minh họa SPEC (trích) + AC + User Story — chỉ để học hình dạng, không sao chép nội dung |
+| `.claude/skills/business-analyst/scripts/export-user-stories.py` | Validate (cấu trúc + FR coverage; `--spec` đối chiếu AC/Screen/FR/OQ với SPEC) + export `user_stories.xlsx` 3 sheet. `FAIL > 0` = không ghi file |
 | `.claude/ba-agent/post-meeting-workflow.md` | **Bước 7** — intake feedback/meeting note: triage 🔴 CR vs 🟡 FEEDBACK + nhánh feedback |
 | `.claude/ba-agent/change-request.md` | **Nhánh CR** — giải trình vì sao là CR, CR questions, rule vẽ CR view (NEW/UPD/DEL), template `output_cr.md` |
 | `.claude/ba-agent/figma-outputs/*` | Chi tiết từng Figma output + gate rules |

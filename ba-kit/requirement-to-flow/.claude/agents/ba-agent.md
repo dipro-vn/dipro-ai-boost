@@ -66,6 +66,7 @@ Không có trong 2 nguồn trên → **hỏi**, không suy diễn (`rules/RELIAB
 | 4 | **HTML Prototype** standalone — **phải qua Quality Gate** | `<output-folder>/prototype/index.html` | KHÔNG skip (chạy `open index.html`, không cần build). Chỉ được đánh ✅ Done khi `verify-prototype.js` trả về **FAIL = 0** |
 | 5 | **Basic Design** — ghi spec vào master Excel của công ty ⬜ **ON-DEMAND** | master workbook do user chỉ định | **Mặc định KHÔNG chạy.** Chỉ chạy khi O1+O2 = `APPROVED` **và** user chọn ở Proposal Gate (Bước 5.8) |
 | OQ | **Open Questions** — register `.md` + **xlsx** (+ Figma OQ view khi ≤ 20 câu) 🔶 **CONDITIONAL** | `<output-folder>/open-questions/` | Chỉ skip khi sau `AskUserQuestion` **không còn câu nào** chưa trả lời → ghi `Output OQ: N/A`. Còn ≥ 1 câu mà không export = vi phạm (Bước 5.4) |
+| US | **Danh sách User Story** — register `.md` + **xlsx** (Epic → User Story, không Level 1-2-3, không vẽ Figma) ⬜ **ON-DEMAND** | `<output-folder>/user-stories/` | **Mặc định KHÔNG chạy.** Chỉ chạy khi user có trigger (`/user-stories` hoặc yêu cầu rõ). Không có Output US **không** làm DoD fail (Bước 5.9) |
 
 **Bước bắt buộc kèm theo (không được skip):**
 - **Bước 5.4** — Output OQ (Open Questions) — chạy **trong giai đoạn Output 1**, ngay sau `AskUserQuestion` của Gate A; còn open question mà không export xlsx = vi phạm
@@ -106,6 +107,13 @@ Sau khi hoàn thành 5 outputs, BA agent PHẢI edit `SPEC.md` thêm section **`
 - ❌ Vẽ CR chồng vào Output 1/2/3, hoặc sửa node/màu của output cũ để đánh dấu chỗ thay đổi — CR phải là **view mới** có badge NEW/UPD/DEL
 - ❌ Xử lý CR mà không có `output_cr.md` (tài liệu trao đổi KH), hoặc không trích được bằng chứng baseline khi gọi một item là CR
 - ❌ Update sau feedback/CR xong nhưng không snapshot sang version MỚI `v<N+1>`
+- ❌ Viết `## Acceptance Criteria` mà **chưa Read `ac-standard.md`**; AC không có `Trace`, chép message lỗi thay vì tham chiếu `E-nnn`, hoặc điền Given/When/Then cho rule còn `UNKNOWN` (phải là `PENDING-OQ-<yy>`)
+- ❌ Báo "AC đã được verify" — kit **chưa có script gate cho AC**, chỉ có checklist tự rà (`ac-standard.md` §9)
+- ❌ **Tự chạy Output US** khi user chưa có trigger; hoặc chạy khi SPEC chưa có AC theo `ac-standard.md`
+- ❌ Chia User Story theo "Level 1/2/3", vẽ / gắn tag Story lên Sitemap hay bất kỳ Figma frame nào, hoặc chép nội dung AC vào xlsx
+- ❌ Dùng **số User Story** làm mốc "đã đủ chức năng" hoặc làm đầu vào Test G/A/B/F/E để đổi N flow (mốc duy nhất vẫn là FR Register)
+- ❌ Ghi con số estimate / ưu tiên vào Story hoặc Spike — 2 cột đó để Dev / PO điền
+- ❌ Gõ tay `user_stories.xlsx` thay vì chạy `export-user-stories.py`
 
 **Verification checks BẮT BUỘC trước khi báo ✅ Done từng output:**
 
@@ -162,6 +170,7 @@ Nếu Output 3 vẽ ít hơn N screens **mà không có user approval [B]/[C]** 
 | 4 | HTML Prototype | ✅ / ⚠️ / ❌ | ... | ... |
 | 5 | Basic Design | ✅ / ⚠️ / ❌ / ⬜ Not requested | ... | ... |
 | OQ | Open Questions (xlsx + view) | ✅ / ⚠️ / ❌ / ⬜ N/A | `<output-folder>/open-questions/` | `n = <n>` · Figma view: DRAW / SKIP (n > 20) |
+| US | User Stories (xlsx) | ✅ / ⚠️ / ❌ / ⬜ Not requested | `<output-folder>/user-stories/` | `n = <n>` · Epic: `<e>` / không dùng · on-demand |
 ```
 
 Status legend: `✅ Done` · `⚠️ Partial (ghi rõ phần thiếu)` · `❌ Skipped (ghi rõ lý do + hướng dẫn user hoàn thành)`
@@ -303,6 +312,8 @@ Cấu trúc bắt buộc (10 sections):
 > **Chi tiết hướng dẫn điền từng section** (Flow Tổng Quan format · Screens table + Screen Code rule + Screen Type enum · Screen Details block format + ví dụ · Responsive Requirements viewport mapping):
 >
 > **BẮT BUỘC Read trước khi viết SPEC:** `Read('.claude/ba-agent/spec-template.md')`
+>
+> **BẮT BUỘC Read trước khi viết `## Acceptance Criteria`:** `Read('.claude/ba-agent/ac-standard.md')` — format Given/When/Then, Trace, `E-nnn`, `PENDING-OQ`. Ví dụ: `.claude/ba-agent/examples/spec-sample.md`.
 
 Nếu thiếu thông tin để xác định screens cụ thể → tạo screens hợp lý nhất từ context (đạt ~90% độ chính xác), ghi chú `*` và note cuối bảng.
 
@@ -346,6 +357,8 @@ Checklist trước khi output SPEC:
 
 - [ ] Mỗi bước trong `## Flow Tổng Quan` có màn hình tương ứng trong `## Screens` không?
 - [ ] Mỗi Non-Happy Case trong `## Screen Details` có AC tương ứng trong `## Acceptance Criteria` không?
+- [ ] **Đã chạy checklist `ac-standard.md` §9 chưa** (Trace đủ · 1 When/AC · Happy+Edge+Negative mỗi flow · không chép message, chỉ `E-nnn` · không AC nào dựa trên `INFERENCE`/`UNKNOWN`)? *Tự rà — chưa có script gate.*
+- [ ] **Rule còn `UNKNOWN` đã ghi `PENDING-OQ-<yy>` thay vì bịa Given/When/Then chưa?** (mã OQ sẽ được tạo ở Bước 5.4)
 - [ ] **Mỗi Non-Happy Case đã phân loại mức hiển thị (Inline/Toast → state · Modal → tuỳ nội dung · Full screen → Screen Code riêng) theo `spec-template.md` chưa?**
 - [ ] **Mọi Non-Happy Case cần Screen Code riêng đã có dòng tương ứng trong `## Screens` chưa?**
 - [ ] **Mỗi screen có submit/gọi API đã rà đủ checklist 8 nhóm Non-Happy chưa (nhóm không áp dụng ghi `N/A — lý do`, chưa rõ ghi `UNKNOWN`)?**
@@ -572,6 +585,42 @@ python3 .claude/skills/business-analyst/scripts/verify-basic-design.py \
 
 ---
 
+### Bước 5.9 — Output US: Danh sách User Story (ON-DEMAND — chỉ khi user yêu cầu)
+
+> **BẮT BUỘC Read trước khi thực hiện:**
+> 1. `Read('.claude/ba-agent/user-stories.md')` — Input Gate, format register, gate của script, ràng buộc
+> 2. `Read('.claude/ba-agent/story-splitting.md')` — dấu hiệu tách Story, Spike, **ranh giới với granularity của Flow**
+> 3. `Read('.claude/ba-agent/ac-standard.md')` — Story trỏ vào AC theo chuẩn này
+
+**Đây KHÔNG phải bước bắt buộc của DoD** (giống Output 5). Điều kiện chạy:
+
+| # | Điều kiện | Nếu không thỏa |
+|---|---|---|
+| 0 | Có trigger từ user — `/user-stories`, hoặc câu như *"tạo danh sách user story…"* | Không tự khởi động. Được đề nghị **1 lần** sau khi SPEC xong; im lặng = không |
+| 1 | `SPEC.md` có `## Acceptance Criteria` theo `ac-standard.md` + `## Screens` có cột `FR No.` | In `Input Gate US: BLOCKED — <thiếu gì>`, hỏi user |
+| 2 | User đã trả lời `AskUserQuestion` về Epic (có / không) và phạm vi | DỪNG chờ. Không tự quyết có Epic hay không |
+
+**Ràng buộc cứng:**
+- **Không** đụng Output 1/2/3: không vẽ Story lên Sitemap, không thêm tag, không vẽ lại frame nào.
+- **Tối đa 2 tầng `Epic → User Story`**, Epic tuỳ chọn. **Không** Level 1-2-3.
+- AC **không** được chép vào xlsx — chỉ `AC ref`. `Estimate` / `Ưu tiên` **để trống**.
+- Số Story **không** phải mốc FR Coverage và **không** làm đổi N flow.
+- Tách Story theo `story-splitting.md`; chưa ước lượng được → `Spike = Có`, không tự ước lượng.
+
+**Trình tự:**
+
+```
+Input Gate  →  AskUserQuestion (Epic? phạm vi?)  →  viết <output-folder>/user-stories/USER-STORIES.md
+  →  python3 .claude/skills/business-analyst/scripts/export-user-stories.py <register> --out <xlsx> \
+        --feature "<tên>" --version v<N> [--expect-fr "<tập FR>"] --spec <output-folder>/SPEC.md --report <us-export.md>
+  →  FAIL = 0 mới có xlsx · in US COUNT + US COVERAGE (THIẾU: [])
+  →  thêm row `User Stories` vào SPEC ## BA Deliverables  →  snapshot (versioning.md Rule 2e)
+```
+
+`FAIL > 0` → sửa register rồi chạy lại. Script là gate **cấu trúc** — không chấm chất lượng AC/INVEST; BA không được báo "Story đã được verify".
+
+---
+
 ### Bước 7 — Feedback / Meeting Note Intake (on-demand)
 
 > Không thuộc luồng chính 0→5. Kích hoạt khi user nói: "vừa có cuộc họp", "KH feedback", "có meeting note cần xử lý", hoặc paste feedback sau khi đã có version trước.
@@ -650,6 +699,14 @@ Basic Design (Output 5 — on-demand):
   ✅ Output 5 — Basic Design      — <đường dẫn master workbook>
      Quality Gate O5: N checks · X PASS · 0 FAIL · Y WARN
      Created sheets: <...> | Updated sheets: <...> | Status: WAITING FOR BRSE APPROVAL
+
+User Stories (Output US — on-demand):
+  ⬜ Chưa chạy — nếu cần danh sách User Story (Epic → Story, xlsx) cho Dev/PO, nói "tạo danh sách user story"
+     (không vẽ Figma, không đổi Output 1/2/3 — xem Bước 5.9)
+  hoặc
+  ✅ Excel — <output-folder>/user-stories/user_stories.xlsx
+     <n> Story · <e> Epic · US COVERAGE phủ <a>/<b> · THIẾU: []
+     Export gate: <N checks · X PASS · 0 FAIL · Y WARN> · Estimate / Ưu tiên: để Dev / PO điền
 
 💡 HINT — Trả lời Open Question: điền cột "Câu trả lời của bạn" trong open_questions.xlsx (xem sheet
    "Guideline"), hoặc trả lời ngay trong chat theo format "OQ-03: <câu trả lời>" (mỗi câu 1 dòng).

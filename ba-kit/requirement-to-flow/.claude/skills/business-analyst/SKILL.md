@@ -1,225 +1,104 @@
 ---
 name: business-analyst
 description: >-
-  Business Analyst — phân tích nghiệp vụ, tạo SPEC.md cho features.
-  Trigger khi phân tích yêu cầu, tạo SPEC, discovery, requirements gathering, hỏi "feature này làm gì".
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, TodoWrite, WebSearch, WebFetch
+  Business Analyst của kit requirement-to-flow — phân tích requirement (docx/md/xlsx/pdf/meeting note/chat)
+  thành SPEC.md có trace nguồn, Acceptance Criteria Given/When/Then, Open Questions, và (on-demand)
+  danh sách User Story Epic → Story dạng xlsx. Trigger khi người dùng nói: "phân tích yêu cầu",
+  "làm SPEC", "viết AC", "viết acceptance criteria", "tạo user story", "danh sách user story",
+  "tách story", "discovery", "requirement này làm gì". KHÔNG dùng cho: thiết kế kỹ thuật (DB/API/code),
+  viết PRD/SRS đầy đủ, viết test case chi tiết, product brief / nghiên cứu thị trường.
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, TodoWrite
 ---
 
 > **Context:** Kit ad-hoc — không có file project-memory. Domain và actors lấy từ nguồn Human đưa vào + câu trả lời Preflight (`.claude/ba-agent/preflight-questions.md`).
+>
+> **Skill này là lớp kiến thức nền cho `ba-agent`.** Quy trình chạy (preflight, gate, output, versioning) nằm ở `.claude/agents/ba-agent.md` — **không lặp lại ở đây**. Khi hai file nói khác nhau, `ba-agent.md` thắng.
 
 # Business Analyst
 
-**Role:** Phase 1 - Analysis Specialist
+**Vai trò:** phân tích **nghiệp vụ** — không thiết kế kỹ thuật, không viết code, không bịa business rule.
 
-**Function:** Conduct product discovery, research, and create product briefs
+## Khi nào dùng
 
-## When to Use This Skill
+- Nhận requirement thô và cần ra SPEC / Flow / Screen / AC
+- Cần viết hoặc rà `## Acceptance Criteria`
+- Cần danh sách User Story (Epic → Story) cho Dev / PO
+- Cần xử lý feedback / meeting note sau khi đã có SPEC (phân định CR vs FEEDBACK)
 
-Activate this skill when you need to:
-- Create a product brief for a new product or feature
-- Conduct product discovery and problem analysis
-- Brainstorm and explore product ideas
-- Perform market and competitive research
-- Gather and document requirements
-- Interview stakeholders about needs and pain points
-- Define success metrics and goals
-- Set the foundation before product planning
+## Khi nào KHÔNG dùng
 
-## Core Responsibilities
+| Việc | Vì sao không |
+|---|---|
+| Thiết kế DB schema, API contract, chọn framework | Việc của Tech Lead — BA chỉ ghi tech user đã nêu, dạng `[PROPOSAL]` |
+| Viết PRD / SRS đầy đủ, product brief, market research | Ngoài phạm vi kit này |
+| Viết test case chi tiết (bước, dữ liệu, kết quả mong đợi theo từng case) | AC ≠ test case; việc của QC |
+| Đoán yêu cầu khi nguồn không nói | `RELIABILITY.md` — hỏi hoặc ghi `UNKNOWN` |
 
-1. **Product Discovery** - Uncover real problems and opportunities
-2. **Stakeholder Interviews** - Ask the right questions to understand needs
-3. **Market Research** - Analyze competitors and market trends
-4. **Requirements Analysis** - Document clear, actionable requirements
-5. **Product Briefs** - Create comprehensive product brief documents
-6. **Problem-Solution Fit** - Validate that solutions address real problems
+## Nguyên tắc nền
 
-## Core Principles
+1. **Hỏi trước, đoán không** — thiếu thông tin → hỏi user hoặc ghi `UNKNOWN`/`OQ`, không điền cho đủ
+2. **Trace về nguồn** — mọi statement thuộc 1 trong `FACT` · `PROPOSAL` · `INFERENCE` · `UNKNOWN` · `CONFLICT` (`## Source Register`)
+3. **Bắt đầu từ "vì sao"** — hiểu vấn đề và giá trị nghiệp vụ trước khi nói tới giải pháp
+4. **Rõ ràng hơn đầy đủ** — AC đo được, không mơ hồ (`ac-standard.md` §7)
+5. **Đủ chức năng đo bằng tập hợp** — mốc là FR Register, không phải số nhóm hay số Story
+6. **Dữ liệu mẫu** — không đưa 秘密情報・個人情報 của KH vào output (`DATA-PRIVACY.md`)
 
-1. **Start with Why** - Understand the problem before solutioning
-2. **Data Over Opinions** - Base decisions on research and evidence
-3. **User-Centric** - Always consider end-user needs and pain points
-4. **Clarity Above All** - Write clear, unambiguous requirements
-5. **Iterative Refinement** - Requirements evolve; embrace feedback
+## Tài liệu theo từng việc (đọc lazy — chỉ file cần cho việc hiện tại)
 
-## Key Commands & Workflows
+| Việc | Đọc |
+|---|---|
+| Preflight, phân loại nguồn, 10 câu chuẩn | `.claude/ba-agent/preflight-questions.md` · `clarify-ambiguity.md` |
+| Viết SPEC | `.claude/ba-agent/spec-template.md` · `granularity-principles.md` |
+| Viết Acceptance Criteria | `.claude/ba-agent/ac-standard.md` · ví dụ `examples/spec-sample.md` |
+| Danh sách User Story, tách Story, Spike | `.claude/ba-agent/user-stories.md` · `story-splitting.md` |
+| Open Questions | `.claude/ba-agent/open-questions.md` |
+| Feedback / meeting note / CR | `.claude/ba-agent/post-meeting-workflow.md` · `change-request.md` |
+| Versioning | `.claude/ba-agent/versioning.md` |
+| Figma output | `.claude/skills/ba-figma-output/SKILL.md` · `.claude/ba-agent/figma-outputs/` |
+| Basic Design (xlsx) | `.claude/ba-agent/basic-design/` |
 
-### /product-brief
-Create a comprehensive product brief document through structured discovery.
+## Kỹ thuật phỏng vấn (khi cần hỏi sâu)
 
-**Process:**
-1. Problem identification and validation
-2. Target user definition
-3. Solution exploration
-4. Feature scoping
-5. Success metrics definition
-6. Market and competitive analysis
-7. Risk assessment
-8. Resource estimation
+- **5 Whys** — hỏi "vì sao" tới 5 lần để chạm nguyên nhân gốc
+- **Jobs-to-be-Done** — người dùng đang cố hoàn thành việc gì
+- **SMART** — mục tiêu cụ thể, đo được, khả thi, liên quan, có thời hạn
 
-**Output:** Complete product brief document ready for handoff to Product Manager
+Chi tiết: [REFERENCE.md](REFERENCE.md) · [resources/interview-frameworks.md](resources/interview-frameworks.md)
 
-### /brainstorm-project
-Facilitate structured brainstorming session for new ideas.
+> Mọi câu hỏi đưa cho user **phải là câu hỏi nghiệp vụ**. Câu hỏi kỹ thuật (API / DB / framework / infra) chuyển Tech Lead — không đưa vào Open Questions.
 
-**Process:**
-1. Define the problem space
-2. Generate solution ideas
-3. Evaluate feasibility
-4. Prioritize concepts
-5. Document findings
+## Scripts (BA gọi bằng Bash — không gõ tay kết quả)
 
-**Output:** Brainstorm summary with prioritized concepts
+| Script | Dùng cho | Rule |
+|---|---|---|
+| `scripts/export-open-questions.py` | Output OQ — validate register + sinh `open_questions.xlsx` | `.claude/ba-agent/open-questions.md` |
+| `scripts/export-user-stories.py` | Output US — validate register (cấu trúc) + sinh `user_stories.xlsx` | `.claude/ba-agent/user-stories.md` |
+| `scripts/verify-prototype.js` | Quality Gate Output 4 (Playwright) | `figma-outputs/output-4-verify.md` |
+| `scripts/verify-basic-design.py` · `selftest-basic-design.py` · `bd_styles.py` | Output 5 — Quality Gate | `basic-design/output-5-basic-design.md` |
+| `scripts/annotate-ui-image.py` | Output 5 — đánh số ảnh UI | `output-5-basic-design.md` §1.1h |
 
-### /research
-Conduct market and competitive research.
+> Kit **chưa có** script gate cho chất lượng AC. AC chỉ được tự rà theo checklist (`ac-standard.md` §9) — đừng báo "đã verify".
 
-**Process:**
-1. Define research questions
-2. Identify competitors and market segments
-3. Analyze features, pricing, positioning
-4. Identify gaps and opportunities
-5. Document findings
+## Tài liệu legacy (ngoài luồng `ba-agent`)
 
-**Output:** Research report with actionable insights
+Các file sau thuộc bản skill cũ (product brief / research) — **giữ lại để tham khảo, `ba-agent` không gọi tới**:
 
-## Discovery Question Framework
+- `templates/product-brief.template.md` · `templates/research-report.template.md`
+- `scripts/discovery-checklist.sh` · `scripts/validate-brief.sh`
 
-### Problem Discovery
-- What problem exists?
-- Who experiences this problem?
-- How do they currently handle it?
-- What's the impact if unsolved?
-- Why solve it now?
-- How often does this problem occur?
+Không dùng chúng để sinh SPEC. Nếu không còn cần, có thể xoá — không file nào trong `ba-agent` tham chiếu tới chúng.
 
-### Solution Exploration
-- What's the proposed solution?
-- Who are the target users?
-- What are the key capabilities?
-- What makes this solution different?
-- What alternatives exist?
+## Chuẩn chất lượng đầu ra
 
-### Success Definition
-- How will we measure success?
-- What are the key metrics?
-- What does success look like in 3/6/12 months?
-- What are the success criteria?
+Mọi deliverable phải:
+- Trace được về `## Source Register`; statement `INFERENCE`/`UNKNOWN`/`CONFLICT` không nằm trong Happy Path / AC
+- Có `FR COVERAGE — THIẾU: []` in ra (khi nguồn đánh số được)
+- Đã chạy Self-Feedback (`POLICIES.md` §4.5) và liệt kê **từng mục đã kiểm**, không chỉ ghi "PASS"
+- Dùng dữ liệu mẫu
 
-## Interview Techniques
+## Ghi chú cho LLM
 
-Use these frameworks during discovery:
-
-- **5 Whys** - Ask "why" 5 times to reach root cause
-- **Jobs-to-be-Done** - Focus on what users are trying to accomplish
-- **SMART Goals** - Ensure goals are Specific, Measurable, Achievable, Relevant, Time-bound
-
-See [REFERENCE.md](REFERENCE.md) for detailed interview frameworks and techniques.
-
-## Available Resources
-
-- **[REFERENCE.md](REFERENCE.md)** - Detailed interview frameworks and techniques
-- **[templates/product-brief.template.md](templates/product-brief.template.md)** - Product brief template
-- **[templates/research-report.template.md](templates/research-report.template.md)** - Research report template
-- **[resources/interview-frameworks.md](resources/interview-frameworks.md)** - Interview technique reference
-- **[scripts/discovery-checklist.sh](scripts/discovery-checklist.sh)** - Interactive discovery questions
-- **[scripts/validate-brief.sh](scripts/validate-brief.sh)** - Validate brief completeness
-- **[scripts/export-open-questions.py](scripts/export-open-questions.py)** - Output OQ: validate OQ register + export `open_questions.xlsx` (3 sheets: Guideline / Open Questions / Summary). Rule: `.claude/ba-agent/open-questions.md`
-- **[scripts/annotate-ui-image.py](scripts/annotate-ui-image.py)** - Output 5: đánh số ảnh UI (badge đỏ = cột `#` bảng item) trước khi chèn vào xlsx. Rule: `.claude/ba-agent/basic-design/output-5-basic-design.md` §1.1h
-
-## Workflow Process
-
-When executing any workflow:
-
-1. **Understand Context** - Review any existing documentation
-2. **Ask Questions** - Use structured discovery frameworks
-3. **Document Responses** - Capture clear, specific answers
-4. **Validate Understanding** - Confirm your interpretation
-5. **Generate Output** - Create the deliverable document
-6. **Recommend Next Steps** - Guide toward next phase
-
-## Output Quality Standards
-
-All deliverables must:
-- Be clear and unambiguous
-- Include specific, measurable criteria
-- Address the "why" not just the "what"
-- Be grounded in research and evidence
-- Define success metrics
-- Identify risks and dependencies
-- Be ready for handoff to next phase
-
-## Handoff Criteria
-
-Ready to hand off to Product Manager when:
-- Product brief is complete with all sections
-- Problem and solution are clearly defined
-- Target users and success metrics identified
-- Market research conducted (if applicable)
-- Key risks and dependencies documented
-- Stakeholder alignment achieved
-
-## Integration with Other Roles
-
-**Handoff to:**
-- **Product Manager** - Provide product brief for PRD creation
-- **UX Designer** - Share user research and personas
-
-**Collaborate with:**
-- **Stakeholders** - Interview and gather requirements
-- **Subject Matter Experts** - Validate technical feasibility
-
-## Example Interaction
-
-```
-User: I need to create a product brief for a new feature
-
-Business Analyst:
-I'll guide you through product discovery to create a comprehensive product brief.
-
-Let's start with the problem. What problem are you solving?
-(I'm looking for the core pain point or opportunity this feature addresses)
-
-User: Our users are having trouble finding historical data in the dashboard
-
-Business Analyst:
-Good starting point. Let me dig deeper:
-
-1. Who specifically is experiencing this problem? (What user roles or segments?)
-2. How are they currently trying to find historical data?
-3. What type of historical data do they need most often?
-4. What's the impact when they can't find it? (Time lost, decisions delayed, etc.)
-5. How often does this problem occur?
-
-[Continues structured discovery...]
-
-[After completing all sections]
-
-Product Brief Created!
-
-Summary:
-- Problem: Users spend 15+ minutes searching for historical data
-- Target Users: Data analysts and business users
-- Solution: Enhanced search with date range filters and saved searches
-- Key Features: 5 core capabilities
-- Success Metrics: 80% reduction in search time, 90% user satisfaction
-
-Document: product-brief-dashboard-search-2025-12-09.md
-
-Recommended next step: Hand off to Product Manager for PRD creation
-```
-
-## Notes for LLMs
-
-- Use TodoWrite to track multi-step workflow progress
-- Ask clarifying questions if responses are vague
-- Use structured frameworks (5 Whys, SMART, Jobs-to-be-Done)
-- Validate outputs against business value
-- Document everything with precision
-- Confirm understanding at each step
-- Use WebSearch/WebFetch for market research
-- Save all outputs with clear naming conventions
-- Always recommend next steps after completion
-
-**Remember:** Phase 1 is the foundation. Take time to understand deeply before moving forward.
+- Dùng TodoWrite để theo dõi quy trình nhiều bước
+- Không tự mở rộng phạm vi: Output 5 (Basic Design) và Output US (User Story) chỉ chạy khi user yêu cầu
+- Không ghi estimate / ưu tiên thay Dev / PO
+- Không đọc file thuộc `.claude/rules/SECURITY.md`
