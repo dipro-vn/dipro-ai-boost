@@ -128,3 +128,16 @@ project-example/
 │   └── [module-B]/
 └── CLAUDE.md                # thông tin chung của project — điền 1 lần
 ```
+
+---
+
+## Hướng dẫn chạy workflow
+- **Gọi workflow**: 
+  - gõ `tên command` 
+  hoặc 
+  - dùng `slash command (/)`: https://drive.google.com/file/d/1gwQKz1Yi5zu04OOeeyw98rPMqTQhQLwA/view?usp=drive_link
+- **Nạp input**: 
+  - `@file-name` : https://drive.google.com/file/d/1JrI5GpRJJgNIE4tqpL50qw8LW5_Ou_Ny/view?usp=drive_link
+  hoặc 
+  - `path-name của file` : https://drive.google.com/file/d/1aHpTeBoHZ3jY8jxgSkcz41gBiO7t5fBe/view?usp=drive_link
+- **Ví dụ 1 câu prompt mẫu**: `thực hiện /gen-tcs với input testing/login/spec.md`
