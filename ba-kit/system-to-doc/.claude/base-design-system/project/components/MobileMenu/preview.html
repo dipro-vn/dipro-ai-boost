@@ -1,0 +1,41 @@
+<!-- @dsCard group="Navigation" height=544 -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><style>body{margin:0;padding:16px;font-family:var(--font-sans);background:var(--white);color:var(--solid-gray-900)} .grid{display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start} .frame{width:360px;border:1px solid var(--solid-gray-420)}</style></head>
+<body>
+<div id="root"></div>
+<script>
+  var D = window.DADS, h = React.createElement;
+  var I = D.MobileMenuItem;
+  ReactDOM.createRoot(document.getElementById('root')).render(h('div', { className: 'grid' },
+    h('div', { className: 'frame' }, h(D.MobileMenu, null,
+      h(I, { href: '#', current: true }, 'ホーム'),
+      h(I, { href: '#' }, 'お知らせ'),
+      h(I, { href: '#', drilldown: true }, '防災・救急'),
+      h(I, { href: '#', external: true }, '電子申請サービス'),
+      h(D.MobileMenuDivider),
+      h(D.MobileMenuSection, { title: 'くらし・手続き' },
+        h(I, { href: '#' }, '住民票・戸籍'),
+        h(I, { label: '税金', defaultOpen: true, items: [
+          h(I, { key: 1, href: '#' }, '市民税・県民税'),
+          h(I, { key: 2, href: '#', current: true }, '固定資産税')
+        ] }),
+        h(I, { label: '保険・年金', items: [h(I, { key: 1, href: '#' }, '国民健康保険')] })
+      )
+    )),
+    h('div', { className: 'frame' },
+      h(D.MobileMenuBackButton, null, 'メニュー'),
+      h(D.MobileMenu, { 'aria-label': '子育て・教育' },
+        h(D.MobileMenuSection, { title: '子育て・教育', chip: 'key' },
+          h(I, { href: '#' }, '妊娠・出産'),
+          h(I, { href: '#' }, '保育園・幼稚園'),
+          h(I, { href: '#' }, '小・中学校')),
+        h(D.MobileMenuSection, { title: '手当・助成', chip: 'gray', collapsible: true, defaultOpen: true },
+          h(I, { href: '#', indent: true }, '児童手当'),
+          h(I, { href: '#', indent: true }, '子ども医療費助成')),
+        h(D.MobileMenuSection, { title: '相談窓口', icon: 'help_false', href: '#' })
+      ))
+  ));
+</script>
+</body>
+</html>

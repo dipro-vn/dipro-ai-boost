@@ -243,19 +243,35 @@ def valid_nodes(cr, rates_path):
         d = {"id": "1:%d" % i, "name": "%s · %s · %s" % (badge, ref, label), "badge": badge, "ref": ref, "kind": kind}
         d.update(kw)
         return d
-    nodes = [n(1, "UPD", "SC-001", "screen"), n(2, "NEW", "IMP-005", "screen"),
-             n(3, "IMPACT", "SC-002", "screen"), n(4, "UPD", "F-001", "flow"), n(5, "AS-IS", "SC-003", "screen"),
+    nodes = [n(1, "UPD", "SC-001", "screen", grp="G-1"), n(2, "NEW", "IMP-005", "screen", grp="G-1"),
+             n(3, "IMPACT", "SC-002", "screen", grp="G-1"), n(4, "UPD", "F-001", "flow", grp="FL-01"),
+             n(5, "AS-IS", "SC-003", "screen", grp="G-1"),
              n(6, "NEW", "IMP-005", "mockup", ds="DS:WEB-01:primary;DS-component:WEB-01:Button", site="WEB-01",
-               colors=["#1a7f37", "#ffffff"])]
+               colors=["#1a7f37", "#ffffff"]),
+             # non-happy: NG tren CR-1 (lane FL-01) + popup loi tren CR-2 (group G-1)
+             n(7, "UPD", "F-001", "flow", grp="FL-01", shape="ng"),
+             n(8, "UPD", "SC-001", "screen", grp="G-1", shape="popup"),
+             # man UPD tren CR-3 co to mau phan doi
+             n(9, "UPD", "SC-001", "mockup", ds="DS-component:WEB-01:Button", site="WEB-01",
+               colors=["#ffffff"], chg=["AS-IS", "UPD"])]
     arrows = [{"id": "9:1", "from": "1:5", "to": "1:1"}, {"id": "9:2", "from": "1:1", "to": "1:2"},
-              {"id": "9:3", "from": "1:1", "to": "1:3"}, {"id": "9:4", "from": "1:4", "to": "1:1"}]
+              {"id": "9:3", "from": "1:1", "to": "1:3"}, {"id": "9:4", "from": "1:4", "to": "1:1"},
+              {"id": "9:5", "from": "1:4", "to": "1:7"}, {"id": "9:6", "from": "1:1", "to": "1:8"}]
     _m, rates = C.load_rates(rates_path)
     stats = []
     for o, d in C.object_stats(cr["impacts"], rates):
         for c, v in zip(S.CR_CHANGE_TYPE + ["Tổng", "実装 MD"], [d[t] for t in S.CR_CHANGE_TYPE] + [d["total"], d["md"]]):
             stats.append({"name": "STAT · %s · %s" % (o, c), "value": str(v)})
     stats.append({"name": "STAT · TOTAL · 実装 — MD", "value": str(C.object_stats(cr["impacts"], rates)[-1][1]["md"])})
-    return {"nodes": nodes, "arrows": arrows, "stats": stats, "legend": 1, "unbadged": [], "overlap": []}
+    return {"nodes": nodes, "arrows": arrows, "stats": stats, "legend": 1, "unbadged": [], "overlap": [],
+            "idx": [{"ref": "SC-001", "type": "List"}, {"ref": "IMP-005", "type": "Form"}, {"ref": "SC-001", "type": "Modal"}],
+            "idxTotal": ["TỔNG = 2 màn chính + 1 popup / màn lỗi = 3"], "erridx": 1,
+            "desc": [{"ref": "IMP-005", "items": 2, "errors": 1}, {"ref": "SC-001", "items": 3, "errors": 2}],
+            "layout": {"cr2": [{"name": "CR-2 Screen Flow · Site (WEB-01)", "site": "WEB-01", "groups": ["G-1"],
+                                "flows": [{"name": "Flow G-1 — x", "flow": "G-1", "groups": ["G-1"]}]}],
+                       "cr3": [{"name": "CR-3 Screens · Site (WEB-01)", "site": "WEB-01", "fill": "#9da5ad",
+                                "flows": [{"name": "Flow G-1 — x", "flow": "G-1", "mockups": 2}], "loose": 0}],
+                       "mockups": 2}}
 
 
 def f_nodes(fn):
@@ -278,6 +294,23 @@ FIG_CASES = [
     ("chong node cu", lambda d: d.__setitem__("overlap", ["Output 1"]), "9"),
     ("mockup dung mau ngoai DS", f_nodes(lambda ns: ns[5].update(colors=["#ff00ff"])), "10"),
     ("mockup khong ghi DS", f_nodes(lambda ns: ns[5].update(ds="")), "10"),
+    ("mockup clone UI that (src) co mau ngoai DS -> chi WARN", f_nodes(lambda ns: ns[5].update(colors=["#ff00ff"], src="1:999")), "10"),
+    ("lane CR-1 khong co NG", f_nodes(lambda ns: ns[6].update(shape="box")), "11"),
+    ("group CR-2 khong co popup / man loi", f_nodes(lambda ns: ns[7].update(shape="box")), "12"),
+    ("Screen Index Loai ngoai enum", lambda d: d["idx"][0].update(type="Inline"), "12"),
+    ("Screen Index thieu TONG", lambda d: d.__setitem__("idxTotal", []), "12"),
+    ("⑦ Error Index thieu dong", lambda d: d.__setitem__("erridx", 0), "12"),
+    ("CR-3 man thieu panel mo ta", lambda d: d.__setitem__("desc", d["desc"][1:]), "13"),
+    ("CR-3 mo ta thieu ERROR SCENARIOS", lambda d: d["desc"][0].update(errors=0), "13"),
+    ("CR-3 man UPD khong to mau phan doi", f_nodes(lambda ns: ns[8].update(chg=["AS-IS"])), "13"),
+    ("CR-3 thieu man UPD SC-001", f_nodes(lambda ns: ns.pop(8)), "13"),
+    ("readback cu khong co layout", lambda d: d.pop("layout"), "14"),
+    ("CR-2 khong chia section theo site", lambda d: d["layout"].update(cr2=[]), "14"),
+    ("CR-2 group khong nam trong section flow rieng", lambda d: d["layout"]["cr2"][0].update(flows=[]), "14"),
+    ("CR-2 group nam o 2 site", lambda d: d["layout"]["cr2"].append({"name": "y", "site": "WEB-02", "groups": ["G-1"]}), "14"),
+    ("CR-3 nen section khong phai #9DA5AD", lambda d: d["layout"]["cr3"][0].update(fill="#ffffff"), "14"),
+    ("CR-3 khong chia theo flow", lambda d: d["layout"]["cr3"][0].update(flows=[], loose=2), "14"),
+    ("CR-3 2 section cung site", lambda d: d["layout"]["cr3"].append(dict(d["layout"]["cr3"][0])), "14"),
 ]
 
 
@@ -403,8 +436,30 @@ def main():
             mut(d)
             code, out = fig(d)
             got = results(out).get(chk)
-            record("figma %s -> check %s FAIL" % (name, chk), got == "FAIL" and code == 1,
+            want = "WARN" if "chi WARN" in name else "FAIL"
+            record("figma %s -> check %s %s" % (name, chk, want), got == want and (code == 1) == (want == "FAIL"),
                    "nhan %s (exit %d)" % (got, code))
+
+        # CR-1 lane dang use case (render-cr-figma.usecase_lane_errors)
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("rcf", os.path.join(HERE, "render-cr-figma.py"))
+        rcf = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(rcf)
+        def lane():
+            return {"lane": "FL-01", "nodes": [{"key": "a", "type": "actor", "ref": "FL-01"}, {"key": "s", "type": "start", "pos": 1, "ref": "SC-001"},
+                    {"key": "d", "type": "decision", "pos": 2, "ref": "SC-001"}, {"key": "e", "type": "end", "pos": 3, "ref": "SC-001", "result": "ok"},
+                    {"key": "n", "type": "ng", "pos": 2, "row": 1, "ref": "SC-001"}, {"key": "f", "type": "end", "pos": 3, "row": 1, "ref": "SC-001", "result": "fail"}],
+                    "edges": [["a", "s"], ["s", "d"], ["d", "e"], ["d", "n", "", "ng"], ["n", "f", "", "ng"]]}
+        record("CR-1 use case hop le -> khong loi", rcf.usecase_lane_errors(lane()) == [], str(rcf.usecase_lane_errors(lane())))
+        for name, fn in [("cot technology cu", lambda L: L["nodes"][2].update(type="technology")),
+                         ("ref API trong lane", lambda L: L["nodes"][2].update(ref="API-001")),
+                         ("thieu ket thuc happy", lambda L: L["nodes"][3].update(row=1)),
+                         ("NG khong di tiep", lambda L: L["edges"].pop()),
+                         ("pos ngoai 1..6", lambda L: L["nodes"][1].update(pos=9))]:
+            L = lane(); fn(L)
+            record("CR-1 use case %s -> renderer tu choi" % name, bool(rcf.usecase_lane_errors(L)))
+        record("Figma CR-1/CR-2 co chu UNKNOWN -> renderer tu choi",
+               bool(rcf.unknown_text_errors({"flows": [{"nodes": [{"label": "Message: UNKNOWN"}]}]})) and not rcf.unknown_text_errors({"flows": [lane()]}))
 
         # Layout DS 1 bo (04_DesignSystem/project/)
         write_ds_single(base)

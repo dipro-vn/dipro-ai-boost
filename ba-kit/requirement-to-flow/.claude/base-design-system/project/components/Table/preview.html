@@ -1,0 +1,37 @@
+<!-- @dsCard group="Data display" height=544 -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><style>body{margin:0;padding:16px;font-family:var(--font-sans);background:var(--white)} .block{margin-bottom:24px}</style></head>
+<body>
+<div id="root"></div>
+<script>
+  var D = window.DADS, h = React.createElement;
+  var cols = [
+    { key: 'name', label: '氏名', sortable: true },
+    { key: 'no', label: '申請番号', sortable: true, href: function (r) { return '#' + r.no; } },
+    { key: 'type', label: '申請種別' },
+    { key: 'date', label: '申請日', sortable: true }
+  ];
+  var rows = [
+    { id: 1, name: 'デジ田 太郎', no: '2024-000123', type: '住民票交付申請', date: '2024/04/01' },
+    { id: 2, name: 'デジ田 花子', no: '2024-000098', type: '転入届', date: '2024/03/28' },
+    { id: 3, name: '霞が関 一郎', no: '2024-000150', type: '印鑑登録', date: '2024/04/03' }
+  ];
+  var dense = [
+    { key: 'kind', label: '手続き', rowHeader: true },
+    { key: 'place', label: '窓口' },
+    { key: 'fee', label: '手数料', align: 'end' },
+    { key: 'link', label: '詳細', href: function (r) { return '#'; }, linkArea: 'cell', render: function () { return '詳しく見る'; } }
+  ];
+  var drows = [
+    { id: 'a', kind: '住民票の写し', place: '市民課', fee: '300円' },
+    { id: 'b', kind: '印鑑登録証明書', place: '市民課', fee: '300円' },
+    { id: 'c', kind: '戸籍謄本', place: '戸籍係', fee: '450円' }
+  ];
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+    h('div', { className: 'block' }, h(D.Table, { columns: cols, rows: rows, defaultSort: { key: 'date', direction: 'descending' }, hoverable: true, selectedKeys: [2], 'aria-label': '申請一覧' })),
+    h('div', { className: 'block' }, h(D.Table, { columns: dense, rows: drows, size: 'dense', striped: true, border: 'horizontal', 'aria-label': '証明書の手数料' }))
+  ));
+</script>
+</body>
+</html>

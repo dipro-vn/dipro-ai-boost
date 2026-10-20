@@ -8,4 +8,4 @@ design-system/
 └── project/           ← nội dung artifact: design-system.json · tokens.json · README.md · components/ · assets/
 ```
 
-Chuẩn định dạng: `.claude/designer-agent/design-system-format.md`. Chưa có nguồn design system → agent dừng lại, không vẽ.
+Chuẩn định dạng: `.claude/designer-agent/design-system-format.md`. Chưa có nguồn design system → user chọn dùng Base Design System chuẩn UI Nhật (`.claude/base-design-system/`, copy vào đây làm bản tạm) hoặc agent dừng lại.

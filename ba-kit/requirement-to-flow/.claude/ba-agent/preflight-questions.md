@@ -175,7 +175,7 @@ Liệt kê đầy đủ Actor của scope này (kể cả actor hệ thống):
 **Lưu:** `ACTOR_LIST` + `PRIMARY_ACTOR` + `SYSTEM_ACTORS`
 
 **Áp dụng:**
-- Cột ACTOR của Output 1 Phần A + level 2 của Sitemap WBS Phần C
+- Actor của từng use case Output 1 Phần A + level Actor của Sitemap Phần C
 - Input BẮT BUỘC cho **Test G** và **Test F** (`output-1-flow.md`)
 - Actor hệ thống → Trigger vẽ dạng ⚙ System, KHÔNG vẽ như actor người
 
@@ -199,7 +199,7 @@ Figma output (label node, tiêu đề bảng, mô tả) viết bằng ngôn ng�
 
 **Áp dụng:**
 - `[JP]` / `[VN + JP]` → Screen Name + mô tả 1 dòng viết đúng ngôn ngữ đó; **Screen Code giữ nguyên ASCII** (không dịch)
-- Audience = `Khách hàng cuối` → tránh thuật ngữ kỹ thuật trong mô tả node (không viết "API 500", viết "hệ thống lỗi")
+- Audience = `Khách hàng cuối` / `BrSE` → chữ trên Figma theo `writing-style.md` (không thuật ngữ kỹ thuật, không mã nội bộ trên hình — không viết "API 500", viết "hệ thống lỗi")
 - Audience = `Dev-QC` → được phép giữ thuật ngữ kỹ thuật
 
 **⚠️ Enforcement:** chưa trả lời → mặc định `VN` + audience `PM nội bộ`, in rõ dòng này trong Discovery Brief để user kịp đổi trước khi vẽ.

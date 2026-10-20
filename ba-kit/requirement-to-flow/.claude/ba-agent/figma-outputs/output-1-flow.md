@@ -1,8 +1,8 @@
 # Ba Agent — Output 1: Flow Tổng Quan
 
-## Output 1 — Flow Tổng Quan (Business Logic Flow + Technology Table + Sitemap)
+## Output 1 — Flow Tổng Quan (Use case + Technology Table + Sitemap)
 
-> **Không phải screen flow.** Đây là luồng **nghiệp vụ + kỹ thuật**: Actor nào → trigger gì → function nào xử lý → công nghệ gì → outcome.
+> **Không phải screen flow.** Đây là bức tranh **use case**: mỗi flow = 1 use case — Actor nào → đi những bước nào → kết thúc ở đâu (happy) · lỗi / nhánh khác kết thúc ở đâu (non-happy). **Không đưa công nghệ / function / API vào luồng** — công nghệ chỉ nằm ở bảng Technology bên phải (feedback 20/10/2026).
 
 > **Sau khi vẽ xong Output 1 + hỏi user ở Gate A (`AskUserQuestion`):** nếu vẫn còn business rule chưa được trả lời → BẮT BUỘC chạy **Bước 5.4 — Output OQ** (`.claude/ba-agent/open-questions.md`): viết `OQ-REGISTER.md` → export `open_questions.xlsx` bằng script → `n ≤ 20` thì vẽ thêm Figma OQ view, `n > 20` thì chỉ giao xlsx. Chốt rule muộn = phải vẽ lại Output 2/3.
 
@@ -47,7 +47,7 @@ Liệt kê **TOÀN BỘ** ứng viên flow thô (từ Function Inventory / requi
 3. Chạy **Test A → Test B → Test F** cho mọi cặp còn lại cùng Actor HOẶC cùng Outcome
 4. Chạy **Test E** (cardinality sanity-check) theo ngưỡng của `FLOW_GRANULARITY` (Câu 0.9 `preflight-questions.md`) — vượt ngưỡng → quay lại bước 2
 5. In **Merge Log** (bắt buộc — format bên dưới)
-6. Verify rule **"gộp = đổi tầng"**: mọi candidate bị gộp đã có mặt ở Sitemap WBS Phần C hoặc là Trigger box phụ chưa?
+6. Verify rule **"gộp = đổi tầng"**: mọi candidate bị gộp đã có mặt ở Sitemap Phần C (nhóm chức năng / màn) hoặc là nhánh / điểm bắt đầu phụ trong use case chưa?
 7. Trình bảng N flow + Merge Log cho user xác nhận (đặc biệt khi input là Simple Estimate — kết hợp Rule R1 ở `preflight-questions.md`)
 8. Chỉ sau khi user confirm N mới bắt đầu vẽ Phần A
 
@@ -59,7 +59,7 @@ MERGE LOG (N thô: 11 → N chốt: 4 · Granularity: [B] Standard)
 - Gộp "Đăng xuất" vào "Account Access"          — Test A: cùng cụm capability "Account Access"
 - Gộp "Xem BĐS đề xuất" vào "Property Mgmt"     — Test B: không có outcome độc lập, chỉ là lối vào
 - GIỮ TÁCH "Seminar Booking" khỏi "Payment"     — Test F: thuật ngữ cốt lõi khác (Seminar vs Transaction), actor sở hữu khác
-→ Sitemap Phần C giữ đủ 11 mục gốc dưới dạng Hành động (rule "gộp = đổi tầng")
+→ Sitemap Phần C giữ đủ 11 mục gốc dưới dạng nhóm chức năng / màn (rule "gộp = đổi tầng")
 ```
 
 **⚠️ Rule "GỘP = ĐỔI TẦNG HIỂN THỊ, KHÔNG PHẢI XOÁ THÔNG TIN" (BẮT BUỘC):**
@@ -67,8 +67,8 @@ MERGE LOG (N thô: 11 → N chốt: 4 · Granularity: [B] Standard)
 > Đây chính là lý do agent hay ngại gộp (sợ mất thông tin của stakeholder) rồi để N phình to.
 
 Mọi candidate bị gộp ở Phần A **PHẢI xuất hiện lại** ở ít nhất 1 trong 2 chỗ:
-- **Phần C — Sitemap WBS level 3 (Hành động)** — mặc định
-- **1 Trigger box phụ** trong flow cha ở Phần A — khi candidate là 1 điểm vào khác
+- **Phần C — Sitemap (Nhóm chức năng → Màn)** — mặc định
+- **1 nhánh / điểm bắt đầu phụ** trong use case cha ở Phần A — khi candidate là 1 điểm vào khác (VD "Quên mật khẩu" = hàng "Nhánh khác" của use case Đăng nhập)
 
 Gộp ở Phần A **không được làm mất bất kỳ mục nào** khỏi Phần C. Verify bằng **phép trừ tập hợp trên FR Register** (KHÔNG phải phép so số lượng):
 
@@ -78,89 +78,73 @@ set(FR No. trong FR Register)  −  set(FR No. đã gắn tag trên Sitemap)  = 
 
 > ⚠️ **Công thức cũ `số Hành động ở Sitemap ≥ số candidate thô trong Flow Candidate Matrix` đã bị bãi bỏ vì SAI** — Flow Candidate Matrix do chính BA gom từ nguồn, lấy nó làm mốc thì gate tự so với chính mình và luôn PASS. Sự cố thực tế: mốc lấy nhầm 34 nhóm giữa thay vì 58 dòng chức năng → `42 ≥ 34` PASS trong khi 3 chức năng đã biến mất. Chi tiết: `granularity-principles.md` § **GATE FR COVERAGE**.
 
-**Bắt buộc khi vẽ Phần C:** mỗi mục Hành động gắn tag `#N` = FR No. của chức năng nguồn. 1 hành động phủ nhiều FR → ghi `#19,20,21`. Chức năng `SYSTEM — không có màn` → vẽ thành node hệ thống trong Phần A và vẫn gắn tag.
+**Bắt buộc khi vẽ Phần C:** mỗi **nhóm chức năng / màn** mang tag FR No. **trong tên layer** (không hiện chữ trên hình): `GROUP · <nhóm> · #19,20,21`. Chức năng `SYSTEM — không có màn` → nhánh "Hệ thống & tự động" của Sitemap (vẫn gắn tag) + ghi bằng lời trong use case liên quan (`⏱ Tự động: …`).
 
 **In trước khi vẽ (THIẾU ≠ [] → dừng, không vẽ):**
 
 ```
-FR COVERAGE — Sitemap: <số hành động> mục · phủ <n>/<N> FR · THIẾU: []
+FR COVERAGE — Sitemap: <số nhóm> nhóm · phủ <n>/<N> FR · THIẾU: []
 ```
 
-**Gồm 3 phần trong cùng 1 frame (width 2280px):**
+**Gồm 3 phần trong cùng 1 frame (width 2280–2360px):**
 
-**Phần A — Business & Logic Flow** (layout trái → phải, 5 cột — chiếm x=40..1770):
+### Phần A — Use case (trái, x = 40..1770)
+
+**1 lane = 1 use case.** Mỗi lane:
+
 ```
-ACTOR → TRIGGER → FUNCTION → TECHNOLOGY → OUTCOME
+👤 Actor → ▶ Bắt đầu → bước → ◇ rẽ nhánh → … → ✓ KẾT THÚC          (hàng 0 — happy case)
+                         └─ NG (lỗi) → ✗ KẾT THÚC                      (hàng dưới — non-happy)
+                ▶ Nhánh khác (đăng ký, quên mật khẩu…) → ✓ KẾT THÚC   (hàng dưới — "Nhánh khác")
 ```
 
-**⚠️ Vertical gap rule (BẮT BUỘC — feedback từ user):**
+- Dòng phụ dưới tên lane: **nền tảng / site · mục tiêu của use case** · việc hệ thống tự làm (ghi bằng lời).
+- Bước viết theo **điều người dùng làm / thấy** ("Nhập email, mật khẩu", "Chọn ngày → màn mua"). **Cấm** trong lane: tên API, thư viện, bảng DB, SDK, mã màn.
+- Mỗi lane bắt buộc: 1 actor · ≥ 1 điểm bắt đầu · ≥ 1 ✓ kết thúc · ≥ 1 non-happy (`◇` → NG → ✗ kết thúc / quay lại bước) — use case thật sự không có lỗi thì ghi lý do N/A ngay dưới tên lane. NG nào cũng phải đi tiếp.
+- Tối đa **6 cột vị trí** mỗi hàng (dài hơn → gộp bước); hàng cách nhau ~118px.
+- Rule chưa chốt (`INFERENCE` / `UNKNOWN` trong Source Register) → **không** vẽ vào đường đi: khung tím nét đứt "To verify" hoặc chip "CHƯA CHỐT" dưới lane.
+- **Không hiện chữ `UNKNOWN` trên Figma** — viết "chưa rõ — chờ BRSE xác nhận" / "chưa xác định". Nhãn `UNKNOWN` chỉ nằm trong SPEC.md (Source Register).
 
-Nếu feature có N business flows (VD Application / Scout / Contract / Admin / LINE), đặt chúng vertically stacked trong Phần A:
-
-- **Gap giữa 2 flows liên tiếp: MIN 100px** (tránh arrow / node của flow N chồng đè lên flow N+1)
-- Mỗi flow band: height ~180px (3 rows nodes) đến ~260px (4+ rows nodes)
-- Tổng height Phần A: `N × (flowBandHeight + 100) - 100`
-- **Verify sau khi vẽ:** `get_screenshot` — TUYỆT ĐỐI không được có arrow/node của flow N đè lên flow N+1. Nếu phát hiện → tăng gap lên 120-150px và vẽ lại.
-- Có thể thêm horizontal divider line 1px `#D0D7DE` giữa 2 flow bands để rõ ràng thêm
-
-**Phần B — Technology Table** (BÊN PHẢI Flow, x=1800..2260):
-- Bảng 2 cột: `Technology | Mô tả mục đích sử dụng`
-- Liệt kê 8-10 tech: Framework/SDK/Service/Database/Cache/Storage/Auth
-- Format: header row 32px xanh, data row 60px alternating white/BGL
-- Ghi chú cuối: "Tech Lead sẽ chốt lại trong Design-Technical.md"
-
-**Phần C — Sitemap WBS Tree** (dưới Flow, y=560+):
-- 4 levels: Feature → Actor → Hành động verb-first → Screen/Popup
-- Legend rõ màu (Root/Actor/Hành động/Popup)
+**⚠️ Vertical gap rule (BẮT BUỘC — feedback từ user):** N use case xếp dọc, **gap MIN 100px** giữa 2 lane (có thể kẻ divider 1px `#D0D7DE`). Verify bằng script bbox (`recheck.md` Tiêu chí 7), không bằng mắt.
 
 | Element | Figma shape | Màu |
 |---|---|---|
-| Actor (người dùng) | Ellipse 80px | Fill `#E8F4FD`, stroke `#0969DA` |
-| Trigger / Action | Rectangle `radius: 8` | Fill `#E8F4FD`, stroke `#0969DA` |
-| Function / System | Rectangle `radius: 8` | Fill `#FFF9EB`, stroke `#F4860C` |
-| Technology (SDK, DB...) | Rectangle `radius: 8` | Fill `#FFF9EB`, stroke `#F4860C` |
-| Outcome | Rectangle `radius: 8` | Fill `#F6F8FA`, stroke `#D0D7DE` |
-| Arrow happy path | Line 2px solid | `#0969DA` |
-| Arrow error | Line 2px dashed | `#CF222E` |
-| Arrow cross-actor | Line 2px solid | `#1A7F37` |
+| Actor | Pill (radius = h/2) | Fill `#E8F4FD`, stroke `#0969DA`, tiền tố 👤 |
+| Bắt đầu | Pill | Fill `#E8F4FD`, stroke `#0969DA`, tiền tố ▶ |
+| Bước | Rectangle `radius: 8` | Fill `#FFFFFF`, stroke `#0969DA` |
+| Rẽ nhánh | Rectangle `radius: 20` | Fill `#FFF9EB`, stroke `#F4860C`, tiền tố ◇ |
+| NG (lỗi) | Rectangle `radius: 8` + vạch đỏ trái | Fill `#FFF6F5`, stroke `#CF222E`, tiền tố `NG ·` |
+| Hệ thống tự động | Rectangle `radius: 8` | Fill `#E8F7EC`, stroke `#1A7F37`, tiền tố ⏱ |
+| ✓ Kết thúc | Pill, stroke 3px | Fill `#EDFDF0`, stroke `#1A7F37` |
+| ✗ Kết thúc | Pill, stroke 3px | Fill `#FFF6F5`, stroke `#CF222E` |
+| To verify | khung bất kỳ | Fill `#FBEEFF`, stroke `#6639BA` nét đứt |
+| Arrow happy / lỗi | Line 2px | `#0969DA` / `#CF222E` |
 
-Row phụ bên dưới: **Technology Stack** — các box nhỏ liệt kê framework/SDK/service.
+### Phần B — Technology Table (bên phải, x = 1800..2260) — giữ như cũ
 
-**Phần B — Sitemap kiểu WBS Tree** (layout cây, bên dưới Phần A):
+- Bảng 2 cột: `Technology | Mô tả mục đích sử dụng` · 8–10 tech (Framework/SDK/Service/Database/Cache/Storage/Auth)
+- Header row 32px xanh, data row 60px xen kẽ trắng / `#F6F8FA` · ghi chú cuối: "Tech Lead sẽ chốt lại trong Design-Technical.md" (chưa chốt → `[PROPOSAL — chờ Tech Lead confirm]`)
 
-> **Reference:** xem `example_output_1.png` — style WBS tree, có icon minh họa mỗi node, tập trung **Actor + Hành động** (không phải chỉ list màn hình).
-
-Sitemap = cây phân tách công việc (Work Breakdown Structure) theo:
-- **Level 1 (Root):** Tên feature
-- **Level 2 (Actor):** Từng actor liên quan
-- **Level 3 (Hành động chính):** Action mà actor thực hiện (không phải screen name)
-- **Level 4 (Sub-action / Screen):** Chi tiết bước hoặc screen liên quan
+### Phần C — Sitemap (dưới lane): Site → Actor / vai trò → Nhóm chức năng → Màn
 
 ```
-[Feature Name]
-├── [👤 Actor A — Vai trò]
-│   ├── ✔ Hành động 1 (VD: "Khởi tạo cuộc gọi")
-│   │   └── Screen liên quan / Popup
-│   └── ✔ Hành động 2 (VD: "Xem lịch sử")
-│       └── Screen liên quan
-├── [👤 Actor B — Vai trò]
-│   └── ✔ Hành động 1 (VD: "Nhận cuộc gọi")
-│       ├── Screen liên quan
-│       └── Popup: Mic Permission
-└── [⚙️ Hệ thống / Tự động]
-    └── ✔ Ghi log cuộc gọi
+[Tên hệ thống / feature]
+├── [🛠 Site / nền tảng A — VD Admin web]
+│   └── 👤 Admin · Staff
+│       ├── Xác thực            → Trang đăng nhập · Trang quên mật khẩu · Trang đặt lại mật khẩu
+│       └── Quản lý sản phẩm    → Danh sách · Tạo · Sửa · [Popup] Xác nhận xoá
+├── [📱 Site / nền tảng B — VD App người dùng]
+│   └── 👤 Người dùng → Tài khoản → Đăng nhập · Đăng ký · …
+└── [⚙ Hệ thống & tự động — không có màn]
+    └── Gửi mail nhắc · Đồng bộ dữ liệu
 ```
 
 | Level | Figma shape | Màu | Nội dung |
 |---|---|---|---|
-| Root (Level 1) | Rectangle lớn `radius: 8` | Fill `#0969DA`, text white | Tên feature |
-| Actor (Level 2) | Rectangle `radius: 8` + icon | Fill nhạt màu actor, stroke đậm | 👤 Tên actor · vai trò |
-| Hành động (Level 3) | Rectangle `radius: 6` | Fill `#F6F8FA`, stroke `#0969DA` | ✔ Tên hành động (verb-first) |
-| Screen/Popup (Level 4) | Rectangle nhỏ `radius: 4` | Fill trắng, stroke màu actor | Screen Code + tên |
-| Connector | Line 1px | `#D0D7DE` | Nối cha → con |
+| Root | Rectangle `radius: 8` | Fill `#0969DA`, chữ trắng | Tên hệ thống / feature |
+| Site / nền tảng | Thanh ngang `radius: 8` | Fill màu site, chữ trắng | Tên site + ghi chú ngắn |
+| Actor / vai trò | Pill viền màu site | Fill trắng | 👤 Tên actor (nhiều vai trò dùng chung màn → 1 pill, vai trò ghi trong nhóm) |
+| Nhóm chức năng | Card `radius: 6` | Fill `#F6F8FA`, stroke màu site | Danh từ dễ hiểu ("Xác thực", "Đặt chỗ") + "Vai trò: …" + danh sách màn (•) |
+| Connector | Line 1–2px | `#8C959F` | Nối cha → con |
 
-**Nguyên tắc điền:**
-- Tên hành động **PHẢI bắt đầu bằng verb**: "Khởi tạo...", "Xem...", "Nhận...", "Ghi log..."
-- KHÔNG đặt tên node = screen code (screen code chỉ ở Level 4)
-- Mỗi Actor phải có ≥ 1 Hành động
-- Popup/Modal xuất hiện ở Level 4, đánh dấu `[Popup]` prefix
+**Nguyên tắc điền:** tên nhóm là **danh từ nghiệp vụ**, không phải hành động; tên màn viết dễ hiểu ("Trang đăng nhập"), **không** route / endpoint / mã màn trên hình (mã + FR tag ở tên layer); Popup ghi `[Popup]`; màn chưa chốt chữ tím "(chưa chốt)".

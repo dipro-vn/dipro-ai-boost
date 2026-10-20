@@ -1,0 +1,23 @@
+<!-- @dsCard group="Content" height=432 -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><style>body{margin:0;padding:16px;font-family:var(--font-sans);background:var(--white)} .grid{display:flex;gap:32px;align-items:flex-start} .desk{flex:1 1 auto;min-width:0} .mob{flex:none;width:343px} p{margin:0}</style></head>
+<body>
+<div id="root"></div>
+<script>
+  var D = window.DADS, h = React.createElement;
+  ReactDOM.createRoot(document.getElementById('root')).render(h('div', { className: 'grid' },
+    h('div', { className: 'desk' }, h(D.Accordion, null,
+      h(D.AccordionItem, { title: '注文をキャンセルしたいです。' }, h('p', null, 'マイページの「注文履歴」からキャンセルの手続きができます。')),
+      h(D.AccordionItem, { title: '地域によって送料の違いはありますか？', defaultOpen: true }, h('p', null, 'お届け先・ご購入金額によって送料が異なります。詳しくは送料一覧をご覧ください。')),
+      h(D.AccordionItem, { title: '返品はできますか？' }, h('p', null, '商品到着後8日以内であれば返品を受け付けます。'))
+    )),
+    h('div', { className: 'mob' }, h(D.Accordion, { platform: 'mobile' },
+      h(D.AccordionItem, { title: '注文をキャンセルしたいです。' }, h('p', null, 'マイページからキャンセルできます。')),
+      h(D.AccordionItem, { title: '地域によって送料の違いはありますか？', defaultOpen: true }, h('p', null, 'お届け先・ご購入金額によって送料が異なります。')),
+      h(D.AccordionItem, { title: '商品が届きません。' }, h('p', null, '配送状況をご確認ください。'))
+    ))
+  ));
+</script>
+</body>
+</html>

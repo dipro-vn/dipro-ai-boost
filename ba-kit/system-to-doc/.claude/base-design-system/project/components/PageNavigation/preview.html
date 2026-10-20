@@ -1,0 +1,19 @@
+<!-- @dsCard group="Navigation" height=400 -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><style>body{margin:0;padding:16px;font-family:var(--font-sans);background:var(--white)} .row{display:flex;gap:24px;align-items:center;flex-wrap:wrap;margin-bottom:24px}</style></head>
+<body>
+<div id="root"></div>
+<script>
+  var D = window.DADS, h = React.createElement;
+  function Row(p) { return h('div', { className: 'row' }, p.children); }
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+    h(Row, null, h(D.PageNavigation, { total: 24, defaultPage: 1 })),
+    h(Row, null, h(D.PageNavigation, { type: 'text', total: 9999, defaultPage: 9999 })),
+    h(Row, null, h(D.PageNavigation, { type: 'outlined', total: 24, defaultPage: 12 })),
+    h(Row, null, h(D.PageNavigation, { type: 'arrow', total: 5, defaultPage: 2 }), h(D.PageNavigation, { type: 'arrow', arrowSize: 's', total: 5, defaultPage: 3 })),
+    h(Row, null, h(D.PageNavigation, { total: 4, defaultPage: 2, previousLabel: '前の3件', nextLabel: '次の3件', label: '4〜6 / 12件' }))
+  ));
+</script>
+</body>
+</html>

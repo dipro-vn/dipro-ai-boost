@@ -114,6 +114,9 @@ def main():
     ap.add_argument("--other-cr", action="append", default=[])
     ap.add_argument("--template", default=None)
     ap.add_argument("--out", default=None)
+    ap.add_argument("--estimate", default=None, help="Estimation sinh tu estimate.json (che do 見積書 theo chuc nang)")
+    ap.add_argument("--function-rates", default=os.path.join(KIT, ".claude/config/function-rates.json"))
+    ap.add_argument("--mitsumori-template", default=os.path.join(KIT, "templates/template_mitsumori.xlsx"))
     a = ap.parse_args()
     try:
         import openpyxl  # noqa: F401
@@ -125,6 +128,21 @@ def main():
     rates_meta, rates = C.load_rates(a.rates)
     B = C.load_baseline(a.baseline)
     X = read_xlsx(a.impact)
+    FE = FR = FRM = FTM = FWB = FX = None
+    if a.estimate:
+        import estimate_core as E
+        from openpyxl import load_workbook
+        FE = C.load_json(a.estimate)
+        FRM, FR = E.load_rates(a.function_rates)
+        _, FTM = E.load_template(a.mitsumori_template)
+        FWB = load_workbook(a.impact)
+        if S.CR_SHEET_ESTIMATION in FWB.sheetnames:
+            ws_ = FWB[S.CR_SHEET_ESTIMATION]
+            lay, items, tots, _b = E.scan_sheet(ws_)
+            col = (lay or {}).get("cols", {})
+            row_all = next((t["row"] for t in tots if E.LBL["vi"]["all"] in t["label"] and "SUM(" in str(t.get("sub"))
+                            and "SUMIF" not in str(t.get("sub"))), 0)
+            FX = {"col": col, "row_all": row_all, "row_step1": next((t["row"] for t in tots if E.LBL["vi"]["step1"] in t["label"]), 0)}
     names, summ = X["names"], X["summ"]
     tpl = C.find_template(a.template, KIT)
     est_meta = C.load_estimation_template(tpl)[1] if tpl else None
@@ -304,18 +322,30 @@ def main():
 
     # 12. Summary: cong so + so doi tuong + link Estimation
     bad = []
-    if num(summary_value(summ, C.L_IMPL)) != grand:
-        bad.append("%s=%s != tong MD %s" % (C.L_IMPL, summary_value(summ, C.L_IMPL), C.fmt_md(grand)))
-    mn, ex = C.plan_md(IMP, rates)
-    if num(summary_value(summ, C.L_MIN_PLAN)) != mn or num(summary_value(summ, C.L_EXT_PLAN)) != ex:
-        bad.append("最小改修案 / 拡張案 = %s / %s != %s / %s (theo co option)" % (
-            summary_value(summ, C.L_MIN_PLAN), summary_value(summ, C.L_EXT_PLAN), mn, ex))
     est = X["est"] or {}
-    for label, key in ((C.L_TOTAL_PD, 0), (C.L_TOTAL_PM, 1)):
-        f = C.txt(summary_value(summ, label)).replace(" ", "")
-        want_row = (est.get("total_row") or 0) + key
-        if f != "='%s'!P%d" % (S.CR_SHEET_ESTIMATION, want_row):
-            bad.append("%s phai la cong thuc ='%s'!P%d (dang: %r)" % (label, S.CR_SHEET_ESTIMATION, want_row, f))
+    if FE:
+        want_impl = round(sum(E.row_numbers(x, FR, FTM)["impl"] for x in FE["rows"]), 2)
+        if num(summary_value(summ, C.L_IMPL)) != want_impl:
+            bad.append("%s=%s != tong 実装 estimate.json %s" % (C.L_IMPL, summary_value(summ, C.L_IMPL), want_impl))
+        lay = E.find_layout(FWB[S.CR_SHEET_ESTIMATION])
+        sub = FX["col"]["sub"] if FX else "?"
+        for label, row in ((C.L_TOTAL_PD, FX["row_all"] if FX else 0), (C.L_TOTAL_PM, (FX["row_all"] + 1) if FX else 0),
+                           ("Step 1 (人日)", FX["row_step1"] if FX else 0), ("Step 2 (人日)", (FX["row_step1"] + 1) if FX else 0)):
+            f = C.txt(summary_value(summ, label)).replace(" ", "")
+            if f != "='%s'!%s%d" % (S.CR_SHEET_ESTIMATION, sub, row):
+                bad.append("%s phai la ='%s'!%s%d (dang: %r)" % (label, S.CR_SHEET_ESTIMATION, sub, row, f))
+    else:
+        if num(summary_value(summ, C.L_IMPL)) != grand:
+            bad.append("%s=%s != tong MD %s" % (C.L_IMPL, summary_value(summ, C.L_IMPL), C.fmt_md(grand)))
+        mn, ex = C.plan_md(IMP, rates)
+        if num(summary_value(summ, C.L_MIN_PLAN)) != mn or num(summary_value(summ, C.L_EXT_PLAN)) != ex:
+            bad.append("最小改修案 / 拡張案 = %s / %s != %s / %s (theo co option)" % (
+                summary_value(summ, C.L_MIN_PLAN), summary_value(summ, C.L_EXT_PLAN), mn, ex))
+        for label, key in ((C.L_TOTAL_PD, 0), (C.L_TOTAL_PM, 1)):
+            f = C.txt(summary_value(summ, label)).replace(" ", "")
+            want_row = (est.get("total_row") or 0) + key
+            if f != "='%s'!P%d" % (S.CR_SHEET_ESTIMATION, want_row):
+                bad.append("%s phai la cong thuc ='%s'!P%d (dang: %r)" % (label, S.CR_SHEET_ESTIMATION, want_row, f))
     objs = summary_objects(summ)
     want_objs = [(o, [d[t] for t in S.CR_CHANGE_TYPE] + [d["total"], d["md"]])
                  for o, d in C.object_stats(IMP, rates)]
@@ -331,40 +361,46 @@ def main():
 
     # 22. Estimation theo template
     bad = []
-    if not est:
-        bad.append("khong co sheet Estimation")
-    elif not est_meta:
-        bad.append("khong thay template Estimation de doi chieu he so (%s)" % S.ESTIMATION_TEMPLATE_PATH)
+    if FE:  # 1 dong / chuc nang, kiem bang gate V-EST (tru E4 ngon ngu, E7 tien de — chi ap cho ban KH)
+        for i, title, b_, w in E.verify(FWB, S.CR_SHEET_ESTIMATION, FE, FR, FRM, FTM, "vi", cr):
+            if b_ and not w:
+                bad += ["%s %s: %s" % (i, title, x) for x in b_[:5]]
     else:
-        got_ids = [x["id"] for x in est["items"]]
-        if sorted(got_ids) != sorted(tag(i) for i in IMP) or len(set(got_ids)) != len(got_ids):
-            bad.append("Estimation co dong hang muc %d (%d khac nhau) != %d impact cua cr.json" % (
-                len(got_ids), len(set(got_ids)), len(IMP)))
-        byid = {i["id"]: i for i in IMP}
-        for x in est["items"]:
-            imp, r = byid.get(x["id"]), x["row"]
-            if not imp:
-                bad.append("Estimation!B%d %s khong co trong cr.json" % (r, x["id"]))
-                continue
-            if num(x["M"]) != C.md_of(imp, rates):
-                bad.append("Estimation!M%d (実装) = %s != MD %s" % (r, x["M"], C.fmt_md(C.md_of(imp, rates))))
-            want = {"K": "=M%d*%s" % (r, est_meta["ratio_K"]), "L": "=M%d*%s" % (r, est_meta["ratio_L"]),
-                    "N": "=M%d*%s" % (r, est_meta["ratio_N"]),
-                    "O": "=SUM(K%d:N%d)*%s" % (r, r, est_meta["ratio_O"]), "P": "=SUM(K%d:O%d)" % (r, r)}
-            for col, f in want.items():
-                if C.txt(x[col]).replace(" ", "") != f:
-                    bad.append("Estimation!%s%d = %r != %s (he so template)" % (col, r, x[col], f))
-            if bool(x["J"]) != bool(imp.get("option")):
-                bad.append("Estimation!J%d option=%s != cr.json %s" % (r, x["J"], bool(imp.get("option"))))
-        if est["items"]:
-            f0, f1 = est["items"][0]["row"], est["items"][-1]["row"]
-            for col in "KLMNOP":
-                if C.txt(est["total"].get(col)).replace(" ", "") != "=SUM(%s%d:%s%d)" % (col, f0, col, f1):
-                    bad.append("Estimation dong 合計 %s = %r khong phu du %d..%d" % (col, est["total"].get(col), f0, f1))
-                want = "=%s%d/%s" % (col, est["total_row"], C.fmt_md(est_meta["md_per_month"]))
-                if C.txt(est["month"].get(col)).replace(" ", "") != want:
-                    bad.append("Estimation dong 人月 %s = %r != %s" % (col, est["month"].get(col), want))
-    g.check(22, "Estimation: 1 dong / hang muc, 実装 = MD, cong thuc he so dung template, 合計/人月 phu du", bad)
+        if not est:
+            bad.append("khong co sheet Estimation")
+        elif not est_meta:
+            bad.append("khong thay template Estimation de doi chieu he so (%s)" % S.ESTIMATION_TEMPLATE_PATH)
+        else:
+            got_ids = [x["id"] for x in est["items"]]
+            if sorted(got_ids) != sorted(tag(i) for i in IMP) or len(set(got_ids)) != len(got_ids):
+                bad.append("Estimation co dong hang muc %d (%d khac nhau) != %d impact cua cr.json" % (
+                    len(got_ids), len(set(got_ids)), len(IMP)))
+            byid = {i["id"]: i for i in IMP}
+            for x in est["items"]:
+                imp, r = byid.get(x["id"]), x["row"]
+                if not imp:
+                    bad.append("Estimation!B%d %s khong co trong cr.json" % (r, x["id"]))
+                    continue
+                if num(x["M"]) != C.md_of(imp, rates):
+                    bad.append("Estimation!M%d (実装) = %s != MD %s" % (r, x["M"], C.fmt_md(C.md_of(imp, rates))))
+                want = {"K": "=M%d*%s" % (r, est_meta["ratio_K"]), "L": "=M%d*%s" % (r, est_meta["ratio_L"]),
+                        "N": "=M%d*%s" % (r, est_meta["ratio_N"]),
+                        "O": "=SUM(K%d:N%d)*%s" % (r, r, est_meta["ratio_O"]), "P": "=SUM(K%d:O%d)" % (r, r)}
+                for col, f in want.items():
+                    if C.txt(x[col]).replace(" ", "") != f:
+                        bad.append("Estimation!%s%d = %r != %s (he so template)" % (col, r, x[col], f))
+                if bool(x["J"]) != bool(imp.get("option")):
+                    bad.append("Estimation!J%d option=%s != cr.json %s" % (r, x["J"], bool(imp.get("option"))))
+            if est["items"]:
+                f0, f1 = est["items"][0]["row"], est["items"][-1]["row"]
+                for col in "KLMNOP":
+                    if C.txt(est["total"].get(col)).replace(" ", "") != "=SUM(%s%d:%s%d)" % (col, f0, col, f1):
+                        bad.append("Estimation dong 合計 %s = %r khong phu du %d..%d" % (col, est["total"].get(col), f0, f1))
+                    want = "=%s%d/%s" % (col, est["total_row"], C.fmt_md(est_meta["md_per_month"]))
+                    if C.txt(est["month"].get(col)).replace(" ", "") != want:
+                        bad.append("Estimation dong 人月 %s = %r != %s" % (col, est["month"].get(col), want))
+    g.check(22, "Estimation: %s" % ("1 dong / chuc nang (estimate.json), V-EST E1-E3 E5 E8" if FE else
+                                     "1 dong / hang muc, 実装 = MD, cong thuc he so dung template, 合計/人月 phu du"), bad)
 
     # 23. cr_item / option
     bad = []

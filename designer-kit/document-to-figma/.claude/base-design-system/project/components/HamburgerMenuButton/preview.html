@@ -1,0 +1,21 @@
+<!-- @dsCard group="Navigation" height=208 -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><style>body{margin:0;padding:16px;font-family:var(--font-sans);background:var(--white);color:var(--solid-gray-900)} .row{display:flex;gap:24px;align-items:center;flex-wrap:wrap;margin-bottom:16px} .cap{font-size:14px;color:var(--solid-gray-600);width:120px}</style></head>
+<body>
+<div id="root"></div>
+<script>
+  var D = window.DADS, h = React.createElement;
+  function Row(p) { return h('div', { className: 'row' }, h('span', { className: 'cap' }, p.cap), p.children); }
+  function Toggle(p) {
+    var s = React.useState(false), open = s[0];
+    return h(D.HamburgerMenuButton, { variant: p.variant, lang: p.lang, type: open ? 'close' : 'menu', 'aria-expanded': open, 'aria-controls': 'drawer', onClick: function () { s[1](!open); } });
+  }
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+    h(Row, { cap: 'テキスト付き' }, h(D.HamburgerMenuButton, null), h(D.HamburgerMenuButton, { type: 'close' }), h(D.HamburgerMenuButton, { lang: 'en' }), h(D.HamburgerMenuButton, { lang: 'en', type: 'close' })),
+    h(Row, { cap: 'アイコン' }, h(D.HamburgerMenuButton, { variant: 'icon' }), h(D.HamburgerMenuButton, { variant: 'icon', type: 'close' }), h(D.HamburgerMenuButton, { variant: 'icon', lang: 'en' }), h(D.HamburgerMenuButton, { variant: 'icon', lang: 'en', type: 'close' })),
+    h(Row, { cap: '開閉（クリック）' }, h(Toggle, null), h(Toggle, { variant: 'icon' }))
+  ));
+</script>
+</body>
+</html>

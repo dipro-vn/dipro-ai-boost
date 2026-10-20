@@ -1,0 +1,42 @@
+<!-- @dsCard group="Navigation" height=624 -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><style>
+body{margin:0;padding:16px;font-family:var(--font-sans);background:var(--white);color:var(--solid-gray-900)}
+.stage{position:relative;transform:translateZ(0);overflow:hidden;border:1px solid var(--solid-gray-420);border-radius:var(--radius-8);padding-bottom:48px}
+.bar{position:relative;z-index:2;display:flex;gap:0;padding:0 16px;background:var(--white)}
+.bar span{display:inline-flex;align-items:center;gap:4px;min-height:64px;padding:0 20px;font-weight:700;font-size:16px;line-height:1.3}
+.bar .on{color:var(--key-1000);box-shadow:inset 0 -4px 0 var(--key-900)}
+.wrap{position:relative;z-index:2;padding:0 16px}
+.art{width:100%;height:100%;display:block}
+</style></head>
+<body>
+<div id="root"></div>
+<script>
+  var D = window.DADS, h = React.createElement;
+  function art(c1, c2) {
+    return h('svg', { className: 'art', viewBox: '0 0 300 84', preserveAspectRatio: 'xMidYMid slice', 'aria-hidden': true },
+      h('rect', { width: 300, height: 84, fill: 'var(' + c1 + ')' }), h('circle', { cx: 240, cy: 70, r: 60, fill: 'var(' + c2 + ')' }), h('circle', { cx: 60, cy: 10, r: 30, fill: 'var(' + c2 + ')' }));
+  }
+  function Demo() {
+    var s = React.useState(true), open = s[0];
+    return h('div', { className: 'stage' },
+      h('div', { className: 'bar' }, h('span', { className: 'on' }, '政策 ', h(D.Icon, { name: open ? 'arrow_up_400' : 'arrow_down_400', size: 16 })), h('span', null, '組織案内'), h('span', null, 'お知らせ')),
+      open ? h(D.MegaMenuOverlay, { onClick: function () { s[1](false); } }) : null,
+      open ? h('div', { className: 'wrap' }, h(D.MegaMenu, {
+        title: '政策',
+        description: '市民のみなさまのためのさまざまな政策に取り組んでいます',
+        titleLink: { href: '#', label: '政策トップへ' },
+        onClose: function () { s[1](false); },
+        columns: [
+          { label: '政策区分', items: [{ label: '防災・危機管理', href: '#' }, { label: '子育て支援', href: '#' }, { label: '地域福祉', href: '#' }, { label: '環境・エネルギー', href: '#' }, { label: 'デジタル化推進', href: '#' }] },
+          { type: 'banner-menu', banners: [{ label: '会議・議事録など', href: '#', image: art('--key-100', '--key-300') }], items: [{ label: '審議会の開催予定', href: '#' }, { label: '過去の議事録', href: '#' }, { label: '統計データ（外部サイト）', href: '#', external: true }] },
+          { type: 'banner', banners: [{ label: '総合計画', href: '#', image: art('--green-100', '--green-300') }, { label: '予算・決算', href: '#', image: art('--yellow-100', '--yellow-300') }] }
+        ]
+      })) : h('p', { style: { padding: '0 36px' } }, h('button', { onClick: function () { s[1](true); } }, 'メガメニューを開く'))
+    );
+  }
+  ReactDOM.createRoot(document.getElementById('root')).render(h(Demo));
+</script>
+</body>
+</html>

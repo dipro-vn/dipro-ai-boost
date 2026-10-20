@@ -1,0 +1,776 @@
+{
+ "v": 3,
+ "assetGroups": {
+  "Icons": {
+   "files": {
+    "add_300.svg": {
+     "blob": "39b16acb84ebb5f6dc21dbc9c496884c",
+     "name": "add_300.svg",
+     "size": 240,
+     "type": "image/svg+xml"
+    },
+    "add_400.svg": {
+     "blob": "a11636d413ce99da5146eeda4f6d7463",
+     "name": "add_400.svg",
+     "size": 264,
+     "type": "image/svg+xml"
+    },
+    "arrow_down_300.svg": {
+     "blob": "6cd51c1c75b6cf8f77a0bae8407bf466",
+     "name": "arrow_down_300.svg",
+     "size": 185,
+     "type": "image/svg+xml"
+    },
+    "arrow_down_400.svg": {
+     "blob": "15e420dab3e344805a6227458e5a60bd",
+     "name": "arrow_down_400.svg",
+     "size": 205,
+     "type": "image/svg+xml"
+    },
+    "arrow_downward_large.svg": {
+     "blob": "8b9fd7add1b4e2568100d4fd7a492f95",
+     "name": "arrow_downward_large.svg",
+     "size": 243,
+     "type": "image/svg+xml"
+    },
+    "arrow_downward_small.svg": {
+     "blob": "23a1ff57469a970d4a902256d46d5408",
+     "name": "arrow_downward_small.svg",
+     "size": 262,
+     "type": "image/svg+xml"
+    },
+    "arrow_drop_down_200.svg": {
+     "blob": "5b069ff651184dbd55fb29dafb475ec1",
+     "name": "arrow_drop_down_200.svg",
+     "size": 192,
+     "type": "image/svg+xml"
+    },
+    "arrow_drop_down_400.svg": {
+     "blob": "8634c9d31453e5a2320b6e9c1ac21205",
+     "name": "arrow_drop_down_400.svg",
+     "size": 167,
+     "type": "image/svg+xml"
+    },
+    "arrow_drop_up_200.svg": {
+     "blob": "81195576297c95872be7e6d4d27bef2d",
+     "name": "arrow_drop_up_200.svg",
+     "size": 193,
+     "type": "image/svg+xml"
+    },
+    "arrow_drop_up_400.svg": {
+     "blob": "a8d3c21dd1c53149b7a15d1f16908307",
+     "name": "arrow_drop_up_400.svg",
+     "size": 166,
+     "type": "image/svg+xml"
+    },
+    "arrow_forward_300.svg": {
+     "blob": "5a1172ec40fa92ac3b65fab1a2a473d3",
+     "name": "arrow_forward_300.svg",
+     "size": 248,
+     "type": "image/svg+xml"
+    },
+    "arrow_forward_400.svg": {
+     "blob": "794a73e4f02f7a54da4f021bd5440bea",
+     "name": "arrow_forward_400.svg",
+     "size": 386,
+     "type": "image/svg+xml"
+    },
+    "arrow_left_300.svg": {
+     "blob": "fcfa6efd1a6f0963dee686931f157d92",
+     "name": "arrow_left_300.svg",
+     "size": 198,
+     "type": "image/svg+xml"
+    },
+    "arrow_left_400.svg": {
+     "blob": "8ad4688c081274cb5e0f03b9446a50e5",
+     "name": "arrow_left_400.svg",
+     "size": 211,
+     "type": "image/svg+xml"
+    },
+    "arrow_right_300.svg": {
+     "blob": "206e55ce36003c974c2923c21ab50029",
+     "name": "arrow_right_300.svg",
+     "size": 183,
+     "type": "image/svg+xml"
+    },
+    "arrow_right_400.svg": {
+     "blob": "71a016536d51af0e29100599d39335d6",
+     "name": "arrow_right_400.svg",
+     "size": 204,
+     "type": "image/svg+xml"
+    },
+    "arrow_up_300.svg": {
+     "blob": "292f673ef1515ae6870e9390cc6e2e26",
+     "name": "arrow_up_300.svg",
+     "size": 196,
+     "type": "image/svg+xml"
+    },
+    "arrow_up_400.svg": {
+     "blob": "137865228ecbb80177ac5dbede23c538",
+     "name": "arrow_up_400.svg",
+     "size": 209,
+     "type": "image/svg+xml"
+    },
+    "arrow_upward_large.svg": {
+     "blob": "52cddb5a466812db027dc35b497eef4f",
+     "name": "arrow_upward_large.svg",
+     "size": 243,
+     "type": "image/svg+xml"
+    },
+    "arrow_upward_small.svg": {
+     "blob": "383d19a25f49703be79a452a692287cf",
+     "name": "arrow_upward_small.svg",
+     "size": 271,
+     "type": "image/svg+xml"
+    },
+    "attention_false.svg": {
+     "blob": "90832cb1420e8e070824a35b69fb9b84",
+     "name": "attention_false.svg",
+     "size": 1396,
+     "type": "image/svg+xml"
+    },
+    "attention_true.svg": {
+     "blob": "09ecd36cd045a2eebb97f919255501d8",
+     "name": "attention_true.svg",
+     "size": 995,
+     "type": "image/svg+xml"
+    },
+    "avatar_false.svg": {
+     "blob": "2a66bcd1b84583c3fec824685253cc71",
+     "name": "avatar_false.svg",
+     "size": 1036,
+     "type": "image/svg+xml"
+    },
+    "avatar_true.svg": {
+     "blob": "141b1eb40cf0f5e1fdf6bef2a59bed12",
+     "name": "avatar_true.svg",
+     "size": 738,
+     "type": "image/svg+xml"
+    },
+    "cancel_300-false.svg": {
+     "blob": "0c96515f3d9d82d6cd3ecbbe3c8cb358",
+     "name": "cancel_300-false.svg",
+     "size": 1154,
+     "type": "image/svg+xml"
+    },
+    "cancel_300-true.svg": {
+     "blob": "50a329041bb15585a014fe5ba18ba4b7",
+     "name": "cancel_300-true.svg",
+     "size": 866,
+     "type": "image/svg+xml"
+    },
+    "cancel_400-false.svg": {
+     "blob": "b3da3b7ff141de129f959fac077ca3ef",
+     "name": "cancel_400-false.svg",
+     "size": 1052,
+     "type": "image/svg+xml"
+    },
+    "cancel_400-true.svg": {
+     "blob": "78258e8e1033ec2cd78a0d9a050cad22",
+     "name": "cancel_400-true.svg",
+     "size": 795,
+     "type": "image/svg+xml"
+    },
+    "check_300.svg": {
+     "blob": "2d591d262ccecf3d7a6338ea0e0992a3",
+     "name": "check_300.svg",
+     "size": 232,
+     "type": "image/svg+xml"
+    },
+    "check_400.svg": {
+     "blob": "847937a7c5bb918595ad1eb8af7f660b",
+     "name": "check_400.svg",
+     "size": 226,
+     "type": "image/svg+xml"
+    },
+    "check_circle_false.svg": {
+     "blob": "14e9452f0174bf2f6609e161d056a478",
+     "name": "check_circle_false.svg",
+     "size": 1029,
+     "type": "image/svg+xml"
+    },
+    "check_circle_true.svg": {
+     "blob": "00e4a098110cb120e6ef59208473eb3c",
+     "name": "check_circle_true.svg",
+     "size": 772,
+     "type": "image/svg+xml"
+    },
+    "checkbox_false.svg": {
+     "blob": "87e672cbd725dbdcbd22d4ade18c675d",
+     "name": "checkbox_false.svg",
+     "size": 822,
+     "type": "image/svg+xml"
+    },
+    "checkbox_true.svg": {
+     "blob": "813e212030b463845e6ea203a76ab6b6",
+     "name": "checkbox_true.svg",
+     "size": 591,
+     "type": "image/svg+xml"
+    },
+    "circle_false.svg": {
+     "blob": "ac54579fdf63cce9b066ab1650acf982",
+     "name": "circle_false.svg",
+     "size": 1016,
+     "type": "image/svg+xml"
+    },
+    "circle_true.svg": {
+     "blob": "4420abd5f97d1e1cfd644aef0bb78e24",
+     "name": "circle_true.svg",
+     "size": 728,
+     "type": "image/svg+xml"
+    },
+    "close_300.svg": {
+     "blob": "f3a08f81c7b5c94a79523fe6debd2207",
+     "name": "close_300.svg",
+     "size": 273,
+     "type": "image/svg+xml"
+    },
+    "close_400.svg": {
+     "blob": "bba732caab4c72f496a479574f56e8fb",
+     "name": "close_400.svg",
+     "size": 240,
+     "type": "image/svg+xml"
+    },
+    "complete_false.svg": {
+     "blob": "65a4ca11c79bcece1962735ff0f8f91a",
+     "name": "complete_false.svg",
+     "size": 1100,
+     "type": "image/svg+xml"
+    },
+    "complete_true.svg": {
+     "blob": "74e8af3dd8c0443933737b463f26e8b8",
+     "name": "complete_true.svg",
+     "size": 772,
+     "type": "image/svg+xml"
+    },
+    "copy_false.svg": {
+     "blob": "cf6b97ab88dce5064bcb2702dd0a12fe",
+     "name": "copy_false.svg",
+     "size": 358,
+     "type": "image/svg+xml"
+    },
+    "copy_true.svg": {
+     "blob": "91e908a66d3d5701422b0afd8d0239f9",
+     "name": "copy_true.svg",
+     "size": 302,
+     "type": "image/svg+xml"
+    },
+    "document_false.svg": {
+     "blob": "cd723e83af3162da849dbdb26a5641b9",
+     "name": "document_false.svg",
+     "size": 781,
+     "type": "image/svg+xml"
+    },
+    "document_true.svg": {
+     "blob": "cb6aa6f439509c223da6cde4f23b4d91",
+     "name": "document_true.svg",
+     "size": 538,
+     "type": "image/svg+xml"
+    },
+    "download_300.svg": {
+     "blob": "18a75c21ad79cfc7c061eaeb42392543",
+     "name": "download_300.svg",
+     "size": 635,
+     "type": "image/svg+xml"
+    },
+    "download_400.svg": {
+     "blob": "db068ec514ba24ba4a272f2ff3546e15",
+     "name": "download_400.svg",
+     "size": 385,
+     "type": "image/svg+xml"
+    },
+    "drag_indicator_300.svg": {
+     "blob": "2be02af6d4d2cf1990e14bc0125c9291",
+     "name": "drag_indicator_300.svg",
+     "size": 1802,
+     "type": "image/svg+xml"
+    },
+    "drag_indicator_400.svg": {
+     "blob": "035bf0f92e94c7a2f901f6519734fbdc",
+     "name": "drag_indicator_400.svg",
+     "size": 1541,
+     "type": "image/svg+xml"
+    },
+    "dummy-icon_300.svg": {
+     "blob": "8b188a0cb4ebf84225e06929acba085d",
+     "name": "dummy-icon_300.svg",
+     "size": 626,
+     "type": "image/svg+xml"
+    },
+    "dummy-icon_400.svg": {
+     "blob": "f938380bdfd5dfc1b7e8bcc44025a214",
+     "name": "dummy-icon_400.svg",
+     "size": 545,
+     "type": "image/svg+xml"
+    },
+    "edit_false.svg": {
+     "blob": "a37673ecaaa8cbe010db8beab1db3040",
+     "name": "edit_false.svg",
+     "size": 507,
+     "type": "image/svg+xml"
+    },
+    "edit_true.svg": {
+     "blob": "907b40171a3afb541ef692c0ff5d898c",
+     "name": "edit_true.svg",
+     "size": 435,
+     "type": "image/svg+xml"
+    },
+    "error_false.svg": {
+     "blob": "5ab5a0d9f542282a8ca6478565434007",
+     "name": "error_false.svg",
+     "size": 535,
+     "type": "image/svg+xml"
+    },
+    "error_true.svg": {
+     "blob": "41f4b8ff012e2a6a60f0f480868e2d95",
+     "name": "error_true.svg",
+     "size": 454,
+     "type": "image/svg+xml"
+    },
+    "favorite_false.svg": {
+     "blob": "2ddbe52047a2c08c6c2fb97bcead271c",
+     "name": "favorite_false.svg",
+     "size": 1259,
+     "type": "image/svg+xml"
+    },
+    "favorite_true.svg": {
+     "blob": "0c2b7532f91f2a1f50a9a79a7730251c",
+     "name": "favorite_true.svg",
+     "size": 722,
+     "type": "image/svg+xml"
+    },
+    "help_false.svg": {
+     "blob": "8c68be3eaa006d990fff998dbea2d300",
+     "name": "help_false.svg",
+     "size": 1985,
+     "type": "image/svg+xml"
+    },
+    "help_true.svg": {
+     "blob": "775940f0ed9709518a6211d0fa416bff",
+     "name": "help_true.svg",
+     "size": 1550,
+     "type": "image/svg+xml"
+    },
+    "history_300.svg": {
+     "blob": "17f149ef1805bab02b66851b31230226",
+     "name": "history_300.svg",
+     "size": 1041,
+     "type": "image/svg+xml"
+    },
+    "history_400.svg": {
+     "blob": "9af82140feba772b594a244a56a33114",
+     "name": "history_400.svg",
+     "size": 899,
+     "type": "image/svg+xml"
+    },
+    "home_false.svg": {
+     "blob": "336d0d20ac118acc2c1f5e981d97dd87",
+     "name": "home_false.svg",
+     "size": 376,
+     "type": "image/svg+xml"
+    },
+    "home_true.svg": {
+     "blob": "3b00deef7ee9dc474cfe94a93ef4773d",
+     "name": "home_true.svg",
+     "size": 258,
+     "type": "image/svg+xml"
+    },
+    "image_arrow_up_false.svg": {
+     "blob": "14449e689e2fb972c4756105ef6ce8cc",
+     "name": "image_arrow_up_false.svg",
+     "size": 492,
+     "type": "image/svg+xml"
+    },
+    "image_arrow_up_true.svg": {
+     "blob": "9d06fa060d421fb21ec42f03a2bff0eb",
+     "name": "image_arrow_up_true.svg",
+     "size": 656,
+     "type": "image/svg+xml"
+    },
+    "indeterminate_check_box_false.svg": {
+     "blob": "a87fb02d1df517bc1b4ce92dfc1411a5",
+     "name": "indeterminate_check_box_false.svg",
+     "size": 939,
+     "type": "image/svg+xml"
+    },
+    "indeterminate_check_box_true.svg": {
+     "blob": "aaeb8fe1788f3ee63a0b2e7aaf6059d8",
+     "name": "indeterminate_check_box_true.svg",
+     "size": 603,
+     "type": "image/svg+xml"
+    },
+    "information_false.svg": {
+     "blob": "7fef5a4fc4a3fd04638b04f972a99bf7",
+     "name": "information_false.svg",
+     "size": 1360,
+     "type": "image/svg+xml"
+    },
+    "information_true.svg": {
+     "blob": "88bd38b781ec77c994eaa0ff465822ba",
+     "name": "information_true.svg",
+     "size": 970,
+     "type": "image/svg+xml"
+    },
+    "language_false.svg": {
+     "blob": "5f10a19f0db54b1c30c6be6f2dbd91f8",
+     "name": "language_false.svg",
+     "size": 2798,
+     "type": "image/svg+xml"
+    },
+    "location_false.svg": {
+     "blob": "6273a20d484819addd17596d3b60a4ee",
+     "name": "location_false.svg",
+     "size": 1043,
+     "type": "image/svg+xml"
+    },
+    "location_true.svg": {
+     "blob": "6b72f32b5689da8caa97720e00a4d376",
+     "name": "location_true.svg",
+     "size": 734,
+     "type": "image/svg+xml"
+    },
+    "lock_false.svg": {
+     "blob": "5ad23128ec07bed8f231837c0652188e",
+     "name": "lock_false.svg",
+     "size": 1351,
+     "type": "image/svg+xml"
+    },
+    "lock_true.svg": {
+     "blob": "3ab779394a35393f685023138aaf7419",
+     "name": "lock_true.svg",
+     "size": 1043,
+     "type": "image/svg+xml"
+    },
+    "menu_300.svg": {
+     "blob": "0ce52986b19c33ecf1fc7fedac1e7613",
+     "name": "menu_300.svg",
+     "size": 368,
+     "type": "image/svg+xml"
+    },
+    "menu_400.svg": {
+     "blob": "0e07ba2ad3b588f3818cf953bb25c1f9",
+     "name": "menu_400.svg",
+     "size": 396,
+     "type": "image/svg+xml"
+    },
+    "mic_false.svg": {
+     "blob": "d07494b06a9b596ed533bbcdfec00b47",
+     "name": "mic_false.svg",
+     "size": 930,
+     "type": "image/svg+xml"
+    },
+    "mic_true.svg": {
+     "blob": "3ea128ef28c9286dc50bdde47ffffbc3",
+     "name": "mic_true.svg",
+     "size": 689,
+     "type": "image/svg+xml"
+    },
+    "more_false.svg": {
+     "blob": "0f99cab6bc9138b48598d172346e4538",
+     "name": "more_false.svg",
+     "size": 954,
+     "type": "image/svg+xml"
+    },
+    "more_vert_false.svg": {
+     "blob": "39c6581094a94a4d4e8ea9792125c1a9",
+     "name": "more_vert_false.svg",
+     "size": 986,
+     "type": "image/svg+xml"
+    },
+    "new_window_300.svg": {
+     "blob": "49cfc917b3d73fb050f7b02cd080da57",
+     "name": "new_window_300.svg",
+     "size": 356,
+     "type": "image/svg+xml"
+    },
+    "new_window_400.svg": {
+     "blob": "a9a056f1162dcac434a47a359a60d446",
+     "name": "new_window_400.svg",
+     "size": 398,
+     "type": "image/svg+xml"
+    },
+    "notification_false.svg": {
+     "blob": "c7380c7a036c2aafef8664c8b975b9f5",
+     "name": "notification_false.svg",
+     "size": 916,
+     "type": "image/svg+xml"
+    },
+    "notification_true.svg": {
+     "blob": "73f9d2a92743ce3275238ecef1224d1b",
+     "name": "notification_true.svg",
+     "size": 719,
+     "type": "image/svg+xml"
+    },
+    "pdf_false.svg": {
+     "blob": "f1cf7cf0e21e0770002081f4e10ac7da",
+     "name": "pdf_false.svg",
+     "size": 1602,
+     "type": "image/svg+xml"
+    },
+    "pdf_true.svg": {
+     "blob": "9f46e2f37a767e8e81893d765c00d2ec",
+     "name": "pdf_true.svg",
+     "size": 1406,
+     "type": "image/svg+xml"
+    },
+    "print_false.svg": {
+     "blob": "7e77a6bcf7effe6d3479164f39dcd4ab",
+     "name": "print_false.svg",
+     "size": 822,
+     "type": "image/svg+xml"
+    },
+    "print_true.svg": {
+     "blob": "dd0ff8e736e0700bf3dbb3ece4b8b910",
+     "name": "print_true.svg",
+     "size": 637,
+     "type": "image/svg+xml"
+    },
+    "radiobutton_false.svg": {
+     "blob": "2fb3a8084a9782b9f2bdc1c94d4c97d0",
+     "name": "radiobutton_false.svg",
+     "size": 990,
+     "type": "image/svg+xml"
+    },
+    "radiobutton_true.svg": {
+     "blob": "124b0622ddd9b7bf94a31d8255a1adb1",
+     "name": "radiobutton_true.svg",
+     "size": 1244,
+     "type": "image/svg+xml"
+    },
+    "scanner_false.svg": {
+     "blob": "4371afbad316a9bc1bc8dcf14866d362",
+     "name": "scanner_false.svg",
+     "size": 377,
+     "type": "image/svg+xml"
+    },
+    "search_300.svg": {
+     "blob": "520a7ec4afd8af888f0f48987caaa2b8",
+     "name": "search_300.svg",
+     "size": 408,
+     "type": "image/svg+xml"
+    },
+    "search_400.svg": {
+     "blob": "305bd3cdcecfc6d485e40ef7d094675e",
+     "name": "search_400.svg",
+     "size": 421,
+     "type": "image/svg+xml"
+    },
+    "subtract_300.svg": {
+     "blob": "ca2bde94b0b6feac6d7794e8fe8b24a9",
+     "name": "subtract_300.svg",
+     "size": 179,
+     "type": "image/svg+xml"
+    },
+    "subtract_400.svg": {
+     "blob": "62af4f486298fdbe572b1930dc70159b",
+     "name": "subtract_400.svg",
+     "size": 183,
+     "type": "image/svg+xml"
+    },
+    "trash_false.svg": {
+     "blob": "56f0763f945b62d5a0c4d0c1ac12d6cb",
+     "name": "trash_false.svg",
+     "size": 764,
+     "type": "image/svg+xml"
+    },
+    "trash_true.svg": {
+     "blob": "aa9cacd4197d04f8a0beb0fb78c6f884",
+     "name": "trash_true.svg",
+     "size": 550,
+     "type": "image/svg+xml"
+    },
+    "update_300.svg": {
+     "blob": "3837309de3ec1eccd619c7f49febbe31",
+     "name": "update_300.svg",
+     "size": 626,
+     "type": "image/svg+xml"
+    },
+    "update_400.svg": {
+     "blob": "557ec7cd7a4c8ce63f0941f5b71a9bf5",
+     "name": "update_400.svg",
+     "size": 622,
+     "type": "image/svg+xml"
+    },
+    "visibility_false.svg": {
+     "blob": "848a248b768e126cd5e8f22986346a34",
+     "name": "visibility_false.svg",
+     "size": 1719,
+     "type": "image/svg+xml"
+    },
+    "visibility_true.svg": {
+     "blob": "ed982b14384d36842b4b28c98f6db2e8",
+     "name": "visibility_true.svg",
+     "size": 1302,
+     "type": "image/svg+xml"
+    },
+    "warning_300-false.svg": {
+     "blob": "6dfb574f67e2cfed58b7998239de7b0f",
+     "name": "warning_300-false.svg",
+     "size": 618,
+     "type": "image/svg+xml"
+    },
+    "warning_300-true.svg": {
+     "blob": "d613a99986f5bd3729e375334cc49e1c",
+     "name": "warning_300-true.svg",
+     "size": 580,
+     "type": "image/svg+xml"
+    },
+    "warning_400-false.svg": {
+     "blob": "ba77888dd11ab5d14f0c38d97b81acf8",
+     "name": "warning_400-false.svg",
+     "size": 509,
+     "type": "image/svg+xml"
+    },
+    "warning_400-true.svg": {
+     "blob": "d4c22ae0682a0407f4bbcb4e3f00aef3",
+     "name": "warning_400-true.svg",
+     "size": 478,
+     "type": "image/svg+xml"
+    }
+   },
+   "name": "Icons",
+   "order": [
+    "add_300.svg",
+    "add_400.svg",
+    "arrow_down_300.svg",
+    "arrow_down_400.svg",
+    "arrow_downward_large.svg",
+    "arrow_downward_small.svg",
+    "arrow_drop_down_200.svg",
+    "arrow_drop_down_400.svg",
+    "arrow_drop_up_200.svg",
+    "arrow_drop_up_400.svg",
+    "arrow_forward_300.svg",
+    "arrow_forward_400.svg",
+    "arrow_left_300.svg",
+    "arrow_left_400.svg",
+    "arrow_right_300.svg",
+    "arrow_right_400.svg",
+    "arrow_up_300.svg",
+    "arrow_up_400.svg",
+    "arrow_upward_large.svg",
+    "arrow_upward_small.svg",
+    "attention_false.svg",
+    "attention_true.svg",
+    "avatar_false.svg",
+    "avatar_true.svg",
+    "cancel_300-false.svg",
+    "cancel_300-true.svg",
+    "cancel_400-false.svg",
+    "cancel_400-true.svg",
+    "check_300.svg",
+    "check_400.svg",
+    "check_circle_false.svg",
+    "check_circle_true.svg",
+    "checkbox_false.svg",
+    "checkbox_true.svg",
+    "circle_false.svg",
+    "circle_true.svg",
+    "close_300.svg",
+    "close_400.svg",
+    "complete_false.svg",
+    "complete_true.svg",
+    "copy_false.svg",
+    "copy_true.svg",
+    "document_false.svg",
+    "document_true.svg",
+    "download_300.svg",
+    "download_400.svg",
+    "drag_indicator_300.svg",
+    "drag_indicator_400.svg",
+    "dummy-icon_300.svg",
+    "dummy-icon_400.svg",
+    "edit_false.svg",
+    "edit_true.svg",
+    "error_false.svg",
+    "error_true.svg",
+    "favorite_false.svg",
+    "favorite_true.svg",
+    "help_false.svg",
+    "help_true.svg",
+    "history_300.svg",
+    "history_400.svg",
+    "home_false.svg",
+    "home_true.svg",
+    "image_arrow_up_false.svg",
+    "image_arrow_up_true.svg",
+    "indeterminate_check_box_false.svg",
+    "indeterminate_check_box_true.svg",
+    "information_false.svg",
+    "information_true.svg",
+    "language_false.svg",
+    "location_false.svg",
+    "location_true.svg",
+    "lock_false.svg",
+    "lock_true.svg",
+    "menu_300.svg",
+    "menu_400.svg",
+    "mic_false.svg",
+    "mic_true.svg",
+    "more_false.svg",
+    "more_vert_false.svg",
+    "new_window_300.svg",
+    "new_window_400.svg",
+    "notification_false.svg",
+    "notification_true.svg",
+    "pdf_false.svg",
+    "pdf_true.svg",
+    "print_false.svg",
+    "print_true.svg",
+    "radiobutton_false.svg",
+    "radiobutton_true.svg",
+    "scanner_false.svg",
+    "search_300.svg",
+    "search_400.svg",
+    "subtract_300.svg",
+    "subtract_400.svg",
+    "trash_false.svg",
+    "trash_true.svg",
+    "update_300.svg",
+    "update_400.svg",
+    "visibility_false.svg",
+    "visibility_true.svg",
+    "warning_300-false.svg",
+    "warning_300-true.svg",
+    "warning_400-false.svg",
+    "warning_400-true.svg"
+   ],
+   "tile": "s"
+  }
+ },
+ "blobs": {},
+ "createdOnFiles": {
+  "at": "2026-10-11T03:19:55Z",
+  "v": 1
+ },
+ "docs": {
+  "sections": []
+ },
+ "groups": [
+  "Icons"
+ ],
+ "lastChange": {
+  "by": "vudd",
+  "at": "2026-10-11T07:49:23Z",
+  "via": "Claude",
+  "note": "Added 7 gradient tokens and a Gradients showcase card"
+ },
+ "layout": "files",
+ "libraries": [
+  {
+   "file": "components/lib/react.production.min.js",
+   "global": "React",
+   "name": "react",
+   "version": "18.3.1"
+  },
+  {
+   "file": "components/lib/react-dom.production.min.js",
+   "global": "ReactDOM",
+   "name": "react-dom",
+   "version": "18.3.1"
+  }
+ ],
+ "namespace": "DADS",
+ "sections": {},
+ "title": "デジタル庁デザインシステム"
+}

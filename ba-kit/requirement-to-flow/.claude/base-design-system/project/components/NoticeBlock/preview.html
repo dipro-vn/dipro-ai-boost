@@ -1,0 +1,21 @@
+<!-- @dsCard group="Feedback" height=408 -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><style>body{margin:0;padding:16px;font-family:var(--font-sans);background:var(--white)} .grid{display:grid;grid-template-columns:repeat(2,minmax(0,400px));gap:16px;align-items:start}</style></head>
+<body>
+<div id="root"></div>
+<script>
+  var D = window.DADS, h = React.createElement;
+  ReactDOM.createRoot(document.getElementById('root')).render(h('div', { className: 'grid' },
+    h(D.NoticeBlock, { variant: 'fill-rounded' }, h('p', null, '有効期限が過ぎている書類は使用できません。')),
+    h(D.NoticeBlock, { variant: 'border-rounded', type: 'notice2', title: '本人確認書類の例' }, h('p', null, '運転免許証、マイナンバーカード、パスポートなど')),
+    h(D.NoticeBlock, { variant: 'border-solid', title: '入力のヒント', chipLabel: '補足' }, h('p', null, '住所は住民票に記載のとおり入力してください。')),
+    h(D.NoticeBlock, { variant: 'fill-solid', type: 'notice2', title: '提出書類について',
+      disclosures: [
+        h(D.NoticeBlockDisclosure, { key: 1, summary: '関連施設一覧', defaultOpen: true }, h('p', null, 'デジタル区福祉センター（デジタル区海山川1-2-3）')),
+        h(D.NoticeBlockDisclosure, { key: 2, summary: 'お問い合わせ先' }, h('p', null, 'デジタル区福祉課 000-0000-0000'))
+      ] }, h('p', null, '書類は申請日から3か月以内に発行されたものをご用意ください。'))
+  ));
+</script>
+</body>
+</html>

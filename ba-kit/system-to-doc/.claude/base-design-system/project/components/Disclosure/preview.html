@@ -1,0 +1,20 @@
+<!-- @dsCard group="Content" height=440 -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><style>body{margin:0;padding:16px;font-family:var(--font-sans);background:var(--white);color:var(--solid-gray-900)} .set{display:flex;flex-direction:column;gap:16px;margin-bottom:24px} p{margin:0;font-size:16px;line-height:1.7} h4{margin:0 0 8px;font-size:16px;line-height:1.7} ul{margin:0;padding-left:24px;line-height:1.7}</style></head>
+<body>
+<div id="root"></div>
+<script>
+  var D = window.DADS, h = React.createElement;
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+    h('div', { className: 'set' },
+      h('p', null, '本手続きは区役所または各支所の窓口で行えます。'),
+      h(D.Disclosure, { summary: '区役所・各支所の所在地一覧', defaultOpen: true, returnLink: true },
+        h('div', null, h('h4', null, '区役所'), h('ul', null, h('li', null, 'デジタル区役所：デジタル区海山川1-2-3'), h('li', null, 'デジタル区役所分庁舎：デジタル区海山川北4-5-6'))))),
+    h('div', { className: 'set' },
+      h('p', null, 'デザインデータ（Figma）v2.1.1を公開しました。'),
+      h(D.Disclosure, { summary: 'v2.1.1の更新内容' }, h('ul', null, h('li', null, 'レイヤー構造の修正'))))
+  ));
+</script>
+</body>
+</html>

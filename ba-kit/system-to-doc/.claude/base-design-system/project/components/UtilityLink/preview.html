@@ -1,0 +1,23 @@
+<!-- @dsCard group="Navigation" height=168 -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><style>body{margin:0;padding:16px;font-family:var(--font-sans);background:var(--white)} .row{margin-bottom:24px}</style></head>
+<body>
+<div id="root"></div>
+<script>
+  var D = window.DADS, h = React.createElement;
+  function Row(p) { return h('div', { className: 'row' }, p.children); }
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+    h(Row, null, h(D.UtilityLink, { items: [
+      { label: 'よくある質問', href: '#', icon: 'help_false' },
+      { label: 'お問い合わせ', href: '#', icon: 'document_false' },
+      { label: 'アクセス', href: '#', icon: 'location_false' },
+      { label: 'マイナポータル', href: '#', icon: 'lock_false', external: true }] })),
+    h(Row, null, h(D.UtilityLink, null,
+      h(D.UtilityLinkItem, { href: '#' }, 'サイトマップ'),
+      h(D.UtilityLinkItem, { href: '#', external: true }, '関連リンク'))),
+    h(Row, null, h(D.UtilityLinkItem, { href: '#', icon: 'print_false' }, '印刷する'))
+  ));
+</script>
+</body>
+</html>

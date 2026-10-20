@@ -1,0 +1,27 @@
+<!-- @dsCard group="Media" height=696 -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><style>body{margin:0;padding:8px 0;font-family:var(--font-sans);background:var(--white)} .narrow{max-width:340px;margin:8px 16px 0}</style></head>
+<body>
+<div id="root"></div>
+<script>
+  var D = window.DADS, h = React.createElement;
+  function banner(hue, title) {
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 696 392"><rect width="696" height="392" fill="hsl(' + hue + ',55%,90%)"/>' +
+      '<circle cx="560" cy="110" r="70" fill="hsl(' + (hue + 40) + ',70%,72%)"/><path d="M0 392 L200 200 L340 320 L460 240 L696 392Z" fill="hsl(' + hue + ',45%,50%)"/>' +
+      '<text x="48" y="96" font-family="sans-serif" font-size="40" font-weight="700" fill="hsl(' + hue + ',60%,20%)">' + title + '</text></svg>';
+    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  }
+  var slides = [
+    { src: banner(210, 'マイナンバーカードの申請'), alt: 'マイナンバーカードの申請方法', href: '#' },
+    { src: banner(140, 'つつじ花見ツアー'), alt: 'つつじ花見ツアーイベント開催のお知らせ', href: '#' },
+    { src: banner(30, '子育て支援補助金'), alt: '子育て支援補助金制度のご案内', href: '#' },
+    { src: banner(330, '防災訓練のお知らせ'), alt: '地域防災訓練のお知らせ', href: '#' }
+  ];
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+    h(D.Carousel, { slides: slides, label: '新着のお知らせ' }),
+    h('div', { className: 'narrow' }, h(D.Carousel, { variant: 'narrow', slides: slides, defaultIndex: 1, label: '注目の手続き' }))
+  ));
+</script>
+</body>
+</html>

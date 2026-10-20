@@ -141,16 +141,30 @@ def build_summary(ws, cr, rates_meta, rates, est):
     sh.put([(1, "1. Công số thay đổi")], "banner", merge_to=full)
     grand = round(sum(C.md_of(i, rates) or 0.0 for i in cr["impacts"]), 2)
     mn, ex = C.plan_md(cr["impacts"], rates)
-    sh.put([(1, C.L_IMPL), (2, grand), (3, "MD · %d hạng mục" % len(cr["impacts"]))],
-           merge_to={3: 7}, bold=(1, 2), center=(2,))
-    r = sh.put([(1, C.L_TOTAL_PD), (2, "='%s'!P%d" % (S.CR_SHEET_ESTIMATION, est["row_total"])),
-                (3, "人日 — theo hệ số của template Estimation")], merge_to={3: 7}, bold=(1, 2), center=(2,))
+    sub = est.get("col_sub", "P")
+    fe = est.get("fn")  # che do --estimate: Estimation = 見積書 theo chuc nang (estimate.json)
+    if fe:
+        sh.put([(1, C.L_IMPL), (2, fe["impl"]), (3, "MD · %d dòng chức năng (function-rates %s) — đối chiếu theo impact: %s MD · %d hạng mục"
+                                                   % (fe["rows"], fe["status"], C.fmt_md(grand), len(cr["impacts"])))],
+               merge_to={3: 7}, bold=(1, 2), center=(2,))
+    else:
+        sh.put([(1, C.L_IMPL), (2, grand), (3, "MD · %d hạng mục" % len(cr["impacts"]))],
+               merge_to={3: 7}, bold=(1, 2), center=(2,))
+    r = sh.put([(1, C.L_TOTAL_PD), (2, "='%s'!%s%d" % (S.CR_SHEET_ESTIMATION, sub, est["row_total"])),
+                (3, "人日 — theo hệ số của template %s" % ("見積書" if fe else "Estimation"))], merge_to={3: 7}, bold=(1, 2), center=(2,))
     ws.cell(row=r, column=2).number_format = "0.00"
-    r = sh.put([(1, C.L_TOTAL_PM), (2, "='%s'!P%d" % (S.CR_SHEET_ESTIMATION, est["row_month"])),
+    r = sh.put([(1, C.L_TOTAL_PM), (2, "='%s'!%s%d" % (S.CR_SHEET_ESTIMATION, sub, est["row_month"])),
                 (3, "人月 = 人日 / %s" % C.fmt_md(est["md_per_month"]))], merge_to={3: 7}, bold=(1, 2), center=(2,))
     ws.cell(row=r, column=2).number_format = "0.00"
-    sh.put([(1, C.L_MIN_PLAN), (2, mn), (3, "MD")], merge_to={3: 7}, center=(2,))
-    sh.put([(1, C.L_EXT_PLAN), (2, ex), (3, "MD")], merge_to={3: 7}, center=(2,))
+    if fe:
+        for k, lab in ((0, "Step 1 (人日)"), (1, "Step 2 (人日)")):
+            r = sh.put([(1, lab), (2, "='%s'!%s%d" % (S.CR_SHEET_ESTIMATION, sub, fe["row_step1"] + k)),
+                        (3, "Phương án thay thế (chọn 1) xem bảng tổng theo phương án cuối sheet Estimation")],
+                       merge_to={3: 7}, center=(2,))
+            ws.cell(row=r, column=2).number_format = "0.00"
+    else:
+        sh.put([(1, C.L_MIN_PLAN), (2, mn), (3, "MD")], merge_to={3: 7}, center=(2,))
+        sh.put([(1, C.L_EXT_PLAN), (2, ex), (3, "MD")], merge_to={3: 7}, center=(2,))
     r = sh.put([(1, C.L_LINK_EST)], merge_to=full)
     link(ws.cell(row=r, column=1), S.CR_SHEET_ESTIMATION, "B%d" % est["row_header"])
     sh.put([(1, C.L_RATES), (2, "%s v%s — %s" % (status or "?", rates_meta.get("version", "?"),
@@ -429,6 +443,9 @@ def main():
     ap.add_argument("--rates", required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--template", default=None, help="mac dinh %s" % S.ESTIMATION_TEMPLATE_PATH)
+    ap.add_argument("--estimate", default=None, help="estimate.json (dong = chuc nang) -> sheet Estimation theo 見積書 (ban vi noi bo)")
+    ap.add_argument("--function-rates", default=os.path.join(KIT, ".claude/config/function-rates.json"))
+    ap.add_argument("--mitsumori-template", default=os.path.join(KIT, "templates/template_mitsumori.xlsx"))
     a = ap.parse_args()
     try:
         import openpyxl  # noqa: F401
@@ -455,15 +472,33 @@ def main():
         return 1
     for k in ("not_cr", "no_impact_axes", "questions", "impacts"):
         cr.setdefault(k, [])
-    try:
-        wb, est = C.load_estimation_template(tpl)
-    except (OSError, ValueError) as e:
-        print("Template Estimation loi: %s" % e, file=sys.stderr)
-        return 1
-    del wb["_meta"]
-    ws_est = wb["Estimation"]
-    ws_est.title = S.CR_SHEET_ESTIMATION
-    pos = build_estimation(ws_est, cr, rates, rates_meta, est)
+    if a.estimate:
+        import estimate_core as E
+        fe = C.load_json(a.estimate)
+        fmeta, frates = E.load_rates(a.function_rates)
+        err = E.validate(fe, frates, cr)
+        if err:
+            print("estimate.json KHONG hop le:\n  " + "\n  ".join(err), file=sys.stderr)
+            return 1
+        wb, p, tm = E.build_workbook(fe, frates, fmeta, a.mitsumori_template, "vi", internal=True)
+        del wb[E.LBL["vi"]["notes_sheet"]]  # tien de nam o 見積書 ban KH + sheet Q&A
+        if E.LBL["vi"]["q_sheet"] in wb.sheetnames:
+            del wb[E.LBL["vi"]["q_sheet"]]  # cau hoi da co o sheet Q&A
+        wb.worksheets[0].title = S.CR_SHEET_ESTIMATION
+        pos = {"row_header": int(tm["row_header"]), "row_total": p["row_all"], "row_month": p["row_month"],
+               "md_per_month": tm["md_per_month"], "col_sub": p["col"]["sub"],
+               "fn": {"impl": round(sum(E.row_numbers(x, frates, tm)["impl"] for x in fe["rows"]), 2), "rows": p["rows"],
+                      "status": fmeta.get("status"), "row_step1": p["row_step1"]}}
+    else:
+        try:
+            wb, est = C.load_estimation_template(tpl)
+        except (OSError, ValueError) as e:
+            print("Template Estimation loi: %s" % e, file=sys.stderr)
+            return 1
+        del wb["_meta"]
+        ws_est = wb["Estimation"]
+        ws_est.title = S.CR_SHEET_ESTIMATION
+        pos = build_estimation(ws_est, cr, rates, rates_meta, est)
     build_summary(wb.create_sheet(S.CR_SHEET_SUMMARY, 0), cr, rates_meta, rates, pos)
     total = 0.0
     noi = {x.get("axis"): x.get("reason") for x in cr["no_impact_axes"]}
@@ -474,6 +509,12 @@ def main():
     build_qa(wb.create_sheet(S.CR_SHEET_QA), cr, rates_meta, rates)
     wb.active = 0
     os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
+    # lam tron so thuc: tranh duoi kieu 0.57000000000000006 (doc kho, va bi H06 nhan nham la so the)
+    for ws in wb.worksheets:
+        for row in ws.iter_rows():
+            for c in row:
+                if isinstance(c.value, float):
+                    c.value = round(c.value, 6)
     wb.save(a.out)
     grand = sum(C.md_of(i, rates) or 0.0 for i in cr["impacts"])
     print("Da ghi %s — %d hang muc · 実装 %s MD (don gia %s v%s) · sheet %s" % (

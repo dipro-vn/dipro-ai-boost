@@ -20,7 +20,7 @@
 2. **Lập `FR Register` ngay ở Bước 0**, TRƯỚC Flow Candidate Matrix — 1 dòng / 1 chức năng nguồn, đánh số `#1..#N` theo đúng thứ tự tài liệu gốc. Đây là baseline bất biến cho toàn bộ lần chạy.
 3. **Mọi phép kiểm "đã đủ" phải đối chiếu theo TẬP HỢP, không theo số lượng.** `count(kết quả) ≥ count(nguồn)` là phép kiểm rỗng — phải chứng minh `set(FR nguồn) − set(FR đã xuất hiện) = ∅` và **in ra danh sách thiếu** (kể cả khi rỗng).
 4. **Chức năng không sinh màn hình** (batch, cron, job hệ thống, API nội bộ) vẫn PHẢI có 1 dòng trong FR Register, đánh dấu `SYSTEM — không có màn` + trỏ tới node hệ thống ở Output 1/2. **Im lặng bỏ qua = tính là thiếu.**
-5. **Cột `FR No.` là bắt buộc** trong bảng `## Screens` của SPEC (xem `spec-template.md`) và trong Sitemap Output 1 (mỗi Hành động gắn tag `#N`). Không có cột này → lần audit sau phải rà tay 58 dòng, chính là tình huống đã xảy ra.
+5. **Cột `FR No.` là bắt buộc** trong bảng `## Screens` của SPEC (xem `spec-template.md`) và trong Sitemap Output 1 (mỗi nhóm chức năng gắn tag `#N` trong tên layer). Không có cột này → lần audit sau phải rà tay 58 dòng, chính là tình huống đã xảy ra.
 
 **FR Register — format bắt buộc (đặt trong `## Source Register` hoặc ngay dưới nó):**
 
@@ -73,7 +73,7 @@ FR COVERAGE — nguồn: <file> (<N> dòng chức năng)
 1. Lập **bảng ứng viên thô ĐẦY ĐỦ** từ nguồn (tầng Flow = *Flow Candidate Matrix*) — KHÔNG coi số dòng/nhóm của nguồn là câu trả lời cuối
 2. Chạy đủ test tương ứng tầng (Flow: **G → A → B → F → E** · Screen: C → D) trên **mọi cặp cùng Actor HOẶC cùng Outcome** — không chỉ cặp "có vẻ liên quan"
 3. In **Merge Log** — mỗi quyết định gộp/tách = 1 dòng, ghi rõ test nào quyết định. **Không có Merge Log → không được vẽ**
-4. Verify rule **"gộp = đổi tầng hiển thị, KHÔNG phải xoá thông tin"**: mọi candidate bị gộp phải xuất hiện lại ở Sitemap WBS (Phần C Output 1) hoặc dưới dạng Trigger box phụ / step của `Wizard` — **đối chiếu với `FR Register` (dòng chức năng gốc), KHÔNG đối chiếu với bảng ứng viên do chính BA gom** (xem § GATE FR COVERAGE ở trên)
+4. Verify rule **"gộp = đổi tầng hiển thị, KHÔNG phải xoá thông tin"**: mọi candidate bị gộp phải xuất hiện lại ở Sitemap (Phần C Output 1 — nhóm chức năng / màn) hoặc dưới dạng nhánh / điểm bắt đầu phụ trong use case / step của `Wizard` — **đối chiếu với `FR Register` (dòng chức năng gốc), KHÔNG đối chiếu với bảng ứng viên do chính BA gom** (xem § GATE FR COVERAGE ở trên)
 5. **Trình danh sách đã gộp/tách kèm lý do cho user xác nhận** trước khi vẽ Figma (Output 1 xác nhận N flow, SPEC Screens xác nhận trước Output 2/3) — không tự tiện chốt rồi vẽ luôn
 6. Nếu số lượng sau khi gộp vẫn lớn bất thường (N flow vượt ngưỡng của `FLOW_GRANULARITY` ở Câu 0.9, hoặc 1 flow có quá nhiều Screen Code biến thể) → phải nêu rõ lý do cụ thể khi trình user, không giấu
 

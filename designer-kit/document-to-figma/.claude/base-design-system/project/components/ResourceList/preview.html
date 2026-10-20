@@ -1,0 +1,31 @@
+<!-- @dsCard group="Data display" height=624 -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><style>body{margin:0;padding:16px;font-family:var(--font-sans);background:var(--white)} .row{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap} .col{width:420px} h3{margin:0 0 8px;font-size:14px;color:var(--solid-gray-600)}</style></head>
+<body>
+<div id="root"></div>
+<script>
+  var D = window.DADS, h = React.createElement, L = D.ResourceList, I = D.ResourceListItem;
+  var more = { label: 'その他の操作' };
+  ReactDOM.createRoot(document.getElementById('root')).render(h('div', { className: 'row' },
+    h('div', { className: 'col' }, h('h3', null, 'Frame style · Inline link'),
+      h(L, { variant: 'frame' },
+        h(I, { label: '健康診断', title: '2025年度', href: '#', supportText: '受診日：2025/04/30', icon: 'document_false', action: more }),
+        h(I, { label: '健康診断', title: '2024年度', href: '#', supportText: '受診日：2024/11/24', icon: 'document_false', action: more })),
+      h('h3', { style: { marginTop: 16 } }, 'List style · Whole'),
+      h(L, { interaction: 'whole' },
+        h(I, { label: '給与明細', title: '2025年10月分', href: '#', supportText: '支給日：2025/11/14', sublabel: '確定' }),
+        h(I, { label: '給与明細', title: '2025年9月分', href: '#', supportText: '支給日：2025/10/15', sublabel: '確定', disabled: true }))),
+    h('div', { className: 'col' }, h('h3', null, 'List style · Checkbox'),
+      h(L, { control: 'checkbox' },
+        h(I, { label: '申請番号 A-1024', title: '児童手当 現況届', supportText: '提出日：2025/06/02', sublabel: '受付済', defaultChecked: true, action: more }),
+        h(I, { label: '申請番号 A-1025', title: '住民票の写し 交付申請', supportText: '提出日：2025/06/10', sublabel: '審査中', action: more }),
+        h(I, { label: '申請番号 A-1026', title: '転出届', supportText: '提出日：2025/06/12', sublabel: '取下げ', disabled: true, action: more })),
+      h('h3', { style: { marginTop: 16 } }, 'Frame style · Radio · Whole'),
+      h(L, { variant: 'frame', control: 'radio', interaction: 'whole', name: 'receive' },
+        h(I, { title: '窓口で受け取る', supportText: '市役所本庁舎 1階', icon: 'location_false', defaultChecked: true }),
+        h(I, { title: '郵送で受け取る', supportText: '3〜5営業日でお届け', icon: 'home_false' })))
+  ));
+</script>
+</body>
+</html>

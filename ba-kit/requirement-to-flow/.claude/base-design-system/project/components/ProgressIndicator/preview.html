@@ -1,0 +1,17 @@
+<!-- @dsCard group="Feedback" height=368 -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><style>body{margin:0;padding:16px;font-family:var(--font-sans);background:var(--white)} .row{display:flex;gap:40px;align-items:center;flex-wrap:wrap;margin-bottom:28px} .shade{display:flex;gap:24px;align-items:center;padding:16px;background:var(--opacity-gray-500);border-radius:var(--radius-8)}</style></head>
+<body>
+<div id="root"></div>
+<script>
+  var D = window.DADS, h = React.createElement;
+  function Row(p) { return h('div', { className: 'row' }, p.children); }
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+    h(Row, null, h(D.ProgressIndicator, { label: '読み込み中' }), h(D.ProgressIndicator, { variant: 'static', label: '処理中' }), h(D.ProgressIndicator, { variant: 'linear', label: '送信しています' })),
+    h(Row, null, h(D.ProgressIndicator, { composition: 'inlined', label: '検索中' }), h(D.ProgressIndicator, { variant: 'static', composition: 'inlined', label: 'お待ちください' }), h(D.ProgressIndicator, { variant: 'linear', composition: 'inlined', label: 'アップロード中' }), h(D.ProgressIndicator, { variant: 'linear', composition: 'inlined', value: 60, label: '60%' })),
+    h('div', { className: 'shade' }, h(D.ProgressIndicator, { underlay: true, label: '読み込み中' }), h(D.ProgressIndicator, { underlay: true, variant: 'static', label: '処理中' }), h(D.ProgressIndicator, { underlay: true, variant: 'linear', label: 'データを取得しています' }))
+  ));
+</script>
+</body>
+</html>

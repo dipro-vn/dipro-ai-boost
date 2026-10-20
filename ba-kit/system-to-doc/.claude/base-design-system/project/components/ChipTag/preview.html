@@ -1,0 +1,25 @@
+<!-- @dsCard group="Data display" height=176 -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><style>body{margin:0;padding:16px;font-family:var(--font-sans);background:var(--white);color:var(--solid-gray-800)} .row{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:16px} .k{font-size:16px;line-height:1.7;letter-spacing:0.02em} .k2{font-size:20px;font-weight:700;line-height:1.5;letter-spacing:0.02em;width:64px}</style></head>
+<body>
+<div id="root"></div>
+<script>
+  var D = window.DADS, h = React.createElement;
+  function Demo() {
+    var s = React.useState(['現行法令', '法令', '勅令', '関連度順', '10件']), tags = s[0], set = s[1];
+    return h('div', null,
+      h('div', { className: 'row' }, h('span', { className: 'k' }, '検索条件：'),
+        tags.map(function (t) { return h(D.ChipTag, { key: t, onRemove: function () { set(tags.filter(function (x) { return x !== t; })); } }, t); }),
+        tags.length ? null : h('span', { className: 'k' }, '（なし）')),
+      h('div', { className: 'row' }, h('span', { className: 'k2' }, '宛先'),
+        h(D.ChipTag, { icon: 'avatar_false', onRemove: function () {} }, 'デジ田 太郎'),
+        h(D.ChipTag, { icon: 'avatar_false', onRemove: function () {} }, 'デジ濱 実')),
+      h('div', { className: 'row' }, h('span', { className: 'k2' }, 'CC'),
+        h(D.ChipTag, { icon: 'avatar_false', onRemove: function () {} }, 'デジ山 ひかり'),
+        h(D.ChipTag, null, '読み取り専用')));
+  }
+  ReactDOM.createRoot(document.getElementById('root')).render(h(Demo));
+</script>
+</body>
+</html>

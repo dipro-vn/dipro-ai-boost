@@ -26,6 +26,7 @@ For each frame in [Output 1, Output 2, Output 3]:
 | 6 | **Không có màn hình trống / node rỗng** (BẮT BUỘC — mọi frame) | Mọi screen mockup có `≥3 child node` VÀ `≥1 text node có ký tự` | Read-back cây node bằng `use_figma` — xem quy trình bên dưới. **KHÔNG được kết luận bằng mắt nhìn screenshot** |
 | 9 | **Node nằm trong biên frame** (BẮT BUỘC, chạy TRƯỚC tiêu chí 7) | Mọi node lá trong `[0,W]×[0,H]`, đủ **4 phía** | Script ở **Tiêu chí 9**. ⚠️ Node văng ra ngoài vẫn làm tiêu chí 6/7/8 PASS giả — overlap=0 vì chúng xa nhau |
 | 8 | **Phủ đủ chức năng nguồn (FR Coverage)** (BẮT BUỘC khi nguồn đánh số được) | `set(FR nguồn) − set(FR trong artifact) = ∅` | Script ở **Tiêu chí 8** bên dưới. Đây là tiêu chí DUY NHẤT đối chiếu ngược về tài liệu nguồn — 7 tiêu chí kia chỉ kiểm thứ đã vẽ |
+| 10 | **Không chữ `UNKNOWN` trên Output 1 / 2** (20/10/2026) | Số text node chứa `UNKNOWN` = 0 | `frame.findAll(n => n.type==="TEXT" && /unknown/i.test(n.characters)).length` — điều chưa rõ viết "chưa quan sát" / "chưa xác định" |
 
 ---
 

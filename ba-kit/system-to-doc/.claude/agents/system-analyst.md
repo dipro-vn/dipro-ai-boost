@@ -68,8 +68,8 @@ Chưa có baseline mà user đưa CR → nói rõ phải chạy Luồng 1 trư�
 | **O1** | Danh sách màn hình theo website (Basic Design) | ✅ khi có website | `01_Screens/BasicDesign_<WEB-xx>_ver<N>.xlsx` | `outputs/o1-screens.md` |
 | **O2** | API Documentation (+ Batch) + Code map | ✅ khi có source | `02_API/API_Doc_…xlsx` · `02_API/CodeMap_…png/.md` | `outputs/o2-api-doc.md` |
 | **O3** | Database Documentation (+ ERD) | ✅ khi có DB **hoặc** ORM/migration trong source | `03_DB/DB_Doc_…xlsx` · `03_DB/ERD_…png` | `outputs/o3-db-doc.md` |
-| **O4** | Design System hệ thống cũ — **chuẩn chung với designer-kit** (`sys-agent/design-system/design-system-format.md`) = format Artifact type "Design System" | ✅ khi có website **hoặc** Figma | `04_DesignSystem/` (`STATUS.md` + `project/`; website khác phong cách → `04_DesignSystem/WEB-xx/…` mỗi site 1 DS) | `outputs/o4-design-system.md` |
-| **O5** | Figma flow (Output 1 + Output 2) | ✅ khi user cho link Figma | `05_Figma/figma-links.md` + node trên Figma | `outputs/o5-figma.md` |
+| **O4** | Design System hệ thống cũ — **chuẩn chung với designer-kit** (`sys-agent/design-system/design-system-format.md`) = format Artifact type "Design System", **dựng trên Base Design System chuẩn Nhật** (`.claude/base-design-system/`, `o4-design-system.md` §3b) | ✅ khi có website **hoặc** Figma | `04_DesignSystem/` (`STATUS.md` + `project/`; website khác phong cách → `04_DesignSystem/WEB-xx/…` mỗi site 1 DS) | `outputs/o4-design-system.md` |
+| **O5** | Figma flow (Output 1 dạng use case + Output 2 site → use case → section — `outputs/o5-figma.md`) | ✅ khi user cho link Figma | `05_Figma/figma-links.md` + node trên Figma | `outputs/o5-figma.md` |
 | **O6** | Tài liệu tổng hợp (docx) | ✅ LUÔN | `06_Overview/Overview_<sys>_ver<N>.docx` | `outputs/o6-overview.md` |
 | **O7** | Bug list hiện trạng — lỗi trên màn khi Playwright quét, mức Urgent / High | ⬜ khi user chọn | `07_BugList/BugList_<sys>_ver<N>.xlsx` | `outputs/o7-bug-list.md` |
 | — | Index version | ✅ LUÔN | `README.md` + `run-log.md` | `versioning.md` |
@@ -179,8 +179,8 @@ Chi tiết: **`sys-agent/flow-2-change-request.md`** (BẮT BUỘC Read trước
 | 1 | `ensure-env.py --flow 2` (tự cài nếu thiếu) → `version-tool.py context --outputs outputs --flow 2 [--cr-id]` → Read file trong `read` (baseline mới nhất · bản mới nhất của CR này · CR khác đang mở · feedback treo) | 🟡 CR-0 xác nhận baseline |
 | 2 | Hỏi bổ sung phần CR chưa rõ — không đoán | 🟡 CR-1 |
 | 3 | Phân loại CR / BUG / QUESTION + **giải trình vì sao là CR** (tiêu chí C1–C6, trích baseline) → phân tích **6 trục** System · DB · Business · Screen · Third-party · Mockup (NEW / UPD / DEL / IMPACT + vì sao sửa + mã đơn giá MD) → `_internal/cr.json` | — |
-| 4 | `build-cr-impact.py` → `CR-<id>_Impact.xlsx` (7 sheet: Summary · Estimation · Screen · API · Database · Figma · Q&A; Estimation theo `templates/template_estimation.xlsx`; MD do script tính) → gate | 🔴 V-CR |
-| 5 | Figma (`sys-agent/figma/cr-view.md`): CR-2 = vẽ → `ensure-env.py --flow 2 --figma` → **section MỚI**: CR-1 Flow (format Output 1) · CR-2 Screen Flow (format Output 2) · CR Change Table (**thống kê**) · CR-3 màn đề xuất (**đọc Design System trước**, hỏi CR-3 / CR-3b) — agent viết `cr-figma.json`, `render-cr-figma.py` sinh JS, không vẽ đè | 🟡 CR-2 · CR-3 · CR-3b · 🔴 V-CR-FIGMA |
+| 4 | Phân rã chức năng (`sys-agent/estimate-rules.md`) · **viết chữ cho khách theo `sys-agent/writing-style.md`** (cụ thể theo màn / nút, nhãn 【想定する対応内容】 + gạch đầu dòng, không mã nội bộ; câu hỏi gửi khách chỉ nghiệp vụ → `estimate.json → questions`) → `_internal/estimate.json` → `build-estimate.py` → **`CR-<id>_見積書.xlsx`** (tiếng Nhật, gửi KH) · `build-cr-impact.py --estimate` → `CR-<id>_Impact.xlsx` (7 sheet: Summary · Estimation (bản vi nội bộ, 1 dòng / chức năng) · Screen · API · Database · Figma · Q&A; MD do script tính) → gate | 🟡 CR-4 · 🔴 V-EST · V-CR |
+| 5 | Figma (`sys-agent/figma/cr-view.md`): CR-2 = vẽ → `ensure-env.py --flow 2 --figma` → **section MỚI**: CR-1 Flow (use case: Actor → đường đi → kết thúc, non-happy hàng dưới, không technology trong lane) · CR-2 Screen Flow (site → use case → Section con) · CR Change Table (**thống kê**) · CR-3 màn đề xuất (**đọc Design System trước**, hỏi CR-3 / CR-3b) — agent viết `cr-figma.json`, `render-cr-figma.py` sinh JS, không vẽ đè. **> 1 site → mỗi site 1 Section riêng (CR-2 · CR-3); CR-3 = site → flow nghiệp vụ → màn, nền `#9DA5AD`** (`site_labels` · `site_order` · `flow` mỗi màn) | 🟡 CR-2 · CR-3 · CR-3b · 🔴 V-CR-FIGMA |
 | 6 | `detect-pii --scan` + README + run-log | 🔴 H06 scan |
 
 ---
@@ -251,7 +251,7 @@ Bảng mức xử lý đầy đủ: `POLICIES.md` §5.
 | **V3** | `verify-overview.py` | O6 thiếu chương, số liệu ≠ inventory, index ≠ file thật |
 | **V5** | `verify-flow-png.py` | Node flow không map về ID có thật |
 | **V-CR** | `verify-cr-impact.py` | Không đủ 7 sheet, Summary gõ số thay vì link Estimation, Estimation sai hệ số template, bảng số đối tượng lệch, trục bị bỏ trống, giải trình CR không trích được baseline, sửa/xoá thứ không có trong baseline, MD ≠ đơn giá × số lượng, xung đột không khai |
-| **V-CR-FIGMA** | `verify-cr-figma.py` | View CR vẽ ngoài phạm vi (không phải hạng mục Impact / hàng xóm 1 bước), badge sai loại, hạng mục đổi mà không vẽ, node không mũi tên (lệch format Output 1/2), Change Table không phải thống kê / lệch số, màn đề xuất dùng màu ngoài Design System hoặc chưa khai đọc DS |
+| **V-CR-FIGMA** | `verify-cr-figma.py` | View CR vẽ ngoài phạm vi (không phải hạng mục Impact / hàng xóm 1 bước), badge sai loại, hạng mục đổi mà không vẽ, node không mũi tên (lệch format Output 1/2), Change Table không phải thống kê / lệch số, màn đề xuất dùng màu ngoài Design System hoặc chưa khai đọc DS, **gộp nhiều site chung 1 section / CR-3 không chia flow / nền section CR-3 ≠ #9DA5AD** (check 14) |
 | **V9** | `selftest-*.py` | Gate rỗng — tiêm lỗi, gate phải bắt |
 
 Verdict: `✅ Complete` (FAIL = 0) · `⚠️ Needs Revision` (tự sửa, chạy lại) · `❌ Critical Gaps` (thiếu **nguồn** → DỪNG hỏi user, không bịa để lấp).

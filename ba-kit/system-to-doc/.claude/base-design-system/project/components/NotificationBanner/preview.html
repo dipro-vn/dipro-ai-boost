@@ -1,0 +1,25 @@
+<!-- @dsCard group="Feedback" height=672 -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><style>body{margin:0;padding:16px;font-family:var(--font-sans);background:var(--white)} .stack{display:flex;flex-direction:column;gap:20px;max-width:900px} .row{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap} .m{width:360px}</style></head>
+<body>
+<div id="root"></div>
+<script>
+  var D = window.DADS, h = React.createElement;
+  var noop = function () {};
+  ReactDOM.createRoot(document.getElementById('root')).render(h('div', { className: 'stack' },
+    h(D.NotificationBanner, { usage: 'success', title: '登録手続きは全て完了しました', date: '2025年4月1日', onClose: noop,
+      primaryAction: { label: '申請内容を確認', onClick: noop }, secondaryAction: { label: 'トップへ戻る', onClick: noop } },
+      '受付番号はメールでお送りしました。審査結果は2週間程度でお知らせします。'),
+    h(D.NotificationBanner, { usage: 'error', variant: 'color-chip', title: '操作を完了できませんでした', onClose: noop },
+      '通信が混み合っています。時間をおいて再度お試しください。'),
+    h('div', { className: 'row' },
+      h('div', { className: 'm' }, h(D.NotificationBanner, { platform: 'mobile', usage: 'warning', title: '偽SNSアカウントにご注意ください', onClose: noop,
+        buttonLayout: 'horizontal', primaryAction: { label: '詳しく見る', href: '#' }, secondaryAction: { label: 'あとで', onClick: noop } }, '公式アカウント以外からの連絡には応じないでください。')),
+      h('div', { className: 'm' }, h(D.NotificationBanner, { platform: 'mobile', variant: 'color-chip', usage: 'info1', title: '登録期間が延長されました', closeType: 'compact', onClose: noop },
+        '申請の受付期間を5月31日まで延長しました。'))
+    )
+  ));
+</script>
+</body>
+</html>

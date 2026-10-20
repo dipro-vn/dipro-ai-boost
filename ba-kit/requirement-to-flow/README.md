@@ -158,7 +158,7 @@ Câu **không được trả lời** sẽ nằm ở `SPEC.md ## Open Questions` 
 
 | # | Output | Nội dung chính | Format / Nơi lưu |
 |---|---|---|---|
-| 1 | **Flow Tổng Quan** | Business Logic Flow (Actor → Trigger → Function → Technology → Outcome) + Sitemap WBS Tree + Technology Stack table | Figma Frame (node trên page user cung cấp) |
+| 1 | **Flow Tổng Quan** | Use case (Actor → đường đi → ✓ kết thúc · non-happy → ✗ kết thúc) + Sitemap (Site → Actor → Nhóm chức năng → Màn) + Technology Stack table | Figma Frame (node trên page user cung cấp) |
 | 2 | **Screen Flow** | Flow hợp nhất phân nhánh (Happy + NG inline + System + Edge/Exceptional Panel riêng) + Bảng Screen Index (screen code · loại · mô tả) | Figma Frame |
 | 3 | **Screens + Items + Error Scenarios** | Mockup từng screen (390×844 hoặc theo platform) + Bảng ITEMS (element + behavior) + Bảng ERROR SCENARIOS | Figma Frame |
 | 4 | **HTML Prototype** | File `index.html` standalone mô phỏng tương tác các màn hình chính | `<output>/prototype/index.html` |
@@ -179,7 +179,7 @@ Câu **không được trả lời** sẽ nằm ở `SPEC.md ## Open Questions` 
 Sample thật từ feature **In-App VoIP Call**. Mỗi lần chạy BA agent sẽ tạo đủ bộ **3 Figma frames + 1 HTML prototype + 1 SPEC.md**.
 
 ### Output 1 — Flow Tổng Quan
-**Nội dung:** Business Logic Flow (Actor → Trigger → Function → Technology → Outcome) + Sitemap WBS Tree (level 1-4: Feature → Actor → Hành động → Screen/Popup) + Technology Stack table.
+**Nội dung:** Use case — mỗi lane 1 use case: Actor → đường đi happy → ✓ kết thúc, hàng dưới non-happy → ✗ kết thúc (không đưa công nghệ / function vào lane) + Sitemap (Site → Actor / vai trò → Nhóm chức năng → Màn, không hành động / endpoint) + Technology Stack table. Output 2 Screen flow chia **site → use case → section**. Trên Output 1/2 không in chữ `UNKNOWN` (ghi "chưa rõ — chờ BRSE").
 
 
 ![Output 1 — Flow Tổng Quan](./sample/output1_sample.jpg)

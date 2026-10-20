@@ -1,0 +1,22 @@
+<!-- @dsCard group="Forms" height=160 -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><style>body{margin:0;padding:16px;font-family:var(--font-sans);background:var(--white);color:var(--solid-gray-800)} .row{display:flex;gap:32px;align-items:flex-start;flex-wrap:wrap;margin-bottom:16px}</style></head>
+<body>
+<div id="root"></div>
+<script>
+  var D = window.DADS, h = React.createElement;
+  function Row(p) { return h("div", { className: "row" }, p.children); }
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+    h(Row, null,
+      h(D.FormControlLabel, { size: 'sm', requirement: 'required', supportText: '住民票に記載の氏名' }, '氏名'),
+      h(D.FormControlLabel, { size: 'md', requirement: 'optional', supportText: '日中に連絡がつく番号' }, '電話番号'),
+      h(D.FormControlLabel, { size: 'lg', requirement: 'required', supportText: '半角英数字で入力してください' }, 'メールアドレス')),
+    h(Row, null,
+      h(D.FormControlLabel, { weight: 'normal', requirement: 'readonly' }, 'マイナンバー'),
+      h(D.FormControlLabel, { weight: 'normal', requirement: 'disabled' }, '旧姓'),
+      h(D.FormControlLabel, { size: 'lg', weight: 'normal' }, '備考'))
+  ));
+</script>
+</body>
+</html>

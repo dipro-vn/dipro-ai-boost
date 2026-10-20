@@ -178,7 +178,7 @@ Xem mockup HiFi (do Designer tạo) hoặc SPEC.md `## Screen Details`, đánh s
 
 ---
 
-## ⚠️ 5 rules cứng về MOCKUP (BẮT BUỘC — không được vi phạm)
+## ⚠️ 6 rules cứng về MOCKUP (BẮT BUỘC — không được vi phạm)
 
 > Phần trước của tài liệu này quy định rất kỹ 2 bảng ITEMS + ERROR, nhưng **không quy định
 > mockup phải trông ra sao** — và đó là chỗ đã hỏng trong thực tế: mockup bị vẽ thành
@@ -284,6 +284,29 @@ mockup nào.
 
 ---
 
+### Rule S6 — Mockup dựng bằng Base Design System (chuẩn UI Nhật, 20/10/2026)
+
+Nguồn: `.claude/base-design-system/` trong kit (bản copy, gốc `AI_Source/base-design-system/`) — đọc `README.md` của folder đó trước.
+
+| Đọc trước khi vẽ (khai trong báo cáo Bước 5.5) | Dùng cho |
+|---|---|
+| `prompt_design_system.md` | Nguyên tắc: đơn giản, nhất quán, chức năng hơn trang trí, đủ trạng thái loading / rỗng / thành công / lỗi, chỉ vẽ chức năng có trong SPEC |
+| `project/README.md` | Màu, chữ, bo góc, focus, giọng văn UI tiếng Nhật |
+| `project/tokens.json` | Giá trị token — gọi bằng **tên vai trò** (`primary`, `page-bg`, `surface`, `text-high`, `divider-low`, `negative-500`, `radius-md`, `control-md`, `text-16`, `heading-20-bold`…) |
+| `project/components/<Comp>/README.md` | Cỡ, biến thể của widget đang vẽ (`Button`, `TextField`, `Select`, `Checkbox`, `Radio`, `Table`, `Badge`, `Modal`, `Pagination`, `Breadcrumb`, `AppHeader`, `NotificationBanner`…) |
+
+- Mỗi widget trong mockup = component tương ứng trong base, đúng cỡ trong README (VD nút chính `primary` cao `control-lg` 56px, ô nhập 56px, label `Std-17B-170`, bảng header `solid-gray-100`). Font `Noto Sans JP`.
+- Chỉ dùng màu có trong `tokens.json`. Cần widget base không có (`SideNav`, `Toast`, `TabBar` — xem `STATUS.md` § Thiếu) → hỏi user / designer, không tự chế; tạm thời ghi "chưa có trong design system" cạnh mockup.
+- Chữ trên mockup khi `OUTPUT_LANG` có JP: theo `project/README.md` § Content fundamentals (「※必須」, lỗi 「＊…を入力してください。」 dưới ô, nhãn nút là cụm động từ ngắn). VN / EN: giữ cùng cấu trúc, dịch nhãn.
+- Theme `light` mặc định; `market` chỉ khi SPEC nói rõ là trang thương mại.
+- Dự án **đã có** design system riêng (user cung cấp ở Preflight) → design system đó thắng base; base chỉ bù phần thiếu, ghi rõ trong báo cáo.
+- Bảng ITEMS / ERROR SCENARIOS vẫn **không** ghi px / hex (xem ví dụ SAI phía dưới) — token chỉ dùng để vẽ mockup.
+- Output 4 (HTML) phải trông giống Output 3 (Rule S2) → prototype dùng cùng token: nạp `project/components/bundle.css` hoặc chép biến `--<token>` cần dùng.
+
+**Phép kiểm:** mọi fill / stroke màu trên mockup nằm trong tập màu của `tokens.json` (trừ badge số ①②③ của kit). Màu ngoài tập → FAIL, sửa trước khi báo Done.
+
+---
+
 ## Cách vẽ khối lượng lớn (> 30 màn) — kinh nghiệm thực chiến
 
 **Chia batch nhỏ.** 1 lần `use_figma` vẽ **8–12 màn**. Batch to hơn dễ timeout và khi lỗi
@@ -386,7 +409,7 @@ BUTTONS:
 ❌ Toast: nền #fff6f5, border 1px #ffbbb9, Regular 13px #cf222e
 ```
 
-**BA KHÔNG tạo:** px, hex color, font-size, border-radius, component instances → đó là Designer-agent.
+**BA KHÔNG tạo:** px, hex color, font-size, border-radius, component instances → đó là Designer-agent. (Áp cho chữ trong bảng / SPEC. Mockup thì vẽ bằng token của Base Design System — Rule S6.)
 
 ---
 

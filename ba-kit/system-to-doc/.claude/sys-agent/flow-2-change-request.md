@@ -50,7 +50,8 @@
 | 3 | Item mơ hồ → hỏi | 🟡 **CR-1** |
 | 4 | `version-tool.py next --outputs outputs --cr-id CR-<id> --slug <slug> --create` | — |
 | 5 | Phân tích 6 trục (§4) → ghi `<ver>/_internal/cr.json` → `build-cr-impact.py` → `CR-<id>_Impact.xlsx` (7 sheet) | 🔴 **V-CR** |
-| 6 | Figma view CR (§5 + `figma/cr-view.md`): CR-1 Flow (Output 1) · CR-2 Screen Flow (Output 2) · CR Change Table (thống kê) · CR-3 màn đề xuất (đọc Design System trước) | 🟡 **CR-2 · CR-3 · CR-3b** · 🔴 **V-CR-FIGMA** |
+| 5b | **見積書 cho KH** (`sys-agent/estimate-rules.md` + **văn phong `sys-agent/writing-style.md`**; câu hỏi nghiệp vụ gửi khách → `estimate.json → questions`, kit sinh sheet 確認事項 / Câu hỏi nghiệp vụ): phân rã chức năng → `_internal/estimate.json` (dòng = màn × thao tác, song ngữ ja / vi, phương án thay thế = dòng riêng + `combos`) → `build-estimate.py` → `CR-<id>_見積書.xlsx` (tiếng Nhật thuần) · build lại Impact với `--estimate` (sheet Estimation = bản vi nội bộ cùng nguồn) | 🟡 **CR-4** · 🔴 **V-EST** |
+| 6 | Figma view CR (§5 + `figma/cr-view.md`; **> 1 site → mỗi site 1 Section riêng, site → flow → màn, CR-3 nền `#9DA5AD`**): CR-1 Flow (Output 1, **có NON-HAPPY mỗi lane**) · CR-2 Screen Flow (Output 2, **có màn / popup lỗi, Screen Index có Loại, ⑦ Error/Popup Index**) · CR Change Table (thống kê) · CR-3 màn đề xuất (**format Output 3: mockup trái + mô tả / ITEMS / ERROR SCENARIOS phải; NEW + UPD tô màu phần đổi + popup lỗi**; đọc Design System trước) | 🟡 **CR-2 · CR-3 · CR-3b** · 🔴 **V-CR-FIGMA** |
 | 7 | `detect-pii.js --scan <ver>` · `build-version-index.py <ver>` · run-log · report | 🔴 H06 |
 
 ### CR-0 — xác nhận baseline (AskUserQuestion)
@@ -62,6 +63,9 @@ Feedback chưa xử lý: <ver.. — tóm tắt> hoặc "không có".   CR này �
   [B] Hệ thống đã đổi so với baseline — chạy Luồng 1 DELTA trước
   [C] Dùng baseline khác — chỉ định
 ```
+
+### CR-4 — 見積書 (AskUserQuestion, 1 lượt, trước bước 5b)
+Hỏi: (a) chia **Step 1 / Step 2** thế nào (mặc định: bắt buộc = Step 1, mở rộng / Option = Step 2) · (b) phương án thay thế nào đưa vào báo giá (mặc định: mọi phương án KH nêu + 1 phương án đơn giản hơn nếu có) · (c) ai duyệt `function-rates.json` (DRAFT → V-EST WARN, ghi tên vai trò vào run-log). User bỏ qua → dùng mặc định, ghi rõ trong run-log.
 
 ### CR-1 — làm rõ (chỉ khi cần, ≤ 4 câu / lượt)
 Hỏi đúng chỗ thiếu. User không trả lời được → câu hỏi `CQ-xxx` trong `cr.json`, dòng impact liên quan `Xung đột = UNKNOWN`, **không** tự chọn đáp án.
@@ -90,7 +94,7 @@ Hỏi đúng chỗ thiếu. User không trả lời được → câu hỏi `CQ-
 | **C5** | Đổi nền tảng / thiết bị / yêu cầu phi chức năng (hiệu năng, bảo mật, trình duyệt) |
 | **C6** | Kéo theo đổi schema DB, API contract hoặc tài liệu đã bàn giao |
 
-### 3.3 Giải trình — viết cho khách, **trọng tâm, không lan man**
+### 3.3 Giải trình — viết cho khách, **trọng tâm, không lan man** (văn phong: `sys-agent/writing-style.md`)
 
 Mỗi item CR = 1 dòng `justification` trong `cr.json` → sheet **Summary** mục "Vì sao đây là Change Request":
 
@@ -176,6 +180,9 @@ Trục **Business** + **ThirdParty** không có sheet riêng (luồng nghiệp v
 
 Gate V-CR chặn mọi vi phạm trên + **MD / tổng trong xlsx khác đơn giá × số lượng** (sửa tay) + Summary gõ số thay vì link Estimation + công thức Estimation khác hệ số template + bảng số đối tượng lệch + Q&A thiếu giải trình / CQ. WARN: đơn giá chưa `APPROVED`; CR khác đang mở cũng sửa cùng thứ (phải nêu ở mục đề xuất).
 
+### 4.5a Chế độ `--estimate` (mặc định từ 19/10/2026)
+`build-cr-impact.py … --estimate <ver>/_internal/estimate.json` → sheet **Estimation** dựng từ `templates/template_mitsumori.xlsx` (layout 見積書 FINAL: 流用可否 · 必須◉/オプション◯ · STEP · tổng Step 1 / Step 2 / 全ての機能 / 人月 + bảng tổng theo phương án), **1 dòng / chức năng**, thêm cột Impact + căn cứ 実装. Summary: 実装 = tổng estimate (kèm số đối chiếu theo impact), 総工数 / 人月 / Step 1 / Step 2 = link sang cột 小計 của Estimation. `verify-cr-impact.py --estimate …` đổi check 12 / 22 sang luật này (22 = V-EST E1–E3 E5 E8). Không có `--estimate` → layout cũ 1 dòng / impact (chỉ để tương thích version cũ).
+
 ### 4.5 Template estimation — bóc 1 lần từ 見積書 của công ty
 
 ```bash
@@ -189,14 +196,14 @@ Giữ letterhead / logo / header / validation / ◆前提条件; bỏ dữ liệ
 ## 5. Figma — view CR mới, đúng format Output 1 / Output 2 (chi tiết: `figma/cr-view.md`)
 
 ### CR-2 / CR-3 / CR-3b (AskUserQuestion — wording ở `figma/cr-view.md` §3)
-- **CR-2** vẽ hay không, file nào. **CR-3** phạm vi màn đề xuất (NEW / NEW + UPD / chọn màn / không). **CR-3b** khi màn cần component Design System site chưa có (mượn site khác hay UI-TOKEN-NEW + CQ). Không tự chọn thay user.
+- **CR-2** vẽ hay không, file nào. **CR-3** phạm vi màn đề xuất (mặc định NEW + UPD + popup lỗi / chỉ NEW / chọn màn / không). **CR-3b** khi màn cần component Design System site chưa có (mượn site khác hay UI-TOKEN-NEW + CQ). Không tự chọn thay user.
 
 ### Luật vẽ (tóm tắt — đầy đủ ở `figma/cr-view.md`)
 - **Section mới** `CR-<id> — <tiêu đề> (baseline ver<K> → ver<N>)`, cách bbox thấp nhất của mọi node hiện có **≥ 400 px**. **Không** remove / move / resize / recolor / relabel node của Output 1/2 hay CR trước.
-- **CR-1 Flow** = Output 1 Phần A (lane `FL-xx` bị chạm: ACTOR → TRIGGER → FUNCTION → TECHNOLOGY → OUTCOME · EDGE) + Phần B Technology. **CR-2 Screen Flow** = Output 2 (Group · Start · Screen · Decision · System · NG inline · Terminal · Edge/Exceptional · ④ Screen Index). Mọi node nối bằng **mũi tên thật**.
+- **CR-1 Flow** = Output 1 dạng use case (lane `FL-xx` bị chạm: Actor → đường đi → ✓ kết thúc · non-happy hàng dưới → ✗ kết thúc · chip CHƯA CHỐT) + bảng Technology bên phải (feedback 20/10/2026). **CR-2 Screen Flow** = Output 2 (Group · Start · Screen · Decision · System · NG inline · Terminal · Edge/Exceptional · ④ Screen Index). Mọi node nối bằng **mũi tên thật**.
 - **Phạm vi — POLICY:** chỉ hạng mục có dòng Impact + hàng xóm **đúng 1 bước** / lane `FL-xx` baseline làm ngữ cảnh (`AS-IS`).
 - **CR Change Table = THỐNG KÊ**: số đối tượng NEW / UPD / DEL / IMPACT (Màn hình · API · Bảng DB · Cột DB · …) + 実装 MD · 総工数 人日 · 人月 · 最小改修案 / 拡張案. **Không** liệt kê lại từng hạng mục (đã có trong xlsx).
-- **CR-3 màn đề xuất**: **đọc Design System trước** (README → tokens.json → component README → STATUS.md, khai vào `screens.ds_read`) → chỉ token / component của DS; thiếu → theo CR-3b. Máy kiểm màu ⊆ token.
+- **CR-3 màn đề xuất**: **đọc Design System trước** (README → tokens.json → component README → STATUS.md, khai vào `screens.ds_read`) → chỉ token / component của DS; thiếu → theo CR-3b. Máy kiểm màu ⊆ token. **Baseline không có DS** → Base Design System tạm (`.claude/base-design-system/`, `figma/cr-view.md` §4 bước 7) copy vào `$V/04_DesignSystem/<WEB-xx>/`, chạy `--ds-baseline $V`.
 - Mỗi node đúng 1 badge, tên `<BADGE> · <REF> · <nhãn>`, `setSharedPluginData("crkit", "kind", …)` (Figma bắt buộc namespace ≥ 3 ký tự).
 - **Không tự viết JS vẽ**: agent viết `_internal/cr-figma.json` → `render-cr-figma.py` sinh JS → `use_figma` → `99-readback.js` → `verify-cr-figma.py` `FAIL = 0`.
 - Ghi link node vào `<ver>/05_Figma/figma-links.md`.
@@ -210,9 +217,10 @@ ver<N>_<DDMMYY>_CR-<id>-<slug>/
 ├── README.md                  mục lục (build-version-index)
 ├── run-log.md                 baseline: ver<K>_…
 ├── input/                     CR nguyên văn
-├── CR-<id>_Impact.xlsx        7 sheet: Summary · Estimation · Screen · API · Database · Figma · Q&A   ← gửi khách được
+├── CR-<id>_Impact.xlsx        7 sheet: Summary · Estimation · Screen · API · Database · Figma · Q&A   ← nội bộ (tiếng Việt)
+├── CR-<id>_見積書.xlsx         詳細見積書 + 前提条件・留意事項 (tiếng Nhật)                             ← gửi KH sau khi PM duyệt
 ├── 05_Figma/figma-links.md    (nếu vẽ)
-└── _internal/  cr.json · cr-figma.json · figma-js/ · cr-figma-nodes.json · gates/
+└── _internal/  cr.json · estimate.json · cr-figma.json · figma-js/ · cr-figma-nodes.json · gates/
 ```
 
 ---
@@ -230,5 +238,9 @@ ver<N>_<DDMMYY>_CR-<id>-<slug>/
 - ❌ Lưu tên / email người gửi CR — dùng vai trò
 - ❌ Vẽ view CR theo bố cục tự chế (lưới thẻ không mũi tên) thay vì khung Output 1 / Output 2 — lỗi đã xảy ra ở CR-001
 - ❌ CR Change Table liệt kê lại từng hạng mục — chỉ thống kê
+- ❌ View CR chỉ có happy path (CR-1 lane không NG, CR-2 group không màn / popup lỗi); Screen Index không có Loại
+- ❌ Màn đề xuất không có mô tả / ITEMS / ERROR SCENARIOS bên phải; chỉ vẽ màn NEW mà bỏ màn UPD; màn UPD không tô màu phần thay đổi
 - ❌ Vẽ màn đề xuất trước khi đọc Design System / dùng màu, component không có trong DS mà không hỏi CR-3b
+- ❌ 見積書 1 dòng / impact (API, cột DB, "kiểm lại") — KH đọc theo chức năng; Mockup / IMPACT đứng thành dòng 実装
+- ❌ Gửi KH file có chữ Việt / mã IMP- API- CQ- / "Chờ CQ" — dùng 【見積もり前提・確認事項】 + sheet 前提条件・留意事項
 - ❌ Gõ số công số vào Summary thay vì link sheet Estimation; sửa hệ số công đoạn trong code thay vì template

@@ -103,7 +103,7 @@
     "user@domain.com",
     "test@gmail.com",
     "test@admin.com",
-    "AKIAIOSFODNN7EXAMPLE"
+    "AKIAIOSFODNN7EXAMPLE", "f1cf7cf0e21e0770002081f4e10ac7da"
   ],
   "allowPathPatterns": [
     "\\.claude/config/pii-patterns\\.json$",

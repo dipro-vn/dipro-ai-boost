@@ -17,6 +17,9 @@ Checks: 1 ten/badge/kind · 2 node tro toi impact co that, badge = Loai · 3 man
 (so doi tuong NEW/UPD/DEL/IMPACT + 実装 MD) · 6 khong ve trung (WARN) · 7 moi node CR-1/CR-2 co mui ten noi (format
 Output 1/2, khong chip roi) · 8 legend + khong node thieu badge · 9 khong chong node cu · 10 CR-3: man de xuat bam DS
 (ref DS resolve, mau ⊆ token cua site / site muon), du man theo cr-figma.json, da khai doc DS.
+11 CR-1 moi lane co NON-HAPPY (node NG) hoac khai no_ng · 12 CR-2 moi group co man / popup loi (NG / ⚠ popup) hoac
+no_ng; ④ Screen Index co cot Loai (enum) + dong TONG; ⑦ Error/Popup Index du dong · 13 CR-3 moi man co panel mo ta
+ben phai (ITEMS + ERROR SCENARIOS), man UPD to mau phan doi, du man NEW + UPD cua truc Screen.
 """
 import argparse
 import glob
@@ -79,14 +82,25 @@ def main():
     ap.add_argument("--view", default=None, help="cr-figma.json (de doi chieu man CR-3 + ds_read)")
     ap.add_argument("--rates", default=os.path.join(KIT, S.MD_RATES_PATH))
     ap.add_argument("--out", default=None)
+    ap.add_argument("--ds-baseline", default=None, help="version chua 04_DesignSystem dung khi ve (mac dinh --baseline)")
     a = ap.parse_args()
 
-    raw = C.load_json(a.nodes)
-    data = raw if isinstance(raw, dict) else {"nodes": raw}
+    # --nodes nhan 1 file hoac nhieu file cach nhau dau phay (readback chia PART vi gioi han 20 KB cua use_figma)
+    data = {"nodes": []}
+    for path in [p for p in a.nodes.split(",") if p.strip()]:
+        raw = C.load_json(path.strip())
+        raw = raw if isinstance(raw, dict) else {"nodes": raw}
+        data["nodes"] += raw.get("nodes") or []
+        for k, v in raw.items():
+            if k not in ("nodes", "part", "of"):
+                data[k] = v
     nodes = data.get("nodes") or []
     cr = C.load_json(a.cr_json)
     _rm, rates = C.load_rates(a.rates)
     B = C.load_baseline(a.baseline)
+    if a.ds_baseline:  # cung DS voi render-cr-figma.py --ds-baseline
+        B["ds"] = C.load_ds_sites(os.path.join(a.ds_baseline, "04_DesignSystem"))
+        B["has_ds"] = bool(B["ds"])
     view = C.load_json(a.view) if a.view and os.path.isfile(a.view) else None
     IMP = cr.get("impacts") or []
     g = Gate("GATE V-CR-FIGMA — %s" % C.txt((cr.get("meta") or {}).get("cr_id")))
@@ -173,7 +187,8 @@ def main():
     # 6. Trung node
     seen, dup = {}, []
     for n in real:
-        k = (n.get("badge"), C.txt(n.get("ref")), n.get("kind"))
+        # nhanh NG / decision / actor cung REF voi buoc happy la node khac nhau -> phan biet theo shape
+        k = (n.get("badge"), C.txt(n.get("ref")), n.get("kind"), n.get("shape") or "")
         if k in seen and n.get("kind") not in ("edge",):
             dup.append("%s · %s (%s, %s)" % (k[0], k[1], seen[k], n.get("id")))
         seen.setdefault(k, n.get("id"))
@@ -217,6 +232,7 @@ def main():
             for f in ("README.md", "tokens.json"):
                 if not any(os.path.join(st, "project", f) in p for p in ds_read):
                     bad.append("CR-3 chua khai doc %s/project/%s truoc khi ve" % (st, f))
+        src_gap = []
         for n in mock:
             refs = C.refs_of(C.txt(n.get("ds")))
             if not refs:
@@ -231,13 +247,128 @@ def main():
                     sites.add(m.group(1))
             allowed = {"#ffffff", "#000000"}
             for st in sites:
-                allowed |= token_colors(a.baseline, st)
+                allowed |= token_colors(a.ds_baseline or a.baseline, st)
             extra = sorted({c.lower() for c in n.get("colors") or []} - allowed)
-            if extra:
+            if extra and n.get("src"):  # clone tu UI that cua designer: mau co that, DS chua co token -> bo sung DS
+                src_gap.append("%s (clone %s) co mau chua co token DS: %s" % (n.get("name"), n.get("src"), extra))
+            elif extra:
                 bad.append("%s dung mau ngoai Design System %s: %s" % (n.get("name"), "/".join(sorted(sites)), extra))
-        g.check(10, "CR-3: man de xuat du theo pham vi, da doc DS truoc, ref DS ton tai, mau chi tu token", bad)
+        if bad or not src_gap:
+            g.check(10, "CR-3: man de xuat du theo pham vi, da doc DS truoc, ref DS ton tai, mau chi tu token", bad)
+        else:
+            g.check(10, "CR-3: man clone tu UI that — mau that chua co token Design System (bo sung DS)", src_gap, level="WARN")
     else:
         g.ok(10, "CR-3 man de xuat", "khong ve (CR-3 = khong) — ghi ly do trong README version")
+
+    STY = ["List", "Detail", "Form", "Modal", "Popup", "Toast", "Banner", "Wizard", "Dashboard", "Complete", "Full screen"]
+    # 11. CR-1 non-happy
+    bad = []
+    lanes = {}
+    for n in nodes:
+        if n.get("kind") in ("flow", "edge") and n.get("grp") and not str(n.get("grp")).startswith("G"):
+            lanes.setdefault(n["grp"], []).append(n)
+    vl = {L["lane"]: L for L in (view or {}).get("flows") or []}
+    if not lanes:
+        bad.append("khong doc duoc lane (readback thieu 'grp') — chay lai 99-readback.js cua renderer moi")
+    for ln, ns in lanes.items():
+        if not any(x.get("shape") == "ng" for x in ns) and len(C.txt((vl.get(ln) or {}).get("no_ng"))) < 15:
+            bad.append("lane %s khong co NG (non-happy) va khong khai no_ng" % ln)
+    g.check(11, "CR-1: moi lane co luong NON-HAPPY (NG) hoac ly do N/A", bad)
+    # 12. CR-2 man / popup loi + Screen Index co Loai + ⑦
+    bad = []
+    grps = {}
+    for n in nodes:
+        if n.get("kind") in ("screen", "flow-step") and n.get("grp"):
+            grps.setdefault(n["grp"], []).append(n)
+    vg = {G["id"]: G for G in (view or {}).get("screen_groups") or []}
+    for gid, ns in grps.items():
+        if not any(x.get("shape") in ("ng", "popup") for x in ns) and len(C.txt((vg.get(gid) or {}).get("no_ng"))) < 15:
+            bad.append("group %s khong co man / popup loi (non-happy) va khong khai no_ng" % gid)
+    idx = data.get("idx") or []
+    if not idx:
+        bad.append("khong co ④ Screen Index (IDX · ...)")
+    bad += ["Screen Index %s Loai=%r ngoai enum" % (r.get("ref"), r.get("type")) for r in idx if r.get("type") not in STY]
+    if not data.get("idxTotal"):
+        bad.append("Screen Index thieu dong TONG = A man chinh + B popup / man loi")
+    n_err = sum(1 for n in nodes if n.get("shape") in ("ng", "popup") and n.get("kind") in ("screen", "flow-step"))
+    if data.get("erridx", 0) < n_err:
+        bad.append("⑦ Error/Popup Index %s dong < %d node NG/popup trong CR-2" % (data.get("erridx", 0), n_err))
+    g.check(12, "CR-2: moi group co man / popup loi; Screen Index co cot Loai + TONG; ⑦ Error/Popup Index du", bad)
+    # 13. CR-3 mo ta + error scenarios + UPD to mau + du man
+    bad = []
+    if items or mock:
+        dmap = {d.get("ref"): d for d in data.get("desc") or []}
+        for n in mock:
+            d = dmap.get(C.txt(n.get("ref")))
+            if not d:
+                bad.append("%s thieu panel mo ta ben phai (DESC)" % n.get("name"))
+                continue
+            if not d.get("items"):
+                bad.append("%s panel mo ta khong co bang ITEMS" % n.get("ref"))
+            if not d.get("errors"):
+                bad.append("%s panel mo ta khong co ERROR SCENARIOS" % n.get("ref"))
+            if n.get("badge") == "UPD" and not [c for c in n.get("chg") or [] if c in ("NEW", "UPD", "DEL")]:
+                bad.append("%s man UPD khong to mau phan thay doi (CHG-ANN)" % n.get("ref"))
+        drawn_refs = {C.txt(n.get("ref")) for n in mock}
+        skip = {C.txt(x.get("ref")): x for x in ((view or {}).get("screens") or {}).get("skip") or []}
+        for i in IMP:
+            if i.get("axis") != "Screen" or i.get("change_type") not in ("NEW", "UPD"):
+                continue
+            refs = [r for r in C.refs_of(i.get("baseline_ref")) if r.startswith("SC-")] or [i["id"]]
+            for r in refs:
+                if r not in drawn_refs and i["id"] not in drawn_refs and r not in skip and i["id"] not in skip:
+                    bad.append("CR-3 thieu man %s %s (%s) — ve hoac khai screens.skip kem ly do" % (i["change_type"], r, i["id"]))
+        g.check(13, "CR-3: moi man co mo ta + ITEMS + ERROR SCENARIOS ben phai, man UPD to mau phan doi, du man NEW + UPD", bad)
+    else:
+        g.ok(13, "CR-3 mo ta man", "khong ve CR-3")
+
+    # 14. Bo cuc: moi site 1 section rieng (CR-2 va CR-3); CR-3 = site -> flow nghiep vu -> man, nen #9DA5AD
+    bad = []
+    lay = data.get("layout")
+    cr2_groups = {G["id"]: G.get("site") for G in (view or {}).get("screen_groups") or []}
+    if (grps or mock) and lay is None:
+        bad.append("readback khong co 'layout' — ve lai bang render-cr-figma.py moi (CR-2 / CR-3 chia section theo site)")
+    elif lay is not None:
+        if grps:
+            secs2 = lay.get("cr2") or []
+            if not secs2:
+                bad.append("CR-2 khong chia Section theo site (khong co section CR-2 Screen Flow · <site>)")
+            sites2 = [x.get("site") for x in secs2]
+            bad += ["CR-2 site %s co %d section (phai 1)" % (st, sites2.count(st)) for st in sorted(set(sites2)) if sites2.count(st) > 1]
+            where = {}
+            for x in secs2:
+                for gid in x.get("groups") or []:
+                    where.setdefault(gid, set()).add(x.get("site"))
+            for gid in grps:
+                if gid not in where:
+                    bad.append("CR-2 group %s nam ngoai section site" % gid)
+                elif len(where[gid]) > 1:
+                    bad.append("CR-2 group %s ve o nhieu site %s" % (gid, sorted(where[gid])))
+                elif cr2_groups.get(gid) and cr2_groups[gid] not in where[gid]:
+                    bad.append("CR-2 group %s (site %s) nam trong section site %s" % (gid, cr2_groups[gid], sorted(where[gid])))
+            # site -> flow / use case -> section (feedback 20/10/2026): moi group nam trong Section con cua chinh flow do
+            in_sub = {gid for x in secs2 for f in x.get("flows") or [] for gid in f.get("groups") or [] if gid == f.get("flow")}
+            bad += ["CR-2 group %s khong nam trong section flow rieng (site -> flow -> section)" % gid for gid in sorted(grps) if gid not in in_sub]
+        if mock:
+            secs3 = lay.get("cr3") or []
+            if not secs3:
+                bad.append("CR-3 khong chia Section theo site")
+            sites3 = [x.get("site") for x in secs3]
+            bad += ["CR-3 site %s co %d section (phai 1)" % (st, sites3.count(st)) for st in sorted(set(sites3)) if sites3.count(st) > 1]
+            for x in secs3:
+                if (x.get("fill") or "").lower() != "#9da5ad":
+                    bad.append("section %s nen %r (phai #9DA5AD)" % (x.get("name"), x.get("fill")))
+                if x.get("loose"):
+                    bad.append("section %s co %d man khong thuoc flow nao" % (x.get("name"), x["loose"]))
+                if not x.get("flows"):
+                    bad.append("section %s khong chia theo flow nghiep vu" % x.get("name"))
+                bad += ["%s / %s khong co man" % (x.get("name"), f.get("name")) for f in x.get("flows") or [] if not f.get("mockups")]
+            in_flow = sum(f.get("mockups", 0) for x in secs3 for f in x.get("flows") or [])
+            if in_flow != lay.get("mockups", len(mock)):
+                bad.append("%d / %d man CR-3 nam dung cho site -> flow" % (in_flow, lay.get("mockups", len(mock))))
+            site_of = {n.get("site") for n in mock}
+            bad += ["man site %s khong co section CR-3 cua site" % st for st in sorted(site_of - set(sites3)) if st]
+    g.check(14, "Bo cuc: moi site 1 section rieng (CR-2 · CR-3); site -> flow nghiep vu -> section (CR-2 · CR-3), CR-3 nen #9DA5AD", bad)
 
     print("FIGMA: %d node · %d mui ten · %d o thong ke · %d man de xuat" % (
         len(nodes), len(data.get("arrows") or []), len(data.get("stats") or []), len(mock)), file=sys.stderr)

@@ -1,0 +1,25 @@
+<!-- @dsCard group="Layout" height=408 -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><style>body{margin:0;padding:16px;font-family:var(--font-sans);background:var(--white);color:var(--solid-gray-800)} .grid{display:grid;grid-template-columns:repeat(2,minmax(0,320px));gap:0 32px} .cap{font-size:14px;line-height:1;letter-spacing:0.02em;color:var(--solid-gray-600);margin-top:8px} .menu{width:320px;margin-top:16px;border:1px solid var(--solid-gray-420)} .item{padding:16px;font-size:17px;line-height:1;letter-spacing:0.02em}</style></head>
+<body>
+<div id="root"></div>
+<script>
+  var D = window.DADS, h = React.createElement;
+  var colors = ['gray-420', 'gray-536', 'black'];
+  function Col(p) {
+    return h('div', null, [1, 2, 3, 4].map(function (w, i) {
+      return h(React.Fragment, { key: w }, h('div', { className: 'cap' }, p.variant + ' / ' + colors[i % 3] + ' / ' + w + 'px'),
+        h(D.Divider, { variant: p.variant, color: colors[i % 3], weight: w }));
+    }));
+  }
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+    h('div', { className: 'grid' }, h(Col, { variant: 'solid' }), h(Col, { variant: 'dash' })),
+    h('div', { className: 'menu' },
+      h('div', { className: 'item' }, 'ディバイダーの種類'), h(D.Divider, { spacing: 0 }),
+      h('div', { className: 'item' }, 'マージンの取り方'), h(D.Divider, { spacing: 0 }),
+      h('div', { className: 'item' }, 'ディバイダーの位置'))
+  ));
+</script>
+</body>
+</html>

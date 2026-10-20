@@ -110,6 +110,8 @@ design-system/
 
 Nguồn không có giá trị cho token bắt buộc → **không bịa**: bỏ token đó, ghi `TBD` vào `STATUS.md` (§ Thiếu).
 
+**Base Design System** (`.claude/base-design-system/` của kit — chuẩn UI Nhật DADS, đã đặt sẵn tên vai trò §3.3): token bắt buộc nguồn không có có thể **lấy giá trị base** thay cho TBD khi user đồng ý — `usage` mở đầu `[base]` + tên DADS gốc, liệt kê ở `STATUS.md` § `Lấy từ base (chờ xác nhận)`. Không bao giờ đè giá trị nguồn bằng giá trị base.
+
 ## 4. `README.md` — brand book
 
 - Viết **tiếng Việt** (giữ nguyên nhãn UI gốc, vd. tiếng Nhật trong 「」), câu mệnh lệnh, **gọi tên token / style / component** trong backtick. Ví dụ: "Nền ứng dụng `page-bg`. Card, header, modal dùng `surface`."

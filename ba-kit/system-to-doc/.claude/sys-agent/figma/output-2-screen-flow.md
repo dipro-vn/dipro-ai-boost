@@ -1,5 +1,14 @@
 > **SOURCE:** `ba-kit/requirement-to-flow/.claude/ba-agent/figma-outputs/output-2-screen-flow.md` @ a4cfc01 — copy self-contained cho kit system-to-doc. Đọc kèm `o5-figma.md` (bảng thay SPEC.md → inventory). Sửa quy tắc vẽ chung thì sửa CẢ HAI nơi.
 
+> ## ⚠ KIT NÀY: bố cục Output 2 = **site → use case → section** (feedback 20/10/2026 — áp dụng cả `requirement-to-flow`)
+>
+> - Mỗi site 1 **Section** (`Site WEB-xx — <tên site> (n màn)`); hệ thống / tích hợp không có màn → Section riêng.
+> - Trong Section site, **mỗi use case (= lane FL-xx của Output 1, cùng tên) 1 Section con** `FL-xx · <tên use case>` chứa Group của use case đó (Start · Screen · Decision · NG · Terminal · Edge như mô tả bên dưới).
+> - Bảng ④ ⑤ ⑥ ⑦ + Master Map gom vào Section **Bảng tổng hợp** cuối (Luồng 2 / CR-2: ④ ⑦ theo từng site).
+> - **Không hiện chữ `UNKNOWN` trên Figma** (Output 1 · Output 2 · CR-1 · CR-2 — feedback 20/10/2026): điều chưa rõ viết bằng lời — "chưa quan sát", "chưa xác định", "màn chưa có tiêu đề", "thông báo: chưa quan sát", "chờ khách hàng xác nhận" — kèm khung tím nét đứt To verify. Nhãn `UNKNOWN` chỉ dùng trong xlsx / inventory / Evidence Ledger. Kiểm: quét chữ trên frame `UNKNOWN` = 0 (CR: `render-cr-figma.py` từ chối).
+> - Kiểm: mọi `SCREEN SC-` / `EDGE SC-` nằm trong đúng Section site của nó; tổng màn = số SC trong scope; không màn nào ngoài Section use case.
+
+
 # Ba Agent — Output 2: Screen Flow
 
 ## Output 2 — Screen Flow (Merged Branch)

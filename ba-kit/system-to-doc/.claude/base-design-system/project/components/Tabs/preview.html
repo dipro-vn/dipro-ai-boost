@@ -1,0 +1,19 @@
+<!-- @dsCard group="Navigation" height=688 -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><style>body{margin:0;padding:16px;font-family:var(--font-sans);background:var(--white)} .block{margin-bottom:24px} ul{margin:0;padding-left:24px} li{padding:4px 0}</style></head>
+<body>
+<div id="root"></div>
+<script>
+  var D = window.DADS, h = React.createElement;
+  function news(t) { return h('ul', null, h('li', null, t + '：デジタル大臣記者会見の概要を掲載しました'), h('li', null, t + '：マイナンバーカードの利用状況を更新しました')); }
+  var cats = ['すべて', '会見', '報道発表', '組織情報', '政策', '会議等', '法令', '採用'].map(function (l) { return { label: l, content: news(l) }; });
+  var years = ['令和7年度', '令和6年度', '令和5年度', '令和4年度'].map(function (l) { return { label: l, value: l, content: h('p', { style: { margin: 0 } }, l + 'の予算・決算に関する資料を掲載しています。') }; });
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+    h('div', { className: 'block' }, h(D.Tabs, { label: '新着・更新', items: cats })),
+    h('div', { className: 'block' }, h(D.Tabs, { label: '年度', position: 'left', items: years, defaultValue: '令和5年度' })),
+    h('div', { className: 'block', style: { maxWidth: 520 } }, h(D.Tabs, { label: '新着・更新（折り返し）', position: 'bottom', reflow: true, items: cats.slice(0, 7) }))
+  ));
+</script>
+</body>
+</html>

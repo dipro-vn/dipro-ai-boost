@@ -1,0 +1,29 @@
+<!-- @dsCard group="Navigation" height=688 -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><style>body{margin:0;padding:16px;font-family:var(--font-sans);background:var(--white)} .row{margin-bottom:32px} .cols{display:flex;gap:32px;flex-wrap:wrap} .cols > *{flex:1 1 380px}</style></head>
+<body>
+<div id="root"></div>
+<script>
+  var D = window.DADS, h = React.createElement;
+  function Row(p) { return h('div', { className: 'row' }, p.children); }
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+    h(Row, null, h(D.StepNavigation, { current: 2, description: false, steps: [
+      { title: '基本情報入力', status: 'completed' }, { title: '利用規約の確認', status: 'completed' },
+      { title: '本人確認', status: 'editing' }, { title: '顔写真の登録' }, { title: '提出' }] })),
+    h(Row, null, h(D.StepNavigation, { size: 'small', current: 1, steps: [
+      { title: '基本情報入力', status: 'reached', href: '#', description: '氏名や住所を入力' }, { title: '本人確認', status: 'error', href: '#', description: '書類を確認してください' },
+      { title: '申請情報の確認', status: 'skipped', description: '任意の手順です' }, { title: '提出', description: '申請を完了します' }] })),
+    h('div', { className: 'cols' },
+      h(D.StepNavigation, { orientation: 'vertical', current: 1, steps: [
+        { title: '基本情報入力', status: 'completed', description: '氏名・生年月日・住所など、申請に必要な基本情報を入力します。' },
+        { title: '利用規約の確認', status: 'reached', description: '本サービスの利用規約を確認し、同意します。' },
+        { title: '本人確認', description: '身分証明書などを用いて本人確認を行います。' }] }),
+      h(D.StepNavigation, { orientation: 'vertical', size: 'small', steps: [
+        { title: '顔写真の登録', status: 'completed', href: '#', description: 'カードに印字される顔写真を登録します。' },
+        { title: '申請情報の入力', status: 'error', href: '#', description: '受取方法や交付場所を入力します。' },
+        { title: '申請情報の確認', href: '#', description: '入力内容を確認し、申請を完了します。' }] }))
+  ));
+</script>
+</body>
+</html>

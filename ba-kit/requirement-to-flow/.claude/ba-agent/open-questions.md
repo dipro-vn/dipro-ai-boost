@@ -54,12 +54,14 @@ Path: `<output-folder>/open-questions/OQ-REGISTER.md`
 
 | OQ ID | Nhóm nghiệp vụ | Câu hỏi | Vì sao cần trả lời (impact) | Liên quan (FR/Flow/Screen) | Mức chặn | Phương án BA đề xuất | Lựa chọn gợi ý |
 |---|---|---|---|---|---|---|---|
-| OQ-01 | Quyền & phê duyệt | Ai được quyền duyệt đơn giá trị trên 10 triệu? | Không rõ thì không vẽ được nhánh duyệt ở Flow 2 | FR-12 · Flow 2 · AX_ORD_004 | Blocker | Chỉ Trưởng phòng duyệt, Admin chỉ xem | A) Trưởng phòng · B) Admin · C) Cả hai |
+| OQ-01 | Quyền & phê duyệt | Ai được quyền duyệt đơn giá trị trên 10 triệu? | Chưa rõ thì chưa vẽ được bước duyệt đơn | FR-12 · Flow 2 · AX_ORD_004 | Blocker | Chỉ Trưởng phòng duyệt, Admin chỉ xem | A) Trưởng phòng · B) Admin · C) Cả hai |
 
 ## Chuyển Tech Lead (không thuộc Output OQ)
 
 - <câu hỏi kỹ thuật phát sinh> — chuyển `Design-Technical.md`
 ```
+
+**Văn phong (BẮT BUỘC đọc `writing-style.md` trước khi viết):** cột Câu hỏi · Vì sao · Phương án BA đề xuất · Lựa chọn gợi ý là chữ khách đọc — viết theo điều người dùng thấy, tên màn / nút đúng như màn hình, không mã nội bộ (`FR-` / `OQ-` / mã màn), không viết tắt (KH, AC, "Output 2"). Mã chỉ nằm ở cột `Liên quan`. Script FAIL nếu còn mã nội bộ.
 
 **Rule từng cột:**
 
@@ -210,7 +212,7 @@ Output OQ — Open Questions:
      Folder     — <output-folder>/open-questions/        ← gửi KH folder này
   ✅/❌ Figma OQ view — <node URL>  |  ❌ Skipped — n = <n> > 20 (chỉ export xlsx)
   Tổng: <n> câu · Blocker <a> · High <b> · Medium <c> · Low <d>
-  Export gate: <11 checks · X PASS · 0 FAIL · Y WARN>
+  Export gate: <n checks · X PASS · 0 FAIL · Y WARN>
   → Hướng dẫn trả lời: xem sheet "Guideline" trong file, hoặc block 📋 ở trên
 ```
 
@@ -222,6 +224,7 @@ Output OQ — Open Questions:
 - ❌ Hỏi lại điều user vừa trả lời ở `AskUserQuestion`, hoặc điều đã có trong nguồn
 - ❌ Câu hỏi chung chung ("còn gì cần bổ sung không?") hoặc câu hỏi ghép 2 vấn đề
 - ❌ OQ không có `Phương án BA đề xuất` → bắt KH viết bài thay vì confirm
+- ❌ Câu hỏi / impact / đề xuất chứa mã nội bộ hoặc viết tắt ("chặn Output 2", "FR-12", "KH") — khách không hiểu (`writing-style.md`)
 - ❌ OQ không trace được về FR/Flow/Screen
 - ❌ Gõ tay workbook xlsx thay vì chạy `export-open-questions.py`; hoặc script FAIL mà vẫn tự tạo file
 - ❌ Đếm `n` bằng mắt rồi quyết định vẽ Figma view (phải lấy `OQ COUNT` từ script)

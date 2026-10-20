@@ -42,6 +42,7 @@ Không có trong 2 nguồn trên → **hỏi**, không suy diễn (`rules/RELIAB
 - **Hỏi user trước khi viết SPEC** — không tự đoán yêu cầu
 - Không cần biết feature thuộc repo nào — đó là việc của Tech Lead
 - Không đưa ra giải pháp kỹ thuật trong SPEC
+- **Chữ khách đọc** (Output OQ · `output_cr.md` · Figma khi audience = BrSE / khách) → **đọc `.claude/ba-agent/writing-style.md` trước khi viết**: theo điều người dùng thấy, tên màn / nút đúng như màn hình, nhãn + gạch đầu dòng, không mã nội bộ / viết tắt, câu hỏi chỉ nghiệp vụ
 - ⛔ **KHÔNG đưa 秘密情報・個人情報 của khách hàng vào AI** — 5 nhóm: ① tên/email/SĐT/địa chỉ + thông tin member/user thực tế ② dữ liệu production ③ password/API key/token ④ thông tin giao dịch/hợp đồng có thể xác định cá nhân ⑤ dữ liệu khác được KH xác định là confidential.
   - Mọi output (SPEC.md · Figma frame · HTML prototype) dùng **dữ liệu mẫu** — bộ chuẩn ở `rules/DATA-PRIVACY.md` §4
   - ⚠️ **Figma là dịch vụ cloud bên ngoài** — vẽ dữ liệu thật lên frame = đã đưa PII ra ngoài
@@ -62,7 +63,7 @@ Không có trong 2 nguồn trên → **hỏi**, không suy diễn (`rules/RELIAB
 | 0 | `SPEC.md` (14 sections) | `<output-folder>/SPEC.md` | KHÔNG skip được |
 | 1 | Figma Frame — **Flow Tổng Quan** (Business Logic + Tech Table + Sitemap) | Node trên Figma Design page user chọn | User refuse cung cấp Figma URL sau khi hỏi 2 lần |
 | 2 | Figma Frame — **Screen Flow** (Happy + Non-Happy + Bảng Index) | Node Figma | Same |
-| 3 | Figma Frame — **Screens + Items + Error Scenarios** (layout dọc) | Node Figma | Same |
+| 3 | Figma Frame — **Screens + Items + Error Scenarios** (layout dọc) — mockup dựng bằng **Base Design System** `.claude/base-design-system/` (chuẩn UI Nhật, `output-3-screens.md` Rule S6) | Node Figma | Same |
 | 4 | **HTML Prototype** standalone — **phải qua Quality Gate** | `<output-folder>/prototype/index.html` | KHÔNG skip (chạy `open index.html`, không cần build). Chỉ được đánh ✅ Done khi `verify-prototype.js` trả về **FAIL = 0** |
 | 5 | **Basic Design** — ghi spec vào master Excel của công ty ⬜ **ON-DEMAND** | master workbook do user chỉ định | **Mặc định KHÔNG chạy.** Chỉ chạy khi O1+O2 = `APPROVED` **và** user chọn ở Proposal Gate (Bước 5.8) |
 | OQ | **Open Questions** — register `.md` + **xlsx** (+ Figma OQ view khi ≤ 20 câu) 🔶 **CONDITIONAL** | `<output-folder>/open-questions/` | Chỉ skip khi sau `AskUserQuestion` **không còn câu nào** chưa trả lời → ghi `Output OQ: N/A`. Còn ≥ 1 câu mà không export = vi phạm (Bước 5.4) |
@@ -146,7 +147,7 @@ Sau khi hoàn thành 5 outputs, BA agent PHẢI edit `SPEC.md` thêm section **`
 | Navigation đảo chiều | `số item có Action ≠ "—"` = `số row Navigation Mapping có From = screen đó` | `output-3-screens.md` Phép 4 |
 | Node coverage (khi tách > 1 Combined Detail) | `distinct node các Group` = `distinct node các Combined Detail` | `ba-figma-output/SKILL.md` §5.0 |
 | Empty check | `0` screen có `child < 3` hoặc `tổng ký tự = 0` | `ba-agent/recheck.md` Tiêu chí 6 |
-| Sitemap không mất mục | `số mục Hành động Sitemap` ≥ `số candidate thô trong Flow Candidate Matrix` | `output-1-flow.md` |
+| Sitemap không mất mục | `set(FR nguồn) − set(FR tag trong tên layer nhóm Sitemap) = ∅` (in `THIẾU: []`) | `output-1-flow.md` |
 
 **Verdict 3 mức thay cho PASS/FAIL nhị phân** (mượn từ skill *Business Analyst Reviewer* trên marketplace — "đủ hay chưa" là phổ liên tục, ép về 2 mức khiến agent thiên về báo PASS):
 
@@ -668,7 +669,7 @@ Tổng screens: <N> màn hình
 
 Figma (nếu có URL):
   ✅ Output 1 — Flow Tổng Quan    — <Figma node URL>
-     (Business Logic Flow + Technology Table bên phải + Sitemap WBS Tree)
+     (Use case: Actor → đường đi → kết thúc, non-happy hàng dưới + Technology Table bên phải + Sitemap Site → Actor → Nhóm → Màn)
   ✅ Output 2 — Screen Flow       — <Figma node URL>
      (Merged Branch: NHÁNH A/B + NG inline + Edge/Exceptional Panel — Bảng Index, Popup/Toast/Push đều đếm)
   ✅ Output 3 — Screens + Items   — <Figma node URL>

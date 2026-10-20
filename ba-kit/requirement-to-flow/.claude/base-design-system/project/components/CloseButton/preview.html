@@ -1,0 +1,20 @@
+<!-- @dsCard group="Actions" height=216 -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><style>body{margin:0;padding:16px;font-family:var(--font-sans);background:var(--white);color:var(--solid-gray-800)} .row{display:flex;gap:24px;align-items:center;flex-wrap:wrap;margin-bottom:20px} .cap{font-size:12px;color:var(--solid-gray-600);width:110px}</style></head>
+<body>
+<div id="root"></div>
+<script>
+  var D = window.DADS, h = React.createElement;
+  function Row(p) { return h('div', { className: 'row' }, h('span', { className: 'cap' }, p.label), p.children); }
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+    h(Row, { label: 'Icon Close' }, h(D.CloseButton, null), h(D.CloseButton, { lang: 'en' })),
+    h(Row, { label: 'Text Close' }, h(D.CloseButton, { variant: 'text' })),
+    h(Row, { label: 'Action Icons' },
+      h(D.ActionIconButton, { size: 24, icon: 'edit_false', label: '編集する' }),
+      h(D.ActionIconButton, { size: 40, icon: 'trash_false', label: '削除する' }),
+      h(D.ActionIconButton, { size: 44, icon: 'more_vert_false', label: 'その他の操作' }))
+  ));
+</script>
+</body>
+</html>
