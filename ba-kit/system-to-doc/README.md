@@ -130,6 +130,8 @@ CR đã được làm xong trong hệ thống → chạy `/analyze-system` (ho�
 
 ## Version
 
+![Vòng đời baseline: chạy lần đầu → baseline v1 → CR → phân tích → duyệt → code xong → baseline v2 → lặp lại](docs/lifecycle-system-to-doc.png)
+
 ```
 outputs/
 ├── ver1_011026_baseline/              Luồng 1
