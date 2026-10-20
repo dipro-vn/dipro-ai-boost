@@ -1,0 +1,22 @@
+<!-- @dsCard group="Forms" height=328 -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><style>body{margin:0;padding:16px;font-family:var(--font-sans);background:var(--white);color:var(--solid-gray-800)} .row{display:flex;gap:32px;align-items:flex-start;flex-wrap:wrap;margin-bottom:16px}</style></head>
+<body>
+<div id="root"></div>
+<script>
+  var D = window.DADS, h = React.createElement;
+  function Row(p) { return h("div", { className: "row" }, p.children); }
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+    h(Row, null,
+      h(D.RadioGroup, { label: '申請者区分', requirement: 'required', size: 'md', defaultValue: 'self' },
+        h(D.Radio, { value: 'self' }, '本人'), h(D.Radio, { value: 'agent' }, '代理人'), h(D.Radio, { value: 'corp', disabled: true }, '法人（準備中）')),
+      h(D.RadioGroup, { label: '連絡を希望する時間帯', layout: 'inline', supportText: '平日のみ対応しています', error: '＊いずれかを選択してください。' },
+        h(D.Radio, { value: 'am' }, '午前'), h(D.Radio, { value: 'pm' }, '午後'), h(D.Radio, { value: 'any' }, '指定なし'))),
+    h(Row, null,
+      h(D.Radio, { name: 'x', defaultChecked: true }, 'Small'), h(D.Radio, { name: 'y', size: 'md', defaultChecked: true }, 'Medium'),
+      h(D.Radio, { name: 'z', size: 'lg', defaultChecked: true }, 'Large'), h(D.Radio, { name: 'w', defaultChecked: true, disabled: true }, '無効'), h(D.Radio, { name: 'v', size: 'lg', error: true }, 'エラー'))
+  ));
+</script>
+</body>
+</html>

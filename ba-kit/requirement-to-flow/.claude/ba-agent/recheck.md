@@ -16,7 +16,7 @@ For each frame in [Output 1, Output 2, Output 3]:
 
 | # | Tiêu chí | PASS khi... | Cách kiểm tra |
 |---|---|---|---|
-| 1 | **Đủ nội dung theo yêu cầu** | Đã đủ tất cả sections theo skill (VD Output 1: 5 columns + Tech Stack + Sitemap; Output 2: 4 zones; Output 3: mockup + bảng ĐẦY ĐỦ item) | So sánh checklist section trong `ba-figma-output/SKILL.md` |
+| 1 | **Đủ nội dung theo yêu cầu** | Đã đủ tất cả sections theo skill (VD Output 1: lane use case + Tech Stack + Sitemap; Output 2: 4 zones; Output 3: mockup + bảng ĐẦY ĐỦ item) | So sánh checklist section trong `ba-figma-output/SKILL.md` |
 | 2 | **KHÔNG chồng đè** | `overlapCount == 0` từ phép quét bbox ở **Tiêu chí 7** | ⚠️ **CHẠY TIÊU CHÍ 7 TRƯỚC** (đếm được, khách quan). Zoom screenshot chỉ là bước phụ sau đó để bắt lỗi text/đường kẻ mà bbox không thấy. **Nhìn screenshot rồi kết luận "không đè" là KHÔNG hợp lệ** |
 | 3 | **Text đầy đủ, không bị crop** | Mọi label đọc được đầy đủ, không bị cắt cuối câu | Zoom screenshot check text nodes có `...` cuối hoặc content ngắn bất thường |
 | 4 | **Đúng vùng (không lệch cột)** | Node của Zone X nằm gọn trong `Z<X>_X` đến `Z<X>_X + Z<X>_W` | Verify X-coordinate của mỗi node ≥ Zone X boundary |
@@ -24,6 +24,7 @@ For each frame in [Output 1, Output 2, Output 3]:
 | 6 | **Không có màn hình trống / node rỗng** (BẮT BUỘC — mọi frame) | Mọi screen mockup có `≥3 child node` VÀ `≥1 text node có ký tự` | Read-back cây node bằng `use_figma` — xem quy trình bên dưới. **KHÔNG được kết luận bằng mắt nhìn screenshot** |
 | 9 | **Node nằm trong biên frame** (BẮT BUỘC, chạy TRƯỚC tiêu chí 7) | Mọi node lá trong `[0,W]×[0,H]`, đủ **4 phía** | Script ở **Tiêu chí 9**. ⚠️ Node văng ra ngoài vẫn làm tiêu chí 6/7/8 PASS giả — overlap=0 vì chúng xa nhau |
 | 8 | **Phủ đủ chức năng nguồn (FR Coverage)** (BẮT BUỘC khi nguồn đánh số được) | `set(FR nguồn) − set(FR trong artifact) = ∅` | Script ở **Tiêu chí 8** bên dưới. Đây là tiêu chí DUY NHẤT đối chiếu ngược về tài liệu nguồn — 7 tiêu chí kia chỉ kiểm thứ đã vẽ |
+| 10 | **Không chữ `UNKNOWN` trên Output 1 / 2** (20/10/2026) | Số text node chứa `UNKNOWN` = 0 | `frame.findAll(n => n.type==="TEXT" && /unknown/i.test(n.characters)).length` — trạng thái chưa rõ ghi `CHƯA RÕ` / "chưa rõ — chờ BRSE" |
 
 ---
 
@@ -150,11 +151,11 @@ print(f"FR phủ: {len(frs | SYSTEM_ONLY)}/{TOTAL} · THIẾU: {missing or 'KHÔ
 assert not missing, f"FAIL — thiếu FR {missing}"
 ```
 
-**Cách chạy — Figma Sitemap Output 1 (tag `#N` trên mỗi Hành động):**
+**Cách chạy — Figma Sitemap Output 1 (tag `#N` trong tên layer nhóm `GROUP · <nhóm> · #19,20,21`):**
 
 ```js
 const TOTAL = 58, SYSTEM_ONLY = new Set([24]);   // khai báo mốc TRƯỚC khi dùng
-const txt = F.findAll(n => n.type === 'TEXT').map(n => n.characters || "").join(" ");
+const txt = F.findAll(n => n.name && n.name.startsWith("GROUP · ")).map(n => n.name).join(" ");   // tag nằm trong tên layer, không hiện chữ
 const seen = new Set();
 // ⚠️ PHẢI bắt được cả ô gộp "#19,20,21". KHÔNG dùng /#\d+/g — nó chỉ lấy số ĐẦU TIÊN,
 //    làm 20 và 21 bị báo thiếu oan. Lỗi này đã xảy ra thật và suýt khiến agent "sửa" bản vẽ đang đúng.

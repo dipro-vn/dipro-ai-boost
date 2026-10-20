@@ -1,0 +1,20 @@
+<!-- @dsCard group="Forms" height=352 -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><style>body{margin:0;padding:16px;font-family:var(--font-sans);background:var(--white);color:var(--solid-gray-900)} .stack{display:flex;flex-direction:column;gap:24px} .row{display:flex;gap:24px;align-items:center}</style></head>
+<body>
+<div id="root"></div>
+<script>
+  var D = window.DADS, h = React.createElement;
+  var scopes = ['すべて', '法令', 'ファイル', '地図', '動画'];
+  ReactDOM.createRoot(document.getElementById('root')).render(h('div', { className: 'stack' },
+    h(D.SearchBox, { scopes: scopes, placeholder: 'キーワードを入力', shortcuts: ['マイナンバー', '申請', 'コンビニ', '確定申告'] }),
+    h(D.SearchBox, { size: 'md', defaultValue: '児童手当' }),
+    h(D.SearchBox, { size: 'sm', scopes: scopes, placeholder: 'キーワードを入力' }),
+    h('div', { className: 'row' },
+      h('div', { style: { flex: 1 } }, h(D.SearchBox, { size: 'sm', buttonVariant: 'text', placeholder: 'サイト内検索' })),
+      h('div', { style: { flex: 1 } }, h(D.SearchBox, { size: 'sm', buttonVariant: 'icon', placeholder: 'サイト内検索' })))
+  ));
+</script>
+</body>
+</html>

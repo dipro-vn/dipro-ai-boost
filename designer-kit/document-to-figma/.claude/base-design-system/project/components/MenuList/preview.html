@@ -1,0 +1,30 @@
+<!-- @dsCard group="Navigation" height=424 -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><style>body{margin:0;padding:16px;font-family:var(--font-sans);background:var(--white)} .row{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap} .col{width:260px} .box{border:1px solid var(--solid-gray-420);padding:16px 0} h3{margin:0 0 8px;font-size:14px;color:var(--solid-gray-600)}</style></head>
+<body>
+<div id="root"></div>
+<script>
+  var D = window.DADS, h = React.createElement;
+  var thumb = h('svg', { width: 48, height: 48, viewBox: '0 0 48 48' }, h('rect', { width: 48, height: 48, rx: 8, style: { fill: 'var(--key-100)' } }), h('circle', { cx: 24, cy: 22, r: 9, style: { fill: 'var(--key-900)' } }));
+  ReactDOM.createRoot(document.getElementById('root')).render(h('div', { className: 'row' },
+    h('div', { className: 'col' }, h('h3', null, 'Standard'),
+      h('nav', { 'aria-label': '手続き' }, h(D.MenuList, { items: [
+        { type: 'category', label: '手続きの種類', icon: 'document_false' },
+        { label: '転入届', href: '#', icon: 'home_false' },
+        { label: '住民票の写し', href: '#', icon: 'document_false', current: true },
+        { label: '印鑑登録', icon: 'edit_false', defaultExpanded: true, items: [
+          { label: '登録の申請', href: '#' }, { label: '証明書の交付', href: '#' } ] },
+        { label: 'マイナポータル', href: '#', icon: 'language_false', external: true, endIcon: null }
+      ] }))),
+    h('div', { className: 'col' }, h('h3', null, 'Boxed / Small'),
+      h('div', { className: 'box' }, h(D.MenuList, { variant: 'boxed', size: 'small', items: [
+        { label: '新着順' }, { label: '更新日順', selected: true }, { label: '名前順' } ] })),
+      h('h3', { style: { marginTop: 16 } }, 'With Thumbnail'),
+      h('div', { className: 'box' }, h(D.MenuList, { variant: 'boxed', divided: true, items: [
+        { label: '子育て支援', description: '児童手当・保育', thumbnail: thumb, href: '#' },
+        { label: '健康・医療', description: '健康診断・予防接種', thumbnail: thumb, href: '#' } ] })))
+  ));
+</script>
+</body>
+</html>

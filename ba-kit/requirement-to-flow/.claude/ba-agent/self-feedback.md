@@ -23,7 +23,8 @@
 - **Error-Screen Strip** đã vẽ đủ các lỗi loại `Full screen` · `Modal` · `Popup` thành node chưa, mỗi node có ghi `◀ màn cha` + message thật chưa?
 - Actor color có nhất quán giữa Output 1/2/3 không?
 - Có bước nào trong `## Flow Tổng Quan` chưa xuất hiện trong Figma Output 1 flow?
-- **FR Coverage — đã in `THIẾU: []` chưa?** `set(FR nguồn) − set(FR trong bảng `## Screens`) = ∅`, và mỗi Hành động ở Sitemap Output 1 có tag `#N` chưa? (`recheck.md` Tiêu chí 8). **Đây là phép duy nhất bắt được "chức năng đáng lẽ phải có mà không có" — các phép còn lại chỉ đối chiếu nội bộ giữa các artifact với nhau.**
+- **Văn phong chữ khách đọc** (OQ · `output_cr.md` · Figma khi audience = BrSE / khách): đã rà theo 10 quy tắc `writing-style.md` chưa — cụ thể theo màn / nút, có nhãn + gạch đầu dòng, không mã nội bộ / viết tắt, câu hỏi chỉ nghiệp vụ?
+- **FR Coverage — đã in `THIẾU: []` chưa?** `set(FR nguồn) − set(FR trong bảng `## Screens`) = ∅`, và mỗi nhóm chức năng ở Sitemap Output 1 có tag `#N` (tên layer) chưa? Trên Output 1/2 còn chữ `UNKNOWN` không (phải = 0)? (`recheck.md` Tiêu chí 8). **Đây là phép duy nhất bắt được "chức năng đáng lẽ phải có mà không có" — các phép còn lại chỉ đối chiếu nội bộ giữa các artifact với nhau.**
 
 **Câu 2b — `## Acceptance Criteria` có đạt chuẩn không? (chạy checklist `ac-standard.md` §9 — tự rà, KHÔNG có script gate)**
 - Mọi AC có `Trace` (FR · Screen Code · Flow) và FR đó có thật trong FR Register chưa?

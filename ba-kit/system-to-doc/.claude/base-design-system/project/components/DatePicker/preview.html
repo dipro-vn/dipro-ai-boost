@@ -1,0 +1,22 @@
+<!-- @dsCard group="Forms" height=576 -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><style>body{margin:0;padding:16px;font-family:var(--font-sans);background:var(--white);color:var(--solid-gray-900)} .wrap{display:flex;gap:48px;align-items:flex-start} .col{display:flex;flex-direction:column;gap:24px;width:400px}</style></head>
+<body>
+<div id="root"></div>
+<script>
+  var D = window.DADS, h = React.createElement;
+  function Demo() {
+    var s = React.useState({ year: '2025', month: '10', day: '23' });
+    return h('div', { className: 'wrap' },
+      h('div', { className: 'col' },
+        h(D.DatePicker, { label: '日付', required: true, supportText: '例：2025年01月20日', showCalendarButton: true, value: s[0], onChange: s[1], minYear: 2000, maxYear: 2030 }),
+        h(D.DatePicker, { type: 'separated', label: '生年月日', supportText: '西暦、半角', defaultValue: { year: '1990', month: '04', day: '01' } }),
+        h(D.DatePicker, { type: 'separated', size: 'md', label: '交付日', required: true, defaultValue: { year: '202', month: '13', day: '' }, errorText: '＊正しい日付を入力してください。' }),
+        h(D.DatePicker, { size: 'sm', label: '有効期限', disabled: true, showDay: false, showCalendarButton: true, defaultValue: { year: '2030', month: '03' } })),
+      h(D.DatePickerCalendar, { value: { year: 2025, month: 10, day: 23 }, today: new Date(2025, 9, 8), minYear: 2000, maxYear: 2030 }));
+  }
+  ReactDOM.createRoot(document.getElementById('root')).render(h(Demo));
+</script>
+</body>
+</html>

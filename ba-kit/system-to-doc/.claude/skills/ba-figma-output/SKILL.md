@@ -200,6 +200,8 @@ function box(title, sub, fillC, strokeC, x, y, w, h, p) {
 
 ## 4. Output 1 — Flow Tổng Quan + Sitemap WBS Tree
 
+> ⚠ **Đổi 20/10/2026:** Phần A vẽ dạng **use case** (Actor → đường đi → ✓ kết thúc · non-happy hàng dưới → ✗ kết thúc, không cột Technology / Function), Sitemap = **Site → Actor → Nhóm chức năng → Màn** (không hành động, không endpoint). Quy tắc thắng mục này: `.claude/sys-agent/figma/output-1-flow.md` (mục ⚠ đầu file). Bố cục toạ độ dưới đây chỉ còn dùng cho Phần B Technology.
+
 ### 4.1. Frame chính
 
 ```

@@ -1,0 +1,21 @@
+<!-- @dsCard group="Layout" height=584 -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><style>body{margin:0;padding:16px;font-family:var(--font-sans);background:var(--white);color:var(--solid-gray-800)} .stack>*{margin-bottom:24px} p.body{margin:0 0 24px;font-size:16px;line-height:1.7;letter-spacing:0.02em}</style></head>
+<body>
+<div id="root"></div>
+<script>
+  var D = window.DADS, h = React.createElement;
+  ReactDOM.createRoot(document.getElementById('root')).render(h('div', { className: 'stack' },
+    h(D.PageHeader, { level: 1, size: 45 }, '行政手続のオンライン化'),
+    h('p', { className: 'body' }, 'スマートフォン等で手続が完結することを目指し、自治体の行政手続をオンライン化する取組を進めています。'),
+    h(D.PageHeader, { level: 2, size: 32, shoulder: '重点計画' }, '概要'),
+    h(D.PageHeader, { level: 2, size: 28, chip: true }, '罹災証明書のオンライン申請について'),
+    h(D.PageHeader, { level: 3, size: 24, icon: 'document_false' }, '申請方法について'),
+    h(D.PageHeader, { level: 3, size: 24, ruler: 4 }, '最近の取組'),
+    h(D.PageHeader, { level: 4, size: 20, chip: true }, '必要な書類'),
+    h(D.PageHeader, { level: 5, size: 16, icon: 'information_false' }, 'お問い合わせ先')
+  ));
+</script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 # Designer Kit — Document to Figma
 
-> **Kit ad-hoc cho Designer** — mỗi lần chạy = 1 bộ tài liệu (prototype HTML · SPEC · Basic Design · ảnh…) do người dùng đưa vào. Dùng cho **mọi dự án**: design system lấy từ nguồn của chính dự án (link Figma / tài liệu / 1–5 màn Figma mẫu), không có mặc định.
+> **Kit ad-hoc cho Designer** — mỗi lần chạy = 1 bộ tài liệu (prototype HTML · SPEC · Basic Design · ảnh…) do người dùng đưa vào. Dùng cho **mọi dự án**: design system lấy từ nguồn của chính dự án (link Figma / tài liệu / 1–5 màn Figma mẫu); dự án chưa có → user chọn **Base Design System** chuẩn UI Nhật có sẵn trong kit (`.claude/base-design-system/`).
 
 ## Agent
 
@@ -15,7 +15,7 @@
 
 | Gate | Hỏi gì | Không đạt |
 |---|---|---|
-| G1 — Design system | Có link Figma / file / artifact / codebase quy định màu, font, size, component… chưa? **Có link artifact Design System đúng định dạng → dùng luôn, không tạo mới.** Còn lại: phân tích → Design System artifact đủ D1–D8 chưa? | Chưa có → **dừng** · Thiếu → xin 1–5 màn Figma để agent tự đo, bổ sung |
+| G1 — Design system | Có link Figma / file / artifact / codebase quy định màu, font, size, component… chưa? **Có link artifact Design System đúng định dạng → dùng luôn, không tạo mới.** Còn lại: phân tích → Design System artifact đủ D1–D8 chưa? | Chưa có → dùng **Base Design System** (user chọn) hoặc **dừng** · Thiếu → xin 1–5 màn Figma để agent tự đo, hoặc bù từ base (nhãn `[base]`) |
 | G2 — Tài liệu & phạm vi | Tài liệu ở đâu (prototype / SPEC / ảnh…) · muốn vẽ toàn bộ / chọn màn / chỉ phân tích / 1 luồng | Không có tài liệu nào → **dừng** |
 | G3 — Figma đầu ra | Link Figma (file / section) có quyền EDIT · tên output | Không có link và không cho tạo file → **dừng** |
 | — | Platform · ngôn ngữ tên (vi + ja + en) | — |
@@ -43,6 +43,7 @@
 | `.claude/designer-agent/screen-index-spec.md` | Đặc tả frame Screen Index trên Figma (vị trí, cột, style, DoD) — Bước 5.5 |
 | `.claude/designer-agent/flow-connector-spec.md` | Đặc tả đường nối + nhãn giữa các màn hình (style đo, hình học, legend, DoD) — Bước 5.7 |
 | `.claude/designer-agent/design-system-template/` | Skeleton `design-system/` (`STATUS.md` + `project/`) |
+| `.claude/base-design-system/` | **Base Design System** chuẩn UI Nhật (DADS + tên vai trò chuẩn công ty) — design system tạm khi dự án chưa có, khung khi dựng từ nguồn dự án (intake §2.6). Bản copy từ `AI_Source/base-design-system/`, giống bản trong ba-kit (sửa ở gốc rồi copy lại cả 3 kit) |
 | `.claude/skills/figma-design/` | Đọc / ghi Figma MCP, map token, checklist chất lượng |
 | `.claude/rules/` | DATA-PRIVACY · POLICY · RELIABILITY · SECURITY |
 | `.claude/hooks/detect-pii.js` | Hook H06 — chặn dữ liệu cá nhân thật khi ghi file / Figma |

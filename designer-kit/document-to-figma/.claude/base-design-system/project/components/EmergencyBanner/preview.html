@@ -1,0 +1,17 @@
+<!-- @dsCard group="Feedback" height=536 -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><style>body{margin:0;padding:16px;font-family:var(--font-sans);background:var(--white)} .stack{display:flex;flex-direction:column;gap:24px;max-width:900px} .m{width:320px}</style></head>
+<body>
+<div id="root"></div>
+<script>
+  var D = window.DADS, h = React.createElement;
+  ReactDOM.createRoot(document.getElementById('root')).render(h('div', { className: 'stack' },
+    h(D.EmergencyBanner, { title: '【緊急】〇〇地区に避難準備情報が発令されました', date: '2025年1月1日　06:00更新', action: { label: '避難所の一覧を見る', href: '#' } },
+      '1時23分に〇〇地区に対して避難準備情報が発令されました。避難に時間がかかる方は、直ちに指定避難所へ避難してください。'),
+    h('div', { className: 'm' }, h(D.EmergencyBanner, { platform: 'mobile', title: '【緊急】大雨特別警報が発表されました', date: '2025年7月5日　14:10更新' },
+      '命を守る行動をとってください。'))
+  ));
+</script>
+</body>
+</html>

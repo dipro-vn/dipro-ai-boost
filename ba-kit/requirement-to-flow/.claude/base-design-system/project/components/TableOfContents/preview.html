@@ -1,0 +1,24 @@
+<!-- @dsCard group="Navigation" height=456 -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><style>body{margin:0;padding:16px;font-family:var(--font-sans);background:var(--white)} .row{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}</style></head>
+<body>
+<div id="root"></div>
+<script>
+  var D = window.DADS, h = React.createElement;
+  var grouped = [
+    { heading: 'デジタル区の魅力' },
+    { label: 'デジタル区の歴史', href: '#history', children: [{ label: '海山川地区の成り立ち', href: '#origin' }, { label: '近代の発展', href: '#modern' }] },
+    { heading: 'みどころ' },
+    { label: '季節ごとのイベント', href: '#events', children: [{ label: '春の桜まつり', href: '#spring' }] },
+    { label: '観光にあたって', href: '#guide' }
+  ];
+  var flat = [{ label: '手続きの概要', href: '#a' }, { label: '必要な書類', href: '#b' }, { label: '申請の方法', href: '#c' }, { label: 'お問い合わせ', href: '#d' }];
+  ReactDOM.createRoot(document.getElementById('root')).render(h('div', { className: 'row' },
+    h(D.TableOfContents, { type: 'border-dotted', items: grouped }),
+    h(D.TableOfContents, { items: flat }),
+    h(D.TableOfContents, { type: 'border-solid', items: flat })
+  ));
+</script>
+</body>
+</html>

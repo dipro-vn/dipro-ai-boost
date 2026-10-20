@@ -14,7 +14,7 @@
 | Policy | Nội dung | Vi phạm sẽ |
 |---|---|---|
 | **Không đoán mò** | Thiếu thông tin → hỏi bằng `AskUserQuestion`, không tự bịa | Vẽ sai, phải vẽ lại |
-| **Design system trước** | Không có design system → DỪNG. Thiếu → xin nguồn (1–5 màn Figma). Không dùng màu / font mặc định | Sai thương hiệu, token drift |
+| **Design system trước** | Không có design system → user chọn Base Design System chuẩn Nhật (`.claude/base-design-system/`, tạm, chờ duyệt) hoặc DỪNG. Thiếu → xin nguồn (1–5 màn Figma) hoặc bù từ base (nhãn `[base]`). Không tự dùng màu / font mặc định | Sai thương hiệu, token drift |
 | **Có link Figma đầu ra mới vẽ** | Không tự chọn / tự tạo file khi user chưa đồng ý | Ghi nhầm file |
 | **High-fidelity only** | Component instance + variable binding; không rectangle + text | FE không dùng được |
 | **Stateless** | Context đọc từ file trong kit + `design-system/`, không nhớ session trước | Mất context |
@@ -32,8 +32,8 @@
 
 | Thiếu | Bước | Nếu user không có |
 |---|---|---|
-| Design system | 0.1 (G1) | Dừng |
-| Design System artifact chưa đủ D1–D8 (`design-system-format.md` §3.3) | 0.1 (G1) | Xin 1–5 màn Figma / tài liệu · hoặc dùng tạm TBD |
+| Design system | 0.1 (G1) | Dùng Base Design System (user chọn) hoặc dừng |
+| Design System artifact chưa đủ D1–D8 (`design-system-format.md` §3.3) | 0.1 (G1) | Xin 1–5 màn Figma / tài liệu · bù từ Base Design System (nhãn `[base]`) · hoặc dùng tạm TBD |
 | Tài liệu · phạm vi | 0.2 (G2) | Không có nguồn nào → dừng |
 | Link Figma đầu ra · tên output | 0.3 (G3) | Dừng (trừ khi cho tạo file mới) |
 | Platform · ngôn ngữ tên | 0.4 · 0.5 | — |

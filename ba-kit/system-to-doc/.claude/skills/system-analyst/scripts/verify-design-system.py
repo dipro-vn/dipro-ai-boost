@@ -493,7 +493,7 @@ def verify_one(a, ds_dir, g, draft, draft_err, site=None, published_url=None):
             obs.setdefault(c["hex"].lower(), set()).update(c.get("alpha") or [1.0])
         for h, al in ((so or {}).get("colors") or {}).items():
             obs.setdefault(h.lower(), set()).update(al or [1.0])
-        badc = []
+        badc, based = [], []
         for t in families["color"]:
             v = t.get("value")
             for th, x in (v.items() if isinstance(v, dict) else [(None, v)]):
@@ -503,7 +503,11 @@ def verify_one(a, ds_dir, g, draft, draft_err, site=None, published_url=None):
                 if c is None:
                     badc.append("%s=%s (khong doi chieu duoc)" % (t.get("name"), x))
                 elif c[0] not in obs or not any(abs(c[1] - al) <= 0.01 for al in obs[c[0]]):
-                    badc.append("%s=%s" % (t.get("name"), x))
+                    # gia tri lay tu Base Design System (.claude/base-design-system) — khai ro, khong phai bia
+                    (based if R_.BASE_MARK in str(t.get("usage", "")) else badc).append("%s=%s" % (t.get("name"), x))
+        if based:
+            g.warn("5b", "Mau lay tu Base Design System (chua quan sat tren he thong — designer xac nhan)",
+                   "; ".join(based[:15]))
         names_obs = set((so or {}).get("fontNames") or [])
         for f in ([] if so else draft.get("fonts", [])):
             for n in f.get("names") or [x.strip().strip("'\"") for x in f.get("family", "").split(",")]:

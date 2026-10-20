@@ -97,6 +97,11 @@ VAGUE_PATTERNS = [
     r"^ok\b", r"có\s+đúng\s+không\s*$",
 ]
 
+# Chu khach doc (writing-style.md): khong ma noi bo (FAIL), khong viet tat noi bo (WARN).
+CUSTOMER_COLS = ["Cau hoi", "Impact", "De xuat cua BA", "Lua chon goi y"]
+INTERNAL_CODE_RE = re.compile(r"\b(?:FR|OQ|IMP|API|CQ|SC|EXT|DS)-\d+\b|\b[A-Z]{2,}_[A-Z0-9]+_\d{2,}\b")
+INTERNAL_ABBR_RE = re.compile(r"\b(?:KH|BrSE|BRSE|MD|AC|UPD)\b|\bOutput\s*\d\b")
+
 GUIDELINE = [
     ("H", "Cach tra loi Open Question"),
     ("P", "File nay la cac diem BA CHUA CO CAU TRA LOI trong nghiep vu. Cau nao khong duoc tra loi thi BA "
@@ -247,6 +252,23 @@ def validate(keys, rows, allow, rep):
     compound = [r["OQ ID"] for r in rows if r.get("Cau hoi", "").count("?") > 1]
     rep.add("1 cau = 1 van de", "FAIL" if compound else "PASS",
             ("cau hoi ghep (tach ra): %s" % ", ".join(compound)) if compound else "khong ghep")
+
+    # Van phong gui khach (.claude/ba-agent/writing-style.md quy tac 5, 6) — cot Lien quan la trace noi bo, khong quet.
+    codes, abbr = [], []
+    for r in rows:
+        txt = " ".join(r.get(k, "") for k in CUSTOMER_COLS)
+        hit = sorted({m.group(0) for m in INTERNAL_CODE_RE.finditer(txt)})
+        if hit:
+            codes.append("%s (%s)" % (r["OQ ID"], ", ".join(hit)))
+        hit = sorted({m.group(0) for m in INTERNAL_ABBR_RE.finditer(txt)})
+        if hit:
+            abbr.append("%s (%s)" % (r["OQ ID"], ", ".join(hit)))
+    rep.add("Van phong gui khach: khong ma noi bo", "FAIL" if codes else "PASS",
+            ("viet thanh cau, ma de o cot Lien quan: %s" % "; ".join(codes)) if codes
+            else "khong co ma noi bo")
+    if abbr:
+        rep.add("Van phong gui khach: khong viet tat noi bo", "WARN",
+                "viet day du (khach hang, tieu chi nghiem thu...): %s" % "; ".join(abbr))
 
     long_q = [r["OQ ID"] for r in rows if len(r.get("Cau hoi", "")) > 300]
     if long_q:

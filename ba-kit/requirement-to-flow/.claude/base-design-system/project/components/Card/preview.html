@@ -1,0 +1,27 @@
+<!-- @dsCard group="Layout" height=640 -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><style>body{margin:0;padding:16px;font-family:var(--font-sans);background:var(--white)} .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:24px;align-items:start;margin-bottom:24px}</style></head>
+<body>
+<div id="root"></div>
+<script>
+  var D = window.DADS, h = React.createElement;
+  function ph(a, b) {
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 352 235"><rect width="352" height="235" fill="hsl(' + a + ',60%,88%)"/>' +
+      '<circle cx="270" cy="70" r="34" fill="hsl(' + b + ',80%,70%)"/><path d="M0 235 L110 110 L190 190 L250 140 L352 235Z" fill="hsl(' + a + ',45%,55%)"/></svg>';
+    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  }
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+    h('div', { className: 'grid' },
+      h(D.Card, { href: '#', label: '子育て・教育', title: '子育て支援補助金制度' }, '育児休業等の取得を促進し労働者の業務負担軽減や業務効率化を目指します'),
+      h(D.Card, { selectable: true, defaultChecked: true, label: '申請区分', title: '住民票の写し' }, '本人または同一世帯の方が請求できます'),
+      h(D.Card, { label: '2024年5月18日', title: '第18回くらしの広場交流会',
+        links: [{ href: '#', label: '開催概要' }, { href: '#', label: '参加申込みフォーム' }],
+        actions: [h(D.Button, { key: 'a', variant: 'outlined', size: 'md' }, '詳細'), h(D.Button, { key: 'b', size: 'md' }, '申込む')] },
+        '地域交流を促進し、地域の景観美化を目的とした緑化事業を行っています。')),
+    h(D.Card, { layout: 'horizontal', href: '#', image: { src: ph(200, 30), alt: '' }, title: '第18回くらしの広場交流会' },
+      '住民の皆さまが参加できる地域緑化事業を行っています。地域交流を促進するとともに、地域の景観美化を目的としています。')
+  ));
+</script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+<!-- @dsCard group="Layout" height=424 -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><style>body{margin:0;padding:16px;font-family:var(--font-sans);background:var(--solid-gray-50);color:var(--solid-gray-900)} .frame{margin-bottom:24px;border:1px solid var(--solid-gray-420);border-radius:var(--radius-8);overflow:hidden} .links{display:flex;gap:16px;font-size:14px}</style></head>
+<body>
+<div id="root"></div>
+<script>
+  var D = window.DADS, h = React.createElement;
+  var links = h('span', { className: 'links' }, h(D.Link, { href: '#' }, 'English'), h(D.Link, { href: '#' }, 'サイトマップ'));
+  var menu = [
+    { label: 'ホーム', href: '#', current: true },
+    { label: '防災・救急', expandable: true },
+    { label: 'くらし・手続き', expandable: true },
+    { label: '子育て・教育', expandable: true },
+    { label: '産業・ビジネス', href: '#' }
+  ];
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+    h('div', { className: 'frame' }, h(D.HeaderContainer, { title: 'デジタル市役所', titleHref: '#', utility: h(React.Fragment, null, links, h(D.HamburgerMenuButton))})),
+    h('div', { className: 'frame' }, h(D.HeaderContainer, { layout: 'full', title: 'デジタル市役所', titleHref: '#', utility: links, nav: h(D.HorizontalMenu, { items: menu }) }))
+  ));
+</script>
+</body>
+</html>

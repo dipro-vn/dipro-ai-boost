@@ -14,6 +14,12 @@
 1. Màu / size đo trên màn Figma đã duyệt · code
 2. Variable / style trong Figma library
 3. Tài liệu guideline
+4. Base Design System (`.claude/base-design-system/`) — chỉ cho phần không quan sát được, token có nhãn `[base]`
+
+## Lấy từ base (chờ xác nhận)
+
+| Token / component | Giá trị base (tên DADS) | Vì sao không quan sát được |
+|---|---|---|
 
 ## Thiếu (TBD)
 

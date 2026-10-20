@@ -7,44 +7,27 @@
 
 ---
 
-## Output 1 — Flow Tổng Quan + Sitemap WBS
+## Output 1 — Use case tổng quan + Technology + Sitemap
 
-**Frame:** `Output 1 — Flow Tổng Quan + Sitemap WBS` · `2280 × 1682px`
+**Frame:** `Output 1 — Use case tổng quan — <Feature Name>` · rộng `2280–2360px`, cao theo số use case
 
-**Header (y=24..63):**
-- Text 1 (font-size 18px, bold): `Output 1 — Flow Tổng Quan — <Feature Name>`
-- Text 2 (font-size 11px, muted `#57606A`): `Phần A: Business & Logic Flow (Actor → Trigger → Function → Technology → Outcome) · Phần B: Sitemap WBS Tree`
+**Header (y=24..70):** tiêu đề 22px bold · dòng phụ 12px `#57606A`: `Phần A: Use case (Actor → đường đi → kết thúc · non-happy hàng dưới) · Phần B: Technology Stack · Phần C: Sitemap Site → Actor → Nhóm chức năng → Màn`
 
-**Phần A — 5-column business flow (y=80..~550):**
+**Phần A — Use case (x=40..1770):** nhãn cột `ACTOR` (x=42) · `ĐƯỜNG ĐI — HAPPY CASE → ✓ KẾT THÚC · hàng dưới: NON-HAPPY / NHÁNH KHÁC` (x=230), divider 2px dưới nhãn.
+- Mỗi lane: tên `<Flow ID> · <tên use case>` 16px bold `#0969DA` + dòng `Site · Mục tiêu` 11px; Actor pill `170×84` tại x=40; node `215×84`, cột vị trí `x = 230 + (pos-1)×255` (pos 1…6), hàng `y = top + row×118`; nhãn hàng dưới "Non-happy" (đỏ) / "Nhánh khác" (xám) tại x=40.
+- Màu theo bảng Element ở `figma-outputs/output-1-flow.md` Phần A. Chip "CHƯA CHỐT" (tím nét đứt, `380×48`) dưới lane. Gap ≥ 100px giữa 2 lane (divider 1px).
 
-| Column | X offset | Content |
-|---|---|---|
-| ACTOR | `x=100` | Ellipse 78px + icon person + text 2 dòng (Tên actor + platform) |
-| TRIGGER | `x=290` | Rectangle `150×72` radius 8, fill `#E8F4FD`, stroke `#0969DA` |
-| FUNCTION | `x=530` | Rectangle `160×96` radius 8, fill `#FFF9EB`, stroke `#F4860C` |
-| TECHNOLOGY | `x=780` | Rectangle `180×96` radius 8, fill `#FFF9EB`, stroke `#F4860C` |
-| OUTCOME | `x=1560` | Rectangle `200×72` radius 8, fill `#F6F8FA`, stroke `#D0D7DE` |
+**Phần B — Technology Table (x=1800..2260):** giữ như cũ (`figma-outputs/output-1-flow.md` Phần B).
 
-- Divider line `y=108`, width 1700, `#D0D7DE`
-- Arrows: solid `#0969DA` 2px (happy) / dashed `#CF222E` 2px (error) / solid `#1A7F37` 2px (cross-actor) — có polygon triangle head ở đầu mũi tên (regular-polygon 8×10)
-- Label trên arrow: text 11px `#57606A` (VD verb ngắn: "tap", "call API", "notify", "signal")
-- Nếu N business flows → stack dọc, gap MIN 100px giữa flows (xem `figma-outputs/output-1-flow.md` Vertical gap rule)
+**Phần C — Sitemap (dưới lane):** Root (pill xanh) → thanh Site (rộng 2140, màu site) → pill Actor → card Nhóm chức năng `520×auto`, lưới 4 cột (gap 20), trong card: tên nhóm 13px bold · "Vai trò: …" · danh sách màn `• …` 11px. Tên layer card: `GROUP · <nhóm> · #FR`.
 
-**Phần B — Sitemap WBS Tree (y=560+):**
-- Divider line `y=560`, width 1700, `#D0D7DE`
-- Section title (y=572, font 14px bold): `SITEMAP — WBS TREE (Actor + Hành động)`
-- Sub-title (y=592, font 11px muted): `Level 1: Feature · Level 2: Actor · Level 3: Hành động (verb-first) · Level 4: Screen / Popup`
-- Legend box (y=620, `320×50`, radius 6): 4 chip nhỏ giải thích màu Root/Actor/Hành động/Screen
-- Tree layout: horizontal or vertical branches (theo số actors) — Root ở giữa hoặc trái, actors đâm ra 2 phía
-
-**Áp dụng khi copy sang project mới:**
-- Giữ cột ACTOR/TRIGGER/FUNCTION/TECHNOLOGY/OUTCOME + màu sắc — thay nội dung chip
-- Technology table (BẮT BUỘC theo `output-1-flow.md` Phần B) đặt bên phải Flow từ `x=1800..2260`
-- Nếu SCOPE_TYPE = `[B]/[C]` (multi-flow) → mỗi flow 1 band, gap MIN 100px
+**Áp dụng khi copy sang project mới:** giữ bố cục + màu, thay nội dung; không đưa API / thư viện / mã màn vào lane; không chữ `UNKNOWN`.
 
 ---
 
 ## Output 2 — Screen Flow (Merged Branch) + Bảng SCREEN INDEX
+
+> ⚠ 20/10/2026: chia **site → use case → section** — mỗi site 1 Section, mỗi use case (cùng tên lane Output 1) 1 Section con chứa Group bên dưới; không in chữ `UNKNOWN` (ghi `CHƯA RÕ`). Chi tiết `figma-outputs/output-2-screen-flow.md` mục ⚠.
 
 **Frame:** `Output 2 — Screen Flow — <Feature>` · width dynamic (đủ chỗ flow chính + Edge/Exceptional Panel bên phải), chiều cao dynamic theo N Group
 

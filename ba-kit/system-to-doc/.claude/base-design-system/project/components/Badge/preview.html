@@ -1,0 +1,21 @@
+<!-- @dsCard group="Data" height=256 -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><style>body{margin:0;padding:16px;font-family:var(--font-sans);background:var(--white);color:var(--solid-gray-800)} .row{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:16px} p{margin:0;font-size:16px;line-height:1.7;letter-spacing:0.02em}</style></head>
+<body>
+<div id="root"></div>
+<script>
+  var D = window.DADS, h = React.createElement;
+  function Row(p) { return h('div', { className: 'row' }, p.children); }
+  var V = ['text-only', 'outlined', 'filled-1', 'filled-2'];
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+    h(Row, null, V.map(function (v) { return h(D.Badge, { key: v, variant: v, color: 'green', icon: 'check_circle_true' }, '成功'); })),
+    h(Row, null, V.map(function (v) { return h(D.Badge, { key: v, variant: v, color: 'red', icon: 'error_false' }, '失敗'); }),
+      V.map(function (v) { return h(D.Badge, { key: 'y' + v, variant: v, color: 'yellow' }, '注意'); })),
+    h(Row, null, [['gray', '開始前'], ['blue', '作業中'], ['green', '完了'], ['yellow', '保留中'], ['red', '中止'], ['purple', '審査中'], ['cyan', '受付']].map(function (c) { return h(D.Badge, { key: c[1], variant: 'filled-1', color: c[0] }, c[1]); })),
+    h(Row, null, [['red', '可燃ごみ'], ['yellow', '不燃ごみ'], ['green', '資源ごみ'], ['blue', 'プラスチック'], ['magenta', 'ビン・缶・ペットボトル']].map(function (c) { return h(D.Badge, { key: c[1], color: c[0], shape: 'pill', icon: 'trash_false' }, c[1]); })),
+    h('p', null, h(D.Badge, { variant: 'filled-2', color: 'light-blue' }, '新着'), ' 　マイナンバーカードの申請受付時間を変更しました。')
+  ));
+</script>
+</body>
+</html>

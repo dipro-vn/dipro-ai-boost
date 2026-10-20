@@ -1,0 +1,57 @@
+<!-- @dsCard height=288 -->
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>デジタル庁デザインシステム</title>
+<style>
+  html, body { margin:0; height:100%; }
+  body { background:var(--white); color:var(--solid-gray-800); font-family:var(--font-sans); overflow:hidden; }
+  .cover { position:relative; width:960px; height:288px; overflow:hidden; }
+  .band { position:absolute; top:0; left:0; width:960px; height:112px; }
+  .band svg { display:block; }
+  .key { fill:var(--key-900); }
+  .deep { fill:var(--key-1200); }
+  .tint { fill:var(--key-100); }
+  .focus { fill:var(--yellow-300); }
+  .ink { fill:var(--black); }
+  .r8 { rx:var(--radius-8); }
+  .r6 { rx:var(--radius-6); }
+  .r4 { rx:var(--radius-4); }
+  .words { position:absolute; left:32px; right:32px; bottom:32px; max-width:900px; }
+  .name { margin:0; font-size:64px; line-height:.95; font-weight:700; letter-spacing:0; color:var(--solid-gray-900); }
+  .tag { margin:16px 0 0 2px; font-size:14px; line-height:20px; color:var(--solid-gray-600); }
+</style>
+</head>
+<body>
+<div class="cover">
+<div class="band" aria-hidden="true">
+<svg viewBox="0 0 960 112" width="960" height="112">
+<!--
+  blocks      key-900 a long 56px-tall button slab (the key color, largest) · key-1200 deep slab · key-100 tint tiles · yellow-300 + black: one focus-ring tile, the system's signature state — ≈30% of 960×288
+  arrangement top-band skeleton (the name is 13 full-width characters, too wide for the 440px zone): a strip of unequal button-shaped bands bleeding off the top and right
+  pattern     geometric, modular, dense UI → tiles cut at the button heights (56 / 48 / 36 / 28px) with their own radii, some merged two-wide like the components
+  scales      heights from Button sizes lg 56, md 48, sm 36, xs 28; gutters 8 / 16; corners radius-8 (lg, md), radius-6 (sm), radius-4 (xs)
+-->
+<rect class="key r8" x="32" y="-8" width="360" height="56" rx="8"/>
+<rect class="tint r8" x="408" y="-8" width="152" height="56" rx="8"/>
+<rect class="deep r8" x="576" y="-8" width="400" height="56" rx="8"/>
+<rect class="tint r6" x="32" y="64" width="96" height="36" rx="6"/>
+<rect class="tint r6" x="144" y="64" width="64" height="36" rx="6"/>
+<rect class="key r8" x="224" y="56" width="168" height="48" rx="8"/>
+<rect class="ink r8" x="404" y="52" width="164" height="56" rx="12"/>
+<rect class="focus r8" x="408" y="56" width="156" height="48" rx="9"/>
+<rect class="key r8" x="412" y="60" width="148" height="40" rx="8"/>
+<rect class="tint r4" x="584" y="68" width="72" height="28" rx="4"/>
+<rect class="tint r4" x="664" y="68" width="48" height="28" rx="4"/>
+<rect class="key r6" x="728" y="64" width="112" height="36" rx="6"/>
+<rect class="tint r6" x="856" y="64" width="120" height="36" rx="6"/>
+</svg>
+</div>
+<div class="words">
+<h1 class="name">デジタル庁デザインシステム</h1>
+<p class="tag">誰一人取り残されない、人に優しいデジタル化のための共通UI。</p>
+</div>
+</div>
+</body>
+</html>

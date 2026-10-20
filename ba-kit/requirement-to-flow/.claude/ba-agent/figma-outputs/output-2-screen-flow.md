@@ -8,6 +8,14 @@
 
 > **⚠️ Prerequisite:** Output 1 PHẢI vẽ xong trước. Đếm N = số business flows trong Output 1 để làm input cho Output 2.
 
+## ⚠ Bố cục site → use case → section + không chữ UNKNOWN (feedback 20/10/2026 — BẮT BUỘC)
+
+- Mỗi **site / nền tảng** (VD App người dùng · Admin web) 1 **Section** riêng; phần hệ thống không có màn → Section riêng.
+- Trong Section site, **mỗi use case (= 1 lane Output 1, cùng tên) 1 Section con** `<Flow ID> · <tên use case>` chứa Group của use case đó (Start · Screen · Decision · NG · Terminal · Edge như mô tả bên dưới). Shared Cluster → đặt ở use case đầu tiên dùng nó, các use case sau ghi "dùng chung cụm màn ở <Flow ID>".
+- Bảng ④ Screen Index · ⑤ Exception Matrix · ⑥ Terminal Nodes · ⑦ Error Index đặt **theo site** (trong Section site) hoặc gom ở Section "Bảng tổng hợp" cuối.
+- **Không hiện chữ `UNKNOWN` trên Figma**: trạng thái chưa rõ ghi `CHƯA RÕ` / "chưa rõ — chờ BRSE xác nhận"; nhãn `UNKNOWN` chỉ nằm trong SPEC.md. Kiểm: `recheck.md` Tiêu chí 10.
+- Kiểm: mọi Screen node nằm trong đúng Section site của nó; không Screen nào nằm ngoài Section use case.
+
 ## Shared Cluster — khi N business flows dùng chung 1 cụm màn hình
 
 Nếu nhiều business flows ở Output 1 đều đi qua CÙNG 1 cụm màn hình dùng chung (VD: 5 flows khác nhau đều cần user Login/Đăng ký trước khi vào) → **KHÔNG lặp lại cụm đó N lần** — gộp thành **1 Group duy nhất**:
@@ -240,7 +248,7 @@ Bảng đặt bên phải frame, cùng width với Bảng Index:
 | AUTH_REGISTER | AUTH_BLOCKED_EMAIL | Error (blocking) | Show modal + không transition | FACT | RQ-020 |
 | CALL_FLOW | CALL_ENDED_NORMAL | Success | Back to AX_FEAT_002 (Company Detail) + toast "Đã kết thúc" | FACT | RQ-025 |
 | CALL_FLOW | CALL_MISSED | Error (timeout) | Show AX_FEAT_005 (Missed screen) | FACT | RQ-026 |
-| CALL_FLOW | CALL_REJECTED | Error (peer reject) | Toast + back to AX_FEAT_002 | UNKNOWN | RQ-027 ⚠ chờ BRSE confirm |
+| CALL_FLOW | CALL_REJECTED | Error (peer reject) | Toast + back to AX_FEAT_002 | CHƯA RÕ | RQ-027 ⚠ chờ BRSE confirm |
 
 **Enum cột Type:**
 - `Success` — flow hoàn tất đúng happy path
@@ -252,13 +260,13 @@ Bảng đặt bên phải frame, cùng width với Bảng Index:
 **Enum cột Status:**
 - `FACT` — destination + hành vi đã confirmed bởi BRSE
 - `PROPOSAL` — BA đề xuất, chờ approve
-- `UNKNOWN` — chưa rõ destination — BLOCKING cho Phase 3
+- `UNKNOWN` — chưa rõ destination — BLOCKING cho Phase 3. **Trên Figma ghi `CHƯA RÕ`** (không in chữ UNKNOWN)
 
 **Rule bắt buộc:**
 - **Mỗi flow trong Output 1 PHẢI có ≥ 2 terminals**: ít nhất 1 Success + 1 Exit (user có thể luôn cancel/back)
 - Nếu Group là Shared Cluster (N flow nguồn) → số terminal box = N = số flow đã liệt kê ở Start
 - Row `UNKNOWN` → PHẢI có tương ứng row trong Exception Matrix (⑤) với classification `UNKNOWN`
-- Cột "Destination sau terminal" KHÔNG được để trống — nếu chưa rõ ghi `UNKNOWN — chờ BRSE`
+- Cột "Destination sau terminal" KHÔNG được để trống — nếu chưa rõ ghi `Chưa rõ — chờ BRSE`
 - Cross-verification: count terminal box trong flow diagram Figma = count row Terminal Nodes table — mismatch → refactor
 
 **Downstream impact:**
@@ -276,7 +284,7 @@ Bảng đặt dưới Bảng Screen Index bên phải frame, cùng width:
 
 | ID | Trigger (nguyên nhân) | Current requirement | Classification | Agent assessment | Need confirm? | Impact nếu bỏ qua |
 |---|---|---|---|---|---|---|
-| EX-01 | Mất mạng khi submit | Chưa có trong SPEC | UNKNOWN | Undefined behavior | ✅ Yes | User double-submit → duplicate record |
+| EX-01 | Mất mạng khi submit | Chưa có trong SPEC | CHƯA RÕ | Hành vi chưa định nghĩa | ✅ Yes | User double-submit → duplicate record |
 | EX-02 | Email đã tồn tại | Toast "Email đã đăng ký" | FACT | Đã đủ | — | — |
 | EX-03 | Payment timeout 30s | Retry 3 lần rồi báo lỗi | PROPOSAL | BA đề xuất | ✅ Yes | Cần BRSE quyết retry count/interval |
 | EX-04 | Push notification bị deny | Fallback SMS OTP | INFERENCE | Suy từ pattern chung | ✅ Yes | Nếu sai → user không nhận được OTP |
@@ -286,7 +294,7 @@ Bảng đặt dưới Bảng Screen Index bên phải frame, cùng width:
 - `FACT` — user/BRSE đã confirm rule cụ thể
 - `PROPOSAL` — BA đề xuất, chờ BRSE approve
 - `INFERENCE` — BA suy từ pattern chung, cần verify
-- `UNKNOWN` — chưa có rule, blocking cho Phase 3
+- `UNKNOWN` — chưa có rule, blocking cho Phase 3. **Trên Figma ghi `CHƯA RÕ`** (không in chữ UNKNOWN)
 - `CONFLICT` — có ≥ 2 source mâu thuẫn
 
 **Rule bắt buộc:**

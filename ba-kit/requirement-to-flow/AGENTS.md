@@ -20,7 +20,7 @@
 | 0 | `SPEC.md` (14 sections chuẩn) | `<output-folder>/SPEC.md` |
 | 1 | Figma Frame — **Flow Tổng Quan** (Business Logic + Tech Table + Sitemap) | Node trên Figma page user cung cấp |
 | 2 | Figma Frame — **Screen Flow** (Master Map + N groups nối bằng **arrow thật** + **Error-Screen Strip** + badge `⚠N` trên mỗi screen + **Combined Overview** + bảng Screen Index + **⑦ Error/Popup Index**) | Node Figma |
-| 3 | Figma Frame — **Screens + Items** (mockup + bảng ITEMS + ERROR SCENARIOS) | Node Figma |
+| 3 | Figma Frame — **Screens + Items** (mockup + bảng ITEMS + ERROR SCENARIOS) — mockup dựng bằng Base Design System `.claude/base-design-system/` (Rule S6) | Node Figma |
 | 4 | **HTML Prototype** (standalone, mở bằng `open index.html`) | `<output-folder>/prototype/index.html` |
 | 5 | **Basic Design** — ghi spec vào master Excel của công ty ⬜ **ON-DEMAND** | master workbook do user chỉ định |
 | OQ | **Open Questions** — register `.md` + `open_questions.xlsx` (+ Figma OQ view khi ≤ 20 câu) 🔶 **CONDITIONAL** | `<output-folder>/open-questions/` |
@@ -114,6 +114,8 @@ Chi tiết trong `.claude/ba-agent/preflight-questions.md`.
 | `.claude/ba-agent/story-splitting.md` | Tách Story, Spike (BA không ước lượng), **ranh giới với granularity Flow/Screen** |
 | `.claude/ba-agent/examples/spec-sample.md` | Ví dụ minh họa SPEC (trích) + AC + User Story — chỉ để học hình dạng, không sao chép nội dung |
 | `.claude/skills/business-analyst/scripts/export-user-stories.py` | Validate (cấu trúc + FR coverage; `--spec` đối chiếu AC/Screen/FR/OQ với SPEC) + export `user_stories.xlsx` 3 sheet. `FAIL > 0` = không ghi file |
+| `.claude/base-design-system/` | **Base Design System** chuẩn UI Nhật (DADS + tên chuẩn công ty) cho mockup Output 3 — bản copy từ `AI_Source/base-design-system/`, giống bản trong system-to-doc và designer-kit/document-to-figma (sửa ở gốc rồi copy lại cả 3 kit) |
+| `.claude/ba-agent/writing-style.md` | **Văn phong chữ khách đọc** (OQ · `output_cr.md` · Figma khi audience = BrSE / khách) — 10 quy tắc, cùng chuẩn với system-to-doc |
 | `.claude/ba-agent/post-meeting-workflow.md` | **Bước 7** — intake feedback/meeting note: triage 🔴 CR vs 🟡 FEEDBACK + nhánh feedback |
 | `.claude/ba-agent/change-request.md` | **Nhánh CR** — giải trình vì sao là CR, CR questions, rule vẽ CR view (NEW/UPD/DEL), template `output_cr.md` |
 | `.claude/ba-agent/figma-outputs/*` | Chi tiết từng Figma output + gate rules |

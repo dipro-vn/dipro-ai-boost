@@ -10,26 +10,40 @@ Agent viet cr-figma.json (noi dung nghiep vu), script nay sinh JS (bo cuc, mau, 
 04-screens-<n>.js (CR-3) · 99-readback.js (doc nguoc -> cr-figma-nodes.json cho verify-cr-figma.py).
 
 Sub-view (dung thu tu kit requirement-to-flow change-request.md §3):
-  CR-1 Flow        = Output 1 Phan A (ACTOR → TRIGGER → FUNCTION → TECHNOLOGY → OUTCOME · EDGE) chi cac lane bi
-                     CR cham + Phan B Technology (chi cong nghe NEW/UPD/IMPACT)
-  CR-2 Screen Flow = Output 2: Group (Start ▶ · Screen · Decision ◇ · System · NG · Terminal) noi bang mui ten
-                     that + Edge/Exceptional panel + bang Screen Index (pham vi CR)
+  CR-1 Flow        = Output 1 dang USE CASE (feedback 20/10/2026): 1 lane = 1 use case — Actor → duong di (happy,
+                     trai -> phai) → diem ket thuc; non-happy o hang duoi (◇ -> NG -> ket thuc ✗). KHONG co cot
+                     Technology / Function trong lane — cong nghe chi o bang TECHNOLOGY ben phai (NEW/UPD/IMPACT)
+  CR-2 Screen Flow = Output 2: site -> flow / use case -> section: moi site 1 Section, trong do moi Group 1 Section
+                     con "Flow <id> — <ten>" (Start ▶ · Screen · Decision ◇ · System · NG · Terminal, mui ten that,
+                     Edge/Exceptional) + frame ④ Screen Index / ⑦ cua site
   CR Change Table  = THONG KE (khong liet ke chi tiet): so doi tuong NEW/UPD/DEL/IMPACT theo Man hinh / API /
                      Bang DB / ... + 実装 MD + 総工数 人日 + 人月 (cung cong thuc Summary / Estimation)
   CR-3 Screens     = man de xuat dung token + component Design System cua baseline (doc tokens.json; component
                      site chua co -> block bat buoc khai "from": "<WEB-xx>" muon site khac, khong tu che)
 Moi node mang dung 1 badge: ten "<BADGE> · <REF> · <nhan>", sharedPluginData("crkit","kind",...).
 
+Bat buoc non-happy (feedback CR-001 r2 — chuan requirement-to-flow Output 1/2/3):
+  CR-1: moi lane co >= 1 node type "ng" (loi da chot, noi bang canh "ng" tu decision) — hoac "no_ng": "<ly do>".
+  CR-2: moi group co >= 1 node "ng" / "popup" (man / popup loi: display Modal|Popup|Toast|Banner|Full screen|Inline,
+        msg, trigger, next) — hoac "no_ng"; node "screen" phai co "stype" (List|Detail|Form|Modal|Popup|Toast|Banner|
+        Wizard|Dashboard|Complete|Full screen) + "desc". Ve ④ Screen Index (# · Ref · Man hinh · Loai · Mo ta · Site ·
+        Badge, ke ca popup) + ⑦ Error / Popup Index + dong TONG = A man chinh + B man loi/popup.
+  CR-3: moi man = 1 hang: MOCKUP BEN TRAI + MO TA BEN PHAI (Muc dich · Vao tu · Happy logic · bang ITEMS
+        (# · Item · Mo ta · Action/Behavior · Thay doi) · bang ERROR SCENARIOS (# · Trigger · Hien thi · Message +
+        Action)). Man UPD = ve man AS-IS + to vien mau badge len block thay doi ("chg": NEW|UPD|DEL, "n": so item).
+        Popup / man loi = item "shell": "modal".
+
 Schema cr-figma.json:
 {"title": "...",
- "flows": [{"lane": "FL-08" | "CR-NEW-1", "title": "...", "nodes": [{"key","col": actor|trigger|function|
-            technology|outcome|edge, "row": 0, "type": box|decision|ng, "badge", "ref", "label", "sub"}],
+ "flows": [{"lane": "FL-08" | "CR-NEW-1", "title": "...", "nodes": [{"key","type": actor|start|step|decision|ng|
+            end|edge, "pos": 1..6 (cot trai -> phai), "row": 0 happy | >=1 non-happy, "result": ok|fail (end),
+            "badge", "ref" (SC- / F- / FL- / IMP- — khong API- / EXT- / table: / column:), "label", "sub"}],
             "edges": [["from_key","to_key","nhan","ng|cross|"]]}],
  "tech": [{"badge","ref","label","sub"}],
  "screen_groups": [{"id": "G1", "title": "...", "site": "WEB-02", "nodes": [{"key","type": start|screen|decision|
             system|ng|terminal|edge, "badge","ref","label","sub"}], "edges": [["a","b","nhan","ng|"]]}],
  "screens": {"ds_read": ["outputs/<baseline>/04_DesignSystem/WEB-02/project/README.md", ...],
-             "items": [{"badge","ref","site","shell": public|mypage|admin|auth, "title","label","nav_active",
+             "items": [{"badge","ref","site","shell": public|mypage|admin|auth|modal|mobile (mobile: + viewport_width, viewport_note khi DS chua co token viewport-mobile), "title","label","nav_active",
                         "blocks": [ {"t": "title"|"breadcrumb"|"section"|"text"|"field"|"field2"|"select"|"radio"|
                                      "checkbox"|"buttons"|"table"|"badge"|"card"|"steps"|"modal"|"search"|
                                      "pagination", ..., "from": "WEB-01"} ]}]}}
@@ -49,8 +63,13 @@ import cr_common as C  # noqa: E402
 
 NS = "crkit"
 BADGES = ["NEW", "UPD", "DEL", "IMPACT", "AS-IS"]
-FLOW_COLS = ["actor", "trigger", "function", "technology", "outcome", "edge"]
-SCREEN_TYPES = ["start", "screen", "decision", "system", "ng", "terminal", "edge"]
+UC_TYPES = ["actor", "start", "step", "decision", "ng", "end", "edge"]
+UC_MAXPOS = 6
+TECH_REF = re.compile(r"^(API-|EXT-|table:|column:|DS)")
+SCREEN_TYPES = ["start", "screen", "decision", "system", "ng", "popup", "terminal", "edge"]
+STYPES = ["List", "Detail", "Form", "Modal", "Popup", "Toast", "Banner", "Wizard", "Dashboard", "Complete", "Full screen"]
+DISPLAYS = ["Modal", "Popup", "Toast", "Banner", "Full screen", "Inline", "Tooltip", "Empty state"]
+CHG = ["NEW", "UPD", "DEL", "AS-IS"]
 MAX_JS = 45000
 
 # block -> component DS can co (None = ve tu token, khong can component)
@@ -58,7 +77,8 @@ BLOCK_COMP = {"field": "TextField", "field2": "TextField", "select": "Select", "
               "checkbox": "Checkbox", "buttons": "Button", "table": "Table", "badge": "Badge",
               "card": "Card", "modal": "Modal", "search": "Card", "pagination": "Pagination",
               "title": "PageHeader", "breadcrumb": "Breadcrumb", "section": None, "text": None, "steps": None}
-SHELL_COMP = {"public": ["AppHeader"], "mypage": ["AppHeader", "SideNav"], "admin": ["SideNav"], "auth": []}
+SHELL_COMP = {"public": ["AppHeader"], "mypage": ["AppHeader", "SideNav"], "admin": ["SideNav"], "auth": [], "modal": [], "mobile": []}
+# mobile: DS chi do o viewport-web -> khung SP khai viewport_width + viewport_note (nguon / quyet dinh), header thu gon
 # auth: WEB-02 = AppHeader dang chua dang nhap; WEB-01 = card giua page-bg (man dang nhap admin khong co header)
 
 
@@ -67,10 +87,14 @@ def load_tokens(bdir, site):
     if not os.path.isfile(p):
         p = os.path.join(bdir, "04_DesignSystem", "project", "tokens.json")
     t = C.load_json(p)
+    themes = [th.get("id") for th in (t.get("color") or {}).get("themes") or []]
     flat = {}
     for grp in ("color", "spacing", "radius", "shadow", "size"):
         for x in (t.get(grp) or {}).get("tokens") or []:
-            flat[x["name"]] = x.get("value")
+            v = x.get("value")
+            if isinstance(v, dict):  # gia tri theo theme -> theme dau tien (VD Base DS: light)
+                v = v.get(themes[0]) if themes and themes[0] in v else next(iter(v.values()), None)
+            flat[x["name"]] = v
     for _ in range(3):                       # giai alias {primary}
         for k, v in flat.items():
             m = re.match(r"^\{(.+)\}$", str(v))
@@ -118,16 +142,17 @@ function R(parent, x, y, w, h, fill){ const r=figma.createRectangle(); r.resize(
 function badgeBox(parent, n, x, y, w, h, kind, shape){
   const b=BADGE[n.badge]; const f=F(parent, `${n.badge} · ${n.ref} · ${n.label}`, x, y, w, h, b.f);
   f.strokes=[paint(b.s)]; f.strokeWeight=2; if(b.d) f.dashPattern=[6,4]; if(b.o) f.opacity=b.o;
-  f.cornerRadius = shape==="pill" ? h/2 : (shape==="decision" ? 20 : 8);
-  if(shape==="ng"){ const bar=R(f,0,0,6,h,"#CF222E"); bar.name="ng-bar"; }
-  const pre = shape==="decision" ? "◇ " : (shape==="ng" ? "NG · " : (shape==="pill" ? "▶ " : ""));
+  f.cornerRadius = (shape==="pill"||shape==="end"||shape==="actor") ? h/2 : (shape==="decision" ? 20 : 8);
+  if(shape==="ng"||shape==="popup"){ const bar=R(f,0,0,6,h,"#CF222E"); bar.name="ng-bar"; }
+  const pre = shape==="decision" ? "◇ " : (shape==="ng" ? "NG · " : (shape==="popup" ? "⚠ "+(n.display||"Popup")+" · " : (shape==="pill" ? "▶ " : shape==="actor" ? "👤 " : (shape==="end" ? (n.result==="fail" ? "✗ KẾT THÚC · " : "✓ KẾT THÚC · ") : ""))));
   const t1=T(f, `${n.badge} · ${n.ref}`, 10, 6, w-20, 10, 700, b.s);
   const t2=T(f, pre+n.label+(n.badge==="DEL"?" (bỏ)":""), 10, t1.y+t1.height+2, w-20, 12, 700, "#1F2328");
   if(n.badge==="DEL") t2.textDecoration="STRIKETHROUGH";
   let bottomY = t2.y+t2.height;
   if(n.sub){ const t3=T(f, n.sub, 10, t2.y+t2.height+2, w-20, 10, 400, "#57606A"); bottomY = t3.y+t3.height; }
   if (bottomY+8 > h) { f.resize(w, bottomY+8); const bar=f.findOne(c=>c.name==="ng-bar"); if(bar) bar.resize(6, bottomY+8); }
-  f.setSharedPluginData(NS,"kind",kind); return f; }
+  f.setSharedPluginData(NS,"kind",kind); f.setSharedPluginData(NS,"shape",shape||"box");
+  if (n._grp) f.setSharedPluginData(NS,"grp",n._grp); return f; }
 function head(parent, x, y, dir){ const v=figma.createVector(); const P={r:"M 0 0 L 10 5 L 0 10 Z",l:"M 10 0 L 0 5 L 10 10 Z",d:"M 0 0 L 10 0 L 5 10 Z",u:"M 0 10 L 10 10 L 5 0 Z"};
   v.vectorPaths=[{windingRule:"NONZERO",data:P[dir]}]; parent.appendChild(v); v.name="head";
   const o={r:[-10,-5],l:[0,-5],d:[-5,-10],u:[-5,0]}[dir]; v.x=x+o[0]; v.y=y+o[1]; return v; }
@@ -172,9 +197,11 @@ def part_shell_flow(view, stats_line):
     body = r"""
 const D = %s;
 const {page, s:old} = await section();
-if (old) return {error: "section da ton tai — xoa section cu (cua chinh lan chay nay) hoac doi ten truoc khi ve lai"};
-const s = figma.createSection(); s.name = SECTION_NAME; s.x = %d; s.y = %d; page.appendChild(s);
+if (old && !D.redraw) return {error: "section da ton tai — xoa section cu (cua chinh lan chay nay) hoac doi ten truoc khi ve lai (hoac --redraw cr1,cr2)"};
 const created=[];
+let s = old;
+if (!s) {
+s = figma.createSection(); s.name = SECTION_NAME; s.x = %d; s.y = %d; page.appendChild(s);
 T(s, SECTION_NAME, 40, 30, 2200, 32, 700);
 T(s, D.subtitle, 40, 80, 2200, 14, 400, "#57606A");
 // Legend
@@ -183,33 +210,40 @@ lg.setSharedPluginData(NS,"kind","legend");
 let lx=16; for (const [b,txt] of [["NEW","Tạo mới"],["UPD","Sửa cái đang có"],["DEL","Bỏ"],["IMPACT","Không sửa — bị kéo theo, kiểm lại"],["AS-IS","Giữ nguyên, ngữ cảnh"]]) {
   const sw=F(lg,"sw-"+b,lx,18,28,28,BADGE[b].f); sw.strokes=[paint(BADGE[b].s)]; sw.strokeWeight=2; if(BADGE[b].d) sw.dashPattern=[4,3]; if(BADGE[b].o) sw.opacity=BADGE[b].o; sw.cornerRadius=6;
   T(lg, b+" — "+txt, lx+36, 22, null, 12, 700, BADGE[b].s); lx += 36 + (b==="IMPACT"?300:180); }
-T(lg, "NG = vạch đỏ bên trái · ◇ = rẽ nhánh · ▶ = điểm vào", lx, 22, null, 12, 500, "#CF222E");
-// CR-1 Flow (format Output 1 Phan A + Phan B)
-const fr = F(s, "CR-1 Flow — luồng nghiệp vụ bị CR chạm (format Output 1)", 40, 220, 2280, 400, "#FFFFFF");
+T(lg, "NG / ⚠ popup lỗi = vạch đỏ bên trái · ◇ = rẽ nhánh · ▶ = điểm vào", lx, 22, null, 12, 500, "#CF222E");
+}
+if (D.only_cr2) return {section: s.id, created: 0, skipped: "CR-1"};
+// CR-1 Flow — dang USE CASE: 1 lane = 1 use case (Actor → duong di happy → ket thuc; non-happy hang duoi)
+const fr = F(s, "CR-1 Flow — use case bị CR chạm (format Output 1)", 40, 220, 2280, 400, "#FFFFFF");
 fr.strokes=[paint("#D0D7DE")]; fr.cornerRadius=12;
-T(fr, "CR-1 — Flow thay đổi (Output 1 · Phần A Business & Logic Flow + Phần B Technology)", 40, 24, 1700, 22, 700);
+T(fr, "CR-1 — Use case thay đổi (Output 1 · mỗi lane = 1 use case: Actor → đường đi → kết thúc · non-happy ở hàng dưới) + TECHNOLOGY bên phải", 40, 24, 1700, 22, 700);
 T(fr, D.flow_note, 40, 54, 1700, 12, 400, "#57606A");
-const CX = {actor:98, trigger:250, function:500, technology:770, outcome:1040, edge:1320};
-const CW = {actor:150, trigger:200, function:220, technology:220, outcome:220, edge:440};
-for (const [k,lab] of [["actor","ACTOR"],["trigger","TRIGGER"],["function","FUNCTION"],["technology","TECHNOLOGY"],["outcome","OUTCOME"],["edge","EDGE / EXCEPTIONAL — chưa chốt"]]) T(fr, lab, CX[k]+(k==="actor"?2:0), 90, null, 12, 700, "#57606A");
+const X0 = 230, DXP = 250, NWP = 210, RH = 112;
+T(fr, "ACTOR", 42, 90, null, 12, 700, "#57606A");
+T(fr, "ĐƯỜNG ĐI — HAPPY CASE (trái → phải) → ✓ KẾT THÚC  ·  hàng dưới: NON-HAPPY CASE → ✗ KẾT THÚC", X0, 90, 1500, 12, 700, "#57606A");
 R(fr, 40, 109, 1730, 2, "#1F2328");
 let y = 130;
 for (const L of D.flows) {
   T(fr, L.lane + " · " + L.title, 40, y, 1700, 16, 700, "#0969DA");
-  T(fr, L.note, 40, y+22, 1700, 12, 400, "#57606A");
-  const top = y + 56; const nodes = {}; let maxRow = 0; let edgeIdx = 0;
-  for (const n of L.nodes) {
-    const row = n.col==="edge" ? edgeIdx++ : (n.row || 0); maxRow = Math.max(maxRow, row);
-    const yy = top + row*120;
+  T(fr, L.note + (L.no_ng ? "   ·   Non-happy: N/A — " + L.no_ng : ""), 40, y+22, 1700, 12, 400, L.no_ng ? "#CF222E" : "#57606A");
+  const top = y + 56; const nodes = {}; let maxRow = 0;
+  for (const n of L.nodes) { if (n.type==="edge") continue; n._grp = L.lane;
+    const row = n.row || 0; maxRow = Math.max(maxRow, row);
     let f;
-    if (n.col === "actor") { f = badgeBox(fr, n, CX.actor-40, yy, 150, 84, "flow", "pill"); }
-    else f = badgeBox(fr, n, CX[n.col], yy, CW[n.col], n.col==="edge"?70:84, n.col==="edge"?"edge":"flow", n.type==="decision"?"decision":(n.type==="ng"?"ng":null));
+    if (n.type === "actor") f = badgeBox(fr, n, 40, top, 160, 84, "flow", "actor");
+    else f = badgeBox(fr, n, X0 + (n.pos-1)*DXP, top + row*RH, NWP, 84, "flow",
+      n.type==="decision" ? "decision" : (n.type==="ng" ? "ng" : (n.type==="end" ? "end" : (n.type==="start" ? "pill" : null))));
+    if (n.type==="end") { f.strokeWeight = 3; if (n.result==="fail") f.strokes=[paint("#CF222E")]; }
     nodes[n.key] = f; created.push(f.id);
   }
-  for (const [a,b,lab,st] of L.edges) created.push(arrow(fr, nodes[a], nodes[b], lab, st).id);
+  for (let r=1; r<=maxRow; r++) { const t=T(fr, "Non-happy", 40, top + r*RH + 34, 160, 11, 700, "#CF222E"); t.name="row-label"; }
+  for (const [a,b,lab,st] of L.edges) if (nodes[a] && nodes[b]) created.push(arrow(fr, nodes[a], nodes[b], lab, st).id);
   let lb = 0; for (const k in nodes) lb = Math.max(lb, nodes[k].y + nodes[k].height);
-  y = Math.max(top + (maxRow+1)*120, lb + 30) + 40;
-  R(fr, 40, y, 1730, 1, "#D0D7DE"); y += 60;
+  const ex = L.nodes.filter(n=>n.type==="edge");
+  if (ex.length) { const ey = lb + 46; T(fr, "CHƯA CHỐT (To verify) — không vẽ vào đường đi", X0, ey - 20, 600, 11, 700, "#6639BA");
+    ex.forEach((n,i)=>{ n._grp = L.lane; const f = badgeBox(fr, n, X0 + i*(NWP+40)*1.5, ey, NWP*1.5, 64, "edge"); created.push(f.id); lb = Math.max(lb, f.y+f.height); }); }
+  y = lb + 50;
+  R(fr, 40, y, 1730, 1, "#D0D7DE"); y += 50;
 }
 // Phan B Technology (chi cong nghe bi cham)
 T(fr, "TECHNOLOGY — thay đổi / bị ảnh hưởng", 1800, 90, 460, 13, 700, "#F4860C");
@@ -220,7 +254,8 @@ fit(s);
 return {section: s.id, flow: fr.id, created: created.length, bottom: fr.y + fr.height};
 """
     return body % (esc({"subtitle": view["subtitle"], "flow_note": view["flow_note"], "flows": view["flows"],
-                        "tech": view.get("tech") or []}), view["_x"], view["_y"])
+                        "tech": view.get("tech") or [], "redraw": bool(view.get("_redraw")),
+                        "only_cr2": "cr1" not in (view.get("_redraw") or ["cr1"])}), view["_x"], view["_y"])
 
 
 # ---------------------------------------------------------------- 02: CR-2 Screen Flow
@@ -266,64 +301,123 @@ def layout_group(g):
     return pos
 
 
+def site_order(view):
+    """Thu tu site: view.site_order, roi theo lan xuat hien (screen_groups -> screens.items)."""
+    out = list(view.get("site_order") or [])
+    for g in view.get("screen_groups") or []:
+        if g.get("site") and g["site"] not in out:
+            out.append(g["site"])
+    for it in ((view.get("screens") or {}).get("items") or []):
+        if it.get("site") and it["site"] not in out:
+            out.append(it["site"])
+    return out
+
+
+def site_label(view, site):
+    return "%s (%s)" % ((view.get("site_labels") or {}).get(site) or "Site", site)
+
+
 def part_screen_flow(view):
-    groups = []
-    for g in view["screen_groups"]:
-        pos = layout_group(g)
-        groups.append({**g, "pos": {k: list(v) for k, v in pos.items()}})
-    index = []
-    for g in view["screen_groups"]:
-        for n in g["nodes"]:
-            if n["type"] in ("screen", "system") and n["badge"] != "AS-IS":
-                index.append([n["ref"], n["label"], g.get("site", ""), n["badge"]])
+    """CR-2: moi site 1 Section rieng (CR-2 Screen Flow · <site>) — trong do: Group (= flow nghiep vu) -> man, + ④ / ⑦ cua site."""
+    sites = []
+    for st in site_order(view):
+        gs = [g for g in view["screen_groups"] if g.get("site") == st]
+        if not gs:
+            continue
+        groups, index, errs, seen = [], [], [], set()
+        for g in gs:
+            pos = layout_group(g)
+            groups.append({**g, "pos": {k: list(v) for k, v in pos.items()}})
+            for n in g["nodes"]:
+                is_scr = n["type"] == "screen" or (n["type"] in ("popup", "ng") and n.get("display") in ("Modal", "Popup", "Toast", "Banner", "Full screen"))
+                if is_scr and n["badge"] != "AS-IS" and (n["ref"], n["label"]) not in seen:
+                    seen.add((n["ref"], n["label"]))
+                    index.append([n["ref"], n["label"], n.get("stype") or n.get("display") or "Popup",
+                                  n.get("desc") or n.get("msg") or "", st, n["badge"]])
+                if n["type"] in ("ng", "popup"):
+                    errs.append(["E-%02d" % (len(errs) + 1), n.get("parent") or "", n.get("display") or "Inline",
+                                 n.get("trigger") or n["label"], n.get("msg") or n.get("sub") or "", n.get("next") or "",
+                                 n["badge"], n["ref"]])
+        main = sum(1 for r in index if r[2] not in ("Modal", "Popup", "Toast", "Banner", "Full screen"))
+        sites.append({"site": st, "label": site_label(view, st), "groups": groups, "index": index, "errs": errs, "main": main})
     body = r"""
 const D = %s;
 const {page, s} = await section();
 if (!s) return {error: "chua co section — chay 01 truoc"};
-const created=[];
+const created=[], frames=[];
+const NW=230, NH=86, DX=280, DY=128;
+for (const SD of D.sites) {
 const y0 = bottom(s) + 120;
-const fr = F(s, "CR-2 Screen Flow — màn bị CR chạm (format Output 2)", 40, y0, 3000, 400, "#FFFFFF");
-fr.strokes=[paint("#D0D7DE")]; fr.cornerRadius=12;
-T(fr, "CR-2 — Screen Flow thay đổi (Output 2 · Group · Start ▶ · Screen · ◇ Decision · System · NG inline · Terminal · Edge/Exceptional)", 40, 24, 2300, 22, 700);
-T(fr, D.note, 40, 54, 2300, 12, 400, "#57606A");
-const NW=220, NH=78, DX=270, DY=118;
-let y = 100;
-for (const G of D.groups) {
-  T(fr, "Group " + G.id + " — " + G.title + "  (" + G.site + ")", 40, y, 2200, 16, 700, "#0969DA");
-  if (G.note) T(fr, G.note, 40, y+22, 2200, 12, 400, "#57606A");
+const sec = figma.createSection(); sec.name = "CR-2 Screen Flow · " + SD.label; s.appendChild(sec); sec.x = 40; sec.y = y0; sec.fills=[paint("#FFFFFF")];
+sec.setSharedPluginData(NS,"kind","cr2-site"); sec.setSharedPluginData(NS,"site",SD.site);
+T(sec, "CR-2 — Screen Flow · " + SD.label + " (site → flow / use case → section · Start ▶ · Screen · ◇ Decision · System · NG inline · ⚠ Popup / màn lỗi · Terminal · Edge/Exceptional)", 40, 30, 2600, 22, 700);
+T(sec, D.note, 40, 62, 2600, 12, 400, "#57606A");
+let sy = 110, maxW = 0;
+for (const G of SD.groups) {
+  // site -> flow / use case -> section: moi Group 1 Section con
+  const gs = figma.createSection(); gs.name = "Flow " + G.id + " — " + G.title; sec.appendChild(gs); gs.x = 40; gs.y = sy; gs.fills=[paint("#F6F8FA")];
+  gs.setSharedPluginData(NS,"kind","cr2-flow"); gs.setSharedPluginData(NS,"flow",G.id); gs.setSharedPluginData(NS,"site",SD.site);
+  const fr = F(gs, "CR-2 Flow " + G.id + " — " + G.title, 40, 40, 2400, 400, "#FFFFFF");
+  fr.strokes=[paint("#D0D7DE")]; fr.cornerRadius=12;
+  let y = 24;
+  T(fr, "Flow " + G.id + " — " + G.title, 40, y, 2200, 16, 700, "#0969DA");
+  T(fr, (G.note||"") + (G.no_ng ? "   ·   Non-happy: N/A — " + G.no_ng : ""), 40, y+22, 2200, 12, 400, G.no_ng ? "#CF222E" : "#57606A");
   const top = y + 56; const nodes={}; let maxD=0, maxI=0;
-  for (const n of G.nodes) { if (n.type==="edge") continue;
+  for (const n of G.nodes) { if (n.type==="edge") continue; n._grp = G.id;
     const [d,i] = G.pos[n.key]; maxD=Math.max(maxD,d); maxI=Math.max(maxI,i);
-    const shape = n.type==="start" ? "pill" : (n.type==="decision" ? "decision" : (n.type==="ng" ? "ng" : null));
-    const w = n.type==="start" ? 200 : (n.type==="decision" ? 180 : NW), h = n.type==="decision" ? 64 : NH;
-    const f = badgeBox(fr, n, 40 + d*DX, top + i*DY, w, h, n.type==="screen"||n.type==="system" ? "screen" : "flow-step", shape);
+    const shape = n.type==="start" ? "pill" : (n.type==="decision" ? "decision" : (n.type==="ng" ? "ng" : (n.type==="popup" ? "popup" : null)));
+    const w = n.type==="start" ? 200 : (n.type==="decision" ? 190 : NW), h = n.type==="decision" ? 64 : NH;
+    const nn = (n.type==="screen" && n.stype) ? {...n, sub: "[" + n.stype + "] " + (n.desc || n.sub || "")} : ((n.type==="popup"||n.type==="ng") && n.msg ? {...n, sub: "「" + n.msg + "」" + (n.next ? " → " + n.next : "")} : n);
+    const f = badgeBox(fr, nn, 40 + d*DX, top + i*DY, w, h, n.type==="screen"||n.type==="system"||n.type==="popup" ? "screen" : "flow-step", shape);
     if (n.type==="system") { f.fills=[paint("#E8F7EC")]; }
     nodes[n.key]=f; created.push(f.id); }
   for (const [a,b,lab,st] of G.edges) if (nodes[a] && nodes[b]) created.push(arrow(fr, nodes[a], nodes[b], lab, st).id);
-  // Edge / Exceptional panel
   const ex = G.nodes.filter(n=>n.type==="edge");
   const px = 40 + (maxD+1)*DX + 40;
   if (ex.length) { T(fr, "EDGE / EXCEPTIONAL — chưa chốt, không vẽ inline", px, top-20, 420, 11, 700, "#6639BA");
-    let ey = top; ex.forEach((n)=>{ const f=badgeBox(fr, n, px, ey, 420, 74, "edge"); created.push(f.id); nodes["_e"+ey]=f; ey = f.y + f.height + 12; }); }
-  let gb = top; for (const k in nodes) gb = Math.max(gb, nodes[k].y + nodes[k].height);
-  y = gb + 70; R(fr, 40, y, 2300, 1, "#D0D7DE"); y += 60;
+    let ey = top; ex.forEach((n)=>{ n._grp = G.id; const f=badgeBox(fr, n, px, ey, 420, 74, "edge"); created.push(f.id); nodes["_e"+ey]=f; ey = f.y + f.height + 12; }); }
+  let gb = top, gr = 0; for (const c of fr.children) { gb = Math.max(gb, c.y + c.height); gr = Math.max(gr, c.x + c.width); }
+  fr.resize(Math.max(1200, gr + 40), gb + 40);
+  gs.resizeWithoutConstraints(fr.width + 80, fr.height + 80);
+  maxW = Math.max(maxW, gs.width); sy = gs.y + gs.height + 60;
 }
-// ④ Screen Index (pham vi CR)
-let maxR = 0; for (const c of fr.children) maxR = Math.max(maxR, c.x + c.width);
-const ix = Math.max(2420, maxR + 60); T(fr, "④ SCREEN INDEX — phạm vi CR", ix, 100, 540, 14, 700, "#0969DA");
-let iy = 130;
-const hdr = F(fr, "idx-header", ix, iy, 540, 28, "#DAEEF3"); T(hdr,"Ref",8,6,90,11,700); T(hdr,"Màn hình",100,6,300,11,700); T(hdr,"Site",400,6,60,11,700); T(hdr,"Badge",465,6,70,11,700);
-iy += 28;
-for (const [ref,lab,site,b] of D.index) { const r=F(fr,"IDX · "+ref, ix, iy, 540, 26, BADGE[b].f); T(r,ref,8,6,90,10,700,BADGE[b].s); T(r,lab,100,6,295,10,400); T(r,site,400,6,60,10,400); T(r,b,465,6,70,10,700,BADGE[b].s); iy+=26; }
-fr.resize(ix + 580, Math.max(y, iy) + 20);
+// ④ / ⑦ cua site — frame rieng ben phai cac section flow
+const IW = 980, ix0 = 40 + maxW + 60;
+const fr = F(sec, "CR-2 Index — " + SD.label, ix0, 110, IW + 80, 400, "#FFFFFF"); fr.strokes=[paint("#D0D7DE")]; fr.cornerRadius=12;
+const ix = 40;
+T(fr, "④ SCREEN INDEX — " + SD.label + " (gồm cả popup / màn lỗi)", ix, 24, IW, 14, 700, "#0969DA");
+const st = T(fr, "TỔNG = " + SD.main + " màn chính + " + (SD.index.length - SD.main) + " popup / màn lỗi = " + SD.index.length, ix, 46, IW, 12, 700, "#1F2328"); st.name = "IDX-TOTAL";
+st.setSharedPluginData(NS,"kind","idx-total"); st.setSharedPluginData(NS,"value",String(SD.index.length));
+let iy = 70;
+const IC = [["#",28],["Ref",90],["Màn hình",230],["Loại",80],["Mô tả chức năng màn hình",370],["Site",62],["Badge",90]];
+function hdrRow(cols, yy, fill){ const h=F(fr,"idx-header",ix,yy,IW,28,fill); let x=6; for(const [c,w] of cols){ T(h,c,x,7,w-6,11,700); x+=w; } return 28; }
+iy += hdrRow(IC, iy, "#DAEEF3");
+SD.index.forEach((r,k)=>{ const [ref,lab,typ,desc,site,b]=r; const vals=[String(k+1),ref,lab,typ,desc,site,b];
+  const row=F(fr,"IDX · "+ref+" · "+typ, ix, iy, IW, 30, typ==="Modal"||typ==="Popup"||typ==="Toast"||typ==="Banner"||typ==="Full screen" ? "#FFF6F5" : BADGE[b].f);
+  row.setSharedPluginData(NS,"kind","idx"); row.setSharedPluginData(NS,"type",typ); row.setSharedPluginData(NS,"ref",ref);
+  let x=6, hmax=30; vals.forEach((v,c)=>{ const t=T(row,v,x,7,IC[c][1]-8,10,c===1||c===6||c===3?700:400, c===1||c===6?BADGE[b].s:(c===3&&row.fills[0].color.r>0.99?"#CF222E":"#1F2328")); hmax=Math.max(hmax,t.height+14); x+=IC[c][1]; });
+  row.resize(IW,hmax); iy+=hmax; });
+iy += 40;
+T(fr, "⑦ ERROR / POPUP INDEX — " + SD.label + " (message thật hoặc đề xuất)", ix, iy, IW, 14, 700, "#CF222E"); iy += 26;
+const EC = [["E-ID",50],["Màn cha",90],["Hiển thị",80],["Trigger",210],["Message",330],["Đi đâu sau đó",150],["Badge",70]];
+iy += hdrRow(EC, iy, "#FFE3E3");
+for (const e of SD.errs) { const [eid,par,disp,trg,msg,nxt,b,ref]=e; const vals=[eid,par,disp,trg,msg,nxt,b];
+  const row=F(fr,"ERRIDX · "+eid+" · "+ref, ix, iy, IW, 30, "#FFFBFB"); row.strokes=[paint("#FFD7D5")];
+  row.setSharedPluginData(NS,"kind","erridx");
+  let x=6, hmax=30; vals.forEach((v,c)=>{ const t=T(row,v||"—",x,7,EC[c][1]-8,10,c===0||c===2?700:400, c===0?"#CF222E":"#1F2328"); hmax=Math.max(hmax,t.height+14); x+=EC[c][1]; });
+  row.resize(IW,hmax); iy+=hmax; }
+fr.resize(IW + 80, iy + 30);
+sec.resizeWithoutConstraints(fr.x + fr.width + 80, Math.max(sy, fr.y + fr.height + 60));
+frames.push(sec.id);
+}
 fit(s);
-return {frame: fr.id, created: created.length, bottom: fr.y + fr.height};
+return {sections: frames, created: created.length};
 """
-    return body % esc({"note": view["screen_note"], "groups": groups, "index": index})
+    return body % esc({"note": view["screen_note"], "sites": sites})
 
 
 # ---------------------------------------------------------------- 03: CR Change Table (thong ke)
-def part_change_table(stats, totals):
+def part_change_table(stats, totals, cr_id, extra_note=""):
     body = r"""
 const D = %s;
 const {page, s} = await section();
@@ -331,11 +425,11 @@ if (!s) return {error: "chua co section"};
 const y0 = bottom(s) + 120;
 const fr = F(s, "CR Change Table — thống kê thay đổi", 40, y0, 1180, 200, "#FFFFFF");
 fr.strokes=[paint("#D0D7DE")]; fr.cornerRadius=12;
-T(fr, "CR Change Table — thống kê (chi tiết từng hạng mục: CR-001_Impact.xlsx)", 32, 24, 1100, 20, 700);
-T(fr, D.note, 32, 54, 1100, 12, 400, "#57606A");
+T(fr, "CR Change Table — thống kê (chi tiết từng hạng mục: " + D.xlsx + ")", 32, 24, 1100, 20, 700);
+const nt = T(fr, D.note, 32, 54, 1100, 12, 400, "#57606A");
 const cols = [["Đối tượng",300],["NEW",110],["UPD",110],["DEL",110],["IMPACT",110],["Tổng",110],["実装 MD",160]];
 const fills = {NEW:"#EDFDF0",UPD:"#FFF9EB",DEL:"#FFF6F5",IMPACT:"#FBEEFF"};
-let y = 90, x = 32;
+let y = Math.max(90, nt.y + nt.height + 14), x = 32;
 for (const [c,w] of cols) { const h=F(fr,"hdr-"+c,x,y,w,32,fills[c]||"#DAEEF3"); h.strokes=[paint("#D0D7DE")]; T(h,c,8,8,w-16,12,700,"#1F2328", c==="Đối tượng"?null:"CENTER"); x+=w; }
 y += 32;
 for (const row of D.rows) { x = 32; const tot = row[0]==="Tổng";
@@ -353,8 +447,8 @@ return {frame: fr.id, bottom: fr.y + fr.height};
     rows = [[o] + [int(v) if v == int(v) else v for v in (d["NEW"], d["UPD"], d["DEL"], d["IMPACT"], d["total"])]
             + [C.fmt_md(d["md"])] for o, d in stats]
     return body % esc({"note": "Số lượng = số đối tượng (màn / API / bảng / cột / rule …) theo đơn vị của bảng đơn giá. "
-                               "総工数 = 実装 × hệ số công đoạn của template Estimation.", "rows": rows,
-                       "totals": totals})
+                               "総工数 = 実装 × hệ số công đoạn của template Estimation." + (" " + extra_note if extra_note else ""), "rows": rows,
+                       "totals": totals, "xlsx": "%s_Impact.xlsx" % cr_id})
 
 
 # ---------------------------------------------------------------- 04: CR-3 Screens (mockup tu token DS)
@@ -392,16 +486,24 @@ def resolve_block_tokens(item, toks_by_site, comps_by_site, errors):
     return sorted(refs)
 
 
-def part_screens(items, toks_by_site, offset_y_first, note):
+def part_screens(items, toks_by_site, offset_y_first, note, labels):
     body = r"""
 const D = %s;
 const {page, s} = await section();
 if (!s) return {error: "chua co section"};
-let host = s.children.find(c=>c.name.startsWith("CR-3 Screens"));
-if (!host) { host = F(s, "CR-3 Screens — màn đề xuất theo Design System", 40, bottom(s)+120, 3120, 200, "#FFFFFF");
-  host.strokes=[paint("#D0D7DE")]; host.cornerRadius=12;
-  T(host, "CR-3 — Màn đề xuất (token + component Design System của baseline)", 40, 24, 3000, 22, 700);
-  T(host, D.note, 40, 54, 3000, 12, 400, "#57606A"); }
+// CR-3: 1 Section / site (nen #9DA5AD) -> trong do 1 Section / flow nghiep vu -> danh sach man (mockup trai · mo ta phai)
+const BG3 = "#9DA5AD";
+function siteHost(site){ let h = s.children.find(c=>c.type==="SECTION" && c.getSharedPluginData(NS,"kind")==="cr3-site" && c.getSharedPluginData(NS,"site")===site); if (h) return h;
+  h = figma.createSection(); h.name = "CR-3 Screens · " + D.labels[site]; s.appendChild(h); h.x = 40; h.y = bottom(s) + 120; h.fills=[paint(BG3)];
+  h.setSharedPluginData(NS,"kind","cr3-site"); h.setSharedPluginData(NS,"site",site);
+  T(h, "CR-3 — " + D.labels[site] + " · chia theo flow nghiệp vụ → danh sách màn (format Output 3: mockup trái · mô tả + ITEMS + ERROR SCENARIOS phải · màn UPD tô màu phần đổi)", 40, 30, 3000, 22, 700, "#1F2328");
+  T(h, D.note, 40, 66, 3000, 12, 400, "#1F2328"); return h; }
+function hostFor(it){ const sh = siteHost(it.site); touched.add(sh);
+  let h = sh.children.find(c=>c.type==="SECTION" && c.getSharedPluginData(NS,"flow")===it.flow); if (h) return h;
+  h = figma.createSection(); h.name = "Flow " + it.flow + " — " + it.flow_title; sh.appendChild(h); h.x = 40; h.y = bottom(sh) + 80; h.fills=[];
+  h.setSharedPluginData(NS,"kind","cr3-flow"); h.setSharedPluginData(NS,"flow",it.flow); h.setSharedPluginData(NS,"site",it.site);
+  T(h, "Flow " + it.flow + " — " + it.flow_title, 40, 30, 3000, 20, 700, "#1F2328"); return h; }
+let host = null; const touched = new Set(), flowsTouched = new Set();
 const created=[];
 function tok(site, name, dflt){ const v=D.tok[site].t[name]; if((v===undefined||v===null) && dflt===undefined) throw new Error("token '"+name+"' khong co trong Design System "+site+" — khong tu che (CR-3b)"); return v===undefined||v===null ? dflt : v; }
 function ty(site, name){ const v=D.tok[site].type[name]; if(!v) throw new Error("type style '"+name+"' khong co trong Design System "+site); return v; }
@@ -445,8 +547,23 @@ function card(parent, site, w, tone, name){ const f=figma.createAutoLayout("VERT
   f.fills=[paint(tok(site, tone==="tinted"?"surface-subtle":"surface"))]; f.cornerRadius=parseFloat(tok(site,"radius-lg","10"))||10;
   const pad = site==="WEB-01" ? [32,40] : [40,40]; f.paddingTop=f.paddingBottom=pad[0]; f.paddingLeft=f.paddingRight=pad[1];
   f.layoutSizingHorizontal="FIXED"; f.resize(w, f.height); if(tone!=="tinted"){ f.effects=[{type:"DROP_SHADOW",color:{r:0,g:0,b:0,a:0.12},offset:{x:0,y:2},radius:6,spread:0,visible:true,blendMode:"NORMAL"}]; } return f; }
+const CHGC = {NEW:["#1A7F37","#EDFDF0"], UPD:["#F4860C","#FFF9EB"], DEL:["#CF222E","#FFF6F5"], "AS-IS":["#57606A",null]};
+const CIRC = "⓪①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳";
+function ann(parent, b, w){   // lop chu thich (khong phai UI): vien + nhan badge thay doi / so item
+  if (!b.chg && !b.n) return [parent, w];
+  const c = CHGC[b.chg||"AS-IS"]; const f=figma.createAutoLayout("VERTICAL",{itemSpacing:4});
+  f.name = "CHG-ANN · " + (b.chg||"AS-IS") + " · " + (b.n||""); parent.appendChild(f);
+  f.fills = c[1] ? [{...paint(c[1]), opacity:0.55}] : []; f.paddingLeft=f.paddingRight=8; f.paddingTop=f.paddingBottom=6; f.cornerRadius=6;
+  if (b.chg && b.chg!=="AS-IS") { f.strokes=[paint(c[0])]; f.strokeWeight=2; f.dashPattern=[6,4]; }
+  f.layoutSizingHorizontal="FIXED"; f.resize(w, f.height);
+  const lab = T(f, (b.n ? (CIRC[b.n]||("("+b.n+")"))+" " : "") + (b.chg && b.chg!=="AS-IS" ? b.chg + (b.note ? " — " + b.note : "") : ""), 0, 0, null, 11, 700, c[0]);
+  lab.name = "chg-label";
+  return [f, w-16]; }
 function blocks(parent, site, list, w){
-  for (const b of list) {
+  for (const b0 of list) { const [parent2, w2] = ann(parent, b0, w); const b = b0;
+    if (parent2 !== parent) { blocks1(parent2, site, b, w2); continue; } blocks1(parent, site, b, w); } }
+function blocks1(parent, site, b, w){
+  {
     if (b.t==="title") { if(site==="WEB-01"){ txt(parent,site,b.text,"heading-20-semibold","text-high"); }
        else { const c=col(parent,8,"PageHeader"); c.counterAxisAlignItems = b.variant==="mypage"?"MIN":"CENTER"; c.layoutSizingHorizontal="FIXED"; c.resize(w,c.height);
          txt(c,site,b.text, b.variant==="mypage"?"title-36":"heading-32", b.variant==="mypage"?"text-black":"text-high");
@@ -465,7 +582,7 @@ function blocks(parent, site, list, w){
     else if (b.t==="buttons") { const r=row(parent,16,"actions"); r.primaryAxisAlignItems="CENTER"; r.layoutSizingHorizontal="FIXED"; r.resize(w,r.height); for(const it of b.items) button(r,site,it); }
     else if (b.t==="table") table(parent,site,b,w);
     else if (b.t==="badge") badge(parent, b._site, b.text);
-    else if (b.t==="card") { const c=card(parent, b._site, w, b.tone); if(b.title) txt(c,b._site,b.title, b._site==="WEB-01"?"heading-20-bold":"heading-20-bold","text-high");
+    else if (b.t==="card") { const c=card(parent, b._site, w, b.tone); if(b.title) txt(c,b._site,b.title,"heading-20-bold","text-high", w-80);
        if(b.badge) badge(c, b.badge_from||b._site, b.badge); for(const l of (b.lines||[])) txt(c,b._site,l,"text-16", b._site==="WEB-01"?"text-middle":"text-high", w-80);
        if(b.blocks) blocks(c, b._site, b.blocks, w-80); }
     else if (b.t==="search") { const c=card(parent, site, w, "raised", "SearchCard"); const r=row(c,24,"grid"); r.counterAxisAlignItems="MIN";
@@ -488,10 +605,23 @@ function shell(item){ const site=item.site; const W=parseFloat(tok(site,"viewpor
         const t=txt(it,site,m,"nav-14", m===item.nav_active?"on-nav-active":"text-low"); t.x=24; t.y=(it.height-t.height)/2; }
      const main=col(fr,32,"main"); main.paddingLeft=20; main.paddingTop=main.paddingRight=main.paddingBottom=32; main.layoutSizingHorizontal="FIXED"; main.resize(W-sw, main.height);
      blocks(main, site, item.blocks, W-sw-52); }
+  else if (item.shell==="modal") { // popup / man loi: nen mo + Modal giua
+     const body=row(fr,0,"backdrop"); body.layoutSizingHorizontal="FILL"; body.primaryAxisAlignItems="CENTER"; body.paddingTop=body.paddingBottom=90;
+     body.fills=[paint(tok(item.scrim_site||site, item.scrim||"page-bg"))];
+     const main=col(body,0,"content"); main.layoutSizingHorizontal="FIXED"; main.resize(700, main.height); main.counterAxisAlignItems="CENTER";
+     blocks(main, site, item.blocks, 680); }
   else if (item.shell==="auth" && site==="WEB-01") { // man dang nhap admin: khong sidebar, khong header — card giua page-bg
      const body=row(fr,0,"body"); body.layoutSizingHorizontal="FILL"; body.primaryAxisAlignItems="CENTER"; body.paddingTop=body.paddingBottom=120;
      const main=col(body,24,"content"); main.layoutSizingHorizontal="FIXED"; main.resize(560, main.height);
      blocks(main, site, item.blocks, 560); }
+  else if (item.shell==="mobile") { // man SP: header thu gon + noi dung 1 cot (rong theo token viewport-mobile hoac viewport_width da khai)
+     const MW=parseFloat(tok(site,"viewport-mobile", item.viewport_width)); fr.resize(MW, fr.height);
+     const tb=row(fr,0,"AppHeader-SP"); tb.fills=[paint(tok(site,"surface-subtle"))]; tb.layoutSizingHorizontal="FILL"; tb.paddingLeft=tb.paddingRight=16; tb.paddingTop=tb.paddingBottom=16; tb.primaryAxisAlignItems="SPACE_BETWEEN";
+     txt(tb,site,"ボーネルンド あそび場","heading-16-bold","primary-text"); txt(tb,site,"☰","heading-20-bold","primary-text");
+     const main=col(fr,16,"content"); main.layoutSizingHorizontal="FILL"; main.paddingLeft=main.paddingRight=16; main.paddingTop=24; main.paddingBottom=40;
+     blocks(main, site, item.blocks, MW-32);
+     const ft=row(fr,0,"footer"); ft.fills=[paint(tok(site,"surface-subtle"))]; ft.layoutSizingHorizontal="FILL"; ft.paddingTop=ft.paddingBottom=16; ft.primaryAxisAlignItems="CENTER";
+     txt(ft,site,"© BørneLund","text-12","text-high"); }
   else { // WEB-02: AppHeader 2 tang + noi dung giua + footer
      const hdr=col(fr,0,"AppHeader"); hdr.layoutSizingHorizontal="FILL";
      const tb=row(hdr,24,"topbar"); tb.fills=[paint(tok(site,"surface"))]; tb.layoutSizingHorizontal="FILL"; tb.paddingLeft=tb.paddingRight=40; tb.paddingTop=tb.paddingBottom=18; tb.primaryAxisAlignItems="MAX";
@@ -510,48 +640,203 @@ function shell(item){ const site=item.site; const W=parseFloat(tok(site,"viewpor
      const ft=row(fr,0,"footer"); ft.fills=[paint(tok(site,"surface-subtle"))]; ft.layoutSizingHorizontal="FILL"; ft.paddingTop=ft.paddingBottom=24; ft.primaryAxisAlignItems="CENTER";
      txt(ft,site,"© BørneLund","text-12","text-high"); }
   return fr; }
-let gx = 40, gy = host.height + 0;
-const existing = host.children.filter(c=>/^(NEW|UPD|DEL|IMPACT|AS-IS) · /.test(c.name)).length;
-let k = existing;
-let yStart = 100; for (const c of host.children) if (c.name.startsWith("cap ·") || /^(NEW|UPD) · /.test(c.name)) yStart = Math.max(yStart, c.y + c.height + 120);
-let rowH = 0; let col2 = 0;
+function descPanel(it, x, y){
+  const PW = 1100; const p = F(host, "DESC · " + it.ref, x, y, PW, 200, "#FFFFFF"); p.strokes=[paint("#D0D7DE")]; p.cornerRadius=10;
+  p.setSharedPluginData(NS,"kind","desc"); p.setSharedPluginData(NS,"ref",it.ref);
+  let yy = 20; const b = BADGE[it.badge];
+  T(p, `${it.badge} · ${it.ref} · ${it.label}`, 24, yy, PW-48, 18, 700, b.s); yy += 30;
+  T(p, "Loại: " + it.stype + "   ·   Site: " + it.site + "   ·   Vào từ: " + (it.entry||"—") + (it.base ? "   ·   Màn AS-IS: " + it.base : ""), 24, yy, PW-48, 12, 500, "#57606A"); yy += 26;
+  const sec = (title, color) => { const t=T(p, title, 24, yy, PW-48, 13, 700, color||"#0969DA"); yy = t.y + t.height + 6; };
+  const para = (s2) => { const t=T(p, s2, 24, yy, PW-48, 12, 400, "#1F2328"); yy = t.y + t.height + 12; };
+  sec("■ Mục đích màn hình"); para(it.purpose);
+  if (it.changes && it.changes.length) { sec("■ Thay đổi so với AS-IS (tô màu trên mockup)", "#F4860C"); para(it.changes.map(c=>"• "+c).join("\n")); }
+  sec("■ Logic màn hình — Happy case"); para(it.happy.map((h,k)=>(k+1)+". "+h).join("\n"));
+  function table(name, cols, rows, fillH, fillR, strokeC, kindRow){
+    const t = F(p, name, 24, yy, PW-48, 30, fillR); t.strokes=[paint(strokeC)]; t.cornerRadius=8;
+    let ty2 = 0; const hdr = F(t, "hdr", 0, 0, PW-48, 30, fillH); let x=8; for (const [c,w] of cols) { T(hdr,c,x,8,w-8,11,700); x+=w; } ty2 = 30;
+    rows.forEach((r,k)=>{ const rr = F(t, kindRow + " · " + it.ref + " · " + (k+1), 0, ty2, PW-48, 30, (r._chg && CHGC[r._chg][1]) || fillR);
+      rr.setSharedPluginData(NS,"kind",kindRow.toLowerCase()); let x2=8, hm=30;
+      r.v.forEach((v,c)=>{ const tt=T(rr, String(v||"—"), x2, 8, cols[c][1]-10, 11, c===0||(r._chg&&c===cols.length-1)?700:400, (r._chg && c===cols.length-1) ? CHGC[r._chg][0] : "#1F2328"); hm=Math.max(hm, tt.height+16); x2+=cols[c][1]; });
+      rr.resize(PW-48, hm); ty2 += hm; });
+    t.resize(PW-48, ty2); yy = t.y + ty2 + 18; return t; }
+  sec("■ Bảng ITEMS (số ① trên mockup)");
+  table("ITEMS · " + it.ref, [["#",36],["Item",190],["Mô tả",290],["Action / Behavior",420],["Thay đổi",116]],
+        it.items.map(r=>({v:[CIRC[r.n]||r.n, r.title, r.desc, r.action, r.chg||it.badge], _chg:r.chg||(it.badge==="NEW"?"NEW":null)})), "#DAEEF3", "#FFFFFF", "#D0D7DE", "ITEM");
+  sec("■ ERROR SCENARIOS — nếu lỗi thì hiển thị gì", "#CF222E");
+  table("ERRORS · " + it.ref, [["#",36],["Trigger (nguyên nhân)",250],["Hiển thị",110],["Message + Action tiếp theo",656]],
+        it.errors.map((r,k)=>({v:[String(k+1), r.trigger, r.display, r.msg]})), "#FFE3E3", "#FFFBFB", "#CF222E", "ERR");
+  if (it.cq) { sec("■ Chờ xác nhận", "#6639BA"); para(it.cq); }
+  p.resize(PW, yy + 10); return p; }
 for (const it of D.items) {
-  const x = 40 + (col2 %% 2) * 1540;
-  const cap = T(host, `${it.badge} · ${it.ref} · ${it.label}`, x, yStart, 1440, 16, 700, BADGE[it.badge].s); cap.name = "cap · " + it.ref;
-  const note = T(host, "DS: " + it.ds.join(", ") + (it.borrow.length ? "  ·  MƯỢN: " + it.borrow.join(", ") + " (chờ designer)" : "") + (it.sidebar_note ? "  ·  sidebar " + it.sidebar_width + "px: " + it.sidebar_note : "") + "  ·  Font Hiragino Kaku Gothic Pro → hiển thị Noto Sans JP (Figma không có font gốc)", x, yStart+24, 1440, 11, 400, "#57606A"); note.name="cap-note";
-  const fr = shell(it); host.appendChild(fr); fr.x = x; fr.y = yStart + 60;
+  host = hostFor(it); flowsTouched.add(host);
+  let yStart = 80; for (const c of host.children) if (c.name.startsWith("cap ·") || c.name.startsWith("DESC ·") || /^(NEW|UPD|DEL) · /.test(c.name)) yStart = Math.max(yStart, c.y + c.height + 200);
+  const x = 40;
+  const cap = T(host, `${it.badge} · ${it.ref} · ${it.label}`, x, yStart, 1440, 18, 700, BADGE[it.badge].s); cap.name = "cap · " + it.ref;
+  cap.fills=[paint("#FFFFFF")]; const capBg = figma.createRectangle(); host.insertChild(host.children.indexOf(cap), capBg); capBg.name="cap-bg"; capBg.resize(cap.width+16, cap.height+8); capBg.x=x-8; capBg.y=yStart-4; capBg.fills=[paint(BADGE[it.badge].s)]; capBg.cornerRadius=6;
+  const note = T(host, "DS: " + it.ds.join(", ") + (it.borrow.length ? "  ·  MƯỢN: " + it.borrow.join(", ") + " (chờ designer)" : "") + (it.sidebar_note ? "  ·  sidebar " + it.sidebar_width + "px: " + it.sidebar_note : "") + (it.viewport_note ? "  ·  viewport SP " + it.viewport_width + "px: " + it.viewport_note : "") + "  ·  Font Hiragino Kaku Gothic Pro → hiển thị Noto Sans JP (Figma không có font gốc)", x, yStart+28, 1440, 11, 400, "#1F2328"); note.name="cap-note";
+  const fr = shell(it); host.appendChild(fr); fr.x = x; fr.y = yStart + 70;
   const b = BADGE[it.badge]; fr.strokes=[paint(b.s)]; fr.strokeWeight=4; if (b.d) fr.dashPattern=[10,6];
   fr.setSharedPluginData(NS,"kind","mockup"); fr.setSharedPluginData(NS,"ds",it.ds.join(";")); fr.setSharedPluginData(NS,"site",it.site);
-  created.push(fr.id); rowH = Math.max(rowH, fr.height + 60);
-  col2++; if (col2 %% 2 === 0) { yStart += rowH + 160; rowH = 0; }
+  created.push(fr.id);
+  const dp = descPanel(it, x + fr.width + 60, yStart + 70);
 }
-let hh=0; for (const c of host.children) hh=Math.max(hh,c.y+c.height); host.resize(3120, hh+60);
+function fitSec(h, minW){ let hh=0, ww=0; for (const c of h.children){ hh=Math.max(hh,c.y+c.height); ww=Math.max(ww,c.x+c.width);} h.resizeWithoutConstraints(Math.max(minW,ww+60), hh+60); }
+function stack(list, gap){ list.sort((a,b)=>a.y-b.y); for (let i=1;i<list.length;i++) if (list[i].y < list[i-1].y + list[i-1].height + gap) list[i].y = list[i-1].y + list[i-1].height + gap; }
+for (const f of flowsTouched) fitSec(f, 3040);
+for (const h of touched) { stack(h.children.filter(c=>c.type==="SECTION"), 80); fitSec(h, 3120); }
+// section CR-3 lon len -> day section ben duoi xuong, khong chong nhau
+stack(s.children.filter(c=>c.type==="SECTION" && c.getSharedPluginData(NS,"kind")==="cr3-site"), 120);
 fit(s);
-return {host: host.id, created};
+return {hosts: [...touched].map(h=>h.id), created};
 """
-    return body % esc({"note": note, "items": items, "tok": toks_by_site})
+    need = set()
+    for it in items:
+        need.add(it["site"])
+        need |= {r.split(":")[1] for r in it.get("ds") or [] if r.count(":") >= 2}
+    used_tok = {st: {"t": {k: v for k, v in toks_by_site[st]["t"].items() if not str(k).startswith("obs-")},
+                     "type": toks_by_site[st]["type"]} for st in need if st in toks_by_site}
+    return body % esc({"note": note, "items": items, "tok": used_tok, "labels": labels})
+
+
+CLEAR = r"""
+const WHAT = %s;
+const {page, s} = await section();
+if (!s) return {error: "chua co section"};
+const old = s.children.filter(c => (WHAT.includes("cr1") && c.name.startsWith("CR-1 Flow")) ||
+  (WHAT.includes("cr2") && c.type==="SECTION" && c.getSharedPluginData(NS,"kind")==="cr2-site"));
+if (!old.length) return {cleared: 0};
+let maxX = 0; for (const c of page.children) maxX = Math.max(maxX, c.x + c.width);
+const ar = figma.createSection(); ar.name = SECTION_NAME + " — LƯU TRỮ bản cũ " + WHAT.join("/").toUpperCase() + " (trước khi vẽ lại)";
+page.appendChild(ar); ar.x = maxX + 400; ar.y = s.y; ar.fills=[paint("#FFFFFF")];
+let yy = 80; T(ar, ar.name, 40, 24, 3000, 24, 700, "#57606A");
+for (const c of old) { const k = c.clone(); ar.appendChild(k); k.x = 40; k.y = yy; yy += k.height + 120;
+  for (const x of [k, ...("findAll" in k ? k.findAll(() => true) : [])]) { try { x.setSharedPluginData(NS,"kind",""); } catch(e) {} } }
+fit(ar);
+const ids = old.map(c => c.id); for (const c of old) c.remove();
+return {archive: ar.id, cleared: ids};
+"""
+
+RESTACK = r"""
+const {page, s} = await section();
+if (!s) return {error: "chua co section"};
+const k = c => c.type==="SECTION" ? (c.getSharedPluginData(NS,"kind")||"") : "";
+const rank = c => c.name.startsWith("CR-1 Flow") ? 1 : (k(c)==="cr2-site" ? 2 : (c.name.startsWith("CR Change Table") ? 3 : (k(c)==="cr3-site" ? 4 : 5)));
+const body = s.children.filter(c => c.y >= 200 && (c.type==="FRAME" || c.type==="SECTION"));
+body.sort((a,b) => rank(a)-rank(b) || a.y-b.y);
+let y = 220; for (const c of body) { c.x = 40; c.y = y; y += c.height + 120; }
+fit(s);
+const sb = s.absoluteBoundingBox;
+const overlap = page.children.filter(c => c.id!==s.id).map(c => ({id:c.id, name:c.name, ...c.absoluteBoundingBox}))
+  .filter(b => !(b.x+b.width<=sb.x||sb.x+sb.width<=b.x||b.y+b.height<=sb.y||sb.y+sb.height<=b.y));
+return {order: body.map(c => c.name.slice(0,50)), section: {x:sb.x, y:sb.y, w:sb.width, h:sb.height}, overlap};
+"""
 
 
 READBACK = r"""
+// Use_figma gioi han ket qua 20 KB -> chay nhieu lan: PART = 0 (meta: arrows/stats/idx/desc...), 1..N (nodes, 50 node / phan).
+// Ghep: python3 verify-cr-figma.py --nodes part0.json,part1.json,...  (hoac tu ghep thanh 1 file {nodes:[...], ...}).
+const PART = 0, PAGE = 50;
 const page = await figma.getNodeByIdAsync(PAGE_ID); await figma.setCurrentPageAsync(page);
 const s = page.children.find(c=>c.type==="SECTION" && c.name===SECTION_NAME);
 if (!s) return {error:"khong thay section"};
+// CR-3 co the dat ngoai section CR (canh Output 1 / 2) — section site mang plugin data crkit.cr = ten section CR
+const hosts = [s, ...page.children.filter(c => c.type==="SECTION" && c.getSharedPluginData("crkit","cr")===SECTION_NAME)];
+const FA = f => hosts.flatMap(h => (f(h) ? [h] : []).concat(h.findAll(f)));
 const rx = /^(NEW|UPD|DEL|IMPACT|AS-IS) · ([^·]+?) · /;
 const hex = c => "#"+[c.r,c.g,c.b].map(v=>Math.round(v*255).toString(16).padStart(2,"0")).join("");
-const nodes = s.findAll(n => rx.test(n.name)).map(n => { const m = n.name.match(rx); const kind = n.getSharedPluginData("crkit","kind")||"other";
-  const o = {id:n.id, name:n.name, badge:m[1], ref:m[2].trim(), kind};
-  if (kind==="mockup") { o.ds = n.getSharedPluginData("crkit","ds"); o.site = n.getSharedPluginData("crkit","site");
-    const cols = new Set(); for (const d of n.findAll(x => "fills" in x && Array.isArray(x.fills))) for (const p of d.fills) if (p.type==="SOLID") cols.add(hex(p.color));
-    o.colors = [...cols]; }
-  return o; });
-const arrows = s.findAll(n => n.name.startsWith("ARROW · ")).map(n => ({id:n.id, from:n.getSharedPluginData("crkit","from"), to:n.getSharedPluginData("crkit","to")}));
-const stats = s.findAll(n => n.name.startsWith("STAT · ")).map(n => ({name:n.name, value:n.getSharedPluginData("crkit","value")}));
-const legend = s.findAll(n => n.name.startsWith("LEGEND")).length;
-const unbadged = s.findAll(n => n.type==="FRAME" && n.parent && n.parent.name && (n.parent.name.startsWith("CR-1") || n.parent.name.startsWith("CR-2")) && !rx.test(n.name) && !/^(IDX|idx-|ARROW)/.test(n.name)).map(n=>n.name).slice(0,20);
-const sb = s.absoluteBoundingBox; const others = page.children.filter(c=>c.id!==s.id).map(c=>({name:c.name, ...c.absoluteBoundingBox}));
+const all = FA(n => rx.test(n.name));
+if (PART > 0) {
+  const nodes = all.slice((PART-1)*PAGE, PART*PAGE).map(n => { const m = n.name.match(rx); const kind = n.getSharedPluginData("crkit","kind")||"other";
+    const o = {id:n.id, name:n.name.slice(0,48), badge:m[1], ref:m[2].trim(), kind};
+    const sh = n.getSharedPluginData("crkit","shape"), g = n.getSharedPluginData("crkit","grp"); if (sh) o.shape = sh; if (g) o.grp = g;
+    if (kind==="mockup") { o.ds = n.getSharedPluginData("crkit","ds"); o.site = n.getSharedPluginData("crkit","site"); const src = n.getSharedPluginData("crkit","src"); if (src) o.src = src;
+      // chi bo chinh khung CHG-ANN / chg-label (mau badge), KHONG bo noi dung ben trong khung
+      const cols = new Set(); for (const d of n.findAll(x => "fills" in x && Array.isArray(x.fills))) { if (d.name && (d.name.startsWith("CHG-ANN") || d.name==="chg-label")) continue; for (const p of d.fills) if (p.type==="SOLID") cols.add(hex(p.color)); }
+      o.colors = [...cols];
+      o.chg = [...new Set(n.findAll(x => x.name && x.name.startsWith("CHG-ANN · ")).map(x => x.name.split(" · ")[1]))]; }
+    return o; });
+  return {part: PART, of: Math.ceil(all.length/PAGE), nodes};
+}
+const arrows = FA(n => n.name.startsWith("ARROW · ")).map(n => ({id:n.id, from:n.getSharedPluginData("crkit","from"), to:n.getSharedPluginData("crkit","to")}));
+const stats = FA(n => n.name.startsWith("STAT · ")).map(n => ({name:n.name, value:n.getSharedPluginData("crkit","value")}));
+const legend = FA(n => n.name.startsWith("LEGEND")).length;
+const idx = FA(n => n.name.startsWith("IDX · ")).map(n => ({ref:n.getSharedPluginData("crkit","ref"), type:n.getSharedPluginData("crkit","type")}));
+const idxTotal = FA(n => n.name==="IDX-TOTAL").map(n => n.characters);
+const erridx = FA(n => n.name.startsWith("ERRIDX · ")).length;
+const desc = FA(n => n.name.startsWith("DESC · ")).map(n => ({ref:n.getSharedPluginData("crkit","ref"),
+  items:n.findAll(x=>x.name && x.name.startsWith("ITEM · ")).length, errors:n.findAll(x=>x.name && x.name.startsWith("ERR · ")).length}));
+const unbadged = FA(n => n.type==="FRAME" && n.parent && n.parent.name && (n.parent.name.startsWith("CR-1") || n.parent.name.startsWith("CR-2")) && !rx.test(n.name) && !/^(IDX|idx-|ARROW|ERRIDX|CR-2 Screen Flow —|CR-2 Index —|CR-2 Flow )/.test(n.name)).map(n=>n.name).slice(0,20);
+const sb = s.absoluteBoundingBox; const others = page.children.filter(c=>!hosts.includes(c)).map(c=>({name:c.name, ...c.absoluteBoundingBox}));
 const overlap = others.filter(b=>!(b.x+b.width<=sb.x||sb.x+sb.width<=b.x||b.y+b.height<=sb.y||sb.y+sb.height<=b.y)).map(b=>b.name);
-return {section:{id:s.id, name:s.name, x:sb.x, y:sb.y, w:sb.width, h:sb.height}, nodes, arrows, stats, legend, unbadged, overlap};
+const kindOf = n => n.getSharedPluginData("crkit","kind");
+const cr2 = FA(n => n.type==="SECTION" && kindOf(n)==="cr2-site").map(h => ({name:h.name, site:h.getSharedPluginData("crkit","site"),
+  groups:[...new Set(h.findAll(x => !!x.getSharedPluginData("crkit","grp")).map(x => x.getSharedPluginData("crkit","grp")))],
+  flows: h.children.filter(c => c.type==="SECTION" && kindOf(c)==="cr2-flow").map(f => ({name:f.name, flow:f.getSharedPluginData("crkit","flow"),
+    groups:[...new Set(f.findAll(x => !!x.getSharedPluginData("crkit","grp")).map(x => x.getSharedPluginData("crkit","grp")))]}))}));
+const cr3 = FA(n => n.type==="SECTION" && kindOf(n)==="cr3-site").map(h => ({name:h.name, site:h.getSharedPluginData("crkit","site"),
+  fill: h.fills.length && h.fills[0].type==="SOLID" ? hex(h.fills[0].color) : "",
+  flows: h.children.filter(c => c.type==="SECTION" && kindOf(c)==="cr3-flow").map(f => ({name:f.name, flow:f.getSharedPluginData("crkit","flow"), mockups:f.findAll(x => kindOf(x)==="mockup").length})),
+  loose: h.children.filter(c => kindOf(c)==="mockup").length}));
+const mockups = FA(n => kindOf(n)==="mockup").length;
+return {part: 0, parts: Math.ceil(all.length/PAGE), layout:{cr2, cr3, mockups}, section:{id:s.id, name:s.name, x:sb.x, y:sb.y, w:sb.width, h:sb.height}, arrows, stats, legend, unbadged, overlap, idx, idxTotal, erridx, desc};
 """
+
+
+def usecase_lane_errors(L):
+    """CR-1 = Output 1 dang use case (feedback 20/10/2026): 1 lane = 1 use case — Actor → duong di happy (pos 1..6,
+    row 0) → ket thuc ✓; non-happy row >= 1 (◇ → NG → ket thuc ✗). Lane khong chua technology / function."""
+    errs, lane = [], L.get("lane")
+    keys = {n.get("key") for n in L.get("nodes") or []}
+    for n in L.get("nodes") or []:
+        t = n.get("type")
+        if t not in UC_TYPES:
+            errs.append("flow %s node %s type=%r (%s) — lane cot TRIGGER/FUNCTION/TECHNOLOGY da bo" % (lane, n.get("key"), t, "|".join(UC_TYPES)))
+            continue
+        if t not in ("actor", "edge") and not (isinstance(n.get("pos"), int) and 1 <= n["pos"] <= UC_MAXPOS):
+            errs.append("flow %s node %s pos=%r (1..%d)" % (lane, n.get("key"), n.get("pos"), UC_MAXPOS))
+        if t != "edge" and (TECH_REF.match(C.txt(n.get("ref"))) or re.search(r"\b(API|EXT)-\d", C.txt(n.get("label")) + " " + C.txt(n.get("sub")))):
+            errs.append("flow %s node %s chua technology / API (%s) — dua sang bang TECHNOLOGY, lane chi viet dieu nguoi dung lam / thay"
+                        % (lane, n.get("key"), n.get("ref")))
+    types = [n.get("type") for n in L.get("nodes") or []]
+    if types.count("actor") != 1:
+        errs.append("flow %s phai co dung 1 node actor (co %d)" % (lane, types.count("actor")))
+    if "start" not in types:
+        errs.append("flow %s thieu node start (diem bat dau use case)" % lane)
+    if not any(n.get("type") == "end" and not n.get("row") and n.get("result") != "fail" for n in L.get("nodes") or []):
+        errs.append("flow %s thieu diem ket thuc happy (type end, row 0)" % lane)
+    for e in L.get("edges") or []:
+        if e[0] not in keys or e[1] not in keys:
+            errs.append("flow %s canh %s->%s tro toi key khong co" % (lane, e[0], e[1]))
+        while len(e) < 4:
+            e.append("")
+    L.setdefault("note", "")
+    if "ng" not in types and len(C.txt(L.get("no_ng"))) < 15:
+        errs.append("flow %s thieu NON-HAPPY: can >= 1 node type 'ng' noi tu decision, hoac 'no_ng' (ly do >= 15 ky tu)" % lane)
+    outs = {e[0] for e in L.get("edges") or []}
+    errs += ["flow %s NG %s khong di tiep — non-happy phai co diem ket thuc (end result fail) hoac quay lai buoc" % (lane, n["key"])
+             for n in L.get("nodes") or [] if n.get("type") == "ng" and n["key"] not in outs]
+    linked = {e[0] for e in L.get("edges") or []} | {e[1] for e in L.get("edges") or []}
+    errs += ["flow %s node %s khong co canh — Output 1 cam the roi" % (lane, n["key"])
+             for n in L.get("nodes") or [] if n.get("type") != "edge" and n.get("key") not in linked]
+    return errs
+
+
+def unknown_text_errors(view):
+    """Figma Output 1 / 2 (CR-1 / CR-2) khong hien chu UNKNOWN (feedback 20/10/2026): chua ro -> viet bang loi
+    ("chua quan sat", "chua xac dinh", "cho khach hang xac nhan"). Trang thai UNKNOWN chi nam o xlsx / inventory."""
+    errs = []
+    def walk(o, where):
+        if isinstance(o, dict):
+            for k, v in o.items():
+                walk(v, "%s.%s" % (where, k))
+        elif isinstance(o, list):
+            for i, v in enumerate(o):
+                walk(v, "%s[%d]" % (where, i))
+        elif isinstance(o, str) and re.search(r"unknown", o, re.I):
+            errs.append("%s chua chu UNKNOWN: %r — Figma khong hien UNKNOWN, viet 'chua quan sat' / 'chua xac dinh'" % (where, o[:60]))
+    for k in ("title", "subtitle", "flow_note", "screen_note", "flows", "tech", "screen_groups"):
+        walk(view.get(k), k)
+    return errs
 
 
 def main():
@@ -566,11 +851,16 @@ def main():
     ap.add_argument("--out-dir", required=True)
     ap.add_argument("--template", default=None)
     ap.add_argument("--per-file", type=int, default=2, help="so man CR-3 moi file JS")
+    ap.add_argument("--redraw", default=None, help="cr1,cr2 — ve lai CR-1 / CR-2 trong section da co (00-clear.js luu ban cu ra section luu tru, 98-restack.js xep lai)")
+    ap.add_argument("--ds-baseline", default=None, help="version chua 04_DesignSystem moi nhat (mac dinh = --baseline)")
     a = ap.parse_args()
     cr = C.load_json(a.cr_json)
     view = C.load_json(a.view)
     _rm, rates = C.load_rates(a.rates)
     B = C.load_baseline(a.baseline)
+    if a.ds_baseline:  # DS dung khi ve (DS moi hon, hoac Base Design System tam o version CR) thay DS cua baseline
+        B["ds"] = C.load_ds_sites(os.path.join(a.ds_baseline, "04_DesignSystem"))
+        B["has_ds"] = bool(B["ds"])
     tpl = C.find_template(a.template, KIT)
     est = C.load_estimation_template(tpl)[1] if tpl else None
     errors = []
@@ -582,22 +872,12 @@ def main():
         if not C.txt(n.get("ref")):
             errors.append("%s %s thieu ref" % (where, n.get("label")))
     for L in view.get("flows") or []:
-        keys = {n["key"] for n in L["nodes"]}
         for n in L["nodes"]:
             ok_ref(n, "flow %s" % L["lane"])
-            if n.get("col") not in FLOW_COLS:
-                errors.append("flow %s node %s col=%r" % (L["lane"], n.get("key"), n.get("col")))
-        for e in L["edges"]:
-            if e[0] not in keys or e[1] not in keys:
-                errors.append("flow %s canh %s->%s tro toi key khong co" % (L["lane"], e[0], e[1]))
-            while len(e) < 4:
-                e.append("")
-        L.setdefault("note", "")
-        linked = {e[0] for e in L["edges"]} | {e[1] for e in L["edges"]}
-        errors += ["flow %s node %s khong co canh — Output 1 cam the roi" % (L["lane"], n["key"])
-                   for n in L["nodes"] if n.get("col") != "edge" and n["key"] not in linked]
+        errors += usecase_lane_errors(L)
     for n in view.get("tech") or []:
         ok_ref(n, "tech")
+    errors += unknown_text_errors(view)
     for g in view.get("screen_groups") or []:
         keys = {n["key"] for n in g["nodes"]}
         for n in g["nodes"]:
@@ -609,15 +889,30 @@ def main():
                 errors.append("group %s canh %s->%s tro toi key khong co" % (g["id"], e[0], e[1]))
             while len(e) < 4:
                 e.append("")
+        if not any(n.get("type") in ("ng", "popup") for n in g["nodes"]) and len(C.txt(g.get("no_ng"))) < 15:
+            errors.append("group %s thieu NON-HAPPY: can >= 1 node 'ng' / 'popup' (man / popup loi), hoac 'no_ng' (ly do)" % g["id"])
+        for n in g["nodes"]:
+            if n.get("type") == "screen" and n.get("badge") != "AS-IS":
+                if n.get("stype") not in STYPES:
+                    errors.append("group %s man %s thieu / sai 'stype' (%s) — Screen Index phai ghi Loai" % (g["id"], n.get("key"), "|".join(STYPES)))
+                if not C.txt(n.get("desc")):
+                    errors.append("group %s man %s thieu 'desc' (mo ta chuc nang man)" % (g["id"], n.get("key")))
+            if n.get("type") in ("ng", "popup"):
+                if n.get("display") not in DISPLAYS:
+                    errors.append("group %s node loi %s thieu / sai 'display' (%s)" % (g["id"], n.get("key"), "|".join(DISPLAYS)))
+                for f in ("msg", "trigger", "parent"):
+                    if not C.txt(n.get(f)):
+                        errors.append("group %s node loi %s thieu '%s'" % (g["id"], n.get("key"), f))
         linked = {e[0] for e in g["edges"]} | {e[1] for e in g["edges"]}
         errors += ["group %s node %s khong co canh — Output 2 cam the roi" % (g["id"], n["key"])
                    for n in g["nodes"] if n.get("type") != "edge" and n["key"] not in linked]
     # CR-3: token + component DS
     sites = sorted({it["site"] for it in (view.get("screens") or {}).get("items") or []})
     toks = {}
+    dsb = a.ds_baseline or a.baseline
     for st in sorted(set(sites) | {s for s in B["ds"]}):
         try:
-            toks[st] = load_tokens(a.baseline, st)
+            toks[st] = load_tokens(dsb, st)
         except (OSError, ValueError) as e:
             errors.append("khong doc duoc tokens.json %s: %s" % (st, e))
     comps = {s: B["ds"][s]["comps"] for s in B["ds"]}
@@ -632,6 +927,38 @@ def main():
                     errors.append("CR-3: chua khai da doc %s (screens.ds_read) — doc Design System TRUOC khi ve" % nd)
     for it in items:
         ok_ref(it, "CR-3")
+        for f in ("purpose", "stype"):
+            if not C.txt(it.get(f)):
+                errors.append("CR-3 %s thieu '%s' (mo ta man ben phai mockup)" % (it.get("ref"), f))
+        if not it.get("happy"):
+            errors.append("CR-3 %s thieu 'happy' (logic man — happy case)" % it.get("ref"))
+        if not it.get("items"):
+            errors.append("CR-3 %s thieu bang ITEMS" % it.get("ref"))
+        if not it.get("errors"):
+            errors.append("CR-3 %s thieu ERROR SCENARIOS (neu loi thi hien gi) — man that su khong loi: 1 dong ghi 'N/A — ly do'" % it.get("ref"))
+        nums = set()
+        def collect(bl):
+            for b in bl:
+                if b.get("n"):
+                    nums.add(b["n"])
+                if b.get("chg") and b["chg"] not in CHG:
+                    errors.append("CR-3 %s block chg=%r" % (it.get("ref"), b["chg"]))
+                collect(b.get("blocks") or [])
+        collect(it.get("blocks") or [])
+        miss = sorted({r.get("n") for r in it.get("items") or []} - nums)
+        if miss:
+            errors.append("CR-3 %s item %s co trong bang ITEMS nhung khong gan so 'n' tren mockup" % (it.get("ref"), miss))
+        if it.get("badge") == "UPD":
+            if not C.txt(it.get("base")):
+                errors.append("CR-3 %s man UPD phai ghi 'base' (SC- man AS-IS goc)" % it.get("ref"))
+            def has_chg(bl):
+                return any(b.get("chg") in ("NEW", "UPD", "DEL") or has_chg(b.get("blocks") or []) for b in bl)
+            if not has_chg(it.get("blocks") or []):
+                errors.append("CR-3 %s man UPD khong co block nao danh 'chg' — phai to mau phan thay doi tren man cu" % it.get("ref"))
+        if it.get("shell") == "mobile" and "viewport-mobile" not in (toks.get(it["site"]) or {}).get("t", {}):
+            if not it.get("viewport_width") or not C.txt(it.get("viewport_note")):
+                errors.append("%s: %s chua co token viewport-mobile — khai viewport_width + viewport_note (nguon / "
+                              "quyet dinh), khong tu dat" % (it["ref"], it["site"]))
         if it.get("shell") == "mypage" and "sidebar-width" not in (toks.get(it["site"]) or {}).get("t", {}):
             if not it.get("sidebar_width") or not C.txt(it.get("sidebar_note")):
                 errors.append("%s: %s chua co token sidebar-width (TBD) — khai sidebar_width + sidebar_note (nguon / "
@@ -639,6 +966,17 @@ def main():
         it["ds"] = resolve_block_tokens(it, toks, comps, errors)
         it["borrow"] = sorted({r.split(":")[1] for r in it["ds"] if r.split(":")[1] != it["site"]})
         it.setdefault("label", it.get("title", ""))
+    # CR-3 chia site -> flow nghiep vu -> man: moi man phai gan flow (id Group CR-2 / lane FL, hoac flow + flow_title)
+    gtitle = {g["id"]: g.get("title", "") for g in view.get("screen_groups") or []}
+    for L in view.get("flows") or []:
+        gtitle.setdefault(L.get("lane"), L.get("title") or L.get("lane_title") or "")
+    for it in items:
+        if not C.txt(it.get("flow")):
+            errors.append("CR-3 %s (%s) thieu 'flow' — gan id Group CR-2 / lane FL-xx (CR-3 chia site -> flow -> man)" % (it.get("ref"), it.get("label")))
+            continue
+        it["flow_title"] = it.get("flow_title") or gtitle.get(it["flow"]) or ""
+        if not it["flow_title"]:
+            errors.append("CR-3 %s flow %r khong co trong screen_groups / flows — khai them flow_title" % (it.get("ref"), it["flow"]))
     if errors:
         print("cr-figma.json KHONG hop le — khong sinh JS:", file=sys.stderr)
         for e in errors:
@@ -674,16 +1012,36 @@ def main():
         p = os.path.join(a.out_dir, name)
         open(p, "w", encoding="utf8").write(js)
         files.append((name, len(js.encode("utf8"))))
+    redraw = [x.strip() for x in (a.redraw or "").split(",") if x.strip()]
+    if any(x not in ("cr1", "cr2") for x in redraw):
+        print("--redraw chi nhan cr1,cr2", file=sys.stderr)
+        return 1
+    view["_redraw"] = redraw
+    if redraw:
+        # ve lai CR-1 / CR-2 trong section da co: luu ban cu ra section luu tru (khong mat), ve moi, xep lai thu tu
+        write("00-clear.js", CLEAR % esc(redraw))
     write("01-shell-flow.js", part_shell_flow(view, ""))
-    if view.get("screen_groups"):
+    if view.get("screen_groups") and (not redraw or "cr2" in redraw):
         write("02-screen-flow.js", part_screen_flow(view))
-    write("03-change-table.js", part_change_table(stats, totals))
+    if redraw:
+        write("98-restack.js", RESTACK)
+        items = []
+    else:
+        write("03-change-table.js", part_change_table(stats, totals, meta["cr_id"], view.get("change_note", "")))
     note = ("Dựng từ tokens.json + component README của Design System baseline (đã đọc: %s). Dữ liệu mẫu theo "
             "DATA-PRIVACY §4. Viền khung = badge thay đổi." % ", ".join(os.path.basename(os.path.dirname(os.path.dirname(p)))
                                                                     + "/" + os.path.basename(p) for p in ds_read))
     per = max(1, a.per_file)
+    order = site_order(view)
+    forder = list(gtitle)
+    for it in items:
+        if it["flow"] not in forder:
+            forder.append(it["flow"])
+    # thu tu ve: site (site_order) -> flow (thu tu Group / lane) -> man
+    items = sorted(items, key=lambda it: (order.index(it["site"]), forder.index(it["flow"])))
+    labels = {st: site_label(view, st) for st in order}
     for k in range(0, len(items), per):
-        write("04-screens-%02d.js" % (k // per + 1), part_screens(items[k:k + per], toks, 0, note))
+        write("04-screens-%02d.js" % (k // per + 1), part_screens(items[k:k + per], toks, 0, note, labels))
     open(os.path.join(a.out_dir, "99-readback.js"), "w", encoding="utf8").write(
         "const PAGE_ID = %s;\nconst SECTION_NAME = %s;\n%s" % (esc(a.page_id), esc(section), READBACK))
     files.append(("99-readback.js", 0))

@@ -20,7 +20,7 @@ Cross-verification bắt buộc:
 
 | Output | Phép kiểm | PASS khi | Rule nguồn |
 |---|---|---|---|
-| O1 | Sitemap không mất mục khi gộp flow | `số mục Hành động Sitemap` ≥ `số candidate thô trong Flow Candidate Matrix` | `output-1-flow.md` |
+| O1 | Sitemap không mất mục khi gộp flow | `set(FR nguồn) − set(FR tag trong tên layer nhóm Sitemap) = ∅` (in `THIẾU: []`) | `output-1-flow.md` |
 | O2 | Non-Happy coverage | `số NG node` ≥ `số Non-Happy Case trong SPEC ## Screen Details` | `output-2-screen-flow.md` |
 | O2 | Screen lỗi riêng | `số Screen Code màn hình lỗi` = `số dòng NH cần Screen Code riêng` | `spec-template.md` |
 | O2 | Node coverage (khi tách > 1 Combined Detail) | `distinct node các Group` = `distinct node các Combined Detail` | `SKILL.md` §5.0 |
@@ -54,7 +54,7 @@ Số business flows detected: N = <số>
 
 3 outputs BA sẽ tạo (giải thích ngắn):
   📊 Output 1 (VỪA XONG) — Flow Tổng Quan
-     Mục đích: cho stakeholder thấy Actor → Trigger → Function → Technology → Outcome + Sitemap WBS
+     Mục đích: cho stakeholder thấy từng use case (Actor → đường đi → kết thúc · non-happy) + Technology Table + Sitemap Site → Actor → Nhóm → Màn
      Ai dùng: PM/Tech Lead review scope, chốt tech stack
 
   🔀 Output 2 (KẾ TIẾP) — Screen Flow
@@ -284,7 +284,7 @@ BA phải xem example images trong `.claude/skills/ba-figma-output/examples/`:
 
 | File | Xem để hiểu |
 |---|---|
-| `example_output_1.png` | **Sitemap kiểu WBS tree** — actor icon + hành động, có illustration (icon người/xe/laptop...) |
+| `example_output_1.png` | **Sitemap kiểu cây** — tham khảo bố cục cây / icon; nội dung theo quy tắc mới: Site → Actor → Nhóm chức năng → Màn (KHÔNG hành động) — `output-1-flow.md` Phần C |
 | `final_output_2.png` (= `example_output_2_screen_flow.png`) | **Output 2 — Screen Flow (Merged Branch).** Flow hợp nhất phân nhánh (NHÁNH A/B) + NG inline + System (xanh lá) + Edge/Exceptional Panel riêng bên cạnh — chi tiết SKILL.md §5 |
 | `example_output_3.png` | **Mô tả màn hình** — mỗi item trên UI đều đánh số + text bên cạnh (Title / Mô tả / Mục đích) — KHÔNG lược bỏ item nào |
 
@@ -389,7 +389,7 @@ Sau khi hoàn thành 5 outputs, BA agent PHẢI edit `SPEC.md` thêm section **`
 
 | # | Output | Nội dung | Figma Frame |
 |---|---|---|---|
-| 1 | **Flow Tổng Quan** | Business Logic Flow + Technology Table + Sitemap WBS | [Mở Figma](<URL frame Output 1>) |
+| 1 | **Flow Tổng Quan** | Use case + Technology Table + Sitemap | [Mở Figma](<URL frame Output 1>) |
 | 2 | **Screen Flow** | N screen-flow groups (matching N business flows) + Bảng Index tổng | [Mở Figma](<URL frame Output 2>) |
 | 3 | **Screens + Items** | Grouped by business flow, đủ N screens, Bảng ITEMS + Bảng ERROR SCENARIOS | [Mở Figma](<URL frame Output 3>) |
 

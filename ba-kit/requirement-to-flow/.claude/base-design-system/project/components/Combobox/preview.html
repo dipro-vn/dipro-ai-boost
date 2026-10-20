@@ -1,0 +1,25 @@
+<!-- @dsCard group="Forms" height=568 -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><style>body{margin:0;padding:16px;font-family:var(--font-sans);background:var(--white);color:var(--solid-gray-900)} .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;align-items:start} .col{display:flex;flex-direction:column;gap:24px}</style></head>
+<body>
+<div id="root"></div>
+<script>
+  var D = window.DADS, h = React.createElement;
+  var prefs = ['北海道', '青森県', '岩手県', '宮城県', '秋田県'];
+  var offices = [
+    { value: 'chiyoda', label: '千代田区役所', group: '東京都' }, { value: 'minato', label: '港区役所', group: '東京都' }, { value: 'shinjuku', label: '新宿区役所', group: '東京都' },
+    { value: 'yokohama', label: '横浜市役所', group: '神奈川県' }, { value: 'kawasaki', label: '川崎市役所', group: '神奈川県', disabled: true }];
+  var names = ['デジ田 ひかり', 'デジ山 長一郎', 'デジ川 花子', '出而足 長一郎'];
+  ReactDOM.createRoot(document.getElementById('root')).render(h('div', { className: 'grid' },
+    h(D.Combobox, { label: '都道府県', options: prefs, defaultValue: '岩手県', defaultOpen: true }),
+    h(D.Combobox, { label: '提出先', size: 'md', multiple: true, options: offices, defaultValue: ['chiyoda', 'yokohama'], defaultOpen: true }),
+    h('div', { className: 'col' },
+      h(D.Combobox, { mode: 'input', label: '担当者名', size: 'sm', options: names, defaultValue: 'デジ', defaultOpen: true }),
+      h('div', { style: { height: 140 } }),
+      h(D.Combobox, { label: '申請区分', size: 'sm', options: ['新規', '更新'], error: '＊申請区分を選択してください。' }),
+      h(D.Combobox, { label: '窓口', size: 'sm', options: ['本庁舎'], disabled: true }))
+  ));
+</script>
+</body>
+</html>

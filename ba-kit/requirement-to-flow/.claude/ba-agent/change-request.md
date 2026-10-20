@@ -75,7 +75,7 @@ Sub-view trong CR Section (theo lựa chọn câu 5 §2):
 
 | Sub-view | Nội dung | Ghi chú |
 |---|---|---|
-| `CR-1 — Flow thay đổi` | Chỉ nhánh business flow bị CR chạm | Không vẽ lại toàn bộ Output 1 |
+| `CR-1 — Flow thay đổi` | Chỉ use case bị CR chạm — **cùng dạng lane use case của Output 1** (Actor → đường đi → kết thúc, non-happy hàng dưới; công nghệ chỉ ở bảng Technology) | Không vẽ lại toàn bộ Output 1 |
 | `CR-2 — Screen Flow thay đổi` | Luồng màn của phần ảnh hưởng | Connector vẽ thật (`shared-rules.md`) |
 | `CR-3 — Screens mới / cần sửa` | Mockup màn NEW + màn UPDATE | Chỉ màn bị chạm |
 | `CR Change Table` | Bảng phân định NEW / UPDATE / DELETE | **BẮT BUỘC, không bỏ** |
@@ -162,6 +162,7 @@ FAIL > 0 → sửa rồi chạy lại, **không** hạ ngưỡng, không báo Do
 ```
 
 Ràng buộc `output_cr.md`:
+- **Văn phong theo `writing-style.md`** (đọc trước khi viết): mục 1–5 viết theo điều người dùng thấy, tên màn / nút đúng như màn hình, không mã nội bộ / viết tắt (mã chỉ ở bảng Reference và trong trích dẫn baseline của mục 2), phương án đánh nhãn **Đề xuất:** / **Tiền đề · cần xác nhận:**, mục 5 chỉ câu hỏi nghiệp vụ.
 - **≤ 1 trang (~40 dòng)**, toàn bộ là gạch đầu dòng / bảng. Không đoạn văn dài.
 - Mục 2 là **quan điểm của mình** — mỗi bullet 1 lý do + 1 reference baseline. Không gộp nhiều lý do vào 1 bullet.
 - Reference **chỉ ghi file/URL có thật** đã tạo trong lần chạy này. Không có Figma URL → ghi `chưa vẽ` , KHÔNG bịa link.

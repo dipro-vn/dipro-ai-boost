@@ -1,0 +1,31 @@
+<!-- @dsCard group="Typography" height=368 -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><style>body{margin:0;padding:16px;font-family:var(--font-sans);background:var(--white);color:var(--solid-gray-800)} .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px} h3{margin:0 0 4px;font-size:16px;line-height:1.7;letter-spacing:0.02em}</style></head>
+<body>
+<div id="root"></div>
+<script>
+  var D = window.DADS, h = React.createElement, L = D.List, I = D.ListItem;
+  function Sec(p) { return h('div', null, h('h3', null, p.title), p.children); }
+  ReactDOM.createRoot(document.getElementById('root')).render(h('div', { className: 'grid' },
+    h(Sec, { title: '必要な書類' }, h(L, null,
+      h(I, null, '本人確認書類'),
+      h(I, null, '住民票の写し'),
+      h(I, null, '委任状（代理人の場合）',
+        h(L, null, h(I, null, '代理人の本人確認書類'), h(I, null, '委任者の署名',
+          h(L, null, h(I, null, '自署または記名押印'))))),
+      h(I, { href: '#', external: true }, '申請書をダウンロード'))),
+    h(Sec, { title: '手続の流れ' }, h(L, { ordered: true, spacing: 4 },
+      h(I, null, 'マイナポータルにログイン'),
+      h(I, null, '申請内容を入力',
+        h(L, { ordered: true, numbering: 'lower-alpha' }, h(I, null, '基本情報'), h(I, null, '添付書類'))),
+      h(I, null, '内容を確認して送信'))),
+    h(Sec, { title: '法令の項番' }, h(L, { ordered: true, numbering: 'dai-fullwidth', spacing: 4 },
+      h(I, null, '総則',
+        h(L, { ordered: true, numbering: 'paren-fullwidth' }, h(I, null, '目的'),
+          h(I, null, '定義', h(L, { ordered: true, numbering: 'paren-katakana' }, h(I, null, '行政機関'), h(I, null, '地方公共団体'))))),
+      h(I, null, '基本方針', h(L, { ordered: true, numbering: 'iroha' }, h(I, null, '利便性の向上'), h(I, null, '効率化')))))
+  ));
+</script>
+</body>
+</html>

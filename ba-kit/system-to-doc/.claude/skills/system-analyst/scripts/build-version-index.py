@@ -19,6 +19,7 @@ import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+KIT = os.path.abspath(os.path.join(HERE, "..", "..", "..", ".."))
 sys.path.insert(0, HERE)
 import inv_schema as S  # noqa: E402
 import cr_common as C  # noqa: E402
@@ -33,7 +34,7 @@ BD_SYSTEM_SHEETS = {"Common mesage", "Screen Error message", "Screen Index",
 ICON = {"ok": "✅", "warn": "⚠️", "fail": "❌", "skip": "⬜"}
 # tien to ten file gate -> output (thu tu quan trong: dai truoc)
 GATE_MAP = [("v-overview", "O6"), ("v-bd", "O1"), ("v-api", "O2"), ("v-db", "O3"),
-            ("v-ds", "O4"), ("v-figma", "O5"), ("v-cr-figma", "O5"), ("v-cr", "CR"), ("v1", "INV"), ("v2", "INV"),
+            ("v-ds", "O4"), ("v-figma", "O5"), ("v-cr-figma", "O5"), ("v-cr", "CR"), ("v-est", "EST"), ("v1", "INV"), ("v2", "INV"),
             ("v3", "O6"), ("v4", "O6"), ("v5", "O6"), ("v6", "O6"), ("v7", "O1"), ("v8", "O7")]
 
 
@@ -302,12 +303,37 @@ def cr_outputs(ver, impact, gates, skips):
             meta = C.load_json(cj).get("meta") or {}
         except (OSError, ValueError):
             pass
+    if os.path.isfile(cj):  # Estimation theo chuc nang (--estimate) khong co cot Impact ID -> dem tu cr.json
+        try:
+            cr = C.load_json(cj)
+            rates = C.load_rates(os.path.join(KIT, S.MD_RATES_PATH))[1]
+            n_imp = len(cr.get("impacts") or [])
+            md = sum(C.md_of(i, rates) or 0.0 for i in cr.get("impacts") or [])
+        except (OSError, ValueError):
+            pass
     meta.setdefault("baseline_version", summ.get(C.L_BASELINE, ""))
     meta.setdefault("cr_id", summ.get(C.L_CR, ""))
     outs.append(finish(entry("CR", "CR Impact", "Công số + ảnh hưởng 6 trục (%s)" % " · ".join(S.CR_SHEETS),
                              [rel(ver, impact)], "%d hạng mục · %s MD (đơn giá %s)" % (
                                  n_imp, C.fmt_md(round(md, 2)), rate_st),
                              True, count_value=n_imp, md=round(md, 2), rates_status=rate_st), gates, skips))
+    ej = os.path.join(ver, "_internal", "estimate.json")
+    mits = sorted(glob.glob(os.path.join(ver, "CR-*_見積書.xlsx"))) + sorted(glob.glob(os.path.join(ver, "CR-*_ETA_vi.xlsx")))
+    if os.path.isfile(ej) or mits:
+        cnt = "—"
+        try:
+            import estimate_core as E
+            est = C.load_json(ej)
+            fm, fr = E.load_rates(os.path.join(KIT, ".claude/config/function-rates.json"))
+            tm = E.load_template(os.path.join(KIT, "templates/template_mitsumori.xlsx"))[1]
+            tot = {st: sum(E.row_numbers(x, fr, tm)["sub"] for x in est["rows"] if x["step"] == st) for st in E.STEPS}
+            cnt = "%d dòng chức năng · Step 1 %s · Step 2 %s 人日 · %d phương án (đơn giá %s)" % (
+                len(est["rows"]), C.fmt_md(round(tot["Step 1"], 2)), C.fmt_md(round(tot["Step 2"], 2)),
+                len(est.get("combos") or []), fm.get("status"))
+        except (OSError, ValueError, KeyError, ImportError):
+            pass
+        outs.append(finish(entry("EST", "見積書", "Báo giá theo chức năng — tiếng Nhật gửi KH (詳細見積書 + 前提条件・留意事項); bản vi nội bộ nếu có",
+                                 [rel(ver, m) for m in mits], cnt, bool(mits)), gates, skips))
     fl = os.path.join(ver, "05_Figma", "figma-links.md")
     urls = FIGMA_RX.findall(open(fl, encoding="utf8").read()) if os.path.isfile(fl) else []
     # CR khong bat buoc ve: khong co figma-links + khong co gate v-cr-figma -> skip "không vẽ"
