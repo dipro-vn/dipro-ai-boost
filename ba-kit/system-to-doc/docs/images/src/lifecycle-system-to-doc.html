@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:2000px;padding:44px 48px 36px;background:#fff;font-family:-apple-system,"Helvetica Neue","Hiragino Sans",sans-serif;color:#1f2328}
+h1{font-size:46px;font-weight:800;letter-spacing:-.5px}
+h1 .ar{color:#57606a;font-weight:400;margin:0 6px}
+h1 .b{color:#0969da}
+.sub{font-size:21px;color:#57606a;margin:12px 0 30px}
+.row{display:flex;align-items:stretch;gap:0}
+.arrow{width:42px;display:flex;align-items:center;justify-content:center;font-size:34px;color:#8c959f;font-weight:700;flex:none}
+.st{flex:1;border-radius:22px;border:2px solid;padding:20px 18px 18px;display:flex;flex-direction:column}
+.pill{display:inline-block;align-self:flex-start;color:#fff;font-weight:800;font-size:17px;padding:7px 15px;border-radius:22px;margin-bottom:14px;letter-spacing:.3px}
+.num{display:inline-flex;width:34px;height:34px;border-radius:50%;color:#fff;font-weight:800;font-size:18px;align-items:center;justify-content:center;margin-right:8px;vertical-align:middle}
+.t{font-size:23px;font-weight:800;margin-bottom:8px;line-height:1.25}
+.cmd{font-family:ui-monospace,Menlo,monospace;font-size:14.5px;background:#f6f8fa;border:1px solid #d0d7de;border-radius:6px;padding:3px 7px;display:inline-block;margin-bottom:10px;color:#1f2328}
+.d{font-size:15.5px;color:#424a53;line-height:1.5}
+.d b{color:#1f2328}
+.card{background:#fff;border-radius:12px;padding:10px 12px;margin-top:10px;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{font-size:13px;font-weight:700;padding:3px 8px;border-radius:6px;color:#fff}
+.ok{display:inline-block;margin-top:10px;font-size:14.5px;font-weight:700;color:#0550ae;background:#ddf4ff;border-radius:8px;padding:4px 9px}
+.folder{font-size:14.5px;font-weight:700;color:#1a7f37;margin-top:4px;white-space:nowrap}
+.folder.p{color:#8250df}
+.blue{background:#eef6ff;border-color:#b6d4fe}.blue .pill,.blue .num{background:#0969da}
+.green{background:#effaf2;border-color:#9fdcae}.green .pill,.green .num{background:#1a7f37}
+.purple{background:#f7f0ff;border-color:#d2b8f5}.purple .pill,.purple .num{background:#8250df}
+.orange{background:#fff8ec;border-color:#f6c98a}.orange .pill,.orange .num{background:#e8820c}
+.loop{margin:26px 0 0;border:2.5px dashed #a371f7;border-radius:22px;background:#fbf8ff;padding:18px 26px;display:flex;align-items:center;gap:22px}
+.loop .big{font-size:24px;font-weight:800;color:#8250df;white-space:nowrap}
+.loop .d{font-size:17px}
+.rules{display:flex;gap:16px;margin-top:20px}
+.rule{flex:1;border-radius:14px;background:#f6f8fa;border:1px solid #d0d7de;padding:13px 16px;font-size:15.5px;color:#424a53;line-height:1.45}
+.rule b{color:#1f2328}
+.red{color:#cf222e;font-weight:700}
+.ver{display:flex;gap:10px;align-items:center;margin-top:18px;font-size:16px;color:#57606a;flex-wrap:wrap}
+.v{font-family:ui-monospace,Menlo,monospace;font-size:14.5px;font-weight:700;padding:5px 10px;border-radius:8px;border:1.5px solid}
+.v.b{color:#1a7f37;border-color:#9fdcae;background:#effaf2}
+.v.c{color:#8250df;border-color:#d2b8f5;background:#f7f0ff}
+</style></head><body>
+
+<h1>System <span class="ar">→</span> <span class="b">Doc</span> <span style="font-weight:400;color:#57606a">· vòng đời baseline</span></h1>
+<div class="sub">Chạy lần đầu ra baseline v1 · mỗi Change Request được phân tích trên baseline mới nhất · CR duyệt + code xong → baseline mới · lặp lại</div>
+
+<div class="row">
+  <div class="st blue">
+    <span class="pill">LẦN ĐẦU</span>
+    <div class="t"><span class="num">1</span>Chạy lần đầu</div>
+    <span class="cmd">/analyze-system</span>
+    <div class="d">Hỏi trước khi làm (P0–P11) → quét website, đọc source / DB / Figma → dựng tài liệu, máy chấm từng output.</div>
+    <div class="card d">Chế độ <b>FULL</b> · thiếu bằng chứng ghi <b>UNKNOWN</b> + câu hỏi</div>
+    <span class="ok">✓ Bạn trả lời câu hỏi</span>
+  </div>
+  <div class="arrow">→</div>
+  <div class="st green">
+    <span class="pill">BASELINE v1</span>
+    <div class="t"><span class="num">2</span>Thông tin output</div>
+    <div class="folder">📁 ver1_ddmmyy_baseline/</div>
+    <div class="d" style="margin-top:6px">Bộ tài liệu hiện trạng (AS-IS):</div>
+    <div class="chips">
+      <span class="chip" style="background:#1a7f37">O1 Màn hình</span><span class="chip" style="background:#1a7f37">O2 API</span>
+      <span class="chip" style="background:#1a7f37">O3 DB</span><span class="chip" style="background:#8250df">O4 Design System</span>
+      <span class="chip" style="background:#f24e1e">O5 Figma</span><span class="chip" style="background:#0550ae">O6 Tổng hợp</span>
+      <span class="chip" style="background:#57606a">O7 Bug list</span>
+    </div>
+    <div class="card d">Mốc đối chiếu cho mọi CR sau</div>
+  </div>
+  <div class="arrow">→</div>
+  <div class="st purple">
+    <span class="pill">CHANGE REQUEST</span>
+    <div class="t"><span class="num">3</span>CR về</div>
+    <span class="cmd">/change-request &lt;file&gt;</span>
+    <div class="d">Khách gửi yêu cầu thay đổi. Agent đối chiếu <b>baseline mới nhất</b>, giải trình có phải CR không (C1–C6) hay là bug / trong scope.</div>
+    <span class="ok">✓ Bạn xác nhận phạm vi</span>
+  </div>
+  <div class="arrow">→</div>
+  <div class="st purple">
+    <span class="pill">PHÂN TÍCH</span>
+    <div class="t"><span class="num">4</span>Phân tích ảnh hưởng</div>
+    <div class="folder p">📁 ver2_ddmmyy_CR-001-…/</div>
+    <div class="d" style="margin-top:6px">6 trục: hệ thống · DB · nghiệp vụ · màn hình · bên thứ 3 · mockup</div>
+    <div class="card d"><b>CR-001_Impact.xlsx</b><br><b>CR-001_見積書.xlsx</b><br>Figma view CR <span style="color:#1a7f37;font-weight:700">NEW</span> <span style="color:#bf8700;font-weight:700">UPD</span> <span style="color:#cf222e;font-weight:700">DEL</span></div>
+  </div>
+  <div class="arrow">→</div>
+  <div class="st orange">
+    <span class="pill">DUYỆT</span>
+    <div class="t"><span class="num">5</span>Duyệt CR</div>
+    <div class="d">PM duyệt công số + 見積書 → gửi khách → khách trả lời câu hỏi, chốt phương án.</div>
+    <div class="card d">Chưa duyệt / chưa code → <b>baseline vẫn là v1</b></div>
+    <span class="ok">✓ PM / khách duyệt</span>
+  </div>
+  <div class="arrow">→</div>
+  <div class="st green">
+    <span class="pill">BASELINE v2</span>
+    <div class="t"><span class="num">6</span>Code xong → baseline mới</div>
+    <span class="cmd">/analyze-system · DELTA</span>
+    <div class="folder">📁 ver3_ddmmyy_baseline/</div>
+    <div class="d" style="margin-top:6px">Chỉ quét lại phần CR chạm, kế thừa phần còn lại từ v1.</div>
+    <div class="card d">AS-IS mới cho các CR tiếp theo</div>
+  </div>
+</div>
+
+<div class="loop">
+  <div class="big">↻ Tiếp tục như thế</div>
+  <div class="d">CR tiếp theo về → quay lại bước <b>3</b>, đối chiếu <b>baseline v2</b> → duyệt → code xong → <b>baseline v3</b>, v4… &nbsp;Nhiều CR cùng lúc: agent kiểm xung đột CR với CR.</div>
+</div>
+
+<div class="ver">Dãy version (số N tăng chung):
+  <span class="v b">ver1_baseline</span>→<span class="v c">ver2_CR-001</span>→<span class="v b">ver3_baseline (DELTA)</span>→<span class="v c">ver4_CR-002</span>→<span class="v b">ver5_baseline (DELTA)</span>→<span style="font-weight:700">…</span>
+</div>
+
+<div class="rules">
+  <div class="rule"><b>Mỗi lần chạy = 1 folder mới.</b> Không sửa version cũ — luôn so sánh được trước / sau.</div>
+  <div class="rule"><b>Folder CR không copy baseline</b> — chỉ trỏ tới baseline đã dùng để đối chiếu.</div>
+  <div class="rule"><b>Agent tự đọc version mới nhất</b> mỗi lần chạy, tự đề xuất FULL hay DELTA.</div>
+  <div class="rule"><span class="red">⛔ Thiếu thông tin</span> → dừng và hỏi · <span class="red">⛔ Dữ liệu nhạy cảm</span> → cảnh báo + dừng.</div>
+</div>
+</body></html>
