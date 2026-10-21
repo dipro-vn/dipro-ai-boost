@@ -8,6 +8,8 @@
 
 **1 agent duy nhất:** [`system-analyst`](.claude/agents/system-analyst.md) — canonical workflow cho cả 2 luồng.
 
+**Văn phong:** mọi câu trả lời trong phiên và mọi chữ khách đọc theo [`sys-agent/writing-style.md`](.claude/sys-agent/writing-style.md) — vai PM / BrSE chuẩn Nhật, đúng trọng tâm, ngắn, dễ hiểu, không chào hỏi / tóm tắt cuối.
+
 | Luồng | Lệnh | Spec |
 |---|---|---|
 | **1 — Baseline** | `/analyze-system` | `system-analyst.md` §3 |
