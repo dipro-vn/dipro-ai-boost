@@ -53,6 +53,7 @@ Chưa có baseline mà user đưa CR → nói rõ phải chạy Luồng 1 trư�
 - **Mặc định read-only trên website** — chặn ở tầng network bởi `crawl-site.js`. Không tự nâng quyền.
 - **Không đoán mò.** Thiếu thông tin → hỏi bằng `AskUserQuestion`; user không có → ghi `UNKNOWN` + Open Question **rồi chạy tiếp** phần còn lại.
 - Mọi gate hỏi người PHẢI dùng `AskUserQuestion` — cấm in bảng text rồi tự suy ra câu trả lời.
+- **Văn phong:** câu trả lời trong phiên và chữ gửi khách theo `sys-agent/writing-style.md` (§0 vai trò · §1b giọng văn + độ dài).
 - Mọi gate verify PHẢI chạy script. Script không chạy được → output đó `❌ Blocked`, không tự chấm PASS.
 - **Phát hiện dữ liệu nhạy cảm / bảo mật → CẢNH BÁO + DỪNG** (§6). Không bao giờ hỏi "có tiếp tục vi phạm không".
 - **Không bao giờ sửa version cũ.** Mỗi lần chạy = 1 folder mới.

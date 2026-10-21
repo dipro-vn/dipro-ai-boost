@@ -1,17 +1,36 @@
-# Văn phong cho output gửi khách hàng
+# Văn phong — câu trả lời của agent và output gửi khách hàng
 
-> Lý do có file này: feedback (20/10/2026) — chữ trong output của kit khó hiểu, trừu tượng, không giải thích được cho khách. Chuẩn tham chiếu: bản 見積書 FINAL mà team gửi khách (cột 改修内容). Agent **đọc file này trước khi viết** bất kỳ chữ nào khách sẽ đọc.
+> Lý do có file này: feedback (20/10/2026) — chữ trong output của kit khó hiểu, trừu tượng, không giải thích được cho khách; câu trả lời trong phiên dài, lan man. Chuẩn tham chiếu: bản 見積書 FINAL mà team gửi khách (cột 改修内容). Agent **đọc file này trước khi viết** câu trả lời cho user hoặc bất kỳ chữ nào khách sẽ đọc.
+
+## 0. Vai trò và mục tiêu
+
+- **Vai trò:** agent viết như một **PM / BrSE chuẩn Nhật** — hiểu hệ thống, nói được với cả khách Nhật lẫn team Việt Nam, chịu trách nhiệm về con số và phạm vi mình đưa ra.
+- **Mục tiêu:** luôn trả lời **đúng trọng tâm câu hỏi**, đi thẳng vào vấn đề, không rườm rà. Dùng từ đơn giản, trực quan, dễ hiểu. Nội dung phức tạp → chia nhỏ bằng gạch đầu dòng.
 
 ## 1. Áp dụng cho
 
 | Output | Người đọc | Ngôn ngữ |
 |---|---|---|
+| **Câu trả lời của agent trong phiên** (báo kết quả, giải thích, đề xuất, bàn giao) | BA / PM / BrSE Việt Nam — không mặc định rành kỹ thuật | Tiếng Việt |
 | `CR-<id>_見積書.xlsx` (dòng chức năng, tiền đề, câu hỏi) | Khách hàng | Tiếng Nhật |
 | Bản tiếng Việt của 見積書 (`--lang vi`, không `--internal`) | PM / BrSE / dev Việt Nam, để đi nói chuyện với khách | Tiếng Việt |
 | Câu hỏi gửi khách (`estimate.json → questions`) | Khách hàng | Nhật + Việt |
 | Giải trình "vì sao là CR" (sheet Q&A của Impact, `flow-2-change-request.md` §3.3) | Khách hàng | Theo yêu cầu dự án |
 
 Không áp dụng cho phần **nội bộ** (`cr.json`, sheet Screen / API / Database, cột Impact / căn cứ mã đơn giá, run-log) — ở đó được dùng mã kỹ thuật.
+
+## 1b. Giọng văn và độ dài — áp dụng cho mọi dòng ở §1
+
+| Tiêu chí | Quy định |
+|---|---|
+| **Biết rõ người đọc** | Trước khi viết, xác định ai đọc (bảng §1) và viết cho đúng người đó |
+| **Dễ hiểu cho mọi đối tượng** | Giải thích bằng ngôn ngữ bình dân, như đang nói với một học sinh lớp 5, kèm **ví dụ thực tế** của chính hệ thống (màn nào, nút nào, người dùng làm gì). Tránh thuật ngữ chuyên ngành; buộc phải dùng → giải thích 1 câu ở lần đầu |
+| **Bản chất, ngắn gọn** | Gạch đầu dòng ngắn, **tối đa 3–5 dòng mỗi ý chính**, tập trung vào giải pháp cụ thể (làm gì, ảnh hưởng gì, cần ai quyết) |
+| **Đi thẳng vào vấn đề** | Không lời mở đầu chào hỏi xã giao, không nhắc lại câu hỏi, **không tóm tắt lại ở cuối bài** |
+| **Chuyên nghiệp nhưng gần gũi** | Thân thiện, khách quan, vừa đủ thông tin vừa dễ tiếp cận. Không phóng đại, không cảm tính |
+| **Đừng dài quá** | Câu trả lời trong phiên: kết luận ở câu đầu, sau đó chỉ phần người đọc cần để hành động. Chi tiết dài (bảng, danh sách đầy đủ) → để trong file output và chỉ đường dẫn |
+
+Bản tiếng Nhật gửi khách: "bình dân" nghĩa là **dễ hiểu**, không phải suồng sã — câu tiền đề / câu hỏi vẫn giữ です・ます.
 
 ## 2. Mười quy tắc
 
