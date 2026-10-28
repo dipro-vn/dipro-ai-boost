@@ -21,7 +21,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import inv_schema as S  # noqa: E402
 import cr_common as C  # noqa: E402
-from gate_report import Gate  # noqa: E402
+from gate_report import Gate, legacy_word_hits  # noqa: E402
 
 KIT = os.path.abspath(os.path.join(HERE, "..", "..", "..", ".."))
 
@@ -165,8 +165,8 @@ def main():
         len(S.CR_SHEETS), " · ".join(S.CR_SHEETS)), bad)
 
     # 2. Meta
-    bad = ["meta.%s rong/UNKNOWN" % k for k in S.CR_META_KEYS
-           if not C.txt(meta.get(k)) or C.txt(meta.get(k)) == S.UNKNOWN]
+    bad = ["meta.%s rong/%s" % (k, S.NEED_CONFIRM) for k in S.CR_META_KEYS
+           if not C.txt(meta.get(k)) or C.txt(meta.get(k)) == S.NEED_CONFIRM]
     if C.txt(meta.get("source_type")) and meta["source_type"] not in S.CR_SOURCE_TYPE:
         bad.append("source_type=%s" % meta["source_type"])
     if C.txt(meta.get("overall_risk")) and meta["overall_risk"] not in S.CR_RISK:
@@ -528,6 +528,9 @@ def main():
         if not C.txt(n.get("reason")):
             bad.append("%s thieu reason" % n.get("item"))
     g.check(21, "not_cr: label BUG/QUESTION + ly do", bad)
+
+    # 25 — D1: Impact xlsx khong con chu cu (thay bang "Cần xác nhận — CQ-xxx" / conflict = To verify)
+    g.check(25, "Khong con chu '%s' trong Impact xlsx (D1)" % S.LEGACY_WORD, legacy_word_hits(a.impact))
 
     # Tom tat impact
     print("IMPACT %s (baseline %s):" % (meta.get("cr_id", "?"), base_name), file=sys.stderr)

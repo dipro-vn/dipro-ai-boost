@@ -22,7 +22,7 @@ except ImportError:
 
 API_ID = re.compile(r"^(API-\d{3,})\b")
 LINK = re.compile(r"^#?'?(.+?)'?!\$?([A-Z]{1,3})\$?(\d+)$")
-NO_FIELD = "UNKNOWN — chua xac dinh tu code"
+NO_FIELD = S.NEED_CONFIRM + " — chưa xác định từ code"
 REQ_IN = {"path", "query", "header", "cookie", "body"}
 RES_IN = {"status", "response-body", "header", "cookie"}
 
@@ -68,7 +68,7 @@ def parse_blocks(ws):
             elif a == "":
                 mode = None
             elif mode:
-                if not a.startswith("UNKNOWN —"):
+                if not a.startswith(S.NEED_CONFIRM + " —"):
                     cur[mode] += 1
             else:
                 cur["labels"][a] = "" if ws.cell(r, 2).value is None else str(ws.cell(r, 2).value)
@@ -183,16 +183,16 @@ def main():
                     bad.append("%s -> %s!%s rong" % (where, t[0], t[1]))
     g.check(7, "Moi hyperlink noi bo tro toi sheet+o ton tai (API ID khop)", bad)
 
-    # 8 Confirmed: Summary != UNKNOWN + co code-ref
+    # 8 Confirmed: Summary != "Cần xác nhận" + co code-ref
     bad = []
     for x in apis:
         if x.get("Status") != "Confirmed":
             continue
         i = x["API ID"]
         summ = (x.get("Summary") or "").strip()
-        if not summ or summ == S.UNKNOWN:
-            bad.append("%s Summary UNKNOWN" % i)
-        elif i in blocks and blocks[i]["labels"].get("Summary", "") in ("", S.UNKNOWN):
+        if not summ or summ == S.NEED_CONFIRM:
+            bad.append("%s Summary %s" % (i, S.NEED_CONFIRM))
+        elif i in blocks and blocks[i]["labels"].get("Summary", "") in ("", S.NEED_CONFIRM):
             bad.append("%s block Summary rong" % i)
         if not any(evtype.get(e) == "code-ref" for e in S.split_ids(x.get("Evidence"))):
             bad.append("%s khong co EV code-ref" % i)

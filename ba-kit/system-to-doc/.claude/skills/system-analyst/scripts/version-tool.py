@@ -1,20 +1,36 @@
 #!/usr/bin/env python3
 """Quan ly version folder trong <project>/outputs/ (Luong 1 baseline + Luong 2 CR).
 
-  python3 version-tool.py next --outputs <project>/outputs --slug baseline [--cr-id CR-001] [--date DDMMYY] [--create]
+  python3 version-tool.py next --outputs <project>/outputs --slug baseline [--date DDMMYY] [--create]
+  python3 version-tool.py next --outputs <project>/outputs --cr-id CR-001 --slug them-coupon [--date DDMMYY] [--create]
+  python3 version-tool.py snapshot --ver <folder version> [--files 01_Screens/a.xlsx ...]
+  python3 version-tool.py promote --outputs <project>/outputs --cr CR-001 [--cr CR-002] --approved --coded \
+          [--slug baseline] [--date DDMMYY] [--create]
   python3 version-tool.py latest-baseline --outputs <project>/outputs
   python3 version-tool.py list --outputs <project>/outputs [--json]
   python3 version-tool.py context --outputs <project>/outputs [--flow 1|2] [--cr-id CR-001]
 
-next            -> JSON {n, folder, path} ; --create moi mkdir folder + _internal/{gates,recon,evidence}
-latest-baseline -> JSON {folder, path, n, inventory, outputs:{O1..O7: bool}} ; exit 1 neu khong co baseline
-list            -> bang version + CR mo sau baseline moi nhat (canh bao xung dot CR-vs-CR)
+Quy tac (versioning.md, R5 · D3 · D4):
+  - Khao sat lan dau luon la ver1. Chua co CR nao tro toi baseline hien hanh -> `next` (Luong 1) tra ve CHINH
+    baseline do (reuse:true) — chay lai = ghi vao ver1; truoc khi ghi de goi `snapshot` (luu file bi thay vao
+    <ver>/_internal/history/<YYYYMMDD-HHMM>/).
+  - Co folder CR tro toi baseline -> baseline KHOA: `next` Luong 1 exit 3 (locked). Baseline moi ver<N+1> chi tao
+    bang `promote --cr ... --approved --coded` (CR da duyet + da code xong).
+  - Folder CR moi: CR-<id>_<DDMMYY>_<slug>, _internal/version-meta.json ghi baseline goc. Chay lai cung CR ->
+    tra ve folder CR do (reuse:true). Doc duoc layout cu: ver<N>_<DDMMYY>_<slug> va ver<N>_<DDMMYY>_CR-<id>-<slug>.
+
+next            -> JSON {n, folder, path, reuse, created} ; --create mkdir _internal/{gates,recon,evidence} +
+                   version-meta.json (folder co san: chi bo sung thu muc con thieu). exit 3 = baseline da khoa
+snapshot        -> JSON {dir, files} ; copy file (mac dinh: moi file tru _internal/history) vao history truoc khi ghi de
+promote         -> JSON {n, folder, path, previous_version, promoted_crs} — baseline moi
+latest-baseline -> JSON {folder, path, n, inventory, outputs:{O1..O9: bool}} ; exit 1 neu khong co baseline
+list            -> bang version + CR mo tren baseline moi nhat (canh bao xung dot CR-vs-CR)
 context         -> JSON agent doc o DAU MOI LAN CHAY (user khong phai tu tim version):
-                   latest (version moi nhat bat ky loai) · latest_baseline (+ inventory, outputs) ·
-                   open_crs (CR sau baseline moi nhat) · latest_by_cr · pending_feedback (muc
-                   "Feedback cua user" trong run-log chua co version sau nao ghi "Feedback da xu ly") ·
-                   suggest (mode de xuat cho Luong 1 / version doc lai cho Luong 2) · read (file can doc)
-KHONG BAO GIO sua folder version cu.
+                   latest (version moi nhat bat ky loai) · latest_baseline (+ inventory, outputs, locked, locked_by) ·
+                   open_crs (CR tro toi baseline moi nhat, chua promote) · latest_by_cr · pending_feedback (muc
+                   "Feedback cua user" trong run-log chua co version nao ghi "Feedback da xu ly") ·
+                   suggest (flow1_action / mode de xuat cho Luong 1 / version doc lai cho Luong 2) · read (file can doc)
+Folder CR cu va baseline da khoa: KHONG sua noi dung.
 """
 import argparse
 import datetime
@@ -22,6 +38,7 @@ import glob
 import json
 import os
 import re
+import shutil
 import sys
 import unicodedata
 
@@ -30,7 +47,11 @@ sys.path.insert(0, HERE)
 import inv_schema as S  # noqa: E402
 
 VER_RE = re.compile(r"^ver(\d+)_(\d{6})_(.+)$")
-CR_SLUG_RE = re.compile(r"^(CR-\d+)(?:-(.*))?$", re.I)
+CR_DIR_RE = re.compile(r"^(CR-\d+)_(\d{6})_(.+)$", re.I)       # layout moi (D3)
+CR_SLUG_RE = re.compile(r"^(CR-\d+)(?:-(.*))?$", re.I)          # layout cu: ver<N>_<date>_CR-<id>-<slug>
+META_FILE = os.path.join("_internal", "version-meta.json")
+HISTORY_DIR = os.path.join("_internal", "history")
+EXIT_LOCKED = 3
 
 # Duong dan output theo CONTRACT (glob tuong doi folder version)
 OUTPUT_GLOBS = {
@@ -42,6 +63,7 @@ OUTPUT_GLOBS = {
     "O5": ["05_Figma/figma-links.md"],
     "O6": ["06_Overview/Overview_*.docx"],
     "O7": ["07_BugList/BugList_*.xlsx"],
+    "O9": ["09_DevSetup/DevSetup_*.md"],
 }
 
 
@@ -81,30 +103,52 @@ def read_kv(xlsx, sheet):
     return out
 
 
+def read_meta(path):
+    f = os.path.join(path, META_FILE)
+    try:
+        return json.load(open(f, encoding="utf8")) if os.path.isfile(f) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def write_meta(path, meta):
+    with open(os.path.join(path, META_FILE), "w", encoding="utf8") as fh:
+        json.dump(meta, fh, ensure_ascii=False, indent=2)
+
+
 def scan(outputs):
-    """Liet ke version folder -> list dict, sap theo n."""
+    """Liet ke version folder (ca layout cu lan moi) -> list dict, sap theo thu tu thoi gian logic.
+
+    n = so baseline (folder CR layout moi: n cua baseline no tro toi) — CR sap ngay sau baseline cua no.
+    """
     if not os.path.isdir(outputs):
         return []
     vers = []
     for name in sorted(os.listdir(outputs)):
         p = os.path.join(outputs, name)
-        m = VER_RE.match(name)
-        if not (m and os.path.isdir(p)):
+        m, mn = VER_RE.match(name), CR_DIR_RE.match(name)
+        if not ((m or mn) and os.path.isdir(p)):
             continue
-        n, date, slug = int(m.group(1)), m.group(2), m.group(3)
+        layout = "ver" if m else "cr"
+        n, date, slug = (int(m.group(1)), m.group(2), m.group(3)) if m else (None, mn.group(2), mn.group(3))
+        vm = read_meta(p)
         inv = os.path.join(p, "_internal", "inventory.xlsx")
-        vtype, cr_id, base_ref = "", "", ""
-        if os.path.isfile(inv):
-            vtype = read_kv(inv, "00_Meta").get("version_type", "").upper()
+        vtype, cr_id, base_ref = (vm.get("version_type") or "").upper(), vm.get("cr_id") or "", vm.get("baseline") or ""
+        kv = read_kv(inv, "00_Meta") if os.path.isfile(inv) else {}
         if vtype not in S.VERSION_TYPE:
-            rl = os.path.join(p, "run-log.md")
-            txt = open(rl, encoding="utf8", errors="ignore").read() if os.path.isfile(rl) else ""
+            vtype = kv.get("version_type", "").upper()
+        base_ref = base_ref or kv.get("baseline") or kv.get("baseline_version") or ""
+        rl = os.path.join(p, "run-log.md")
+        txt = open(rl, encoding="utf8", errors="ignore").read() if os.path.isfile(rl) else ""
+        if vtype not in S.VERSION_TYPE:
             mm = re.search(r"version_type\W{0,6}(BASELINE|CR)\b", txt)
             vtype = mm.group(1) if mm else ""
         impacts = sorted(glob.glob(os.path.join(p, "CR-*_Impact.xlsx")))
-        mc = CR_SLUG_RE.match(slug)
+        mc = CR_SLUG_RE.match(slug) if m else None
         if mc:
-            cr_id = mc.group(1).upper()
+            cr_id = cr_id or mc.group(1).upper()
+        if mn:
+            cr_id = cr_id or mn.group(1).upper()
         cr_json = os.path.join(p, "_internal", "cr.json")
         if os.path.isfile(cr_json):
             try:
@@ -112,17 +156,51 @@ def scan(outputs):
             except (OSError, ValueError):
                 cm = {}
             cr_id = cm.get("cr_id") or cr_id
-            base_ref = cm.get("baseline_version", "")
+            base_ref = cm.get("baseline_version") or base_ref
+        if not base_ref:
+            mb = re.search(r"^baseline:\s*`?((?:ver\d+|CR-\d+)_\d{6}_[^\s`|]+)", txt, re.M)
+            base_ref = mb.group(1) if mb else ""
         if impacts and not cr_id:
             cr_id = os.path.basename(impacts[0]).split("_")[0]
-        if not vtype and (impacts or mc):
+        if mn or impacts or mc:
             vtype = "CR"
-        vers.append({"n": n, "folder": name, "path": os.path.abspath(p),
-                     "date": date, "type": vtype or "UNKNOWN", "cr_id": cr_id,
-                     "baseline_ref": base_ref,
+        if not vtype:
+            vtype = "BASELINE"   # folder ver<N> khong co dau hieu CR = baseline (quy tac moi)
+        vers.append({"n": n, "folder": name, "path": os.path.abspath(p), "layout": layout,
+                     "date": date, "type": vtype, "cr_id": cr_id.upper(),
+                     "baseline_ref": base_ref, "promoted_crs": [c.upper() for c in vm.get("promoted_crs") or []],
                      "impact": os.path.abspath(impacts[0]) if impacts else ""})
-    vers.sort(key=lambda v: v["n"])
+    # CR layout moi: n = n cua baseline goc (khong ro -> sau cung)
+    by_folder = {v["folder"]: v for v in vers}
+    top = max([v["n"] for v in vers if v["n"] is not None] or [0])
+    for v in vers:
+        if v["n"] is None:
+            b = by_folder.get(v["baseline_ref"])
+            v["n"] = b["n"] if b and b["n"] is not None else top
+    ddmmyy = lambda d: d[4:6] + d[2:4] + d[0:2]
+    vers.sort(key=lambda v: (v["n"], 0 if v["type"] == "BASELINE" else 1, ddmmyy(v["date"]), v["folder"]))
     return vers
+
+
+def promoted(vers):
+    """CR da duoc promote vao baseline nao do."""
+    return {c for v in vers if v["type"] == "BASELINE" for c in v["promoted_crs"]}
+
+
+def crs_on(vers, b):
+    """CR tro toi baseline b (khoa b). Layout cu khong ghi baseline -> CR co n > b.n."""
+    if not b:
+        return []
+    out = []
+    for v in vers:
+        if v["type"] != "CR":
+            continue
+        if v["baseline_ref"]:
+            if v["baseline_ref"] == b["folder"]:
+                out.append(v)
+        elif v["layout"] == "ver" and v["n"] > b["n"]:
+            out.append(v)
+    return out
 
 
 FB_HEAD = re.compile(r"^##\s*Feedback c\w* user\s*$", re.I | re.M)
@@ -146,7 +224,7 @@ def read_runlog(path):
         return "", set()
     txt = open(rl, encoding="utf8", errors="ignore").read()
     fb = "\n".join(l for l in _section(txt, FB_HEAD).splitlines() if not PLACEHOLDER.match(l)).strip()
-    done = set(re.findall(r"ver\d+_\d{6}_[^\s|`)\]]+", _section(txt, FB_DONE_HEAD)))
+    done = set(re.findall(r"(?:ver\d+|CR-\d+)_\d{6}_[^\s|`)\]]+", _section(txt, FB_DONE_HEAD)))
     return fb, done
 
 
@@ -157,26 +235,136 @@ def outputs_exist(path):
     return res
 
 
-def cmd_next(a):
-    vers = scan(a.outputs)
-    n = max([v["n"] for v in vers] or [0]) + 1
+def _date_slug(a):
     date = a.date or datetime.date.today().strftime("%d%m%y")
     if not re.match(r"^\d{6}$", date):
         raise SystemExit("--date phai dang DDMMYY")
     slug = slugify(a.slug)
     if not slug:
         raise SystemExit("--slug rong sau khi chuan hoa")
+    return date, slug
+
+
+def _make(path, meta):
+    """mkdir _internal/{gates,recon,evidence} (folder co san: chi bo sung) + version-meta.json neu chua co."""
+    for sub in ("gates", "recon", "evidence"):
+        os.makedirs(os.path.join(path, "_internal", sub), exist_ok=True)
+    if not os.path.isfile(os.path.join(path, META_FILE)):
+        write_meta(path, meta)
+
+
+def cmd_next(a):
+    vers = scan(a.outputs)
+    date, slug = _date_slug(a)
+    b = latest_baseline(vers)
+    now = datetime.datetime.now().isoformat(timespec="seconds")
     if a.cr_id:
-        folder = "ver%d_%s_%s-%s" % (n, date, norm_cr_id(a.cr_id), slug)
+        cid = norm_cr_id(a.cr_id)
+        if not b:
+            print("Chua co baseline trong %s — chay Luong 1 truoc." % a.outputs, file=sys.stderr)
+            return 1
+        same = [v for v in vers if v["type"] == "CR" and v["layout"] == "cr" and v["cr_id"] == cid]
+        if same:   # chay lai cung CR -> ghi vao folder CR do (snapshot truoc khi ghi de)
+            v = same[-1]
+            folder, path, reuse, base = v["folder"], v["path"], True, v["baseline_ref"] or b["folder"]
+        else:
+            folder = "%s_%s_%s" % (cid, date, slug)
+            path, reuse, base = os.path.abspath(os.path.join(a.outputs, folder)), False, b["folder"]
+        if a.create:
+            _make(path, {"version_type": "CR", "cr_id": cid, "baseline": base, "created_at": now})
+        print(json.dumps({"n": b["n"], "folder": folder, "path": path, "type": "CR", "cr_id": cid,
+                          "baseline": base, "reuse": reuse, "created": bool(a.create),
+                          **({"snapshot": "version-tool.py snapshot --ver %s" % path} if reuse else {})},
+                         ensure_ascii=False))
+        return 0
+    if b:
+        lock = crs_on(vers, b)
+        if lock:
+            print(json.dumps({"locked": True, "folder": b["folder"], "path": b["path"],
+                              "locked_by": [v["cr_id"] or v["folder"] for v in lock],
+                              "hint": ("%s da khoa (co CR tro toi). Khong ghi de. CR da duyet + da code xong -> "
+                                       "version-tool.py promote --outputs %s --cr <CR-id> --approved --coded --create; "
+                                       "chua co CR nao code xong -> chi doc lai %s.") % (b["folder"], a.outputs, b["folder"])},
+                             ensure_ascii=False))
+            return EXIT_LOCKED
+        if a.create:
+            _make(b["path"], {"version_type": "BASELINE", "created_at": now})
+        print(json.dumps({"n": b["n"], "folder": b["folder"], "path": b["path"], "type": "BASELINE",
+                          "reuse": True, "created": bool(a.create),
+                          "snapshot": "version-tool.py snapshot --ver %s" % b["path"]}, ensure_ascii=False))
+        return 0
+    folder = "ver1_%s_%s" % (date, slug)
+    path = os.path.abspath(os.path.join(a.outputs, folder))
+    if a.create:
+        _make(path, {"version_type": "BASELINE", "created_at": now})
+    print(json.dumps({"n": 1, "folder": folder, "path": path, "type": "BASELINE", "reuse": False,
+                      "created": bool(a.create)}, ensure_ascii=False))
+    return 0
+
+
+def cmd_snapshot(a):
+    """Luu file sap bi ghi de vao <ver>/_internal/history/<YYYYMMDD-HHMM>/ (giu cau truc thu muc)."""
+    ver = os.path.abspath(a.ver)
+    if not os.path.isdir(ver):
+        raise SystemExit("Khong thay folder version: %s" % ver)
+    hist_root = os.path.join(ver, HISTORY_DIR)
+    if a.files:
+        # chap nhan ca duong dan tuyet doi nam trong folder version; ngoai folder -> bo (loc '..' ben duoi)
+        rels = [os.path.relpath(os.path.abspath(f), ver) if os.path.isabs(f) else os.path.normpath(f) for f in a.files]
     else:
-        folder = "ver%d_%s_%s" % (n, date, slug)
+        rels = []
+        for root, dirs, files in os.walk(ver):
+            if os.path.abspath(root).startswith(hist_root):
+                dirs[:] = []
+                continue
+            rels += [os.path.relpath(os.path.join(root, f), ver) for f in files]
+    rels = [r for r in rels if not r.startswith(("..", HISTORY_DIR)) and os.path.isfile(os.path.join(ver, r))]
+    stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M")
+    dst, k = os.path.join(hist_root, stamp), 2
+    while os.path.exists(dst):
+        dst, k = os.path.join(hist_root, "%s-%d" % (stamp, k)), k + 1
+    for r in rels:
+        os.makedirs(os.path.dirname(os.path.join(dst, r)), exist_ok=True)
+        shutil.copy2(os.path.join(ver, r), os.path.join(dst, r))
+    if rels:
+        with open(os.path.join(dst, "SNAPSHOT.md"), "w", encoding="utf8") as fh:
+            fh.write("# Snapshot %s\n\n%d file truoc khi ghi de:\n\n" % (os.path.basename(dst), len(rels)) +
+                     "".join("- %s\n" % r.replace(os.sep, "/") for r in sorted(rels)))
+    print(json.dumps({"dir": dst if rels else None, "files": len(rels)}, ensure_ascii=False))
+    return 0
+
+
+def cmd_promote(a):
+    """Baseline moi ver<N+1> = baseline hien hanh + CR da duyet + da code xong (lenh ro rang)."""
+    if not (a.approved and a.coded):
+        print("Tu choi: chi tao baseline moi khi CR da duyet VA da code xong — them --approved --coded "
+              "sau khi user xac nhan.", file=sys.stderr)
+        return 1
+    vers = scan(a.outputs)
+    b = latest_baseline(vers)
+    if not b:
+        print("Chua co baseline trong %s." % a.outputs, file=sys.stderr)
+        return 1
+    on_b = {v["cr_id"]: v for v in crs_on(vers, b) if v["cr_id"]}
+    cids = [norm_cr_id(c) for c in a.cr]
+    miss = [c for c in cids if c not in on_b]
+    if miss:
+        print("CR %s khong tro toi baseline hien hanh %s (CR tren baseline nay: %s)."
+              % (", ".join(miss), b["folder"], ", ".join(sorted(on_b)) or "khong co"), file=sys.stderr)
+        return 1
+    date, slug = _date_slug(a)
+    n = b["n"] + 1
+    folder = "ver%d_%s_%s" % (n, date, slug)
     path = os.path.abspath(os.path.join(a.outputs, folder))
     if a.create:
         if os.path.exists(path):
             raise SystemExit("Da ton tai, khong ghi de: %s" % path)
-        for sub in ("gates", "recon", "evidence"):
-            os.makedirs(os.path.join(path, "_internal", sub))
-    print(json.dumps({"n": n, "folder": folder, "path": path, "created": bool(a.create)},
+        _make(path, {"version_type": "BASELINE", "previous_version": b["folder"], "promoted_crs": cids,
+                     "approved": True, "coded": True,
+                     "created_at": datetime.datetime.now().isoformat(timespec="seconds")})
+    print(json.dumps({"n": n, "folder": folder, "path": path, "type": "BASELINE", "previous_version": b["folder"],
+                      "promoted_crs": cids, "created": bool(a.create),
+                      "next_step": "Luong 1 mode DELTA ghi vao %s (carry tu %s + phan CR cham)" % (folder, b["folder"])},
                      ensure_ascii=False))
     return 0
 
@@ -203,7 +391,8 @@ def cmd_latest(a):
 def cmd_list(a):
     vers = scan(a.outputs)
     b = latest_baseline(vers)
-    open_crs = [v for v in vers if v["type"] == "CR" and b and v["n"] > b["n"]]
+    done = promoted(vers)
+    open_crs = [v for v in crs_on(vers, b) if v["cr_id"] not in done]
     if a.json:
         print(json.dumps({"versions": vers, "latest_baseline": b and b["folder"],
                           "open_crs": [v["folder"] for v in open_crs]},
@@ -218,7 +407,7 @@ def cmd_list(a):
     print("")
     print("Latest baseline: %s" % (b["folder"] if b else "(khong co)"))
     if open_crs:
-        print("Open CRs since latest baseline (%d) — kiem tra xung dot CR-vs-CR "
+        print("Open CRs on latest baseline (%d) — kiem tra xung dot CR-vs-CR "
               "(verify-cr-impact.py --other-cr):" % len(open_crs))
         for v in open_crs:
             warn = ""
@@ -226,7 +415,7 @@ def cmd_list(a):
                 warn = "  [CANH BAO: tham chieu baseline %s]" % v["baseline_ref"]
             print("  - %s (%s) %s%s" % (v["folder"], v["cr_id"] or "?", v["impact"] or "", warn))
     else:
-        print("Open CRs since latest baseline: 0")
+        print("Open CRs on latest baseline: 0")
     return 0
 
 
@@ -237,16 +426,19 @@ def cmd_context(a):
     for v in vers:
         if v["type"] == "CR" and v["cr_id"]:
             by_cr[v["cr_id"].upper()] = v["folder"]
-    # CR mo sau baseline — moi CR chi lay version MOI NHAT (CR chay lai nhieu lan khong dem trung)
-    open_crs = [v for v in vers if v["type"] == "CR" and b and v["n"] > b["n"]
+    # CR tren baseline moi nhat, chua promote — moi CR chi lay version MOI NHAT (CR chay lai khong dem trung)
+    done = promoted(vers)
+    lock = crs_on(vers, b)
+    open_crs = [v for v in lock if v["cr_id"] not in done
                 and (not v["cr_id"] or by_cr.get(v["cr_id"].upper()) == v["folder"])]
     logs = {v["folder"]: read_runlog(v["path"]) for v in vers}
     pending = []
-    for v in vers:
+    for i, v in enumerate(vers):
         fb = logs[v["folder"]][0]
         if not fb:
             continue
-        handled = any(v["folder"] in logs[w["folder"]][1] for w in vers if w["n"] > v["n"])
+        # chay lai tai cho (ver1) -> chinh run-log do co the ghi "Feedback da xu ly"
+        handled = any(v["folder"] in logs[w["folder"]][1] for w in vers[i:])
         if not handled:
             pending.append({"folder": v["folder"], "type": v["type"], "cr_id": v["cr_id"], "feedback": fb})
     ctx = {
@@ -265,12 +457,28 @@ def cmd_context(a):
         inv = os.path.join(b["path"], "_internal", "inventory.xlsx")
         ctx["latest_baseline"] = {"folder": b["folder"], "path": b["path"], "n": b["n"],
                                   "inventory": inv, "inventory_exists": os.path.isfile(inv),
-                                  "outputs": outputs_exist(b["path"])}
+                                  "outputs": outputs_exist(b["path"]),
+                                  "locked": bool(lock), "locked_by": [v["cr_id"] or v["folder"] for v in lock],
+                                  "promoted_crs": b["promoted_crs"],
+                                  "history": sorted(os.listdir(os.path.join(b["path"], HISTORY_DIR)))
+                                  if os.path.isdir(os.path.join(b["path"], HISTORY_DIR)) else []}
     flow = str(a.flow or "")
     read, suggest = [], {}
     if b:
         read += [os.path.join(b["path"], "_internal", "inventory.xlsx"), os.path.join(b["path"], "run-log.md")]
     if flow != "2":
+        # flow1_action: create_v1 (chua co gi) · rerun_in_place (ghi vao baseline, snapshot truoc) ·
+        #               locked (baseline da khoa — chi promote khi CR da duyet + code xong, hoac chi doc lai)
+        if not b:
+            suggest["flow1_action"] = "create_v1"
+        elif lock:
+            suggest["flow1_action"] = "locked"
+            suggest["locked_hint"] = ("%s da khoa boi %s. CR nao da duyet + da code xong -> promote; "
+                                      "chua co -> chi doc lai, khong ghi." % (
+                                          b["folder"], ", ".join(v["cr_id"] or v["folder"] for v in lock)))
+        else:
+            suggest["flow1_action"] = "rerun_in_place"
+            suggest["flow1_target"] = b["folder"]
         if not b:
             suggest["flow1_mode"] = "FULL"
             suggest["why"] = "chua co baseline"
@@ -278,7 +486,7 @@ def cmd_context(a):
             suggest["flow1_mode"] = "DELTA"
             why = []
             if open_crs:
-                why.append("%d CR sau baseline (%s) — CR nao da code xong thi Delta cap nhat AS-IS"
+                why.append("%d CR tren baseline (%s) — CR nao da duyet + code xong thi promote roi Delta cap nhat AS-IS"
                            % (len(open_crs), ", ".join(v["cr_id"] or v["folder"] for v in open_crs)))
             if pending:
                 why.append("%d feedback chua xu ly" % len(pending))
@@ -313,6 +521,17 @@ def main():
     p.add_argument("--cr-id", default=None)
     p.add_argument("--date", default=None)
     p.add_argument("--create", action="store_true")
+    p = sub.add_parser("snapshot")
+    p.add_argument("--ver", required=True)
+    p.add_argument("--files", nargs="*", default=None, help="duong dan tuong doi folder version (mac dinh: moi file)")
+    p = sub.add_parser("promote")
+    p.add_argument("--outputs", required=True)
+    p.add_argument("--cr", action="append", required=True)
+    p.add_argument("--approved", action="store_true", help="user xac nhan CR da duyet")
+    p.add_argument("--coded", action="store_true", help="user xac nhan CR da code xong / da len he thong")
+    p.add_argument("--slug", default="baseline")
+    p.add_argument("--date", default=None)
+    p.add_argument("--create", action="store_true")
     p = sub.add_parser("latest-baseline")
     p.add_argument("--outputs", required=True)
     p = sub.add_parser("list")
@@ -323,8 +542,8 @@ def main():
     p.add_argument("--flow", choices=["1", "2"], default=None)
     p.add_argument("--cr-id", default=None)
     a = ap.parse_args()
-    return {"next": cmd_next, "latest-baseline": cmd_latest, "list": cmd_list,
-            "context": cmd_context}[a.cmd](a)
+    return {"next": cmd_next, "snapshot": cmd_snapshot, "promote": cmd_promote, "latest-baseline": cmd_latest,
+            "list": cmd_list, "context": cmd_context}[a.cmd](a)
 
 
 if __name__ == "__main__":

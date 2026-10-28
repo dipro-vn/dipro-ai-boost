@@ -2,7 +2,7 @@
 
 > Always-loaded qua `CLAUDE.md`. Sửa policy thì chỉ sửa file này.
 >
-> **Companion rules** (đọc khi cần chi tiết): `.claude/rules/DATA-PRIVACY.md` (dữ liệu KH) · `.claude/rules/SECURITY.md` (file cấm đọc) · `.claude/rules/RELIABILITY.md` (không bịa) · `.claude/rules/POLICY.md` (tài sản, AI tool, sự cố). Các file rules copy từ kit `requirement-to-flow`; chỗ nào nói "BA / SPEC.md" thì hiểu là "System Analyst / tài liệu O1–O7 + CR".
+> **Companion rules** (đọc khi cần chi tiết): `.claude/rules/DATA-PRIVACY.md` (dữ liệu KH) · `.claude/rules/SECURITY.md` (file cấm đọc) · `.claude/rules/RELIABILITY.md` (không bịa) · `.claude/rules/POLICY.md` (tài sản, AI tool, sự cố). Các file rules copy từ kit `requirement-to-flow`; chỗ nào nói "BA / SPEC.md" thì hiểu là "System Analyst / tài liệu O1–O9 + CR".
 
 ---
 
@@ -11,9 +11,9 @@
 | Policy | Nội dung | Vi phạm dẫn tới |
 |---|---|---|
 | **Bằng chứng trước, kết luận sau** | Mọi `Confirmed` phải có `EV ID` phân giải được | Tài liệu sai, khách mất niềm tin vào cả bộ |
-| **Không đoán mò** | Thiếu thông tin → hỏi bằng `AskUserQuestion`; không có → `UNKNOWN` + Open Question, **chạy tiếp phần khác** | Giả định biến thành spec |
+| **Không đoán mò** | Thiếu thông tin → hỏi bằng `AskUserQuestion`; không có → `To verify` + Open Question (chữ hiển thị "Cần xác nhận — Q-xxx"), **chạy tiếp phần khác** | Giả định biến thành spec |
 | **Read-only mặc định** | Không thao tác ghi trên hệ thống thật khi chưa qua P3 | Hỏng dữ liệu production — không hoàn tác được |
-| **Stateless + versioned** | Mọi context đọc từ folder version; mỗi lần chạy 1 folder mới, không sửa version cũ | Tự cho là đã được duyệt · mất baseline |
+| **Stateless + versioned** | Mọi context đọc từ folder version. Khảo sát lần đầu luôn là ver1: chạy lại ghi vào ver1, **cất bản cũ vào `_internal/history/` trước khi ghi đè**. Có CR trỏ tới baseline → baseline **khoá**; baseline mới ver<N+1> chỉ tạo khi CR đã duyệt + code xong (`version-tool.py promote`). Không sửa baseline đã khoá / folder CR cũ | Tự cho là đã được duyệt · mất baseline · CR đối chiếu sai bản gốc |
 | **Gate bằng máy** | PASS/FAIL do script, không do cảm nhận | Gate rỗng, báo xong khi chưa xong |
 
 ---
@@ -98,7 +98,7 @@ Thiếu 1 ý / trả lời mơ hồ → **hỏi lại để phân loại** (khô
 | Output không chạy → ghi rõ trong README version + lý do | Im lặng thu hẹp scope |
 | Báo cáo cuối: đường dẫn folder + từng output + số lượng | "Đã xong" chung chung |
 
-Ba mức kết luận: `Confirmed` (≥ 1 evidence phân giải được) · `Inferred` / `To verify` (bắt buộc Open Question) · `UNKNOWN` (ghi rõ vì sao chưa quan sát được). **`UNKNOWN` không phải thất bại — ô trống mới là thất bại.**
+Ba mức kết luận: `Confirmed` (≥ 1 evidence phân giải được) · `Inferred` (suy luận — bắt buộc Open Question) · `To verify` (chưa có bằng chứng — bắt buộc Open Question; chữ hiển thị trong xlsx / docx / Figma / CR = "Cần xác nhận — Q-xxx", bản JP 「要確認 — Q-xxx」). **"Cần xác nhận" không phải thất bại — ô trống, hay ô lấp bằng nội dung không có căn cứ, mới là thất bại.**
 
 ---
 

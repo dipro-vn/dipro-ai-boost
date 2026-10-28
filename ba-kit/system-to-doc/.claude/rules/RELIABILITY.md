@@ -28,7 +28,7 @@ You MUST ALWAYS prioritize accuracy, truthfulness, and reliability in all output
 | `FACT` | user/BRSE đã confirm | ✅ Happy Path · AC · kết luận chính thức |
 | `PROPOSAL` | BA đề xuất, chờ approve | ⚠️ Chỉ khi có badge `[PROPOSAL — chờ BRSE approve]` tại nơi reference |
 | `INFERENCE` | BA suy luận từ context | ❌ Không đưa vào AC — cần verify trước |
-| `UNKNOWN` | chưa rõ | ❌ Đưa vào `## Q&A`, blocking |
+| `To verify` (đã tách khỏi bản gốc, D1) | chưa rõ — chữ hiển thị "Cần xác nhận — Q-xxx" | ❌ Đưa vào Open Question, blocking |
 | `CONFLICT` | ≥2 source mâu thuẫn | ❌ Cần BRSE quyết trước khi dùng |
 
 - Case chưa rõ hành vi → **không vẽ inline vào flow chính** như thể đã confirm; đưa vào panel Edge/Exceptional riêng (`skills/ba-figma-output/SKILL.md` §5.6)

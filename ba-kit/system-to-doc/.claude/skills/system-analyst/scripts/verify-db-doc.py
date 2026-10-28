@@ -2,12 +2,18 @@
 """GATE — O3 Database Documentation (doi chieu voi inventory).
 
   python3 verify-db-doc.py <DB_Doc.xlsx> --inventory <_internal>/inventory.xlsx \\
+      [--code-schema <_internal>/recon/db-code/REPO-01/code-schema.csv ...] \\
       [--erd-png <ERD.png>] [--out <_internal>/gates/v-db.md]
+
+Check 10 (gate schema, R1): moi bang + cot doc tu code (model / entity / migration — read-orm-schema.py)
+phai co trong 03_DB_Tables / 04_DB_Columns. Thieu -> FAIL (ver3: O3 bo sot ~60 migration TypeORM).
+Repo co ORM / migration ma khong truyen --code-schema -> WARN.
 
 Chan: bang thieu/trung sheet, so cot lech 04_DB_Columns, quan he tro toi bang/cot khong ton tai
 (bia), link noi bo gay, o trong trong luoi du lieu, Confidence High khong co code-ref, thieu ERD.
 """
 import argparse
+import csv
 import os
 import sys
 
@@ -60,6 +66,8 @@ def main():
     ap.add_argument("doc")
     ap.add_argument("--inventory", required=True)
     ap.add_argument("--erd-png")
+    ap.add_argument("--code-schema", action="append", default=[],
+                    help="code-schema.csv cua read-orm-schema.py (lap lai moi repo)")
     ap.add_argument("--out")
     a = ap.parse_args()
 
@@ -72,6 +80,29 @@ def main():
     evtype = {e.get("EV ID"): e.get("Type", "") for e in data["05_Evidence"]}
     wb = load_workbook(a.doc)
     g = Gate("GATE O3 — Database Documentation")
+
+    # 10 gate schema: code -> inventory (doc lap voi doc xlsx, chay truoc)
+    if a.code_schema:
+        inv_t = {t.lower() for t in tables}
+        inv_c = {(t.lower(), c.lower()) for t, cs in colmap.items() for c in cs}
+        bad, missing = [], set()
+        for path in a.code_schema:
+            if not os.path.isfile(path):
+                bad.append("khong thay %s" % path)
+                continue
+            with open(path, encoding="utf8") as fh:
+                for r in csv.DictReader(fh):
+                    t, c = r.get("Table", ""), r.get("Column", "")
+                    if t.lower() not in inv_t:
+                        if t.lower() not in missing:    # bao 1 lan / bang
+                            bad.append("bang %s (%s) khong co trong 03_DB_Tables" % (t, r.get("Source", "")[:80]))
+                        missing.add(t.lower())
+                    elif (t.lower(), c.lower()) not in inv_c:
+                        bad.append("cot %s.%s (%s) khong co trong 04_DB_Columns" % (t, c, r.get("Source", "")[:80]))
+        g.check(10, "Moi bang / cot doc tu code (model, entity, migration) co trong 03/04", bad)
+    else:
+        g.check(10, "Doi chieu schema voi code (--code-schema)",
+                ["khong truyen --code-schema — repo co ORM/migration thi bat buoc"], level="WARN")
 
     req = ["00_Overview", "01_Relationships", "02_ERD"]
     g.check(1, "Co sheet 00_Overview, 01_Relationships, 02_ERD", [s for s in req if s not in wb.sheetnames])
@@ -111,7 +142,7 @@ def main():
         ws = tsheets[t][0]
         h, hd, rows = grid(ws, "No", "Column")
         grids[t] = (ws, hd, rows)
-        doc_cols = [str(v[1]) for _, v in rows if str(v[1]) != S.UNKNOWN]
+        doc_cols = [str(v[1]) for _, v in rows if str(v[1]) != S.NEED_CONFIRM]
         inv_cols = colmap.get(t, set())
         if len(doc_cols) != len(inv_cols) or set(doc_cols) != inv_cols:
             miss = sorted(inv_cols - set(doc_cols))
@@ -161,7 +192,7 @@ def main():
     bad = blanks("00_Overview", orows) + blanks("01_Relationships", rrows)
     for t, (ws, hd, rows) in grids.items():
         bad += blanks(ws.title, rows)
-    g.check(7, "Khong co o trong trong luoi du lieu (UNKNOWN / — thay cho trong)", bad)
+    g.check(7, "Khong co o trong trong luoi du lieu ('Cần xác nhận' / — thay cho trong)", bad)
 
     # 8 Confidence High -> co code-ref
     bad = []

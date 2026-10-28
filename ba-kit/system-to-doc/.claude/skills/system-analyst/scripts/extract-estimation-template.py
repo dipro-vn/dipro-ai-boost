@@ -179,11 +179,10 @@ def main():
                            end_row=rng.max_row - notes + OUT_ROW["notes"], end_column=rng.max_col)
         elif rng.min_row == tot:
             ws.merge_cells(start_row=tr, start_column=rng.min_col, end_row=mr, end_column=rng.max_col)
-    # 5. do rong cot, freeze, view
+    # 5. do rong cot, view (khong freeze — R13)
     for k, d in src.column_dimensions.items():
         if d.width:
             ws.column_dimensions[k].width = d.width
-    ws.freeze_panes = "A%d" % (hdr + 2)
     ws.sheet_view.showGridLines = bool(src.sheet_view.showGridLines)
     # 6. validation + conditional format (lay danh sach gia tri tu nguon)
     for dv in src.data_validations.dataValidation:

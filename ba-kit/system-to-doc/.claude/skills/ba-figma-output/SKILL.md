@@ -10,7 +10,7 @@
 
 ---
 
-> **SOURCE:** `ba-kit/requirement-to-flow/.claude/skills/ba-figma-output/SKILL.md` @ a4cfc01 — copy self-contained cho kit system-to-doc. Kit này chỉ dùng §1–§5 (Output 1 + Output 2) và §7–§11; nguồn dữ liệu thay SPEC.md → xem `.claude/sys-agent/outputs/o5-figma.md`. Sửa quy tắc vẽ chung thì sửa CẢ HAI nơi.
+> **SOURCE:** `ba-kit/requirement-to-flow/.claude/skills/ba-figma-output/SKILL.md` @ a4cfc01 — copy self-contained cho kit system-to-doc. Kit này chỉ dùng §1–§5 (Output 1 + Output 2) và §7–§11; nguồn dữ liệu thay SPEC.md → xem `.claude/sys-agent/outputs/o5-figma.md`. Sửa quy tắc vẽ chung thì sửa CẢ HAI nơi. **Đã tách khỏi bản gốc (D1, 27/10/2026):** phân loại `To verify` của bản gốc ở kit này ghi là `To verify` (+ Open Question); chữ hiển thị "Cần xác nhận — Q-xxx".
 
 
 ## 0. Load ngay đầu
@@ -84,7 +84,7 @@ Output 2 dùng 5 màu mang ngữ nghĩa theo **loại node** (không theo actor)
 | **Decision** | `ORANGELT` | `ORANGE` | Điểm rẽ nhánh (verify, check điều kiện...) |
 | **System** | `GREENLT` | `GREEN` | Hành động backend tự động (gửi mail, generate code...) — KHÔNG phải Actor |
 | **NG** | `REDLT` | `RED` | Lỗi ĐÃ ĐỊNH NGHĨA rõ (FACT) — vẽ inline ngay tại điểm phát sinh trong flow chính |
-| **Edge / Exceptional** | `PURPLT` | `PURP` | Case CHƯA rõ hành vi (UNKNOWN/INFERENCE trong Source Register) — tách panel riêng, KHÔNG vẽ inline |
+| **Edge / Exceptional** | `PURPLT` | `PURP` | Case CHƯA rõ hành vi (To verify/INFERENCE trong Source Register) — tách panel riêng, KHÔNG vẽ inline |
 
 Legend trên frame Output 2 PHẢI dùng đúng 5 label: `Screen` · `Decision` · `System` · `NG` · `Edge`.
 
@@ -460,7 +460,7 @@ y+50                               Legend (giống §5.3 y=70): Screen · Decisi
 y+90                               Start (▶ ellipse 32px BLUE) — "Vào từ N luồng: <flow 1> · <flow 2> · ..."
 y+140+                             NHÁNH A / NHÁNH B / ... (1 nhánh / flow gốc, hoặc gộp nhánh có chung hành vi)
 ...                                Merge point → Terminal fan-out (N terminal, xem §5.5)
-(cột phải, ngang tầm flow)         Edge/Exceptional Panel GỘP — tất cả case UNKNOWN/INFERENCE của N flow trong 1 panel (xem §5.6)
+(cột phải, ngang tầm flow)         Edge/Exceptional Panel GỘP — tất cả case To verify/INFERENCE của N flow trong 1 panel (xem §5.6)
 ```
 
 **Cách dựng nhánh gộp — quan trọng để không vẽ trùng:**
@@ -566,7 +566,7 @@ Ví dụ: `"Inline error tại chỗ. Cho nhập lại không giới hạn. → 
 
 **⚠️ Rule NG vs Edge (BẮT BUỘC phân biệt — không được lẫn):**
 - Lỗi đã rõ cách xử lý (validation thông thường, đã có trong Function detail / SPEC, classification `FACT` trong Source Register) → vẽ **NG** (đỏ, inline trong flow chính)
-- Case CHƯA rõ hành vi, cần BRSE confirm (`UNKNOWN`/`INFERENCE` trong Source Register) → **TUYỆT ĐỐI KHÔNG vẽ inline như NG** — đưa vào panel **Edge/Exceptional** riêng (5.6). Vẽ inline sẽ khiến flow chính trông như "đã confirm" trong khi thực ra chưa — vi phạm RELIABILITY.md.
+- Case CHƯA rõ hành vi, cần BRSE confirm (`To verify`/`INFERENCE` trong Source Register) → **TUYỆT ĐỐI KHÔNG vẽ inline như NG** — đưa vào panel **Edge/Exceptional** riêng (5.6). Vẽ inline sẽ khiến flow chính trông như "đã confirm" trong khi thực ra chưa — vi phạm RELIABILITY.md.
 
 ### 5.5. Merge point + Terminal fan-out
 
@@ -586,7 +586,7 @@ Nếu Group KHÔNG phải shared-cluster (N=1) → vẫn giữ merge point + 1 t
 
 ### 5.6. Edge / Exceptional Panel (BẮT BUỘC — đặt bên phải flow chính, cùng Group)
 
-> Panel này là biểu diễn TRỰC QUAN của các row `UNKNOWN`/`INFERENCE` trong `## Source Register` (SPEC.md) và Exception Matrix (`figma-outputs/output-2-screen-flow.md` §⑤) — mỗi box PHẢI trace được về 1 row Exception Matrix tương ứng.
+> Panel này là biểu diễn TRỰC QUAN của các row `To verify`/`INFERENCE` trong `## Source Register` (SPEC.md) và Exception Matrix (`figma-outputs/output-2-screen-flow.md` §⑤) — mỗi box PHẢI trace được về 1 row Exception Matrix tương ứng.
 
 ```
 Header: "EDGE / EXCEPTIONAL — chưa được định nghĩa trong Function detail"   (11-12px Bold TH)
@@ -606,7 +606,7 @@ Xếp dọc, gap ~20px giữa các box. Chiều rộng panel ~280-320px, chiều
 ### 5.7. Cross-verification khi Quality Gate O2
 
 - Nếu có ≥ 2 Group → Combined Detail (§5.0b) PHẢI có mặt ở CUỐI frame (sau Group N), đủ Decision/System/NG/Edge gộp N flow, badge số khớp với Group bên trên. Nếu tổng node > 40 → PHẢI có thêm **Master Map** (§5.0) và pass **Node Coverage Checklist**
-- Mọi box trong Edge/Exceptional Panel PHẢI có 1 row tương ứng trong Exception Matrix (§⑤) với classification `UNKNOWN` hoặc `INFERENCE`
+- Mọi box trong Edge/Exceptional Panel PHẢI có 1 row tương ứng trong Exception Matrix (§⑤) với classification `To verify` hoặc `INFERENCE`
 - Mọi NG box PHẢI có 1 row Exception Matrix classification `FACT`
 - Nếu Group là Shared Cluster (N>1 flow nguồn) → số terminal box = N = số flow đã liệt kê ở Start note
 - Badge số phải liên tục tăng dần qua toàn bộ các Group trong frame (không trùng, không reset)
@@ -1020,7 +1020,7 @@ Mỗi row build 3 thành phần qua helper:
 | Ghi px/hex trong Output 3 Mô tả | Chỉ mô tả "trông ntn" + "mục đích nghiệp vụ" |
 | Vẽ Level 3 = screen name | Level 3 phải là **hành động verb-first** (✔ Chọn công ty) |
 | Trộn màu actor DA/CA | Giữ nhất quán: DA = BLUE, CA = GREEN toàn bộ 3 outputs |
-| Vẽ case `UNKNOWN`/`INFERENCE` như NG (đỏ) inline trong flow chính | Đưa vào Edge/Exceptional Panel riêng (§5.6), không lẫn vào flow đã "trông như confirm" |
+| Vẽ case `To verify`/`INFERENCE` như NG (đỏ) inline trong flow chính | Đưa vào Edge/Exceptional Panel riêng (§5.6), không lẫn vào flow đã "trông như confirm" |
 | Reset badge số về 1 mỗi Group trong Output 2 | Badge liên tục toàn cục qua các Group trong cùng 1 frame |
 | Lặp lại vẽ Auth/shared-cluster N lần cho N business flows | Gộp thành 1 Group duy nhất (5.1), fan-out N terminal ở cuối |
 | Vẽ Combined Overview dạng chip/badge liệt kê rời rạc cạnh nhau (chỉ cách nhau bằng gap), không có arrow/connector nối giữa các node — kể cả khi N flow lớn khiến layout đầy đủ tốn công | Mọi node nối bằng connector thật (`hl`/`vl`/`arrowHead`), kể cả bản compact chip (§5.0b) — dùng spine + branch-stub pattern (giống Sitemap §4.4) để fan-out/fan-in gọn mà vẫn có connector. Khi tổng node > 40 → tách 2 tầng Master Map (§5.0) + Combined Detail thay vì nhồi 1 sơ đồ, KHÔNG bao giờ bỏ connector để "tiết kiệm effort" |

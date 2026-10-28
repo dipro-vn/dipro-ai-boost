@@ -21,7 +21,7 @@ import inv_schema as S
 from gate_report import Gate
 
 DASHES = ("—", "-")
-SKIP_REF = ("—", "-", "N/A", S.UNKNOWN)
+SKIP_REF = ("—", "-", "N/A", S.NEED_CONFIRM)
 METHOD_PREFIX = re.compile(r"^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS|ANY|ALL)\s+", re.I)
 CRED_URL = re.compile(r"://[^/\s:@]+:[^/\s@]+@")
 
@@ -195,7 +195,7 @@ def main():
         for r in data[sheet]:
             blanks += ["%s!row%s.%s" % (sheet, r["__row__"], c)
                        for c in need if not r.get(c, "").strip()]
-    g.check(11, "Khong o trong lang le (thieu bang chung phai ghi UNKNOWN)", blanks)
+    g.check(11, "Khong o trong lang le (thieu bang chung phai ghi 'Cần xác nhận')", blanks)
 
     # 12 — nhat quan DB
     db_mode = meta.get("db_mode", "")

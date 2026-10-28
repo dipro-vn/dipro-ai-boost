@@ -1,0 +1,59 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>System to Doc</title>
+<style>
+body{margin:0;padding:36px 36px 30px;width:1928px;font-family:-apple-system,"Segoe UI","Helvetica Neue",Arial,sans-serif;color:#1f2328;background:#fff}
+h1{font-size:44px;margin:0}h1 .b{color:#0969da}h1 .ar{color:#57606a;font-weight:400}
+.sub{font-size:20px;color:#57606a;margin:10px 0 26px}
+.grid{display:grid;grid-template-columns:500px 40px 640px 40px 1fr;align-items:stretch}
+.col{border:2px solid;border-radius:22px;padding:22px 22px 18px}
+.in{background:#eef6ff;border-color:#b6d4fe}.ag{background:#fff8ee;border-color:#f5cf96}.out{background:#effaf1;border-color:#a8dbb3}
+.pill{display:inline-block;color:#fff;font-weight:800;font-size:20px;padding:8px 18px;border-radius:22px;margin-bottom:14px}
+.arrow{display:flex;align-items:center;justify-content:center;font-size:40px;color:#6e7781}
+.card{background:#fff;border-radius:14px;padding:14px 16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);display:flex;gap:14px;align-items:flex-start}
+.ic{width:54px;height:54px;border-radius:12px;color:#fff;font-weight:800;font-size:22px;display:flex;align-items:center;justify-content:center;flex:none}
+.t{font-size:23px;font-weight:700}.d{font-size:16px;color:#57606a;line-height:1.45;margin-top:3px}
+.tag{font-size:13px;font-weight:700;color:#fff;border-radius:10px;padding:2px 8px;margin-left:8px;vertical-align:middle}
+.num{width:46px;height:46px;border-radius:50%;background:#e8870b;color:#fff;font-weight:800;font-size:22px;display:flex;align-items:center;justify-content:center;flex:none}
+.ok{display:inline-block;margin-top:6px;background:#ddf4ff;color:#0550ae;font-weight:700;font-size:15px;padding:3px 10px;border-radius:8px}
+.o{padding:10px 14px;margin-bottom:8px;align-items:center}.o .t{font-size:19px}.o .d{font-size:14px;margin:0}
+.ty{width:72px;height:34px;border-radius:7px;color:#fff;font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center;flex:none}
+.warn{color:#cf222e;font-weight:700;font-size:17px;margin-top:10px;line-height:1.6}
+.cr{margin-top:22px;border:2px dashed #a475f9;border-radius:18px;padding:16px 26px;display:flex;gap:24px;align-items:center}
+.cr .big{font-size:24px;font-weight:800;color:#8250df;white-space:nowrap}.cr .d{font-size:17px;color:#1f2328}
+code{font-family:Menlo,monospace;background:#f6f8fa;border:1px solid #d0d7de;border-radius:6px;padding:1px 6px;font-size:15px}
+.b{font-weight:700}
+</style></head><body>
+<h1>System <span class="ar">→</span> <span class="b" style="color:#0969da">Doc</span></h1>
+<div class="sub">Hệ thống đang chạy → bộ tài liệu hiện trạng (AS-IS) · Đọc code trước, website sau · AI nhớ câu trả lời · Máy chấm từng output · Khảo sát lần đầu luôn là ver1</div>
+<div class="grid">
+ <div class="col in"><span class="pill" style="background:#0969da">ĐẦU VÀO</span>
+  <div class="card"><div class="ic" style="background:#24292f">&lt;/&gt;</div><div><div class="t">Source code <span class="tag" style="background:#1a7f37">Đọc trước</span></div><div class="d">Repo FE / BE · FE nào chạy site nào<br>(không giao source → chỉ website)</div></div></div>
+  <div class="card"><div class="ic" style="background:#0969da">🌐</div><div><div class="t">Website <span class="tag" style="background:#57606a">Đối chiếu sau</span></div><div class="d">URL từng site + tài khoản thử nghiệm được phép quét · chỉ xem hay được ghi</div></div></div>
+  <div class="card"><div class="ic" style="background:#bf8700">DB</div><div><div class="t">Database <span class="tag" style="background:#8c959f">Tuỳ chọn</span></div><div class="d">File chỉ cấu trúc · hoặc lấy từ code (model / migration)</div></div></div>
+  <div class="card"><div class="ic" style="background:#f24e1e">F</div><div><div class="t">Figma <span class="tag" style="background:#8c959f">Tuỳ chọn</span></div><div class="d">Design hiện tại + link để vẽ flow và sơ đồ</div></div></div>
+  <div class="warn">⛔ Thiếu thông tin → hỏi, hoặc "chạy v1 trước, bổ sung sau"<br>⛔ Thấy dữ liệu nhạy cảm → cảnh báo + dừng</div>
+ </div>
+ <div class="arrow">➜</div>
+ <div class="col ag"><span class="pill" style="background:#e8870b">AGENT LÀM · /analyze-system (Opus)</span>
+  <div class="card"><div class="num">1</div><div><div class="t">Hỏi câu còn thiếu</div><div class="d">Câu đã trả lời → 1 bảng "có gì đổi không?" · 4 câu an toàn luôn xác nhận lại: thử nghiệm hay thật · được phép quét · mức thao tác · có dữ liệu thật</div><span class="ok">✓ Bạn trả lời / xác nhận</span></div></div>
+  <div class="card"><div class="num">2</div><div><div class="t">Đọc code → quyết định lớn</div><div class="d">Màn → nút → API → bảng · quyền · so giao diện các site → đề xuất 1 hay nhiều Design System, output nào làm, có vẽ sơ đồ lên Figma</div><span class="ok">✓ Bạn OK bảng tổng hợp</span></div></div>
+  <div class="card"><div class="num">3</div><div><div class="t">Mở website để đối chiếu</div><div class="d">Chỉ xem · mỗi kiểu trang lấy mẫu ≤ 3 · không đăng nhập được → nhờ bạn đăng nhập tay</div></div></div>
+  <div class="card"><div class="num">4</div><div><div class="t">Dựng tài liệu + máy chấm</div><div class="d">FAIL thì sửa rồi chạy lại · thiếu bằng chứng ghi "Cần xác nhận — Q-xxx" + câu hỏi, không đoán</div></div></div>
+  <div class="card"><div class="num">5</div><div><div class="t">Đóng version</div><div class="d">Quét PII / credential · báo đường dẫn + số lượng từng output</div></div></div>
+ </div>
+ <div class="arrow">➜</div>
+ <div class="col out"><span class="pill" style="background:#1a7f37">ĐẦU RA</span>
+  <div class="d" style="color:#1a7f37;font-weight:700;margin:0 0 10px">📁 outputs/ver1_ddmmyy_&lt;tên&gt;/</div>
+  <div class="card o"><div class="ty" style="background:#1a7f37">XLSX</div><div><div class="t">O1 · Danh sách màn hình</div><div class="d">Basic Design, 1 file / website · cột "API gọi"</div></div></div>
+  <div class="card o"><div class="ty" style="background:#1a7f37">XLSX</div><div><div class="t">O2 · API Documentation</div><div class="d">mọi API theo group + batch</div></div></div>
+  <div class="card o"><div class="ty" style="background:#1a7f37">XLSX</div><div><div class="t">O3 · Database Documentation</div><div class="d">+ ERD · đủ bảng / cột từ code</div></div></div>
+  <div class="card o"><div class="ty" style="background:#8250df">LINK</div><div><div class="t">O4 · Design System <span style="font-weight:400;font-size:14px;color:#57606a">(tuỳ chọn)</span></div><div class="d">claude.ai artifact, tách theo website</div></div></div>
+  <div class="card o"><div class="ty" style="background:#f24e1e">FIGMA</div><div><div class="t">O5 · Figma flow + sơ đồ</div><div class="d">Output 1 & 2 · ERD trên cùng file Figma</div></div></div>
+  <div class="card o"><div class="ty" style="background:#0550ae">DOCX</div><div><div class="t">O6 · Tài liệu tổng hợp</div><div class="d">Nghiệp vụ chính · bảng tổng màn / API / DB</div></div></div>
+  <div class="card o"><div class="ty" style="background:#1a7f37">XLSX</div><div><div class="t">O7 · Bug list <span style="font-weight:400;font-size:14px;color:#57606a">(tuỳ chọn)</span></div><div class="d"> 1 sheet · code + web · mức High trở lên</div></div></div>
+  <div class="card o"><div class="ty" style="background:#57606a">MD</div><div><div class="t">O9 · Hướng dẫn chạy local</div><div class="d">Cho dev · chỉ tên key cấu hình</div></div></div>
+ </div>
+</div>
+<div class="cr"><div class="big">↻ Có Change Request?</div>
+ <div class="d"><code>/change-request &lt;file / link / nội dung&gt;</code> → đối chiếu baseline mới nhất, ra folder <b>CR-&lt;id&gt;_ddmmyy_&lt;tên&gt;/</b>: <b>CR-&lt;id&gt;_Impact.xlsx</b> + <b>見積書</b> + Figma view CR (NEW · UPD · DEL · IMPACT). CR đã duyệt và code xong → <b>ver2</b> = ver1 + CR.</div>
+</div>
+</body></html>

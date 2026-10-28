@@ -16,7 +16,8 @@
  *   node login-site.js --form --cred-file <project>/.auth/credentials.local.env --site WEB-01 --account admin \
  *        [--url <trang login, mac dinh WEB-01.URL>] [--save <project>/.auth/WEB-01-admin.json]
  *        [--user-selector "#email"] [--pass-selector "#password"] [--submit-selector "button[type=submit]"] \
- *        [--success-url-contains ... | --success-selector ...]
+ *        [--success-url-contains ... | --success-selector ...] [--timeout-min 5]
+ *        Toi da 2 lan tu dang nhap trong --timeout-min; van that bai -> exit 4 + huong dan dang nhap tay (--manual)
  *
  *   # 2b) (cu, van chay) credential tu bien moi truong do USER tu export trong terminal cua ho
  *   node login-site.js --form --url ... --save ... --user-env WEB01_USER --pass-env WEB01_PASS \
@@ -28,7 +29,11 @@
  * Output: file storage state (cookie + localStorage) mode 0600. .auth/ PHAI nam trong .gitignore,
  * khong bao gio copy vao outputs/, khong in ra, khong ghi vao tai lieu.
  * --form: request khac GET/HEAD chi duoc phep toi origin cua form login (POST duy nhat kit cho phep).
- * Exit: 0 dang nhap OK · 1 dang nhap that bai / sai tham so · 2 thieu playwright · 3 tu choi (an toan)
+ * Thanh cong (mac dinh): URL quay ve dung origin cua site (<site>.URL, khong co cred-file thi origin --url),
+ *   khong phai trang login / SSO, khong con o mat khau. Con o domain SSO (vd Cognito) = CHUA xong, khong luu phien.
+ *   --success-url-contains / --success-selector ghi de dieu kien mac dinh.
+ * Exit: 0 dang nhap OK · 1 sai tham so · 2 thieu playwright · 3 tu choi (an toan)
+ *       4 khong dang nhap duoc (2 lan tu dang nhap that bai / qua --timeout-min) -> agent DUNG thu, nho user --manual
  */
 const fs = require('fs');
 const path = require('path');
@@ -70,7 +75,7 @@ function httpCreds(arg, url) {
   let url = arg('url');
   const manual = arg('manual', false) === true;
   const form = arg('form', false) === true;
-  const opt = { urlContains: arg('success-url-contains', null), selector: arg('success-selector', null) };
+  const opt = { urlContains: arg('success-url-contains', null), selector: arg('success-selector', null), origin: null };
   const timeoutMin = parseFloat(arg('timeout-min', '5'));
   const credFile = arg('cred-file', null);
   const site = arg('site', null);
@@ -82,6 +87,7 @@ function httpCreds(arg, url) {
     cred = A.loadCreds({ file: credFile, site, account: form ? account : null, url: url === true ? null : url, needAccount: form });
     url = cred.url;
   }
+  opt.origin = cred ? cred.origin : A.originOf(url);   // thanh cong = quay ve dung origin cua site
   let save = arg('save');
   if ((!save || save === true) && cred && cred.account) save = path.join(path.dirname(cred.file), `${cred.site}-${cred.account}.json`);
   if (!url || url === true || !save || save === true) {
@@ -116,7 +122,7 @@ function httpCreds(arg, url) {
   if (hc) ctxOpts.httpCredentials = hc;
   const ctx = await browser.newContext(ctxOpts);
   const page = await ctx.newPage();
-  let ok = false;
+  let ok = false, failReason = null;
   const blocked = [];
 
   try {
@@ -130,6 +136,7 @@ function httpCreds(arg, url) {
         await new Promise(r => setTimeout(r, 1000));
       }
       if (ok) await new Promise(r => setTimeout(r, 1500));   // cho cookie/localStorage on dinh
+      else failReason = page.isClosed() ? 'cua so trinh duyet da dong' : `qua ${timeoutMin} phut chua thay vao duoc trang cua site`;
     } else {
       let allowOrigin = null;   // chi origin cua form login duoc POST
       await ctx.route('**/*', route => {
@@ -140,22 +147,30 @@ function httpCreds(arg, url) {
         blocked.push(`${req.method()} ${req.url()}`);
         return route.abort();
       });
-      const r = await A.formLogin(page, {
+      const r = await A.formLoginRetry(page, {
         loginUrl: url, user, pass, origin: cred ? cred.origin : null,
         userSel: String(arg('user-selector', A.DEF_USER)), passSel: String(arg('pass-selector', A.DEF_PASS)),
         submitSel: String(arg('submit-selector', A.DEF_SUBMIT)), opt, allow: o => { allowOrigin = o; },
-      });
+      }, { deadline: Date.now() + timeoutMin * 60000 });
       ok = r.ok;
-      if (!ok) console.error('Loi: ' + r.reason);
+      if (!ok) failReason = r.reason;
     }
   } catch (e) {
-    console.error('Loi: ' + String(e.message || e).split('\n')[0]);
+    failReason = String(e.message || e).split('\n')[0];
   }
 
   if (!ok) {
-    await browser.close();
+    try { await browser.close(); } catch { /* */ }
+    console.error('Loi: ' + failReason);
     console.error('Dang nhap THAT BAI' + (user ? ` (user ${A.mask(user)})` : '') + ' — khong ghi storage state.');
-    process.exit(1);
+    if (manual) {
+      console.error(`\n⚠ Chưa thấy đăng nhập xong (${failReason}). Bạn chạy lại lệnh và đăng nhập trong cửa sổ trình duyệt; ` +
+        'cần thêm thời gian thì thêm --timeout-min 10. Nếu đã vào được trang chính mà vẫn báo lỗi: thêm ' +
+        '--success-url-contains <đoạn URL của trang chính>.');
+    } else {
+      console.error(A.manualHint({ site: cred ? cred.site : null, loginUrl: url, save: absSave, reason: failReason }));
+    }
+    process.exit(A.EXIT_LOGIN);
   }
 
   fs.mkdirSync(path.dirname(absSave), { recursive: true, mode: 0o700 });

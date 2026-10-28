@@ -113,7 +113,7 @@ def figma_lines(root):
 def ensure_figma(root, check_only):
     lines, raw = figma_lines(root)
     if lines is None:
-        rows.append(("Figma MCP", "UNKNOWN",
+        rows.append(("Figma MCP", "TO_VERIFY",
                      "không gọi được CLI `claude` — agent tự kiểm: có tool mcp__*figma* trong phiên thì coi là OK"))
         return
     if any("connected" in ln.lower() and "fail" not in ln.lower() for ln in lines):

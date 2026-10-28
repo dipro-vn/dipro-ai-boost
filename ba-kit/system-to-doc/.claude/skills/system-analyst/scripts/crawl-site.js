@@ -17,7 +17,13 @@
  *                                   kind "session-lost", thu lai URL 1 lan de biet trang nao giet session
  *                                   (trang do = "session-killer": khong tham lai, pages.json sessionKiller:true,
  *                                   khong vao urls.txt neu khong quan sat duoc), dang nhap lai toi da 5 lan / run
+ *                                 - bi chuyen sang origin khac (trang SSO / IdP) cung tinh la mat session
+ *                                 - tu dang nhap (dau run hoac giua chung) that bai 2 lan -> DUNG sach, exit 4,
+ *                                   summary stopped:"login_failed" + huong dan dang nhap tay (login-site.js --manual)
  *                                 --role mac dinh = ten account
+ *        [--samples-per-route 3]  budget theo ROUTE TEMPLATE: gom URL theo pattern (doan so / uuid / hash / slug dai
+ *                                 -> :id), moi template tham toi da N mau; URL thua -> blocked.json kind "route-sampled".
+ *                                 --max-urls van la tran an toan tong.
  *
  * Gate G2 duoc thuc thi o day, khong phai bang loi hua trong prompt:
  *   - read-only  : chan moi request khac GET/HEAD o tang network
@@ -39,6 +45,11 @@
  *   recon/crawl/<site>/ui-issues.json    loi do duoc (anh vo, tran ngang, cham, console, 4xx/5xx) -> Bug List
  *   recon/crawl/<site>/evidence.csv      dong san sang dan vao sheet 05_Evidence
  *   recon/crawl/<site>/console.json · network.json · blocked.json (bang chung Gate G9)
+ *        console / network co nhan noise: "read-only-block" (request ghi do chinh crawl abort) |
+ *        "csp-block" (CSP / script ben thu ba bi chan) -> bao dong gia cua cong cu, KHONG dua vao Bug List
+ *   recon/crawl/<site>/routes.json       route template -> so URL gap / da tham / mau
+ * Exit: 0 xong (ke ca dung vi budget) · 1 sai tham so · 2 thieu playwright · 3 tu choi (an toan)
+ *       4 khong tu dang nhap duoc -> nho user dang nhap tay roi chay lai voi --storage-state
  * Stdout cuoi: JSON co next_ev de chain lan chay sau.
  */
 const fs = require('fs');
@@ -54,6 +65,8 @@ const DESTRUCTIVE = [
 const LOGOUT_RE = /log-?out|sign-?out|ログアウト|đăng xuất|dang xuat/i;
 const LOGIN_RE = /log-?in|sign-?in|ログイン/i;
 const MAX_RELOGIN = 5;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const CSP_RE = /content security policy|content-security-policy|refused to (load|execute|connect|apply|frame)|blocked by csp/i;
 const EVIDENCE_HEADER = 'EV ID,Type,Locator,Captured At,Actor/Role,Artifact,Note';  // = S.SHEETS["05_Evidence"]
 const SLOW_MS = 5000;
 const MAX_ICONS = 80, MAX_LOGOS = 20, MAX_ASSET_BYTES = 2 * 1024 * 1024;
@@ -87,6 +100,23 @@ function destructiveHit(s) {
   return DESTRUCTIVE.find(k => /^[\x00-\x7f]+$/.test(k)
     ? new RegExp('(^|[^a-z])' + k.replace(/ /g, '[ _-]?') + '([^a-z]|$)').test(t)
     : t.includes(k)) || null;
+}
+
+// route template: /admin/doctor/123 , /admin/doctor/9f1c-... , /news/a-very-long-slug-2024 -> .../:id
+// query giu ten tham so (bo gia tri) de /list?page=2 va /list?page=3 cung 1 template
+function routeKey(u) {
+  try {
+    const x = new URL(u);
+    const segs = x.pathname.split('/').map(sg => {
+      let d = sg; try { d = decodeURIComponent(sg); } catch { /* */ }
+      if (!d) return d;
+      if (/^\d+$/.test(d) || UUID_RE.test(d) || /^[0-9a-f]{12,}$/i.test(d) || /^[A-Za-z0-9_-]{20,}$/.test(d) && /\d/.test(d)) return ':id';
+      if (d.length > 30 || (d.split('-').length >= 4 && /[a-z]/i.test(d))) return ':id';   // slug dai
+      return d;
+    });
+    const q = Array.from(new Set(Array.from(x.searchParams.keys()))).sort();
+    return x.origin + segs.join('/') + (q.length ? '?' + q.join('&') : '');
+  } catch { return String(u); }
 }
 
 function hrefPath(u) {
@@ -127,6 +157,7 @@ function httpCreds(arg, url) {
   const evStart = parseInt(arg('ev-start', '1'), 10);
   const vp = String(arg('viewport', '1440x900')).match(/^(\d+)x(\d+)$/);
   const withAssets = !['off', 'false', 'no', '0'].includes(String(arg('assets', 'on')).toLowerCase());
+  const perRoute = parseInt(arg('samples-per-route', '3'), 10);
 
   if (!start || start === true) { console.error('Thieu --url'); process.exit(1); }
   if (!site || !/^WEB-\d{2,}$/.test(String(site))) { console.error('Thieu/sai --site (vd WEB-01)'); process.exit(1); }
@@ -135,6 +166,7 @@ function httpCreds(arg, url) {
   }
   if (!vp) { console.error('--viewport phai dang 1440x900'); process.exit(1); }
   if (!(evStart >= 1)) { console.error('--ev-start phai >= 1'); process.exit(1); }
+  if (!(perRoute >= 1)) { console.error('--samples-per-route phai >= 1'); process.exit(1); }
   const viewport = { width: parseInt(vp[1], 10), height: parseInt(vp[2], 10) };
   // credential tu file — kiem tra an toan TRUOC khi mo trinh duyet / ghi output (exit 3 neu tu choi)
   const cred = credFile ? A.loadCreds({ file: credFile, site, account, url: start, needAccount: true }) : null;
@@ -165,6 +197,7 @@ function httpCreds(arg, url) {
   const page = await ctx.newPage();
 
   const consoleErrors = [], networkIssues = [], blocked = [];
+  const abortedUrls = new Set();   // request ghi do chinh crawl chan (READ-ONLY) -> loi kem theo la noise
   let curUrl = null;
   let allowPost = null;   // chi mo khi dang dien form login (origin cua site), dong ngay sau do
 
@@ -178,6 +211,7 @@ function httpCreds(arg, url) {
     }
     if (mode === 'read-only' && !['GET', 'HEAD'].includes(m)) {
       blocked.push({ kind: 'request', method: m, url: req.url(), page: curUrl, at: new Date().toISOString() });
+      abortedUrls.add(req.url());
       return route.abort();
     }
     return route.continue();
@@ -185,14 +219,39 @@ function httpCreds(arg, url) {
 
   page.on('console', msg => {
     if (msg.type() === 'error') {
-      consoleErrors.push({ url: curUrl, text: msg.text().slice(0, 500), at: new Date().toISOString() });
+      const text = msg.text();
+      let src = null; try { src = msg.location().url || null; } catch { /* */ }
+      const rec = { url: curUrl, text: text.slice(0, 500), at: new Date().toISOString() };
+      const n = consoleNoise(text, src);
+      if (n) rec.noise = n;
+      consoleErrors.push(rec);
     }
+  });
+  page.on('requestfailed', req => {   // request bi abort / chan: chi ghi khi la noise de loc khoi Bug List
+    const f = (req.failure() && req.failure().errorText) || '';
+    const noise = abortedUrls.has(req.url()) ? 'read-only-block' : (/csp|blocked/i.test(f) ? 'csp-block' : null);
+    if (noise) networkIssues.push({ page: curUrl, url: req.url(), status: 'REQUEST_BLOCKED', detail: f.slice(0, 120), noise, at: new Date().toISOString() });
   });
   page.on('response', r => {
     if (r.status() >= 400) {
       networkIssues.push({ page: curUrl, url: r.url(), status: r.status(), at: new Date().toISOString() });
     }
   });
+
+  // console error do chinh cong cu gay ra: request ghi bi READ-ONLY abort, hoac CSP chan script / ben thu ba
+  function consoleNoise(text, src) {
+    if (CSP_RE.test(text)) return 'csp-block';
+    if (/net::ERR_FAILED|net::ERR_ABORTED|Failed to fetch|NetworkError|Load failed/i.test(text) &&
+        (mode === 'read-only' && (Array.from(abortedUrls).some(u => text.includes(u)) || (src && abortedUrls.has(src)) ||
+          abortedRecently()))) return 'read-only-block';
+    if (src && !sameOrigin(src, start) && /net::ERR_BLOCKED|ERR_BLOCKED_BY_CLIENT|ERR_BLOCKED_BY_RESPONSE/i.test(text)) return 'csp-block';
+    return null;
+  }
+  // shortcut: gan theo thoi gian (abort trong 3s gan nhat cung trang) khi console khong ghi URL, co the gan nham loi that cung luc
+  function abortedRecently() {
+    const t = Date.now();
+    return blocked.some(b => b.kind === 'request' && b.page === curUrl && t - Date.parse(b.at) < 3000);
+  }
 
   // --- luu asset: logo/favicon tai bang GET (ctx.request dung chung cookie), icon svg tu markup ---
   const writeAsset = (kind, sub, prefix, buf, ext, meta) => {
@@ -255,6 +314,7 @@ function httpCreds(arg, url) {
     }
   }
   const seen = new Set(), pages = [], evidence = [], styles = [], uiIssues = [];
+  const routes = new Map();   // route template -> { found, visited, samples }
   const t0 = Date.now();
   let evNo = evStart - 1;
 
@@ -279,33 +339,43 @@ function httpCreds(arg, url) {
 
   // --- dang nhap (lai) bang form, credential tu file; chi POST toi origin cua site ---
   const killers = [];
-  let relogins = 0, stopReason = null, lastOk = null;
+  let relogins = 0, stopReason = null, stopDetail = null, lastOk = null;
+  // --manual phai mo URL cung origin cua site (thanh cong = quay ve origin nay), khong mo thang trang SSO
+  const siteLoginUrl = () => (loginUrl && sameOrigin(loginUrl, start) ? loginUrl : start);
   const isLoginUrl = u => (loginUrl && A.strip(u) === A.strip(loginUrl)) || LOGIN_RE.test(hrefPath(u));
   const sessionLost = async (reqUrl) => {
     if (isLoginUrl(reqUrl)) return false;   // tu mo trang login thi khong tinh
     const fin = page.url();
     if (A.strip(fin) === A.strip(reqUrl)) return false;   // khong bi chuyen trang
     if (isLoginUrl(fin)) return true;
+    if (!sameOrigin(fin, start)) return true;   // bi day sang trang SSO / IdP
     try { return !!(await A.firstVisible(page, passSel)); } catch { return false; }
   };
   const doLogin = async (lu) => {
     const prevCur = curUrl;
     curUrl = 'login';
-    const r = await A.formLogin(page, { loginUrl: lu, user: cred.user, pass: cred.pass, origin: cred.origin,
-      userSel, passSel, submitSel, opt: okOpt, allow: o => { allowPost = o; } });
+    const r = await A.formLoginRetry(page, { loginUrl: lu, user: cred.user, pass: cred.pass, origin: cred.origin,
+      userSel, passSel, submitSel, opt: Object.assign({ origin: cred.origin }, okOpt), allow: o => { allowPost = o; } },
+    { deadline: t0 + maxMin * 60000 });
     allowPost = null;
     curUrl = prevCur;
     return r;
   };
   const relogin = async () => {
     if (relogins >= MAX_RELOGIN) {
-      stopReason = `Da dang nhap lai ${MAX_RELOGIN} lan — DUNG crawl. Con trang giet session chua xac dinh? Xem blocked.json (session-lost), them vao --forbid roi chay lai.`;
-      console.error(stopReason);
+      stopReason = 'relogin_limit';
+      stopDetail = `Da dang nhap lai ${MAX_RELOGIN} lan — DUNG crawl. Con trang giet session chua xac dinh? Xem blocked.json (session-lost), them vao --forbid roi chay lai.`;
+      console.error(stopDetail);
       return false;
     }
     relogins += 1;
     const r = await doLogin(loginUrl);
-    if (!r.ok) { stopReason = `Dang nhap lai THAT BAI (lan ${relogins}): ${r.reason} — DUNG crawl`; console.error(stopReason); return false; }
+    if (!r.ok) {
+      stopReason = 'login_failed';
+      stopDetail = `Dang nhap lai THAT BAI (lan ${relogins}, ${r.tries} lan thu): ${r.reason} — DUNG crawl`;
+      console.error(stopDetail);
+      return false;
+    }
     console.error(`Dang nhap lai OK (${relogins}/${MAX_RELOGIN}) user ${A.mask(cred.user)}`);
     return true;
   };
@@ -318,8 +388,10 @@ function httpCreds(arg, url) {
       const r = await doLogin(null);
       if (!r.ok) {
         await browser.close();
-        console.error(`Dang nhap THAT BAI (user ${A.mask(cred.user)}): ${r.reason}`);
-        process.exit(1);
+        console.error(`Dang nhap THAT BAI (user ${A.mask(cred.user)}, ${r.tries} lan thu): ${r.reason}`);
+        console.error(A.manualHint({ site: cred.site, loginUrl: siteLoginUrl(), save: path.join(path.dirname(cred.file), `${cred.site}-${cred.account}.json`), reason: r.reason }));
+        console.log(JSON.stringify({ site, mode, role, urls: 0, stopped: 'login_failed', stoppedDetail: r.reason, account: cred.account, user: A.mask(cred.user) }, null, 2));
+        process.exit(A.EXIT_LOGIN);
       }
       console.error(`Dang nhap OK user ${A.mask(cred.user)} -> ${r.landedOn}`);
     }
@@ -330,6 +402,14 @@ function httpCreds(arg, url) {
     const url = queue.shift();
     if (!url || seen.has(url)) continue;
     if (forbid.some(f => url.includes(f))) { blocked.push({ kind: 'forbidden-zone', url }); continue; }
+    // budget theo route template: moi template toi da perRoute mau (URL dau = trang bat dau luon tham)
+    const rk = routeKey(url);
+    const rt = routes.get(rk) || { template: rk, found: 0, visited: 0, samples: [] };
+    routes.set(rk, rt);
+    rt.found += 1;
+    if (rt.visited >= perRoute) { blocked.push({ kind: 'route-sampled', url, route: rk }); continue; }
+    rt.visited += 1;
+    rt.samples.push(url);
     seen.add(url);
     curUrl = url;
 
@@ -357,7 +437,7 @@ function httpCreds(arg, url) {
       // trang nay binh thuong -> session bi giet boi trang tham ngay truoc (sau khi load)
       const prev = lastOk && pages.find(p => p.url === lastOk);
       rec.killer = prev ? prev.url : null;
-      rec.how = prev ? 'after-load' : 'unknown';
+      rec.how = prev ? 'after-load' : 'undetermined';
       if (prev) { prev.sessionKiller = true; prev.sessionKillerHow = 'after-load'; killers.push({ url: prev.url, how: 'after-load' }); }
     }
     const { resp, loadMs } = r;
@@ -725,7 +805,7 @@ function httpCreds(arg, url) {
 
   // dem loi console / 4xx-5xx theo trang
   for (const p of pages) {
-    const ce = consoleErrors.filter(c => c.url === p.url).length;
+    const ce = consoleErrors.filter(c => c.url === p.url && !c.noise).length;   // noise cong cu -> khong thanh bug
     const he = networkIssues.filter(n => n.page === p.url && typeof n.status === 'number').length;
     if (ce) uiIssues.push({ url: p.url, kind: 'consoleErrors', detail: `${ce} console error(s) — xem console.json`, evId: p.evId, count: ce });
     if (he) uiIssues.push({ url: p.url, kind: 'httpErrors', detail: `${he} response 4xx/5xx — xem network.json`, evId: p.evId, count: he });
@@ -741,6 +821,7 @@ function httpCreds(arg, url) {
   W('console.json', JSON.stringify(consoleErrors, null, 2));
   W('network.json', JSON.stringify(networkIssues, null, 2));
   W('blocked.json', JSON.stringify(blocked, null, 2));
+  W('routes.json', JSON.stringify(Array.from(routes.values()), null, 2));
   W('evidence.csv',
     EVIDENCE_HEADER + '\n' +
     evidence.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\n') + (evidence.length ? '\n' : ''));
@@ -756,13 +837,20 @@ function httpCreds(arg, url) {
   console.log(JSON.stringify({
     site, mode, role, viewport: `${viewport.width}x${viewport.height}`,
     urls: pages.filter(observed).length, errorPages: pages.filter(p => p.errorPage).length, budget: `${pages.length}/${maxUrls} URL · ${((Date.now() - t0) / 60000).toFixed(1)}/${maxMin} phut`,
+    routes: routes.size, samplesPerRoute: perRoute, routeSampledSkipped: blocked.filter(b => b.kind === 'route-sampled').length,
     consoleErrors: consoleErrors.length, networkIssues: networkIssues.length,
+    noise: { 'read-only-block': consoleErrors.concat(networkIssues).filter(x => x.noise === 'read-only-block').length,
+      'csp-block': consoleErrors.concat(networkIssues).filter(x => x.noise === 'csp-block').length },
     uiIssues: uiIssues.length, blocked: blocked.length,
     ...(cred ? { account: cred.account, user: A.mask(cred.user), relogins, sessionKillers: killers } : {}),
-    ...(stopReason ? { stopped: stopReason } : {}),
+    ...(stopReason ? { stopped: stopReason, stoppedDetail: stopDetail } : {}),
     assets: withAssets ? { logos: assetFiles.filter(f => f.kind !== 'icon').length,
       icons: assetFiles.filter(f => f.kind === 'icon').length, dir: assetDir } : 'off',
     ev_range: pages.length ? `EV-${String(evStart).padStart(4, '0')}..EV-${String(evNo).padStart(4, '0')}` : null,
     next_ev: evNo + 1, out, crawlDir,
   }, null, 2));
+  if (stopReason === 'login_failed') {   // da ghi phan da phu; dung sach, khong lap lai
+    console.error(A.manualHint({ site: cred.site, loginUrl: siteLoginUrl(), save: path.join(path.dirname(cred.file), `${cred.site}-${cred.account}.json`), reason: stopDetail }));
+    process.exit(A.EXIT_LOGIN);
+  }
 })();

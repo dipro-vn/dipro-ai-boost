@@ -3,12 +3,12 @@
 
   python3 build-version-index.py <ver folder> [--skip "O7=user khong yeu cau"] [--skip "O5=..."]
 
-Tu nhan dien output theo duong dan chuan (O1..O7, hoac output CR neu co CR-*_Impact.xlsx: so hang muc + tong
+Tu nhan dien output theo duong dan chuan (O1..O7 + O9, hoac output CR neu co CR-*_Impact.xlsx: so hang muc + tong
 MD + trang thai don gia, Figma CR (gate v-cr-figma), input/). O4 = 04_DesignSystem/project/ (1 bo) hoac
 04_DesignSystem/WEB-xx/project/ (moi site 1 dong); link artifact + trang thai + so TBD lay tu STATUS.md
 canh project/ (dong "- Artifact:" / "- Trạng thái:" / bang "## Thiếu (TBD)"),
 dem so luong, doc ket qua gate tu _internal/gates/*.md (dong "N checks · X PASS · Y FAIL · Z WARN").
-index.json la dau vao cua render-overview-docx.py (chuong 2). Chay lai sau moi gate.
+index.json la dau vao cua render-overview-docx.py (bia: version, ngay). Chay lai sau moi gate.
 README KHONG nhac toi _internal/ (artifact noi bo).
 """
 import argparse
@@ -29,11 +29,12 @@ SUMMARY_RX = re.compile(r"(\d+) checks · (\d+) PASS · (\d+) FAIL · (\d+) WARN
 FIGMA_RX = re.compile(r"https?://(?:www\.)?figma\.com/[^\s)>\]]+")
 ARTIFACT_RX = re.compile(r"https://claude\.ai/(?:code/)?artifact/[A-Za-z0-9_-]+")
 VER_RX = re.compile(r"^ver(\d+)_(\d{2})(\d{2})(\d{2})_(.+)$")
+CR_RX = re.compile(r"^(CR-\d+)_(\d{2})(\d{2})(\d{2})_(.+)$", re.I)   # folder CR layout moi (versioning.md D3)
 BD_SYSTEM_SHEETS = {"Common mesage", "Screen Error message", "Screen Index",
                     "Change History", "Sample"}
 ICON = {"ok": "✅", "warn": "⚠️", "fail": "❌", "skip": "⬜"}
 # tien to ten file gate -> output (thu tu quan trong: dai truoc)
-GATE_MAP = [("v-overview", "O6"), ("v-bd", "O1"), ("v-api", "O2"), ("v-db", "O3"),
+GATE_MAP = [("v-overview", "O6"), ("v-devsetup", "O9"), ("v-dev", "O9"), ("v-bd", "O1"), ("v-api", "O2"), ("v-db", "O3"),
             ("v-ds", "O4"), ("v-figma", "O5"), ("v-cr-figma", "O5"), ("v-cr", "CR"), ("v-est", "EST"), ("v1", "INV"), ("v2", "INV"),
             ("v3", "O6"), ("v4", "O6"), ("v5", "O6"), ("v6", "O6"), ("v7", "O1"), ("v8", "O7")]
 
@@ -94,7 +95,7 @@ def finish(e, gates, skips, auto_skip=None):
     key = oid + ":" + e["site"] if oid in ("O1", "O4") and e.get("site") else oid
     e["gate"], e["gate_detail"] = gate_of(gates, key)
     reason = skips.get(oid) or skips.get(key.replace(":", "=")) or None
-    if not e["exists"] and (reason or auto_skip):
+    if reason or (not e["exists"] and auto_skip):     # --skip luon thang, ke ca khi da co file
         e["status"], e["reason"] = "skip", reason or auto_skip
         e["files"], e["count"] = [], DASH
         e["status_text"] = "%s Không chạy — %s" % (ICON["skip"], e["reason"])
@@ -185,7 +186,8 @@ def ds_entries(ver, gates, skips):
             "O4", "Design System" + (" %s" % site if site else ""),
             "Token, kiểu chữ, component, icon (format artifact Design System)",
             ds["files"], ds["count"], ds["exists"], count_value=ds["count_value"],
-            ds_status=ds["status"], **kw), gates, skips))
+            ds_status=ds["status"], **kw), gates, skips,
+            auto_skip="tuỳ chọn — không chạy lần này"))   # O4 optional: khong co thi bo qua, khong bao loi
     return outs
 
 
@@ -207,7 +209,7 @@ def baseline_outputs(ver, data, meta, sysname, n, gates, skips):
             cnt = sum(1 for ws in wb.worksheets if ws.title not in BD_SYSTEM_SHEETS
                       and str(ws["F6"].value or "").strip() == "WORKING_SCREEN")
         count = ("%d sheet màn hình" % cnt) if cnt is not None else \
-            ("%d màn hình (inventory)" % screens_by_site.get(site, 0) if data else S.UNKNOWN)
+            ("%d màn hình (inventory)" % screens_by_site.get(site, 0) if data else S.NEED_CONFIRM)
         outs.append(finish(entry(
             "O1", "Basic Design %s" % site, "Thiết kế cơ bản từng màn hình của site %s" % site,
             [rel(ver, p)] if p else ["01_Screens/BasicDesign_%s_ver%s.xlsx" % (site, n)],
@@ -217,11 +219,10 @@ def baseline_outputs(ver, data, meta, sysname, n, gates, skips):
     n_api = sum(1 for r in apis if r.get("Kind") == "API")
     n_other = len(apis) - n_api
     api_files = sorted(glob.glob(os.path.join(ver, "02_API", "API_Doc_*.xlsx")))
-    cm = sorted(glob.glob(os.path.join(ver, "02_API", "CodeMap_*.png")))
     outs.append(finish(entry(
-        "O2", "API & Code map", "Danh sách API/batch + sơ đồ FE→API→BE→DB",
-        [rel(ver, p) for p in api_files + cm] or ["02_API/API_Doc_%s_ver%s.xlsx" % (sysname, n)],
-        ("%d API · %d batch/khác" % (n_api, n_other)) if data else S.UNKNOWN,
+        "O2", "API", "Danh sách API/batch",
+        [rel(ver, p) for p in api_files] or ["02_API/API_Doc_%s_ver%s.xlsx" % (sysname, n)],
+        ("%d API · %d batch/khác" % (n_api, n_other)) if data else S.NEED_CONFIRM,
         bool(api_files), count_value=len(apis) if data else None), gates, skips))
 
     tables = (data or {}).get("03_DB_Tables", [])
@@ -231,7 +232,7 @@ def baseline_outputs(ver, data, meta, sysname, n, gates, skips):
         "O3", "Database", "Danh sách bảng/cột/quan hệ + ERD",
         [rel(ver, p) for p in db_files + erd] or ["03_DB/DB_Doc_%s_ver%s.xlsx" % (sysname, n)],
         ("%d bảng · %d cột" % (len(tables), len((data or {}).get("04_DB_Columns", []))))
-        if data else S.UNKNOWN,
+        if data else S.NEED_CONFIRM,
         bool(db_files), count_value=len(tables) if data else None), gates, skips,
         auto_skip="không có DB (db_mode=NONE)" if meta.get("db_mode") == "NONE" else None))
 
@@ -240,11 +241,13 @@ def baseline_outputs(ver, data, meta, sysname, n, gates, skips):
     fl = os.path.join(ver, "05_Figma", "figma-links.md")
     urls = FIGMA_RX.findall(open(fl, encoding="utf8").read()) if os.path.isfile(fl) else []
     fig_out = meta.get("figma_output_url", "")
+    # figma-links.md chi liet ke so do can ve (chua co link figma.com) -> O5 "chưa vẽ", khong phai "chưa chạy gate"
     outs.append(finish(entry(
         "O5", "Figma", "Link node Figma của màn hình/thành phần",
-        ["05_Figma/figma-links.md"], "%d link" % len(urls), os.path.isfile(fl),
+        ["05_Figma/figma-links.md"], "%d link" % len(urls), bool(urls),
         count_value=len(urls)), gates, skips,
-        auto_skip="không có Figma output" if fig_out in ("", S.UNKNOWN, DASH, "NO") else None))
+        auto_skip="không có Figma output" if fig_out in ("", S.NEED_CONFIRM, DASH, "NO") else
+        "chưa vẽ — figma-links.md chưa có link Figma" if os.path.isfile(fl) else None))
 
     ov = sorted(glob.glob(os.path.join(ver, "06_Overview", "Overview_*.docx")))
     outs.append(finish(entry(
@@ -256,12 +259,19 @@ def baseline_outputs(ver, data, meta, sysname, n, gates, skips):
     nb = None
     if bl:
         wb = load_xlsx(bl[0])
-        nb = sheet_rows(wb["Bugs"]) if "Bugs" in wb.sheetnames else 0
+        nb = sheet_rows(wb[S.BUG_SHEET]) if S.BUG_SHEET in wb.sheetnames else 0
     outs.append(finish(entry(
-        "O7", "Bug List", "Lỗi Medium/High đang tồn tại",
+        "O7", "Bug List", "Lỗi mức High trở lên ảnh hưởng thao tác người dùng",
         [rel(ver, p) for p in bl] or ["07_BugList/BugList_%s_ver%s.xlsx" % (sysname, n)],
         ("%d bug" % nb) if nb is not None else DASH, bool(bl), count_value=nb), gates, skips,
         auto_skip=("bug_list=%s" % meta.get("bug_list")) if meta.get("bug_list") != "YES" else None))
+
+    dv = sorted(glob.glob(os.path.join(ver, "09_DevSetup", "DevSetup_*.md")))
+    outs.append(finish(entry(
+        "O9", "Dev setup", "Hướng dẫn chạy local + môi trường cho dev (md)",
+        [rel(ver, p) for p in dv] or ["09_DevSetup/DevSetup_%s_ver%s.md" % (sysname, n)],
+        "1 tài liệu" if dv else DASH, bool(dv), count_value=1 if dv else 0), gates, skips,
+        auto_skip="không có source code" if data is not None and not (data or {}).get("11_Repo") else None))
     return outs
 
 
@@ -339,7 +349,7 @@ def cr_outputs(ver, impact, gates, skips):
     # CR khong bat buoc ve: khong co figma-links + khong co gate v-cr-figma -> skip "không vẽ"
     outs.append(finish(entry("O5", "Figma (CR)", "Màn/luồng thay đổi theo CR (badge NEW/UPD/DEL/IMPACT/AS-IS)",
                              ["05_Figma/figma-links.md"], "%d link" % len(urls),
-                             os.path.isfile(fl) or bool(gates.get("O5")), count_value=len(urls)),
+                             bool(urls) or bool(gates.get("O5")), count_value=len(urls)),
                        gates, skips, auto_skip="không vẽ"))
     inp = [p for p in glob.glob(os.path.join(ver, "input", "**", "*"), recursive=True)
            if os.path.isfile(p)]
@@ -373,15 +383,16 @@ def main():
         skips[k.strip()] = v.strip() or "không yêu cầu"
 
     folder = os.path.basename(ver)
-    m = VER_RX.match(folder)
+    m = VER_RX.match(folder) or CR_RX.match(folder)
     n = m.group(1) if m else "?"
     date = ("%s/%s/20%s" % (m.group(2), m.group(3), m.group(4))) if m else DASH
+    label = n.upper() if m and not n.isdigit() else "ver%s" % n   # folder CR moi: nhan = CR-<id>
 
     inv_path = os.path.join(ver, "_internal", "inventory.xlsx")
     data = S.load(inv_path) if os.path.isfile(inv_path) else None
     meta = S.meta(data) if data else {}
-    sysname = meta.get("system_name") or S.UNKNOWN
-    if sysname == S.UNKNOWN:
+    sysname = meta.get("system_name") or S.NEED_CONFIRM
+    if sysname == S.NEED_CONFIRM:
         for p in glob.glob(os.path.join(ver, "0*", "*_ver*.*")):
             mm = re.match(r"(?:API_Doc|DB_Doc|Overview|BugList)_(.+?)_ver\d+\.", os.path.basename(p))
             if mm:
@@ -390,20 +401,28 @@ def main():
 
     gates = parse_gates(ver)
     impacts = sorted(glob.glob(os.path.join(ver, "CR-*_Impact.xlsx")))
-    baseline_ref = meta.get("previous_version") or DASH
+    vmeta = {}   # _internal/version-meta.json do version-tool.py ghi (baseline goc cua CR / previous_version)
+    try:
+        vmeta = json.load(open(os.path.join(ver, "_internal", "version-meta.json"), encoding="utf8"))
+    except (OSError, ValueError):
+        pass
+    baseline_ref = meta.get("previous_version") or vmeta.get("baseline") or vmeta.get("previous_version") or DASH
     if impacts:
         vtype = "CR"
         outs, summ = cr_outputs(ver, impacts[0], gates, skips)
         baseline_ref = summ.get("baseline_version") or baseline_ref
         base_inv = os.path.join(os.path.dirname(ver), baseline_ref, "_internal", "inventory.xlsx")
-        if sysname == S.UNKNOWN and os.path.isfile(base_inv):
-            sysname = S.meta(S.load(base_inv)).get("system_name") or S.UNKNOWN
+        if sysname == S.NEED_CONFIRM and os.path.isfile(base_inv):
+            sysname = S.meta(S.load(base_inv)).get("system_name") or S.NEED_CONFIRM
+    elif CR_RX.match(folder) or vmeta.get("version_type") == "CR":   # folder CR chua co Impact xlsx -> van la CR
+        vtype = "CR"
+        outs = [finish(entry("CR", "CR Impact", "Công số + ảnh hưởng 6 trục", [], DASH, False), gates, skips)]
     else:
         vtype = meta.get("version_type") if meta.get("version_type") in S.VERSION_TYPE else "BASELINE"
         outs = baseline_outputs(ver, data, meta, sysname, n, gates, skips)
 
     ig, igd = gate_of(gates, "INV")
-    index = {"system": sysname, "version": "ver%s" % n, "version_folder": folder,
+    index = {"system": sysname, "version": label, "version_folder": folder,
              "version_type": vtype, "date": date,
              "baseline_ref": baseline_ref if vtype == "CR" else DASH,
              "outputs": outs, "inventory_gate": {"gate": ig, "detail": igd}}
@@ -412,7 +431,7 @@ def main():
     with open(os.path.join(ver, "_internal", "index.json"), "w", encoding="utf8") as fh:
         json.dump(index, fh, ensure_ascii=False, indent=2)
 
-    lines = ["# %s — ver%s (%s)" % (sysname, n, vtype), "",
+    lines = ["# %s — %s (%s)" % (sysname, label, vtype), "",
              "- Thư mục: `%s`" % folder, "- Ngày: %s" % date, "- Loại: %s" % vtype]
     if vtype == "CR":
         lines.append("- Baseline tham chiếu: %s" % baseline_ref)

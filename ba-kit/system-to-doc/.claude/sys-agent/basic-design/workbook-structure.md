@@ -1,6 +1,7 @@
 # Ba Agent — Basic Design Workbook Structure (map thật của master workbook)
 
 > **SOURCE:** `ba-kit/requirement-to-flow/.claude/ba-agent/basic-design/workbook-structure.md` @ 447770e — copy self-contained cho kit `system-to-doc`. Khi master workbook cua cong ty doi, sua CA HAI noi.
+> **Đã tách khỏi bản gốc requirement-to-flow (D2, 27/10/2026):** bản của kit này thêm cột **`S` "API gọi"** ngay sau cột `R` (bảng item) và cột `S` "Nguồn" (bảng ERROR SCENARIOS), chữ chưa rõ ghi **"Cần xác nhận — Q-xxx"** (bản JP 「要確認 — Q-xxx」). Sheet `Sample` vẫn giữ nguyên (cột `S` chỉ thêm ở working sheet). Không sửa requirement-to-flow. Dựng tự động: `build-basic-design.py` (`../outputs/o1-screens.md` §4).
 > Khác biệt của kit này (AS-IS thay vì TO-BE, 1 workbook / website) nằm ở `../outputs/o1-screens.md`. Ở kit này **"Quality Gate O5" = gate V-BD** (`verify-basic-design.py --asis`).
 
 > **Nguồn:** đọc trực tiếp từ `sample/sample_basic_design.xlsx` ngày 23/09/2026 bằng `openpyxl`.
@@ -104,7 +105,8 @@ Quy ước: **ảnh UI nằm cột A–F bên trái, bảng item nằm cột H�
 | `O` | `初期値 (default)` | giá trị mặc định hoặc `ー` |
 | `P` | `記述（日本語）` | Mô tả + validation + hành vi, bullet `・`, sub-list đánh số |
 | `Q` | `Description (VN)` | Bản tiếng Việt của `P` — **phải khớp 1-1 về số bullet và số nhánh validation** |
-| `R` | `Comment` | Câu hỏi còn treo cho BRSE |
+| `R` | `Comment` | Câu hỏi còn treo cho BRSE · kit này: bằng chứng (`EV-xxxx` / code-ref `REPO-xx:path#Lnn`) hoặc `Cần xác nhận — Q-xxx` |
+| `S` | `API gọi` *(chỉ kit system-to-doc, D2)* | API sự kiện của item gọi — nguồn `fe-api-calls.csv`: dòng "Mở màn" → `Mở màn → GET /api/orders (API-012)` · nút 「保存」 → `POST /api/orders (API-015)` · link → `Không gọi API — chuyển trang` · không gọi → `Không gọi API` · không có bằng chứng → `Cần xác nhận — Q-xxx` · item không bấm được → `ー`. Item dạng Button / Hyperlink / Form **bắt buộc** có ô này (gate V-BD check 17) |
 
 **Số dòng đã format sẵn:** `Sample` có **11 dòng item (row 9 → row 19)** với border + row height đặt sẵn.
 Nếu screen có > 11 item → **copy format của 1 row chuẩn xuống**, không được chèn row trần không border.
@@ -113,7 +115,8 @@ Nếu screen có > 11 item → **copy format của 1 row chuẩn xuống**, khô
 
 ### 2.5 Layout phải giữ nguyên khi duplicate
 
-- Column widths: `A=9.7` `B=21.2` `C=17.8` `D=40.5` `E=19.0` `F=22.0` `G=9.7` `I=32.2` `J=22.0` `K=14.0` `L=12.5` `N=14.3` `O=12.5` `P=55.0` `R=36.5` `S=8.7`
+- Column widths: `A=9.7` `B=21.2` `C=17.8` `D=40.5` `E=19.0` `F=22.0` `G=9.7` `I=32.2` `J=22.0` `K=14.0` `L=12.5` `N=14.3` `O=12.5` `P=55.0` `R=36.5` `S=8.7` (working sheet kit này: `S=40` cho cột "API gọi")
+- **Không freeze panel** ở mọi sheet (R13) — template có freeze sẵn ở `Screen Index` / `Change History` (`A6`), `build-basic-design.py` gỡ khi sinh file
 - Row heights vùng item: row 9=54.8, 10=74.2, 11=204.0, 12=170.2, 13=125.2, 14=70.5, 15=85.5, 16=171.8, 17=83.2, 18=80.2, 19=261.8
 - Page setup: **orientation = landscape**
 - Merged ranges gốc: `A8:F8`, `B4:D4`, `B5:D5`, `B6:D6`
@@ -124,7 +127,7 @@ Nếu screen có > 11 item → **copy format của 1 row chuẩn xuống**, khô
 
 > Một screen sheet phải chứa đủ 7 nhóm nội dung dưới. **Template thật chỉ có sẵn vùng riêng cho 4 nhóm đầu** — 3 nhóm cuối phải gửi vào cell free-text đang có.
 >
-> ⛔ **KHÔNG được thêm cột / thêm sheet / đổi layout của template công ty** để "cho đủ chỗ". Template là tài sản dùng chung, đổi nó ảnh hưởng mọi dự án khác.
+> ⛔ **KHÔNG được thêm cột / thêm sheet / đổi layout của template công ty** để "cho đủ chỗ". Template là tài sản dùng chung, đổi nó ảnh hưởng mọi dự án khác. **Ngoại lệ duy nhất đã chốt (D2):** cột `S` "API gọi" / "Nguồn" ở working sheet của kit system-to-doc.
 
 | # | Nhóm | Vùng trong sheet | Bắt buộc |
 |---|---|---|---|
@@ -147,7 +150,7 @@ Nếu screen có > 11 item → **copy format của 1 row chuẩn xuống**, khô
   2. <nhánh 2> → <đích hoặc Message Code>
 ```
 
-**Quy ước nhóm 7 Known gaps:** mọi ô không có evidence **để `UNKNOWN`, không để trống và không tự điền**, kèm 1 dòng `⚠ <thứ còn thiếu> — Need Confirm` ở cột `R`. Để trống lặng lẽ = người đọc tưởng "không áp dụng"; tự điền = biến giả định thành spec.
+**Quy ước nhóm 7 Known gaps:** mọi ô không có evidence **ghi `Cần xác nhận — Q-xxx` (JP `要確認 — Q-xxx`), không để trống và không tự điền**, kèm 1 dòng `⚠ <thứ còn thiếu> — Need Confirm` ở cột `R`. Để trống lặng lẽ = người đọc tưởng "không áp dụng"; tự điền = biến giả định thành spec.
 
 ---
 
@@ -238,7 +241,7 @@ Nếu screen có > 11 item → **copy format của 1 row chuẩn xuống**, khô
 | Header | 7 cột dưới · style `header` |
 | Data | 1 row / 1 error · style `data` |
 
-**7 cột (dùng merge để khớp độ rộng cột có sẵn):**
+**7 cột (dùng merge để khớp độ rộng cột có sẵn) + cột `S` Nguồn ở kit này:**
 
 | Cột | Nội dung | Nguồn |
 |---|---|---|
@@ -248,7 +251,8 @@ Nếu screen có > 11 item → **copy format của 1 row chuẩn xuống**, khô
 | `K:L` merged | Hiển thị | `SPEC` cột `Hiển thị` — Toast · Modal · Banner · Full screen · Inline · Empty state |
 | `M:O` merged | Message Code | Khớp code trong `Screen Error message` / `Common mesage` |
 | `P` | Message hiển thị (VN) | `SPEC` cột `Message` — **nguyên văn** |
-| `Q:R` merged | **Xử lý tiếp theo** | `SPEC` → hành vi sau lỗi: màn đích, retry, chặn submit… Không rõ → `UNKNOWN — Need Confirm` |
+| `Q:R` merged | **Xử lý tiếp theo** | `SPEC` → hành vi sau lỗi: màn đích, retry, chặn submit… Không rõ → `Cần xác nhận — Q-xxx` |
+| `S` | **Nguồn** *(chỉ kit system-to-doc)* | code-ref (validation / i18n message) hoặc `EV-xxxx (screenshot) · network.json / console.json` (lỗi thấy khi quét web). Báo động giả của công cụ quét (`noise`) không vào bảng |
 
 **Rule:**
 - Số row bảng này **phải bằng** số error của màn đó trong `Screen Error message` — gate check 15 kiểm

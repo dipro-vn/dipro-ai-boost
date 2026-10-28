@@ -25,6 +25,9 @@ Output: tokens-draft.json (colors · primaryCandidates · fonts · fontSizes · 
         -> agent PHAI kiem vai tro + viet usage that (gate V-DS FAIL khi con obs-/TODO).
 --emit-status: STATUS.md DRAFT (mac dinh <thu muc tokens>/../STATUS.md): nguon, platform, bang Thieu (TBD) =
         moi token §3.3 / component §5 chua co (khong bia gia tri de lap).
+--code-only (R10, nhap truoc Discovery Brief, ngay sau Pha A): khong can --crawl; chi CSS/theme/tailwind trong code
+        (--css-root REPO-xx@WEB-yy=... moi site) -> tokens-draft.json/.md + dsLayout de goi y "1 hay nhieu Design
+        System". Khong ghi --emit-* (Design System that dung ca crawl o Buoc 6).
 Chi ghi du lieu QUAN SAT DUOC — script khong tu dat ra token. verify-design-system.py doi chieu file nay.
 Khong ghi gi vao repo duoc phan tich.
 """
@@ -889,7 +892,7 @@ def emit_tokens(draft, path, name, multi=None):
         if u:
             files.append(u)
     out = {"name": name, "version": 1,
-           "meta": {"source": src or "UNKNOWN", "file": " ; ".join(files), "frames": [], "components": {},
+           "meta": {"source": src or "Cần xác nhận", "file": " ; ".join(files), "frames": [], "components": {},
                     "componentKeys": {}, "synced": datetime.date.today().isoformat(), "sites": sites,
                     "repos": sorted(draft["cssRoots"]), "evidence": evidence},
            "color": {"themes": themes, "tokens": fam_out["color"]},
@@ -945,7 +948,7 @@ def emit_status(draft, tk, path, name, note=None, conflicts=()):
     src = ["website %s (%s, %d màn đã quét)" % (s_, url[s_], n_pg[s_]) for s_ in sites]
     src += ["codebase %s (%d file CSS)" % kv for kv in sorted(draft["cssRoots"].items())]
     L = ["# Design System — %s" % name, "", "- Trạng thái: DRAFT", "- Artifact: — (chưa publish)",
-         "- Nguồn: %s" % (" · ".join(src) or "UNKNOWN")] + (["- Ghi chú: %s" % note] if note else []) + [
+         "- Nguồn: %s" % (" · ".join(src) or "Cần xác nhận")] + (["- Ghi chú: %s" % note] if note else []) + [
          "", "## Platform", "",
          "| Platform | Theme (`data-theme`) | Viewport | Khung màn | Screen prefix |", "|---|---|---|---|---|"]
     for s_ in sites:
@@ -1292,7 +1295,7 @@ def write_md(draft, out_dir):
           "- Trang da do: %d (%s) · CSS roots: %s" % (len(pages), ", ".join(sorted({p["site"] for p in pages})) or "—",
                                                      ", ".join("%s=%d file" % kv for kv in scanned.items()) or "—"),
           "- Primary candidates (button bg khong trung tinh): %s" %
-          (", ".join("`%s` x%d" % (p["hex"], p["buttons"]) for p in prim[:5]) or "UNKNOWN — khong thay nut co mau"),
+          (", ".join("`%s` x%d" % (p["hex"], p["buttons"]) for p in prim[:5]) or "Cần xác nhận — không thấy nút có màu"),
           "- Day la du lieu quan sat, KHONG phai design system da duyet. count=0 = chi thay trong source.", ""]
     lay = draft.get("dsLayout")
     if lay:
@@ -1352,9 +1355,19 @@ def layout_notes(lay, site=None):
                    "Tạm gộp; xác nhận với designer (%s)" % how)]
 
 
+def _code_counts(d):
+    """--code-only: count = so cho khai bao trong code (crawl khong co) -> fingerprint font/spacing/radius so duoc.
+    shortcut: khong co thang chu / nut / header / mau theo site (chi crawl cho biet) — Buoc 6 chay lai co crawl."""
+    for key in ("fonts", "radii", "spacings", "fontSizes"):
+        for r in d.get(key) or []:
+            r["count"] = max(r.get("count", 0), len(r.get("sources") or []))
+    return d
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--crawl", required=True)
+    ap.add_argument("--crawl", default=None, help="bat buoc tru khi --code-only")
+    ap.add_argument("--code-only", action="store_true", help="R10: nhap chi tu CSS/theme trong code, truoc Brief")
     ap.add_argument("--css-root", action="append", default=[], help="REPO-01=/path hoac REPO-01@WEB-01=/path")
     ap.add_argument("--out", required=True)
     ap.add_argument("--assets", help="thu muc assets cua crawl (mac dinh <out>/assets)")
@@ -1369,11 +1382,17 @@ def main():
     if a.emit_root and (a.emit_tokens or a.emit_status is not None):
         print("--emit-root khong dung chung voi --emit-tokens/--emit-status", file=sys.stderr)
         return 1
+    if a.code_only and (a.emit_root or a.emit_tokens):
+        print("--code-only chi la ban nhap: khong dung chung voi --emit-*", file=sys.stderr)
+        return 1
+    if not a.code_only and not a.crawl:
+        print("Can --crawl (hoac --code-only)", file=sys.stderr)
+        return 1
     if a.emit_status is not None and not a.emit_tokens:
         print("--emit-status can --emit-tokens", file=sys.stderr)
         return 1
 
-    files = sorted(glob.glob(os.path.join(a.crawl, "*", "styles.json")))
+    files = [] if a.code_only else sorted(glob.glob(os.path.join(a.crawl, "*", "styles.json")))
     css = []
     for spec in a.css_root:
         m = CSS_SPEC.match(spec)
@@ -1388,12 +1407,17 @@ def main():
         print("Khong co styles.json nao duoi %s va khong co --css-root" % a.crawl, file=sys.stderr)
         return 1
     aroot = a.assets or os.path.join(a.out, "assets")
-    draft = build_draft(files, css, aroot, a.crawl)
+    draft = build_draft(files, css, aroot, a.crawl or a.out)
     sites = sorted({p["site"] for p in draft["pages"]})
-    site_drafts = {s_: build_draft(files, css, aroot, a.crawl, s_) for s_ in sites} if len(sites) > 1 else \
+    if a.code_only:   # site lay tu --css-root REPO@WEB; dem = so cho dung trong code de fingerprint so duoc
+        sites = sorted({x for _, ss, _ in css for x in (ss or [])})
+        _code_counts(draft)
+    site_drafts = {s_: _code_counts(build_draft(files, css, aroot, a.crawl or a.out, s_)) if a.code_only
+                   else build_draft(files, css, aroot, a.crawl, s_) for s_ in sites} if len(sites) > 1 else \
         ({sites[0]: draft} if sites else {})
     lay = decide_layout(site_drafts, a.force_mode)
     draft["dsLayout"] = lay
+    draft["codeOnly"] = a.code_only
     for s_, d in site_drafts.items():
         draft["perSite"].setdefault(s_, {})["observed"] = observed(d)
     os.makedirs(a.out, exist_ok=True)

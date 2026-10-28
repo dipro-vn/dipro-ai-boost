@@ -474,6 +474,22 @@ def main():
             if want == "PASS":
                 ok = ok and not fails
             record(name, ok, "nhan %s=%s, FAIL %s (exit %d)" % (chk, r.get(chk), fails, code))
+        # R10: --code-only (truoc Brief) — 2 repo FE khac font/radius -> per-site; giong nhau -> single
+        def code_only(name, css_b):
+            d = os.path.join(root, "co_" + name)
+            for rid, css in (("a", ":root{--radius-md:4px;--space-2:8px;font-family:'Noto Sans JP',sans-serif}"),
+                             ("b", css_b)):
+                os.makedirs(os.path.join(d, rid))
+                open(os.path.join(d, rid, "app.css"), "w").write(css)
+            p_ = subprocess.run([sys.executable, os.path.join(HERE, "extract-design-tokens.py"), "--code-only",
+                                 "--css-root", "REPO-01@WEB-01=" + os.path.join(d, "a"),
+                                 "--css-root", "REPO-02@WEB-02=" + os.path.join(d, "b"), "--out", os.path.join(d, "o")],
+                                capture_output=True, text=True)
+            return p_.returncode, (json.loads(p_.stdout)["dsLayout"]["mode"] if p_.returncode == 0 else p_.stderr[-200:])
+        got = code_only("diff", ":root{--radius-md:12px;--space-2:20px;font-family:'Inter',sans-serif}")
+        record("--code-only: 2 site khac font/radius/spacing -> per-site", got == (0, "per-site"), str(got))
+        got = code_only("same", ":root{--radius-md:4px;--space-2:8px;font-family:'Noto Sans JP',sans-serif}")
+        record("--code-only: 2 site giong nhau -> single", got == (0, "single"), str(got))
     finally:
         if a.keep:
             print("Giu fixture tai %s" % root)

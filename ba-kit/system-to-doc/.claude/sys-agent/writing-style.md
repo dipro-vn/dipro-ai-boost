@@ -16,6 +16,8 @@
 | Bản tiếng Việt của 見積書 (`--lang vi`, không `--internal`) | PM / BrSE / dev Việt Nam, để đi nói chuyện với khách | Tiếng Việt |
 | Câu hỏi gửi khách (`estimate.json → questions`) | Khách hàng | Nhật + Việt |
 | Giải trình "vì sao là CR" (sheet Q&A của Impact, `flow-2-change-request.md` §3.3) | Khách hàng | Theo yêu cầu dự án |
+| **Câu hỏi `AskUserQuestion` + option, Discovery Brief** (`preflight-questions.md`, `flow-2-change-request.md`, `figma/cr-view.md` §3) | BA / PM / khách hàng | Tiếng Việt (P10) |
+| Chương 2 "Nghiệp vụ chính" của O6 (`business.json`) | Khách hàng / BA | Theo P10 |
 
 Không áp dụng cho phần **nội bộ** (`cr.json`, sheet Screen / API / Database, cột Impact / căn cứ mã đơn giá, run-log) — ở đó được dùng mã kỹ thuật.
 
@@ -46,6 +48,12 @@ Bản tiếng Nhật gửi khách: "bình dân" nghĩa là **dễ hiểu**, khô
 | 8 | **Giả định / phương án đề xuất phải nói rõ** bằng nhãn riêng | Để lẫn trong nội dung | `【提案する対応方法】` (đề xuất của mình) · `【見積もり前提・確認事項】` (giả định đang dùng để tính, chờ khách xác nhận) · `【見積もり前提・対象外】` (không làm) |
 | 9 | **Bản tiếng Việt dịch đầy đủ**, chỉ giữ tiếng Nhật ở letterhead / tên công ty; tên màn tiếng Nhật thì dịch nghĩa (có thể kèm tên Nhật trong ngoặc ở lần đầu) | "Trang 限定公開 · 店舗詳細" | "Trang giới hạn · Trang chi tiết cửa hàng" |
 | 10 | **Câu hỏi gửi khách chỉ hỏi nghiệp vụ** — điều khách quyết định được (quy tắc bán, phạm vi, vận hành). Chi tiết giao diện nhỏ, kỹ thuật, môi trường → nội bộ tự quyết hoặc hỏi PM | "Có cần giữ trạng thái mở khi quay lại trang?" | "Sản phẩm giới hạn có cần ẩn ở trang bảng giá không?" |
+
+## 2b. Câu hỏi trong phiên (`AskUserQuestion`)
+
+- Quy tắc **khi nào hỏi, gom bao nhiêu câu** chỉ ghi 1 chỗ: `preflight-questions.md` §0 (gom câu cùng chủ đề, tối đa 4 câu / lượt; câu đã có trong memory → 1 bảng xác nhận; 4 câu an toàn luôn hỏi lại gọn).
+- Chữ câu hỏi / option theo bảng §2: điều người dùng thấy và làm, tên màn / nút trong 「」, **không mã nội bộ** (P2b, SC-, API-, EV-, T1…) — mã chỉ ở tiêu đề mục hoặc comment cho agent. Ví dụ: ~~"P2b — Tài khoản có được phép dùng để quét tự động không? [A] TEST do KH/PM cấp"~~ → "Tài khoản này có phải tài khoản thử nghiệm mà khách hàng / PM cấp, và cho phép tôi tự động mở từng trang để xem không?"
+- Câu an toàn: dễ hiểu nhưng **giữ đúng nghĩa** (thử nghiệm hay thật · được phép hay không · chỉ xem hay được sửa · có dữ liệu thật không).
 
 ## 3. Mẫu một dòng chức năng (bản Nhật · bản Việt)
 

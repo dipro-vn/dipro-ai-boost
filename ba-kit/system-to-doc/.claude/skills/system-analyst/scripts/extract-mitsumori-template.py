@@ -132,6 +132,8 @@ def main():
     for k, v in meta.items():
         mt.append([k, v])
     mt.sheet_state = "hidden"
+    for s in wb.worksheets:
+        s.freeze_panes = None  # file nguon co the freeze san — kit khong freeze (R13)
     os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
     wb.save(a.out)
     print("Da ghi %s — header dong %d · section %d · item %d · 合計 %d · cot 実装 %s · he so 要件 %s / UI %s,%s / テスト %s / 管理 %s · 人月 /%s"

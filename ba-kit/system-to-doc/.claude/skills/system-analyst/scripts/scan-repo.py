@@ -3,12 +3,29 @@
 
   python3 scan-repo.py <repo_root> --repo-id REPO-01 [--kind AUTO|FE|BE|FULLSTACK]
           --out <_internal> --ev-start N --api-start N
+          [--api-seed <_internal>/recon/code/REPO-02/api-seed.csv]   # repo BE quet truoc, lap lai
+          [--prev-inventory <ver cu>/_internal/inventory.xlsx]        # so repo_commit
+          [--site-url https://stg.example.jp]                          # -> seed-urls.txt cho crawl
+          [--sensitive-memory outputs/_project/preflight-memory.json]  # mo lai file S1 "báo nhầm"
+  python3 scan-repo.py <repo_root> --repo-id REPO-01 --commit-only [--prev-inventory ...]
 
 Output -> <_internal>/recon/code/<REPO-xx>/
-  stack.json  routes.txt  routes.json  api.json  fe-routes.json  fe-api-calls.json
+  stack.json (co "commit")  routes.txt  routes.json  api.json  fe-routes.json  fe-api-calls.json
+  fe-api-calls.csv   do thi goi FE -> API: man (route) -> trigger (mount / handler / nhan nut)
+                     -> ham goi -> endpoint -> API ID, moi canh Confidence static|inferred
+  api-roles.csv      API -> role (decorator / guard / so sanh role / middleware), best-effort
   batch.json  integrations.json  table-refs.json  evidence.csv  api-seed.csv
-  skipped-sensitive.json   (chi TEN file nhay cam bi bo qua, khong bao gio noi dung)
-stdout: JSON {counts, kind, next_ev, next_api, out}
+  fe-screen-files.json   route -> file component cua man (de build-basic-design.py tra nhan nut -> handler)
+  skipped-sensitive.json   (chi TEN file nhay cam bi bo qua, khong bao gio noi dung; "reopened" = file mo lai
+                           theo --sensitive-memory)
+Import FE: duong dan tuong doi, @/ ~/, va tsconfig.json / jsconfig.json gan nhat (compilerOptions.baseUrl + paths,
+cho phep comment / dau phay thua). --sensitive-memory: chi file bi chan vi TEN (name-keyword) ma nguoi dung da
+phan loai "[A]" / "báo nhầm" / "được đọc" moi duoc doc; .env / key / dump / .npmrc / .yarnrc.yml / credential
+config LUON bi chan.
+stdout: JSON {counts, kind, commit, prev_commit, commit_changed, next_ev, next_api, out}
+
+commit: git HEAD (repo goc) | tree@<id> (thu muc con cua git) | tree:<hash> (khong phai git),
++dirty:<hash> khi co thay doi chua commit. Ghi vao 00_Meta.repo_commit = "REPO-01=<commit>;...".
 
 Ho tro: Express/Koa/Fastify/Nest, Next.js (pages/api, app/**/route), Nuxt server/api,
 SvelteKit, Laravel, Django/DRF, Flask, FastAPI, Spring, ASP.NET, Rails, Go (gin/echo/chi);
@@ -22,6 +39,7 @@ import bisect
 import csv
 import json
 import os
+import posixpath
 import re
 import sys
 
@@ -235,6 +253,11 @@ class Repo:
         self.files = {}          # rel -> Src
         self.paths = []          # moi file (ke ca khong doc) -> dung cho file routing
         self.skipped = []
+        self.reopen = set()      # --sensitive-memory: file nguoi dung phan loai "bao nham" (chi name-keyword)
+        self.reopened = []
+        self.ts_cfg = {}         # thu muc -> (baseUrl, paths) cua tsconfig / jsconfig gan nhat
+        self.screen_files = {}   # route FE -> [file component cua man] (fe-screen-files.json)
+        self.const_cache = {}    # rel -> hang so URL trong file + file import truc tiep
         self.skipped_large = []
         self.name_only = []
         self.manifests = {}
@@ -261,6 +284,27 @@ class Repo:
         return hits[0] if hits else None
 
 
+REOPEN_RX = re.compile(r"(?i)^\s*\[A\]|báo nhầm|bao nham|false positive|được đọc|duoc doc|dùng bình thường")
+NO_REOPEN_RX = re.compile(r"(?i)không mở|khong mo|dữ liệu thật|du lieu that|chưa rõ|chua ro")
+
+
+def load_reopen(path):
+    """preflight-memory.json -> tap duong dan file S1 nguoi dung da phan loai 'bao nham' / 'duoc doc'."""
+    try:
+        mem = json.load(open(path, encoding="utf8"))
+    except (OSError, ValueError) as ex:
+        raise SystemExit("--sensitive-memory doc khong duoc: %s (%s)" % (path, ex.__class__.__name__))
+    return {f.replace(os.sep, "/").strip("/") for s in mem.get("sensitive", [])
+            if REOPEN_RX.search(s.get("classification", "")) and not NO_REOPEN_RX.search(s.get("classification", ""))
+            for f in s.get("files", [])}
+
+
+def reopened(repo, rel):
+    # memory ghi duong dan tu goc du an / inputs/ (vd "tokiwagi/src/x.ts") -> so phan duoi theo ranh gioi "/"
+    full = os.path.abspath(os.path.join(repo.root, rel)).replace(os.sep, "/")
+    return any(full.endswith("/" + f) or f == rel for f in repo.reopen)
+
+
 def walk(repo):
     for dirpath, dirnames, filenames in os.walk(repo.root):
         dirnames[:] = sorted(d for d in dirnames if d not in SKIP_DIRS)
@@ -268,6 +312,9 @@ def walk(repo):
             fp = os.path.join(dirpath, fn)
             rel = os.path.relpath(fp, repo.root).replace(os.sep, "/")
             why = sensitive_reason(rel)
+            if why == "name-keyword" and repo.reopen and reopened(repo, rel):
+                repo.reopened.append(rel)   # chi TEN trung tu khoa, nguoi dung da phan loai bao nham
+                why = None
             if why:
                 repo.skipped.append({"path": rel, "reason": why})
                 if why == "name-keyword":
@@ -409,13 +456,90 @@ def build_index(repo):
         repo.base_url = bases.pop()
 
 
+def strip_jsonc(t):
+    """tsconfig / jsconfig: bo comment // va /* */ (ngoai chuoi) + dau phay thua truoc } ]."""
+    out, i, n, q = [], 0, len(t), False
+    while i < n:
+        c = t[i]
+        if q:
+            out.append(c)
+            if c == "\\" and i + 1 < n:
+                out.append(t[i + 1])
+                i += 1
+            elif c == '"':
+                q = False
+        elif c == '"':
+            q = True
+            out.append(c)
+        elif t.startswith("//", i):
+            j = t.find("\n", i)
+            i = n if j < 0 else j
+            continue
+        elif t.startswith("/*", i):
+            j = t.find("*/", i + 2)
+            i = n if j < 0 else j + 2
+            continue
+        else:
+            out.append(c)
+        i += 1
+    return re.sub(r",(\s*[}\]])", r"\1", "".join(out))
+
+
+def pjoin(*parts):
+    p = posixpath.normpath(posixpath.join(*parts))
+    return "" if p == "." else p
+
+
+def ts_config(repo, d):
+    """tsconfig.json / jsconfig.json gan nhat tu thu muc d di len goc repo -> (baseUrl | None, [(pattern, [target])])."""
+    if d in repo.ts_cfg:
+        return repo.ts_cfg[d]
+    cfg = None
+    for name in ("tsconfig.json", "jsconfig.json"):
+        src = repo.files.get(pjoin(d, name))
+        if not src:
+            continue
+        try:
+            co = (json.loads(strip_jsonc(src.text)) or {}).get("compilerOptions") or {}
+        except ValueError:
+            continue
+        # shortcut: khong theo "extends" — cau hinh baseUrl/paths o file cha thi chua doc duoc
+        base = pjoin(d, co["baseUrl"]) if isinstance(co.get("baseUrl"), str) else None
+        root = base if base is not None else d
+        paths = [(k, [pjoin(root, x) for x in v if isinstance(x, str)])
+                 for k, v in (co.get("paths") or {}).items() if isinstance(v, list)]
+        cfg = (base, sorted(paths, key=lambda kv: -len(kv[0].split("*")[0])))
+        break
+    if cfg is None:
+        cfg = ts_config(repo, posixpath.dirname(d)) if d else (None, [])
+    repo.ts_cfg[d] = cfg
+    return cfg
+
+
+def ts_cands(repo, rel, spec):
+    """Ung vien duong dan cho import khong tuong doi theo tsconfig paths (truoc) roi baseUrl."""
+    base, paths = ts_config(repo, posixpath.dirname(rel))
+    out = []
+    for pat, targets in paths:
+        if "*" in pat:
+            pre, _, suf = pat.partition("*")
+            if spec.startswith(pre) and spec.endswith(suf) and len(spec) >= len(pre) + len(suf):
+                star = spec[len(pre):len(spec) - len(suf)]
+                out += [x.replace("*", star, 1) for x in targets]
+        elif spec == pat:
+            out += targets
+    if base is not None:
+        out.append(pjoin(base, spec))
+    return out
+
+
 def resolve_js_import(repo, src, spec):
-    if not spec.startswith((".", "@/", "~/")):
-        return None
-    if spec.startswith(("@/", "~/")):
-        cands = ["src/" + spec[2:], spec[2:]]
+    if spec.startswith("."):
+        cands = [pjoin(posixpath.dirname(src.rel), spec)]
     else:
-        cands = [os.path.normpath(os.path.join(os.path.dirname(src.rel), spec)).replace(os.sep, "/")]
+        cands = ts_cands(repo, src.rel, spec)
+        if spec.startswith(("@/", "~/")):
+            cands += ["src/" + spec[2:], spec[2:]]
     for base in cands:
         for suf in ("", ".ts", ".js", ".tsx", ".jsx", ".mjs", ".cjs", ".vue",
                     "/index.ts", "/index.js", "/index.tsx", "/index.jsx"):
@@ -531,7 +655,7 @@ def default_group(stem, path):
 
 def add_ep(repo, src, pos, method, path, handler, group, fw, auth=None, req=None,
            handler_loc=None, handler_file=None, prefix_key=None, line=None):
-    ep = {"method": mapm(method), "path": path, "handler": handler or "UNKNOWN",
+    ep = {"method": mapm(method), "path": path, "handler": handler or S.NEED_CONFIRM,
           "group": group, "framework": fw,
           "locator": repo.loc(src, line, True) if line else repo.loc(src, pos),
           "file": src.rel, "auth_hints": sorted(set(auth or [])),
@@ -559,7 +683,7 @@ def is_be_js(src):
 def handler_info(repo, src, args):
     """args sau path -> (handler, middleware list, handler_locator, handler_file, (s,e,src))."""
     if not args:
-        return "UNKNOWN", [], None, None, None
+        return S.NEED_CONFIRM, [], None, None, None
     last, lpos = args[-1]
     mids = [a for a, _ in args[:-1]]
     if re.match(r"^(async\s*)?(\(|function\b|[A-Za-z_$][\w$]*\s*=>)", last):
@@ -806,7 +930,7 @@ def scan_laravel(repo, src):
             ctrl, meth = re.match(r"([\w\\]+)::class", h).group(1).split("\\")[-1], "__invoke"
         elif lit(h) and gctrl:
             meth = lit(h)
-        handler = "%s@%s" % (ctrl, meth) if ctrl and meth else ("(closure)" if "function" in h or "fn" in h else "UNKNOWN")
+        handler = "%s@%s" % (ctrl, meth) if ctrl and meth else ("(closure)" if "function" in h or "fn" in h else S.NEED_CONFIRM)
         hloc, hfile, req, cauth = laravel_controller(repo, ctrl, meth)
         for mt in methods:
             add_ep(repo, src, m.start(), mt, join_path(*(pre + [path])), handler,
@@ -1113,7 +1237,7 @@ def scan_go(repo, src):
     for m in re.finditer(r"\.(GET|POST|PUT|PATCH|DELETE|Get|Post|Put|Patch|Delete|HandleFunc|Handle)\(\s*\"(/[^\"]*)\"\s*,\s*([^)\n]*)", src.text):
         meth = m.group(1) if m.group(1) not in ("HandleFunc", "Handle") else "ANY"
         parts = [x.strip() for x in m.group(3).split(",") if x.strip()]
-        h = parts[-1] if parts else "UNKNOWN"
+        h = parts[-1] if parts else S.NEED_CONFIRM
         auth = [x for x in parts[:-1] if AUTH_RX.search(x)]
         add_ep(repo, src, m.start(), meth, norm_path(m.group(2)), h,
                default_group(src.stem, m.group(2)), "Go", auth, [], None, src.rel)
@@ -1164,7 +1288,7 @@ def scan_rails(repo, src):
             tm = re.search(r"(?:to:|=>)\s*['\"]([\w/]+#\w+)['\"]", m2.group(3))
             vm = re.search(r"via:\s*\[?:?(\w+)", m2.group(3))
             meth = m2.group(1) if m2.group(1) != "match" else (vm.group(1) if vm else "ANY")
-            h = tm.group(1) if tm else "UNKNOWN"
+            h = tm.group(1) if tm else S.NEED_CONFIRM
             out.append((meth, join_path(prefix(), m2.group(2)), h, h.split("#")[0].split("/")[-1] if tm else default_group(None, m2.group(2)), i))
         m3 = re.match(r"root\s+(?:to:\s*)?['\"]([\w/]+#\w+)['\"]", s)
         if m3:
@@ -1258,7 +1382,7 @@ def scan_fe_routes(repo, src):
                 cm = re.search(r"element\s*=\s*\{\s*<\s*([\w.]+)", tag) or \
                     re.search(r"(?:component|Component)\s*=\s*\{\s*([\w.]+)", tag)
                 add_fe_route(repo, src, m.start(), full if full == "*" else norm_path(full),
-                             cm.group(1) if cm else "UNKNOWN", "react-router")
+                             cm.group(1) if cm else S.NEED_CONFIRM, "react-router")
             if not self_close:
                 stack.append(full if full is not None else parent)
     # route objects (react-router / vue-router / angular)
@@ -1280,7 +1404,7 @@ def scan_fe_routes(repo, src):
                 re.search(r"(?:component|Component|loadComponent)\s*:\s*(?:\(\)\s*=>\s*import\(\s*['\"]([^'\"]+)['\"]|([\w.]+))", win) or \
                 re.search(r"lazy\s*:\s*\(\)\s*=>\s*import\(\s*['\"]([^'\"]+)", win) or \
                 re.search(r"(redirect(?:To)?)\s*:", win) or re.search(r"loadChildren\s*:.*?import\(\s*['\"]([^'\"]+)", win)
-            comp = next((g for g in cm.groups() if g), "UNKNOWN") if cm else "UNKNOWN"
+            comp = next((g for g in cm.groups() if g), S.NEED_CONFIRM) if cm else S.NEED_CONFIRM
             fw = "vue-router" if "vue-router" in t or src.ext == ".vue" else ("angular" if "@angular" in t else "router-object")
             norm = full if full in ("*", "**") else norm_path(full)
             add_fe_route(repo, src, m.start(), norm, comp, fw)
@@ -1355,7 +1479,33 @@ SKIP_RECV = {"router", "app", "server", "express", "fastify", "r", "Route", "map
 ASSET_RX = re.compile(r"\.(png|jpe?g|svg|gif|webp|css|scss|ico|woff2?|ttf|map|html|md)$", re.I)
 
 
-def url_from_arg(repo, a):
+def file_consts(repo, src):
+    """Hang so URL cua file + file import truc tiep (ten trung giua cac file -> uu tien file dang xet)."""
+    if src.rel in repo.const_cache:
+        return repo.const_cache[src.rel]
+    own = {}
+    repo.const_cache[src.rel] = own
+    for rx in (CONST_RX, OBJ_URL_RX):
+        for x in rx.finditer(src.text):
+            own.setdefault(x.group(1), x.group(3))
+    out = dict(own)
+    for x in IMPORT_FROM_RX.finditer(src.text):
+        dep = repo.files.get(resolve_js_import(repo, src, x.group(2)) or "")
+        if dep:
+            for rx in (CONST_RX, OBJ_URL_RX):
+                for y in rx.finditer(dep.text):
+                    out.setdefault(y.group(1), y.group(3))
+    repo.const_cache[src.rel] = out
+    return out
+
+
+def const_val(repo, src, name):
+    name = name.split(".")[-1]
+    loc = file_consts(repo, src) if src is not None else {}
+    return loc.get(name, repo.str_consts.get(name))
+
+
+def url_from_arg(repo, a, src=None):
     a = (a or "").strip()
     if not a:
         return None, None
@@ -1363,6 +1513,10 @@ def url_from_arg(repo, a):
     m = re.match(r"^`([^`]*)`", a)
     if m:
         u = m.group(1)
+        h = re.match(r"^\$\{\s*([A-Za-z_$][\w$.]*)\s*\}", u)
+        v = const_val(repo, src, h.group(1)) if h else None
+        if v is not None:      # `${APIs.ORDER}/${id}` -> "/api/orders/:id"
+            u, note = v + u[h.end():], "const " + h.group(1)
         u = re.sub(r"^\$\{[^}]*\}(?=/)", "", u)
         u = re.sub(r"\$\{([^}]*)\}", lambda x: ":" + (re.findall(r"[A-Za-z_]\w*", x.group(1)) or ["param"])[-1], u)
     else:
@@ -1372,11 +1526,8 @@ def url_from_arg(repo, a):
             v = lit(p)
             if v is not None:
                 u += v
-            elif i == 0 and p in repo.str_consts:
-                u += repo.str_consts[p]
-                note = "const " + p
-            elif i == 0 and "." in p and p.split(".")[-1] in repo.str_consts:
-                u += repo.str_consts[p.split(".")[-1]]
+            elif i == 0 and re.match(r"^[A-Za-z_$][\w$.]*$", p) and const_val(repo, src, p) is not None:
+                u += const_val(repo, src, p)
                 note = "const " + p
             elif i == 0 and re.match(r"^[A-Za-z_$][\w$.]*$", p) and re.search(r"(?i)base|api|host|url|endpoint", p):
                 continue
@@ -1416,14 +1567,14 @@ def scan_fe_calls(repo, src):
         args, _ = call_args(t, m.end() - 1)
         if not args:
             continue
-        u, note = url_from_arg(repo, args[0][0])
+        u, note = url_from_arg(repo, args[0][0], src)
         if u:
             add_call(repo, src, m.start(), m.group(2), u, note, recv + "." + m.group(2))
     for m in FETCH_RX.finditer(t):
         args, _ = call_args(t, m.end() - 1)
         if not args:
             continue
-        u, note = url_from_arg(repo, args[0][0])
+        u, note = url_from_arg(repo, args[0][0], src)
         if not u:
             continue
         meth = "GET"
@@ -1437,15 +1588,508 @@ def scan_fe_calls(repo, src):
         um = re.search(r"\burl\s*:\s*([^,\n}]+)", obj)
         if not um:
             continue
-        u, note = url_from_arg(repo, um.group(1))
+        u, note = url_from_arg(repo, um.group(1), src)
         if u:
             mm = re.search(r"\b(?:method|type)\s*:\s*['\"](\w+)", obj)
             add_call(repo, src, m.start(), mm.group(1) if mm else "GET", u, note, m.group(1) + "({})")
+    if "hono" in repo.deps or "hono/client" in t:   # Hono RPC: client.api.v1.orders[':id'].$get()
+        for m in HONO_RX.finditer(t):
+            segs = re.findall(r"\.\s*([A-Za-z_$][\w$]*)|\[\s*['\"]([^'\"]+)['\"]\s*\]", m.group(2))
+            path = "/" + "/".join(a or b for a, b in segs if (a or b) != "index")
+            add_call(repo, src, m.start(), m.group(3), path, "hono chain (prefix chua chac)", "hono-rpc")
+
+
+# ---------------------------------------------------------------- FE -> API call graph (R1)
+# Do thi muc KY HIEU (ham/component), khong phai import graph theo file: man chi gan API khi
+# component/hook/ham cua man that su goi toi ham chua loi goi API (ver3: import graph gan sai).
+# shortcut: chi JS/TS (React/Next); tsconfig "extends", class instance, Vue/Angular -> chua theo.
+FE_EDGE_COLS = ["Screen Route", "Screen File", "Trigger", "UI Label", "Method", "Path", "API ID",
+                "Via", "Trigger Ref", "Code Ref", "Confidence"]
+API_ROLE_COLS = ["API ID", "Method", "Path", "Roles", "Auth", "Code Ref", "Confidence"]
+DECL_RX = re.compile(r"^(export\s+)?(default\s+)?(?:declare\s+)?(?:async\s+)?(?:function\s*\*?\s*([A-Za-z_$][\w$]*)?\s*[(<]"
+                     r"|(?:const|let|var)\s+([A-Za-z_$][\w$]*)|(?:abstract\s+)?class\s+([A-Za-z_$][\w$]*))", re.M)
+DEFAULT_EXPR_RX = re.compile(r"^export\s+default\s+(?!(?:async\s+)?function\b|(?:abstract\s+)?class\b)", re.M)
+IMPORT_FROM_RX = re.compile(r"""^import\s+(?!type\s+\{)(?:type\s+)?([\w$*{}\s,]+?)\s+from\s+['"]([^'"]+)['"]""", re.M)
+EXPORT_LIST_RX = re.compile(r"""^export\s+(?:type\s+)?\{([^}]*)\}(?:\s*from\s+['"]([^'"]+)['"])?""", re.M)
+EXPORT_STAR_RX = re.compile(r"""^export\s+\*\s+from\s+['"]([^'"]+)['"]""", re.M)
+REF_RX = re.compile(r"(?<![\w$.])([A-Za-z_$][\w$]*)(?:\s*\.\s*([A-Za-z_$][\w$]*))?")
+CTX_RX = re.compile(r"\b(?:(useEffect|useLayoutEffect|useMount|useQuery|useQueries|useSWR\w*|useInfiniteQuery|"
+                    r"useSuspenseQuery|getServerSideProps|getStaticProps|getInitialProps|loader|useMutation)\s*\("
+                    r"|(on[A-Z]\w*)\s*=\s*\{"
+                    r"|(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:useCallback\(\s*)?(?:async\s*)?"
+                    r"(?:\([^()]*\)|[A-Za-z_$][\w$]*)\s*(?::[^=;\n]+)?=>"
+                    r"|(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\()")
+HONO_RX = re.compile(r"""(?<![\w$.])([A-Za-z_$][\w$]*)((?:\s*\.\s*[A-Za-z_$][\w$]*|\[\s*['"][^'"]+['"]\s*\])+)\s*\.\s*\$(get|post|put|patch|delete)\s*\(""")
+
+
+class Mod:
+    def __init__(self):
+        self.decls, self.exports, self.reexp, self.star, self.imports = {}, {}, {}, [], {}
+        self.server = False
+
+
+def build_mod(repo, src):
+    t, m = src.text, Mod()
+    m.server = bool(re.match(r"""\s*(?://[^\n]*\n\s*)*['"]use server['"]""", t))
+    marks = []
+    for x in DECL_RX.finditer(t):
+        name = x.group(3) or x.group(4) or x.group(5) or ("default" if x.group(2) else None)
+        if name:
+            marks.append((x.start(), name, bool(x.group(1)), bool(x.group(2))))
+    for x in DEFAULT_EXPR_RX.finditer(t):
+        marks.append((x.start(), "default", True, True))
+    marks.sort()
+    for i, (pos, name, exp, dflt) in enumerate(marks):
+        end = marks[i + 1][0] if i + 1 < len(marks) else len(t)
+        m.decls.setdefault(name, (pos, end))
+        if exp:
+            m.exports[name] = name
+        if dflt:
+            m.exports["default"] = name
+        dm = re.search(r"""\bimport\(\s*['"]([^'"]+)['"]\s*\)(?:\s*\.then\(\s*\(?\s*(\w+)\s*\)?\s*=>\s*\2\.(\w+))?""", t[pos:end])
+        if dm and name != "default" and re.match(r"(?:export\s+)?(?:const|let|var)\s", t[pos:pos + 20]):
+            m.imports[name] = (resolve_js_import(repo, src, dm.group(1)), dm.group(3) or "default")
+    for x in IMPORT_FROM_RX.finditer(t):
+        clause, rel = x.group(1), resolve_js_import(repo, src, x.group(2))
+        br = re.search(r"\{([^}]*)\}", clause)
+        if br:
+            for part in br.group(1).split(","):
+                p = re.sub(r"^\s*type\s+", "", part).strip()
+                if p:
+                    a, _, b = p.partition(" as ")
+                    m.imports[(b or a).strip()] = (rel, a.strip())
+        head = re.sub(r"\{[^}]*\}", "", clause)
+        ns = re.search(r"\*\s+as\s+([\w$]+)", head)
+        if ns:
+            m.imports[ns.group(1)] = (rel, "*")
+        dm = re.match(r"\s*([A-Za-z_$][\w$]*)\s*(?:,|$)", head)
+        if dm and dm.group(1) != "type":
+            m.imports[dm.group(1)] = (rel, "default")
+    for x in EXPORT_LIST_RX.finditer(t):
+        rel = resolve_js_import(repo, src, x.group(2)) if x.group(2) else None
+        for part in x.group(1).split(","):
+            a, _, b = part.strip().partition(" as ")
+            a, b = a.strip(), (b or a).strip()
+            if not a:
+                continue
+            if x.group(2):
+                m.reexp[b] = (rel, a)
+            else:
+                m.exports[b] = a
+    for x in EXPORT_STAR_RX.finditer(t):
+        rel = resolve_js_import(repo, src, x.group(1))
+        if rel:
+            m.star.append(rel)
+    return m
+
+
+def line_pos(src, ln):
+    return 0 if ln <= 1 else (src.nl[ln - 2] + 1 if ln - 2 < len(src.nl) else len(src.text))
+
+
+def call_line(c):
+    return int(c["locator"].rsplit("#L", 1)[1])
+
+
+class Graph:
+    def __init__(self, repo):
+        self.repo, self.mods, self.memo, self._refs = repo, {}, {}, {}
+        self.calls = {}                      # rel -> [(line, call)]
+        for c in repo.fe_calls:
+            self.calls.setdefault(c["file"], []).append((call_line(c), c))
+        self.ranges = {}                     # (rel, "obj.member") -> (s, e)
+
+    def mod(self, rel):
+        if rel not in self.mods:
+            src = self.repo.files.get(rel)
+            self.mods[rel] = build_mod(self.repo, src) if src and src.ext in JS_EXT else Mod()
+        return self.mods[rel]
+
+    def resolve(self, rel, name, depth=0):
+        if not rel or depth > 6:
+            return None
+        m = self.mod(rel)
+        local = m.exports.get(name, name if name in m.decls and name != "default" else None)
+        if local:
+            return self.local(rel, local, depth + 1)
+        if name in m.reexp:
+            r2, n2 = m.reexp[name]
+            return self.resolve(r2, n2, depth + 1)
+        for r2 in m.star:
+            hit = self.resolve(r2, name, depth + 1)
+            if hit:
+                return hit
+        return None
+
+    def local(self, rel, name, depth=0):
+        m = self.mod(rel)
+        if name in m.decls:
+            return (rel, name)
+        if name in m.imports:
+            r2, n2 = m.imports[name]
+            return None if n2 == "*" else self.resolve(r2, n2, depth + 1)
+        return None
+
+    def span(self, node):
+        return self.ranges.get(node) or self.mod(node[0]).decls.get(node[1], (0, 0))
+
+    def refs(self, node):
+        """[(target_node, [pos], narrowed)] — ky hieu duoc dung trong than node."""
+        if node not in self._refs:
+            self._refs[node] = self._scan_refs(node)
+        return self._refs[node]
+
+    def _scan_refs(self, node):
+        rel, name = node
+        m, (s, e) = self.mod(rel), self.span(node)
+        t = self.repo.files[rel].text
+        out = {}
+        for x in REF_RX.finditer(t, s, e):
+            a, mem = x.group(1), x.group(2)
+            if a == name.split(".")[0] or (a not in m.imports and a not in m.decls):
+                continue
+            if m.imports.get(a, (None, ""))[1] == "*":
+                tgt, narrow = (self.resolve(m.imports[a][0], mem) if mem else None), True
+            else:
+                tgt, narrow = self.local(rel, a), True
+                if tgt and mem and not tgt[1][:1].isupper():
+                    sub = self.member(tgt, mem)
+                    tgt, narrow = (sub, True) if sub else (tgt, False)
+            if tgt and tgt != node:
+                k = out.setdefault(tgt, [[], narrow])
+                if len(k[0]) < 3:
+                    k[0].append(x.start())
+        return [(k, v[0], v[1]) for k, v in out.items()]
+
+    def member(self, node, mem):
+        """obj = { list: () => ..., create: ... } -> pham vi cua key 'mem'."""
+        rel, name = node
+        s, e = self.span(node)
+        t = self.repo.files[rel].text
+        i = t.find("{", s, e)
+        if i < 0 or "=" not in t[s:i]:
+            return None
+        close = match_close(t, i, "{", "}")
+        for seg, off in split_top(t[i + 1:close if close > 0 else e]):
+            if re.match(r"\s*(?:async\s+)?%s\s*[:(]" % re.escape(mem), seg):
+                key = (rel, "%s.%s" % (name, mem))
+                self.ranges[key] = (i + 1 + off, i + 1 + off + len(seg))
+                return key
+        return None
+
+    def direct(self, node):
+        rel, name = node
+        s, e = self.span(node)
+        src = self.repo.files[rel]
+        l1, l2 = src.line(s), src.line(max(s, e - 1))
+        out = [c for ln, c in self.calls.get(rel, []) if l1 <= ln <= l2]
+        m = self.mod(rel)
+        if m.server and "." not in name and m.exports.get(name) == name:
+            out.append({"method": "ACTION", "path": name, "url": name, "note": "", "via": "server action",
+                        "locator": self.repo.loc(src, s)})
+        return out
+
+    def reach(self, node, seen=None):
+        if node in self.memo:
+            return self.memo[node]
+        seen = seen if seen is not None else set()
+        if node in seen:
+            return []
+        seen.add(node)
+        out = [(c, node[1], True) for c in self.direct(node)]
+        for tgt, _, narrow in self.refs(node):
+            if not is_component(tgt[1]):
+                out += [(c, node[1] + " > " + v, ok and narrow) for c, v, ok in self.reach(tgt, seen)]
+        self.memo[node] = out
+        return out
+
+
+def is_component(name):
+    n = name.split(".")[-1]
+    return n[:1].isupper() and not n.isupper()
+
+
+def jsx_label(t, p):
+    """Nhan nut/link chua thuoc tinh onX tai p (text hien thi, key i18n, hoac label/title)."""
+    ts = t.rfind("<", 0, p)
+    if ts < 0:
+        return ""
+    j, d, q = ts + 1, 0, None
+    while j < len(t) and j - ts < 3000:
+        ch = t[j]
+        if q:
+            if ch == q:
+                q = None
+        elif ch in "'\"`":
+            q = ch
+        elif ch == "{":
+            d += 1
+        elif ch == "}":
+            d -= 1
+        elif ch == ">" and d == 0:
+            break
+        j += 1
+    tag = t[ts:j]
+    am = re.search(r"""\b(?:aria-label|label|title|text|value)\s*=\s*(?:\{\s*)?(?:t\(\s*)?['"]([^'"]{1,60})['"]""", tag)
+    if not tag.rstrip().endswith("/"):
+        tn = re.match(r"<([\w.]+)", tag)
+        end = t.find("</%s" % tn.group(1), j) if tn else -1
+        inner = t[j + 1:end if 0 < end < j + 400 else j + 1]
+        km = re.search(r"""\{\s*t\(\s*['"]([^'"]+)['"]""", inner)
+        txt = re.sub(r"\s+", " ", re.sub(r"<[^>]*>|\{[^{}]*\}", " ", inner)).strip()
+        if txt:
+            return txt[:40]
+        if km:
+            return "t:" + km.group(1)
+    return am.group(1) if am else ""
+
+
+def trigger_of(g, node, pos):
+    """-> (trigger, nhan nut, vi tri) cua loi goi tai pos trong node."""
+    rel, name = node
+    s, e = g.span(node)
+    t = g.repo.files[rel].text
+    best = None
+    for x in CTX_RX.finditer(t, s, pos):
+        if (x.group(3) or x.group(4)) == name.split(".")[0]:
+            continue                          # chinh khai bao cua node (component / ham bao ngoai)
+        if x.group(2):
+            o = x.end() - 1
+        elif x.group(1) or x.group(4):
+            o = t.find("(", x.end() - 1)
+            if x.group(4):
+                o = t.find("{", match_close(t, o) if o >= 0 else x.end())
+        else:
+            o = x.end()
+            while o < len(t) and t[o] in " \t\n":
+                o += 1
+        if o < 0 or o >= len(t):
+            continue
+        if t[o] in "({":
+            c = match_close(t, o, t[o], ")" if t[o] == "(" else "}")
+        else:
+            nl = re.compile(r"[;\n]").search(t, o)
+            c = nl.start() if nl else e
+        if o <= pos <= (c if c > 0 else e):
+            best = x
+    if not best:
+        ssr = name in ("getServerSideProps", "getStaticProps", "getInitialProps", "loader", "generateMetadata")
+        return ("mount (SSR)" if ssr else "mount"), "", pos
+    if best.group(1):
+        hook = best.group(1)
+        return ("mutation" if hook == "useMutation" else "mount (SSR)" if hook.startswith("get") else "mount"), "", best.start()
+    if best.group(2):
+        return best.group(2), jsx_label(t, best.start()), best.start()
+    h = best.group(3) or best.group(4)
+    use = re.compile(r"(on[A-Z]\w*)\s*=\s*\{[^{}]{0,80}?\b%s\b" % re.escape(h)).search(t, s, e)
+    if use:
+        return "%s → %s" % (h, use.group(1)), jsx_label(t, use.start()), use.start()
+    return h, "", best.start()
+
+
+def seg_match(a, b):
+    A = [x for x in a.strip("/").split("/") if x]
+    B = [x for x in b.strip("/").split("/") if x]
+    for i, bs in enumerate(B):
+        if bs.endswith("*"):
+            return True
+        if i >= len(A):
+            return False
+        if not (bs.startswith(":") or A[i].startswith(":") or A[i] == bs):
+            return False
+    return len(A) == len(B)
+
+
+def match_api(apis, method, path):
+    """-> (api_id, exact?) — exact: method + pattern khop het; khong exact: khop phan duoi path."""
+    ok = [x for x in apis if method in ("ANY", x[0]) or x[0] == "ANY"]
+    hit = [x for x in ok if seg_match(path, x[1])]
+    if hit:
+        return min(hit, key=lambda x: x[1].count(":"))[2], True
+    A = [x for x in path.strip("/").split("/") if x]
+    tail = []
+    for x in ok:
+        B = [y for y in x[1].strip("/").split("/") if y]
+        n = min(len(A), len(B))
+        if n >= 1 and seg_match("/".join(A[-n:]), "/".join(B[-n:])) and (len(A) - n + len(B) - n) <= 2:
+            tail.append(x)
+    return (tail[0][2], False) if len(tail) == 1 else ("—", False)
+
+
+def fe_api_edges(repo, apis):
+    g = Graph(repo)
+    roots = []
+    for r in repo.fe_routes:
+        f = r.get("file")
+        if not f or f not in repo.files:
+            continue
+        if r["framework"] in ("next-pages", "next-app", "nuxt-pages", "sveltekit"):
+            m = g.mod(f)
+            names = set(m.exports.values()) & set(m.decls) or set(m.decls)
+            roots += [(r, (f, n)) for n in sorted(names)]
+        else:
+            n = g.local(f, r["component"].split(".")[0]) if r.get("component") else None
+            if n:
+                roots.append((r, n))
+    rows, seen = [], set()
+
+    def add(r, call, trig, label, tpos_node, tpos, via, narrow):
+        method = call["method"]
+        if method == "ACTION":
+            aid, exact = "—", True
+        else:
+            aid, exact = match_api(apis, method, call["path"])
+        static = exact and narrow and aid != "—" and "baseURL" not in call.get("note", "") and call["via"] != "hono-rpc"
+        if method == "ACTION":
+            static = narrow
+        k = (r["route"], trig, method, call["path"], call["locator"])
+        if k in seen:
+            return
+        seen.add(k)
+        rows.append({"Screen Route": r["route"], "Screen File": "%s:%s" % (repo.rid, r["file"]),
+                     "Trigger": trig, "UI Label": label or "—", "Method": method, "Path": call["path"],
+                     "API ID": aid, "Via": via, "Trigger Ref": repo.loc(repo.files[tpos_node[0]], tpos),
+                     "Code Ref": call["locator"], "Confidence": "static" if static else "inferred"})
+
+    def walk_node(r, node, chain, visited, depth):
+        files = repo.screen_files.setdefault(r["route"], [])
+        if node[0] not in files:
+            files.append(node[0])
+        for c in g.direct(node):
+            pos = max(g.span(node)[0], line_pos(repo.files[node[0]], call_line(c)))
+            trig, label, tp = trigger_of(g, node, pos)
+            add(r, c, trig, label, node, tp, chain, True)
+        for tgt, positions, narrow in g.refs(node):
+            if is_component(tgt[1]):
+                if tgt not in visited and depth < 8:
+                    visited.add(tgt)
+                    walk_node(r, tgt, chain + " > " + tgt[1], visited, depth + 1)
+                continue
+            calls = g.reach(tgt)
+            for p in positions:
+                trig, label, tp = trigger_of(g, node, p)
+                for c, via, ok in calls:
+                    add(r, c, trig, label, node, tp, chain + " > " + via, ok and narrow)
+    for r, node in roots:
+        walk_node(r, node, node[1], {node}, 0)
+    return rows
+
+
+ROLE_RXS = [
+    re.compile(r"@(?:Roles|HasRoles|RequireRoles|Authorize|Permissions|RequirePermissions)\(([^)]*)\)"),
+    re.compile(r"\b(?:hasRole|hasAnyRole|requireRoles?|checkRoles?|withRoles?|isRole|authorize|allowRoles?)\(([^)]*)\)"),
+    re.compile(r"""(?i)\brole\w*\s*(?:===?|!==?)\s*([\w.]*['"]?[\w-]+['"]?)"""),
+    re.compile(r"""(?i)([\w.]*['"]?[\w-]+['"]?)\s*(?:===?|!==?)\s*[\w.?]*\brole\b"""),
+    re.compile(r"""(?i)\[([^\[\]]{1,200})\]\s*\.includes\(\s*[\w.?]*\brole"""),
+    re.compile(r"""(?i)\broles?\s*\.\s*includes\(([^)]*)\)"""),
+]
+ROLE_NAME_RX = re.compile(r"""['"]([A-Za-z_][\w-]{1,30})['"]|\b(?:Role|Roles|UserRole|ROLE|ROLES|UserType|AdminRole)\.([A-Za-z_]\w*)""")
+
+
+def roles_in(text):
+    out = []
+    for rx in ROLE_RXS:
+        for m in rx.finditer(text):
+            for a, b in ROLE_NAME_RX.findall(m.group(1)):
+                if (a or b) and (a or b).lower() not in ("role", "roles", "undefined", "null"):
+                    out.append((a or b, m.start()))
+    return out
+
+
+def api_roles(repo, eps):
+    """API -> role (best-effort): decorator / guard / so sanh role trong handler, middleware Next."""
+    mw = {}                                   # prefix -> (roles, locator)
+    for rel, src in repo.files.items():
+        if re.search(r"(?:^|/)middleware\.(ts|js)$", rel) and rel.count("/") <= 1:
+            for m in re.finditer(r"""startsWith\(\s*['"](/[^'"]*)['"]""", src.text):
+                win = src.text[max(0, m.start() - 300):m.end() + 300]
+                mw[m.group(1)] = ([x for x, _ in roles_in(win)], repo.loc(src, m.start()))
+    rows = []
+    for ep in eps:
+        src = repo.files.get(ep["file"])
+        if not src:
+            continue
+        t, ln = src.text, call_line(ep)
+        s, e = (0, len(t)) if ep["framework"] == "file-routing" else (line_pos(src, ln - 8), line_pos(src, ln + 60))
+        found = roles_in(t[s:e])
+        auth = list(ep["auth_hints"])
+        auth += re.findall(r"export\s+default\s+(with\w+|\w*[Aa]uth\w*|\w*[Gg]uard\w*)\s*\(", t[s:e])
+        ref, conf = (repo.loc(src, s + found[0][1]), "static") if found else (ep["locator"], "—")
+        roles = [x for x, _ in found]
+        if not roles:                         # @Roles muc class (NestJS) nam trong auth_hints
+            roles = [x for x, _ in roles_in(" ".join(ep["auth_hints"]))]
+            conf = "static" if roles else conf
+        for pre, (mroles, mloc) in mw.items():
+            if ep["path"].startswith(pre.rstrip("/")):
+                auth.append("middleware %s" % pre)
+                if mroles and not roles:
+                    roles, ref, conf = mroles, mloc, "inferred"
+        rows.append({"API ID": ep["api_id"], "Method": ep["method"], "Path": ep["path"],
+                     "Roles": "; ".join(dict.fromkeys(roles)) or "—",
+                     "Auth": "; ".join(dict.fromkeys(auth))[:200] or "— (khong thay kiem tra quyen trong code)",
+                     "Code Ref": ref, "Confidence": conf})
+    return rows
+
+
+def load_api_seeds(paths):
+    out = []
+    for p in paths or []:
+        with open(p, encoding="utf8") as fh:
+            for r in csv.DictReader(fh):
+                if r.get("Kind") in ("API", "WEBHOOK") and r.get("Path / Schedule", "").startswith("/"):
+                    out.append((r.get("Method") or "ANY", r["Path / Schedule"], r["API ID"]))
+    return out
+
+
+# ---------------------------------------------------------------- commit hash
+def repo_commit(repo):
+    """git HEAD (repo goc) · tree@<id> (thu muc con trong git) · tree:<hash noi dung> (khong phai git).
+    Thay doi chua commit -> them '+dirty:<hash>' de lan sau so sanh van thay doi."""
+    import hashlib
+    import subprocess
+
+    def tree_hash():
+        h = hashlib.sha1()
+        for rel in sorted(repo.files):
+            h.update(rel.encode("utf8"))
+            h.update(repo.files[rel].text.encode("utf8", "ignore"))
+        return h.hexdigest()[:16]
+
+    def git(*args):
+        try:
+            p = subprocess.run(["git", "-C", repo.root] + list(args), capture_output=True, text=True, timeout=30)
+            return p.stdout.strip() if p.returncode == 0 else None
+        except (OSError, subprocess.SubprocessError):
+            return None
+    top = git("rev-parse", "--show-toplevel")
+    sha = None
+    if top and os.path.realpath(top) == os.path.realpath(repo.root):
+        sha = git("rev-parse", "HEAD")
+    elif top:
+        tid = git("rev-parse", "HEAD:./")
+        sha = "tree@" + tid if tid else None
+    if not sha:
+        return "tree:" + tree_hash()
+    if git("status", "--porcelain", "--untracked-files=no", "--", "."):
+        sha += "+dirty:" + tree_hash()
+    return sha
+
+
+def prev_commit(inventory, rid):
+    """00_Meta.repo_commit cua inventory lan truoc: 'REPO-01=<hash>;REPO-02=<hash>'."""
+    if not inventory or not os.path.isfile(inventory):
+        return None
+    val = S.meta(S.load(inventory, {"00_Meta": S.SHEETS["00_Meta"]})).get("repo_commit", "")
+    for part in val.split(";"):
+        k, _, v = part.partition("=")
+        if k.strip() == rid and v.strip():
+            return v.strip()
+    return None
 
 
 # ---------------------------------------------------------------- batch / queue
 def add_job(repo, src, pos, schedule, handler, kind, fw, line=None):
-    repo.batch.append({"schedule": (schedule or "UNKNOWN").strip(), "handler": handler or "UNKNOWN",
+    repo.batch.append({"schedule": (schedule or S.NEED_CONFIRM).strip(), "handler": handler or S.NEED_CONFIRM,
                        "kind": kind, "framework": fw, "file": src.rel,
                        "locator": "%s:%s#L%d" % (repo.rid, src.rel, line) if line else repo.loc(src, pos)})
 
@@ -1453,9 +2097,9 @@ def add_job(repo, src, pos, schedule, handler, kind, fw, line=None):
 def next_name(t, pos, lang):
     if lang == "py":
         m = py_def_after(t, pos)
-        return m.group(1) if m else "UNKNOWN"
+        return m.group(1) if m else S.NEED_CONFIRM
     m = re.compile(r"(?:fun\s+(\w+)\s*\(|(?:public|protected|private|async)\s+[\w<>\[\], ?]*?\s*(\w+)\s*\(|^\s*(?:async\s+)?(\w+)\s*\()", re.M).search(t, pos)
-    return next((g for g in m.groups() if g), "UNKNOWN") if m else "UNKNOWN"
+    return next((g for g in m.groups() if g), S.NEED_CONFIRM) if m else S.NEED_CONFIRM
 
 
 def scan_batch(repo, src):
@@ -1490,13 +2134,13 @@ def scan_batch(repo, src):
     if src.ext == ".php":
         for m in re.finditer(r"(?:\$schedule->|Schedule::)(command|job|call|exec)\(", t):
             args, close = call_args(t, m.end() - 1)
-            cmd = (lit(args[0][0]) or args[0][0][:60]) if args else "UNKNOWN"
+            cmd = (lit(args[0][0]) or args[0][0][:60]) if args else S.NEED_CONFIRM
             end = t.find(";", close)
             chain = re.findall(r"->(\w+)\(([^)]*)\)", t[close:end if end > 0 else close + 300])
             sched = " ".join("%s(%s)" % (k, v) if v else k for k, v in chain
                              if k not in ("withoutOverlapping", "onOneServer", "runInBackground",
                                           "timezone", "appendOutputTo", "sendOutputTo",
-                                          "emailOutputTo", "description", "name")) or "UNKNOWN"
+                                          "emailOutputTo", "description", "name")) or S.NEED_CONFIRM
             add_job(repo, src, m.start(), sched, "%s %s" % (m.group(1), cmd), "BATCH", "Laravel scheduler")
         if re.search(r"implements\s+[^{]*ShouldQueue", t):
             cm = re.search(r"class\s+(\w+)", t)
@@ -1510,7 +2154,7 @@ def scan_batch(repo, src):
         for m in re.finditer(r"""['"]task['"]\s*:\s*['"]([\w.]+)['"]""", t):
             win = t[max(0, m.start() - 300):m.end() + 300]
             sm = re.search(r"""['"]schedule['"]\s*:\s*([^\n]+?)\s*,?\s*$""", win, re.M)
-            add_job(repo, src, m.start(), sm.group(1).rstrip(",") if sm else "UNKNOWN", m.group(1), "BATCH", "Celery beat")
+            add_job(repo, src, m.start(), sm.group(1).rstrip(",") if sm else S.NEED_CONFIRM, m.group(1), "BATCH", "Celery beat")
         for m in re.finditer(r"add_periodic_task\(\s*([^,]+),\s*([\w.]+)", t):
             add_job(repo, src, m.start(), m.group(1), m.group(2), "BATCH", "Celery beat")
         for m in re.finditer(r"^[ \t]*@(?:\w+\.)?(shared_task|task|periodic_task|dramatiq\.actor|actor)\b(\([^)]*\))?", t, re.M):
@@ -1539,7 +2183,7 @@ def scan_batch(repo, src):
             for m in re.finditer(r"^\s*cron:\s*['\"]?([^'\"\n]+)", t, re.M):
                 win = t[max(0, m.start() - 200):m.end() + 200]
                 cm = re.search(r"class:\s*['\"]?(\w[\w:]*)", win)
-                add_job(repo, src, m.start(), m.group(1), cm.group(1) if cm else "UNKNOWN", "BATCH", "sidekiq-cron/yaml")
+                add_job(repo, src, m.start(), m.group(1), cm.group(1) if cm else S.NEED_CONFIRM, "BATCH", "sidekiq-cron/yaml")
     if name == "crontab" or name.endswith(".cron") or "/cron.d/" in "/" + rel:
         for i, line in enumerate(t.split("\n"), start=1):
             m = re.match(r"^\s*((?:[\d*/,\-]+\s+){4}[\d*/,\-]+|@\w+)\s+(.+)$", line)
@@ -1767,6 +2411,13 @@ def main():
     ap.add_argument("--out", required=True, help="<ver>/_internal")
     ap.add_argument("--ev-start", type=int, default=1)
     ap.add_argument("--api-start", type=int, default=1)
+    ap.add_argument("--api-seed", action="append", default=[],
+                    help="api-seed.csv cua repo BE da quet truoc (lap lai) -> gan API ID cho loi goi FE")
+    ap.add_argument("--prev-inventory", help="inventory.xlsx lan truoc -> so repo_commit (repo doi chua)")
+    ap.add_argument("--commit-only", action="store_true", help="chi in commit + commit_changed, khong quet")
+    ap.add_argument("--sensitive-memory", help="preflight-memory.json -> doc lai file S1 da phan loai 'bao nham' "
+                    "(chi file bi chan vi ten; .env / key / dump / config luon chan)")
+    ap.add_argument("--site-url", help="URL goc website cua repo FE -> seed-urls.txt cho crawl-site.js --seed-file")
     a = ap.parse_args()
 
     if not re.match(S.ID_PATTERNS["11_Repo"][1], a.repo_id):
@@ -1783,7 +2434,16 @@ def main():
     os.makedirs(outdir, exist_ok=True)
 
     repo = Repo(root, a.repo_id)
+    if a.sensitive_memory:
+        repo.reopen = load_reopen(a.sensitive_memory)
     walk(repo)
+    commit = repo_commit(repo)
+    prev = prev_commit(a.prev_inventory, a.repo_id)
+    changed = None if prev is None else prev != commit
+    if a.commit_only:
+        print(json.dumps({"repo_id": a.repo_id, "commit": commit, "prev_commit": prev,
+                          "commit_changed": changed}, indent=2))
+        return 0
     fws = read_stack(repo)
     build_index(repo)
     build_models(repo)
@@ -1894,10 +2554,10 @@ def main():
         fields = ", ".join(dict.fromkeys(h["field"] for h in ep["request_hints"]))[:200]
         api_rows.append({"API ID": ep["api_id"], "Group": ep["group"], "Kind": k,
                          "Method": ep["method"], "Path / Schedule": ep["path"],
-                         "Summary": S.UNKNOWN,
-                         "Auth": "; ".join(ep["auth_hints"])[:120] or S.UNKNOWN,
+                         "Summary": S.NEED_CONFIRM,
+                         "Auth": "; ".join(ep["auth_hints"])[:120] or S.NEED_CONFIRM,
                          "Handler": ep["handler_locator"] or ep["locator"], "Repo": a.repo_id,
-                         "Called By Screens": S.UNKNOWN, "Related Tables": S.UNKNOWN,
+                         "Called By Screens": S.NEED_CONFIRM, "Related Tables": S.NEED_CONFIRM,
                          "Evidence": ep["ev"], "Status": "To verify", "Open Q": "—",
                          "Note": ("handler %s" % ep["handler"]) + ("; req: " + fields if fields else "")})
     for r in repo.fe_routes:
@@ -1910,9 +2570,9 @@ def main():
         api += 1
         api_rows.append({"API ID": j["api_id"], "Group": "Batch" if j["kind"] == "BATCH" else "Queue",
                          "Kind": j["kind"], "Method": "CRON" if j["kind"] == "BATCH" else "EVENT",
-                         "Path / Schedule": j["schedule"], "Summary": S.UNKNOWN, "Auth": "—",
+                         "Path / Schedule": j["schedule"], "Summary": S.NEED_CONFIRM, "Auth": "—",
                          "Handler": j["locator"], "Repo": a.repo_id,
-                         "Called By Screens": S.UNKNOWN, "Related Tables": S.UNKNOWN,
+                         "Called By Screens": S.NEED_CONFIRM, "Related Tables": S.NEED_CONFIRM,
                          "Evidence": j["ev"], "Status": "To verify", "Open Q": "—",
                          "Note": "%s (%s)" % (j["handler"], j["framework"])[:200]})
 
@@ -1930,8 +2590,16 @@ def main():
             for r in rows:
                 w.writerow(r)
 
+    apis = [(ep["method"], ep["path"], ep["api_id"]) for ep in repo.endpoints] + load_api_seeds(a.api_seed)
+    edges = fe_api_edges(repo, apis)
+    roles = api_roles(repo, repo.endpoints)
+    rmap = {r["API ID"]: r["Roles"] for r in roles if r["Roles"] != "—"}
+    for row in api_rows:
+        if row["API ID"] in rmap:
+            row["Auth"] = ("%s; roles: %s" % (row["Auth"] if row["Auth"] != S.NEED_CONFIRM else "", rmap[row["API ID"]])).lstrip("; ")
+
     stack = {"repo_id": a.repo_id, "kind": kind, "kind_arg": a.kind, "frameworks": fws,
-             "manifests": repo.manifests}
+             "manifests": repo.manifests, "commit": commit}
     routes = sorted(set([e["path"] for e in repo.endpoints] + [r["route"] for r in repo.fe_routes]))
     W("stack.json", json.dumps(stack, indent=2, ensure_ascii=False)[:300000])
     W("routes.txt", "\n".join(routes) + ("\n" if routes else ""))
@@ -1940,21 +2608,34 @@ def main():
     W("api.json", repo.endpoints)
     W("fe-routes.json", repo.fe_routes)
     W("fe-api-calls.json", repo.fe_calls)
+    W("fe-screen-files.json", repo.screen_files)
     W("batch.json", repo.batch)
     W("integrations.json", scan_integrations(repo))
     W("table-refs.json", build_table_refs(repo))
     W("skipped-sensitive.json", {"note": "Chi ten file — KHONG doc noi dung (rules/SECURITY.md)",
-                                 "sensitive": repo.skipped, "too_large": repo.skipped_large})
+                                 "sensitive": repo.skipped, "too_large": repo.skipped_large,
+                                 "reopened": repo.reopened})
     C("evidence.csv", S.SHEETS["05_Evidence"], ev_rows)
     C("api-seed.csv", S.SHEETS["07_API"], api_rows)
+    C("fe-api-calls.csv", FE_EDGE_COLS, edges)
+    C("api-roles.csv", API_ROLE_COLS, roles)
+    if a.site_url:  # route tinh (khong :param / *) -> URL tuyet doi; route co tham so de crawler tu tim qua link
+        static = sorted({r["route"] for r in repo.fe_routes if not re.search(r"[:*]", r["route"])})
+        W("seed-urls.txt", "".join(a.site_url.rstrip("/") + r + "\n" for r in static))
 
     print(json.dumps({
         "repo_id": a.repo_id, "kind": kind, "frameworks": fws,
         "counts": {"endpoints": len(repo.endpoints), "fe_routes": len(repo.fe_routes),
-                   "fe_api_calls": len(repo.fe_calls), "batch": len(repo.batch),
+                   "fe_api_calls": len(repo.fe_calls), "fe_api_edges": len(edges),
+                   "fe_api_edges_static": sum(1 for x in edges if x["Confidence"] == "static"),
+                   "fe_api_edges_matched": sum(1 for x in edges if x["API ID"] != "—"),
+                   "fe_screens_with_api": len({x["Screen Route"] for x in edges}),
+                   "api_with_roles": len(rmap), "batch": len(repo.batch),
                    "evidence_rows": len(ev_rows), "api_rows": len(api_rows),
                    "models": len(repo.models), "files_read": len(repo.files),
-                   "skipped_sensitive": len(repo.skipped), "skipped_large": len(repo.skipped_large)},
+                   "skipped_sensitive": len(repo.skipped), "skipped_large": len(repo.skipped_large),
+                   "reopened_sensitive": len(repo.reopened)},
+        "commit": commit, "prev_commit": prev, "commit_changed": changed,
         "next_ev": ev, "next_api": api, "out": outdir}, indent=2, ensure_ascii=False))
     if repo.skipped:
         print("LUU Y: %d file nhay cam bi bo qua (chi ghi ten) -> skipped-sensitive.json"

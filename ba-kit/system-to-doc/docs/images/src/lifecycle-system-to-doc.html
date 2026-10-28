@@ -47,8 +47,8 @@ h1 .b{color:#0969da}
     <span class="pill">LẦN ĐẦU</span>
     <div class="t"><span class="num">1</span>Chạy lần đầu</div>
     <span class="cmd">/analyze-system</span>
-    <div class="d">Hỏi trước khi làm (P0–P11) → quét website, đọc source / DB / Figma → dựng tài liệu, máy chấm từng output.</div>
-    <div class="card d">Chế độ <b>FULL</b> · thiếu bằng chứng ghi <b>UNKNOWN</b> + câu hỏi</div>
+    <div class="d">Hỏi câu còn thiếu (câu cũ chỉ xác nhận) → <b>đọc source trước</b>, rồi mở website để đối chiếu → dựng tài liệu, máy chấm từng output.</div>
+    <div class="card d">Chạy lại / bổ sung → <b>vẫn ghi vào ver1</b> (bản cũ cất vào history) · thiếu bằng chứng ghi <b>Cần xác nhận — Q-xxx</b></div>
     <span class="ok">✓ Bạn trả lời câu hỏi</span>
   </div>
   <div class="arrow">→</div>
@@ -59,11 +59,12 @@ h1 .b{color:#0969da}
     <div class="d" style="margin-top:6px">Bộ tài liệu hiện trạng (AS-IS):</div>
     <div class="chips">
       <span class="chip" style="background:#1a7f37">O1 Màn hình</span><span class="chip" style="background:#1a7f37">O2 API</span>
-      <span class="chip" style="background:#1a7f37">O3 DB</span><span class="chip" style="background:#8250df">O4 Design System</span>
+      <span class="chip" style="background:#1a7f37">O3 DB</span><span class="chip" style="background:#8250df">O4 Design System (tuỳ chọn)</span>
       <span class="chip" style="background:#f24e1e">O5 Figma</span><span class="chip" style="background:#0550ae">O6 Tổng hợp</span>
       <span class="chip" style="background:#57606a">O7 Bug list</span>
+      <span class="chip" style="background:#57606a">O9 Dev setup</span>
     </div>
-    <div class="card d">Mốc đối chiếu cho mọi CR sau</div>
+    <div class="card d">Mốc đối chiếu cho mọi CR sau · <b>khoá</b> khi có CR đầu tiên</div>
   </div>
   <div class="arrow">→</div>
   <div class="st purple">
@@ -77,7 +78,7 @@ h1 .b{color:#0969da}
   <div class="st purple">
     <span class="pill">PHÂN TÍCH</span>
     <div class="t"><span class="num">4</span>Phân tích ảnh hưởng</div>
-    <div class="folder p">📁 ver2_ddmmyy_CR-001-…/</div>
+    <div class="folder p">📁 CR-001_ddmmyy_…/ <span style="font-weight:400">(trỏ về ver1)</span></div>
     <div class="d" style="margin-top:6px">6 trục: hệ thống · DB · nghiệp vụ · màn hình · bên thứ 3 · mockup</div>
     <div class="card d"><b>CR-001_Impact.xlsx</b><br><b>CR-001_見積書.xlsx</b><br>Figma view CR <span style="color:#1a7f37;font-weight:700">NEW</span> <span style="color:#bf8700;font-weight:700">UPD</span> <span style="color:#cf222e;font-weight:700">DEL</span></div>
   </div>
@@ -93,9 +94,9 @@ h1 .b{color:#0969da}
   <div class="st green">
     <span class="pill">BASELINE v2</span>
     <div class="t"><span class="num">6</span>Code xong → baseline mới</div>
-    <span class="cmd">/analyze-system · DELTA</span>
-    <div class="folder">📁 ver3_ddmmyy_baseline/</div>
-    <div class="d" style="margin-top:6px">Chỉ quét lại phần CR chạm, kế thừa phần còn lại từ v1.</div>
+    <span class="cmd">promote → /analyze-system · DELTA</span>
+    <div class="folder">📁 ver2_ddmmyy_baseline/</div>
+    <div class="d" style="margin-top:6px">ver2 = ver1 + CR đã duyệt và đã code xong. Chỉ quét lại phần CR chạm, kế thừa phần còn lại.</div>
     <div class="card d">AS-IS mới cho các CR tiếp theo</div>
   </div>
 </div>
@@ -105,14 +106,14 @@ h1 .b{color:#0969da}
   <div class="d">CR tiếp theo về → quay lại bước <b>3</b>, đối chiếu <b>baseline v2</b> → duyệt → code xong → <b>baseline v3</b>, v4… &nbsp;Nhiều CR cùng lúc: agent kiểm xung đột CR với CR.</div>
 </div>
 
-<div class="ver">Dãy version (số N tăng chung):
-  <span class="v b">ver1_baseline</span>→<span class="v c">ver2_CR-001</span>→<span class="v b">ver3_baseline (DELTA)</span>→<span class="v c">ver4_CR-002</span>→<span class="v b">ver5_baseline (DELTA)</span>→<span style="font-weight:700">…</span>
+<div class="ver">Version (CR không chiếm số):
+  <span class="v b">ver1_baseline</span>→<span class="v c">CR-001</span>→<span class="v b">ver2_baseline (= ver1 + CR-001)</span>→<span class="v c">CR-002</span>→<span class="v b">ver3_baseline</span>→<span style="font-weight:700">…</span>
 </div>
 
 <div class="rules">
-  <div class="rule"><b>Mỗi lần chạy = 1 folder mới.</b> Không sửa version cũ — luôn so sánh được trước / sau.</div>
+  <div class="rule"><b>Khảo sát lần đầu luôn là ver1.</b> Chạy lại ghi vào ver1, bản cũ cất vào <code>_internal/history/</code>. verver<N+1> chỉ khi CRlt;N+1&gt; chỉ khi CR đã duyệt + code xong.</div>
   <div class="rule"><b>Folder CR không copy baseline</b> — chỉ trỏ tới baseline đã dùng để đối chiếu.</div>
-  <div class="rule"><b>Agent tự đọc version mới nhất</b> mỗi lần chạy, tự đề xuất FULL hay DELTA.</div>
+  <div class="rule"><b>Agent tự đọc version mới nhất</b> và <b>nhớ câu trả lời</b> — không hỏi lại, chỉ xác nhận 1 bảng.</div>
   <div class="rule"><span class="red">⛔ Thiếu thông tin</span> → dừng và hỏi · <span class="red">⛔ Dữ liệu nhạy cảm</span> → cảnh báo + dừng.</div>
 </div>
 </body></html>

@@ -37,15 +37,16 @@ Vị trí: Section `CR-<id> — <tiêu đề> (baseline ver<K> → ver<N>)` dư�
 
 ## 3. Câu hỏi (AskUserQuestion) trước khi vẽ
 
+<!-- CR-2 · CR-3 · CR-3b — 1 lượt, chủ đề "Figma cho yêu cầu thay đổi" (quy tắc gom câu: preflight-questions.md §0). Chữ hiển thị không mã nội bộ -->
 ```
-CR-2. Vẽ view CR lên Figma?
-  [A] Có — cùng file flow của baseline (<figma_output_url>)   [B] Có — file/page khác (Other: link)   [C] Không vẽ lần này
-CR-3. Màn đề xuất (CR-3 Screens) — phạm vi?   (chỉ hỏi khi CR-2 = A/B; luôn hỏi, kể cả khi chỉ có 1 màn)
-  [A] Màn NEW + UPD + popup lỗi (mặc định — đúng format Output 3)   [B] Chỉ màn NEW   [C] Chọn màn (Other: Impact ID)   [D] Không vẽ màn đề xuất
-CR-3b. (chỉ khi màn cần component Design System của site chưa có — STATUS.md ghi TBD)
-  <Component> chưa có ở <WEB-xx>, site <WEB-yy> có. Xử lý:
-  [A] Mượn mẫu của <WEB-yy>, ghi "MƯỢN — chờ designer" trên màn   [B] Bỏ block đó, ghi UI-TOKEN-NEW + CQ cho designer
+1. Có vẽ phần thay đổi lên Figma không?
+   [A] Có — cùng file đã vẽ luồng của bản khảo sát (<link>)   [B] Có — file / trang khác (Other: link)   [C] Không vẽ lần này
+2. (khi vẽ) Vẽ màn hình đề xuất cho những màn nào?
+   [A] Màn mới + màn sửa + thông báo lỗi  (đề xuất)   [B] Chỉ màn mới   [C] Tôi chọn màn (Other: tên màn)   [D] Không vẽ màn đề xuất
+3. (chỉ khi cần) Màn 「<tên màn>」 cần 「<tên thành phần, ví dụ hộp chọn ngày>」 nhưng bộ quy chuẩn giao diện của <tên website> chưa có; <website khác> thì có.
+   [A] Mượn mẫu của <website khác>, ghi "mượn — chờ designer" trên màn   [B] Bỏ phần đó, ghi câu hỏi cho designer
 ```
+<!-- 1 = CR-2 · 2 = CR-3 (luôn hỏi khi CR-2 = A/B, kể cả 1 màn; [A] = NEW + UPD + popup, format Output 3; [C] → map tên màn → Impact ID) · 3 = CR-3b ([A] "from": "<WEB-yy>" · [B] UI-TOKEN-NEW + CQ) -->
 Không hỏi CR-3b → không được dùng component site khác. Câu trả lời ghi vào run-log.
 
 ## 4. Đọc Design System TRƯỚC khi vẽ CR-3 (bắt buộc — máy kiểm)
@@ -97,7 +98,7 @@ Không hỏi CR-3b → không được dùng component site khác. Câu trả l�
 - `site_order` [WEB-xx…] · `site_labels` {WEB-xx: "Màn hình người dùng"} — tên section theo site (không hardcode trong renderer).
 - CR-3 item: **`flow`** (id Group CR-2 / lane FL-xx, bắt buộc; ngoài danh sách → thêm `flow_title`), `stype`, `entry`, `purpose`, `changes` (UPD), `happy` [..], `items` [{`n`,`title`,`desc`,`action`,`chg`}], `errors` [{`trigger`,`display`,`msg`}], `base` (UPD: SC- màn gốc), `cq` (câu hỏi chờ). Block có `n` (số item) và `chg` (NEW/UPD/DEL) — số item trong bảng phải có trên mockup. Popup: `shell: "modal"` (+ `scrim`).
 - Màn `To verify` ở baseline (chưa quan sát UI) mà vẫn UPD → dựng AS-IS từ code (nhãn trong page) và ghi `cq` "AS-IS dựng từ code — chờ xác nhận UI".
-- Không chữ `UNKNOWN` trong `title` / note / `flows` / `tech` / `screen_groups` (renderer từ chối) — viết "chưa quan sát" / "chưa xác định" / "chờ khách hàng xác nhận".
+- Không chữ cũ của trạng thái chưa rõ (`inv_schema.LEGACY_WORD`) trong `title` / note / `flows` / `tech` / `screen_groups` (renderer từ chối) — viết "Cần xác nhận — CQ-xxx" / "chưa quan sát" / "chờ khách hàng xác nhận".
 - CR-1 node: `type` = `actor · start · step · decision · ng · end · edge` · `pos` 1…6 (cột trái → phải) · `row` 0 = happy, ≥ 1 = non-happy · `end` có `result: ok|fail` · `ref` là SC- / F- / FL- / IMP- (**không** API- / EXT- / `table:` / `column:` — những thứ đó vào `tech`). Bắt buộc: 1 actor · ≥ 1 start · ≥ 1 end ok ở row 0 · NG nào cũng có cạnh đi tiếp. Vẽ lại CR-1 / CR-2 trên section đã có: `--redraw cr1,cr2` (sinh `00-clear.js` lưu bản cũ ra section LƯU TRỮ, `98-restack.js` xếp lại). `type` (CR-2): `start · screen · decision · system · ng · terminal · edge`.
 - Cạnh `[from, to, nhãn, kiểu]` — kiểu `ng` (đỏ), `cross` (xanh lá, khác actor), rỗng (xanh dương). **Mọi node trừ `edge`/`tech` phải có ≥ 1 cạnh.**
 - Shell CR-3: `public` (AppHeader + PageHeader giữa) · `mypage` (AppHeader + SideNav マイページ) · `admin` (SideNav admin + PageHeader) · `auth` · `modal` · `mobile` (khung SP; DS chưa có token `viewport-mobile` → khai `viewport_width` + `viewport_note`, không tự đặt). Block: `title · breadcrumb · section · text · field · field2 · select · radio · checkbox · buttons · table · badge · card · steps · modal · search · pagination`.

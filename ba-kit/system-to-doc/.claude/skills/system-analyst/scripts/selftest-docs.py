@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Self-test cho O2 (API doc) + O3 (DB doc) + read-schema — chung minh gate KHONG pass rong.
+"""Self-test cho O2 (API doc) + O3 (DB doc) + read-schema + O9 DevSetup (phan nghiep vu O6: selftest-gates V3) — chung minh gate KHONG pass rong.
 
   python3 selftest-docs.py [--keep]
 
@@ -90,8 +90,8 @@ def make_inventory(tmp, recon, db_mode="DUMP", n_extra_tables=0):
     cols = rd("columns.csv")
     for i in range(n_extra_tables):   # bang phu cho test ERD > 60 bang
         name = "t%03d" % i
-        tables.append({"Table": name, "Purpose": "UNKNOWN", "PK": "id", "FK": "ref_id->users.id" if i % 3 == 0 else "—",
-                       "Est Rows": "UNKNOWN", "Related Function IDs": "UNKNOWN", "Evidence": "EV-0001",
+        tables.append({"Table": name, "Purpose": S.NEED_CONFIRM, "PK": "id", "FK": "ref_id->users.id" if i % 3 == 0 else "—",
+                       "Est Rows": S.NEED_CONFIRM, "Related Function IDs": S.NEED_CONFIRM, "Evidence": "EV-0001",
                        "Confidence": "Low", "Note": "—"})
         cols.append({"Table": name, "Column": "id", "Type": "int", "PK": "Yes", "FK": "—", "Nullable": "NO",
                      "Evidence": "EV-0001", "Confidence": "Low"})
@@ -163,7 +163,7 @@ def main():
               and c[("orders", "total")]["Format"] == "12,2"
               and c[("orders", "user_id")]["FK"] == "users.id"
               and c[("users", "created_at")]["Format"] == "YYYY-MM-DD HH:MM:SS"
-              and c[("orders", "status")]["Meaning"] == S.UNKNOWN)
+              and c[("orders", "status")]["Meaning"] == S.NEED_CONFIRM)
         case("read-schema parse dump schema-only dung (max length/format/enum/comment/FK/next_ev)", ok, out[-300:])
 
         inv = make_inventory(tmp, recon)
@@ -174,6 +174,10 @@ def main():
         rc2, o2 = run(["build-db-doc.py", "--inventory", inv, "--system", "T", "--version", "ver1",
                        "--out", db, "--erd-png", erd])
         case("build-api-doc + build-db-doc chay OK", rc1 == 0 and rc2 == 0 and os.path.exists(erd), o1[-200:] + o2[-200:])
+        from gate_report import frozen_sheets
+        frozen = {os.path.basename(p): frozen_sheets(p) for p in (inv, api, db) if os.path.exists(p)}
+        case("R13: inventory / API / DB xlsx khong freeze panel o moi sheet",
+             len(frozen) == 3 and not any(frozen.values()), str({k: v for k, v in frozen.items() if v}))
 
         inv_none = make_inventory(tmp, recon, db_mode="NONE")
         rc, out = run(["build-db-doc.py", "--inventory", inv_none, "--system", "T", "--version", "ver1",
@@ -323,6 +327,45 @@ def main():
         case("ERD >60 bang: ve 60, bao so bang an", rc == 0 and j.get("erd_omitted") == 73 - 60, str(j))
         rc, f = gate_db(os.path.join(tmp, "big.xlsx"), inv_big, big_png)
         case("verify-db-doc PASS voi 73 bang", rc == 0 and not f, str(f))
+
+        # --- PNG co chu Nhat: ERD dung font CJK co tren may (khong DejaVu don)
+        import matplotlib
+        font = S.use_cjk_font(matplotlib)
+        src = open(os.path.join(HERE, "build-db-doc.py"), encoding="utf8").read()
+        case("PNG chu Nhat: font CJK (%s), build-db-doc goi use_cjk_font" % font,
+             "S.use_cjk_font(matplotlib)" in src, font or "khong co font CJK")
+
+        # --- O9 DevSetup (R12 · D7): chi ten key, khong doc .env that
+        repo = os.path.join(tmp, "devrepo")
+        os.makedirs(os.path.join(repo, ".github", "workflows"))
+        open(os.path.join(repo, "package.json"), "w").write('{"scripts":{"dev":"next dev"}}')
+        open(os.path.join(repo, ".env.example"), "w").write("DATABASE_URL=\nAPI_BASE=changeme\n")
+        open(os.path.join(repo, ".env"), "w").write("REAL_ONLY_KEY=%s\n" % SECRET)
+        open(os.path.join(repo, ".github", "workflows", "deploy.yml"), "w").write("name: Deploy\njobs:\n  d:\n    environment: staging\n")
+        md_out = os.path.join(tmp, "DevSetup.md")
+        rc, o = run(["build-devsetup.py", "--repo", "REPO-01=" + repo, "--inventory", inv, "--system", "T",
+                     "--version", "ver1", "--out", md_out])
+        txt = open(md_out, encoding="utf8").read() if rc == 0 else ""
+        case("O9 DevSetup: key tu .env.example, khong doc .env that, co batch + moi truong",
+             rc == 0 and "`DATABASE_URL`" in txt and "REAL_ONLY_KEY" not in txt and SECRET not in txt
+             and "staging" in txt and "API-003" in txt, o[-200:])
+
+        def dev_gate(path):
+            md = os.path.join(tmp, "gd.md")
+            if os.path.exists(md):
+                os.remove(md)
+            rc, _ = run(["verify-devsetup.py", path, "--out", md])
+            return rc, failed_checks(md)
+        rc, f = dev_gate(md_out)
+        case("verify-devsetup PASS tren file sach", rc == 0 and not f, str(f))
+        bad = os.path.join(tmp, "DevSetup_bad.md")
+        open(bad, "w", encoding="utf8").write(txt.replace("| `API_BASE` |", "| `API_BASE` |\n\nAPI_BASE=" + "https://x.example/v1"))
+        rc, f = dev_gate(bad)
+        case("O9: co KEY=gia tri -> check 4 FAIL", 4 in f, str(f))
+        bad2 = os.path.join(tmp, "DevSetup_pii.md")
+        open(bad2, "w", encoding="utf8").write(txt + "\nLien he: tran.thi" + "@" + "congty-thuc.vn\n")   # example.com nam trong allowValues
+        rc, f = dev_gate(bad2)
+        case("O9: lot email / PII -> check 3 FAIL (detect-pii --scan)", 3 in f, str(f))
     finally:
         if a.keep:
             print("Giu thu muc tam:", tmp)

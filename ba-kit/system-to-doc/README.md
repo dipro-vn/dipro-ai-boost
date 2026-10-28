@@ -12,8 +12,9 @@
 |---|---|---|
 | Khi nào | Lần đầu nhận dự án · hệ thống đã đổi nhiều | Khách gửi yêu cầu thay đổi |
 | Lệnh | `/analyze-system` | `/change-request <file / link / nội dung>` |
+| Model | Opus (tự chọn khi gõ lệnh) | Opus |
 | Đọc | Website · Source · DB · Figma | Baseline mới nhất + nội dung CR |
-| Ra | `outputs/ver<N>_<DDMMYY>_<tên>/` — 7 output | `outputs/ver<N>_<DDMMYY>_CR-<id>-<tên>/` — impact 6 trục |
+| Ra | `outputs/ver1_<DDMMYY>_<tên>/` — 9 output (chạy lại vẫn ghi vào ver1) | `outputs/CR-<id>_<DDMMYY>_<tên>/` — impact 6 trục |
 
 ---
 
@@ -35,7 +36,7 @@ my-project/
 ├── .auth/                       ← tài khoản test + phiên đăng nhập — KHÔNG commit
 │   ├── credentials.example.env  ← mẫu; copy thành credentials.local.env rồi điền
 │   └── credentials.local.env    ← bạn điền; script đọc, AI không đọc
-└── outputs/                     ← AI tự tạo, mỗi lần chạy 1 folder version
+└── outputs/                     ← AI tự tạo: ver1_… / CR-… / ver2_… + _project/ (câu trả lời đã nhớ)
 ```
 
 | Bạn có | Bỏ vào đâu |
@@ -57,7 +58,7 @@ cd my-project && claude
 /analyze-system
 ```
 
-AI sẽ hỏi (chọn đáp án hoặc gõ vào ô *Other*):
+AI **đọc source code trước**, rồi mới mở website. AI sẽ hỏi (chọn đáp án hoặc gõ vào ô *Other*; mỗi lượt gom tối đa 4 câu cùng chủ đề):
 
 | Nhóm | AI hỏi | Chuẩn bị sẵn |
 |---|---|---|
@@ -74,22 +75,26 @@ AI sẽ hỏi (chọn đáp án hoặc gõ vào ô *Other*):
 > ⚠️ Mặc định AI **chỉ đọc** — mọi thao tác ghi bị chặn ở tầng mạng.
 > Thiếu thứ gì (không có DB, không có Figma…) → AI ghi lại và **chạy tiếp** phần còn lại.
 
-AI in **bảng tổng hợp** → bạn trả lời `OK` → AI khảo sát và sinh output. Phát hiện dữ liệu nhạy cảm (`.env`, key, dump có dữ liệu thật…) → AI **cảnh báo và dừng** chờ bạn xử lý.
+> 🧠 **AI nhớ câu trả lời.** Lần chạy sau AI không hỏi lại — chỉ in 1 bảng *"Tôi đang dùng các thông tin sau — có gì đổi không?"*. Riêng 4 câu an toàn (website thử nghiệm hay thật · tài khoản có được phép quét · mức thao tác · có dữ liệu thật không) luôn được hỏi lại gọn *"vẫn như lần trước chứ?"*. Chưa có thông tin (ví dụ chưa có link Figma) → chọn **"Chưa có — chạy v1 trước, bổ sung sau"**; khi bổ sung, AI cập nhật lại ver1.
+> 🔐 **Không đăng nhập được?** AI không thử mãi: sau 2 lần sẽ mở trình duyệt và nhờ bạn **đăng nhập tay**, xong trả lời "xong".
+
+Sau khi đọc code, AI in **bảng tổng hợp** kèm **các quyết định lớn có đề xuất** (ví dụ "2 website khác nhau về cỡ chữ, bo góc nút → đề xuất 2 bộ quy chuẩn giao diện riêng", "đồng ý vẽ sơ đồ database / API lên Figma?") → bạn trả lời `OK` → AI khảo sát và sinh output. Phát hiện dữ liệu nhạy cảm (`.env`, key, dump có dữ liệu thật…) → AI **cảnh báo và dừng** chờ bạn xử lý.
 
 ### Output Luồng 1
 
 | # | Output | File trong `outputs/ver<N>_.../` |
 |---|---|---|
-| **O1** | **Danh sách màn hình theo website** — tổng số màn, item từng màn, xử lý, lỗi hiển thị, liên kết giữa các màn (template Basic Design công ty) | `01_Screens/BasicDesign_WEB-01_ver<N>.xlsx` (1 file / website) |
-| **O2** | **API Documentation** — mọi API theo group (+ batch): làm gì, method, request, response; sheet tổng hợp có link tới từng API · **sơ đồ map code** FE ↔ BE ↔ DB | `02_API/API_Doc_….xlsx` · `02_API/CodeMap_….png` |
+| **O1** | **Danh sách màn hình theo website** — tổng số màn, item từng màn, xử lý, **API mỗi nút gọi** (cột "API gọi"), lỗi hiển thị, liên kết giữa các màn (template Basic Design công ty; đọc code trước rồi mới mở website) | `01_Screens/BasicDesign_WEB-01_ver<N>.xlsx` (1 file / website) |
+| **O2** | **API Documentation** — mọi API theo group (+ batch): làm gì, method, request, response; sheet tổng hợp có link tới từng API | `02_API/API_Doc_….xlsx` |
 | **O3** | **Database Documentation** — tổng quan bảng, quan hệ, từng bảng: field · kiểu · format · giới hạn · maxlength · mục đích · ERD | `03_DB/DB_Doc_….xlsx` · `03_DB/ERD_….png` |
-| **O4** | **Design System** hệ thống cũ (từ website / Figma + source) — **cùng chuẩn với `designer-kit`** và format artifact **Design System** của claude.ai: brand book, màu theo theme, thang chữ, spacing/radius/shadow/size, component có preview, logo/icon, cover; token đặt tên vai trò chuẩn, phần không quan sát được ghi TBD. Nhiều website: chỉ khác màu → 1 Design System mỗi site 1 theme; khác cả phong cách → mỗi website 1 Design System riêng. Đồng ý thì publish thành link private | `04_DesignSystem/` (`STATUS.md` + `project/`) |
+| **O4** | *(tuỳ chọn — không chạy thì bỏ qua)* **Design System** hệ thống cũ (từ website / Figma + source) — **cùng chuẩn với `designer-kit`** và format artifact **Design System** của claude.ai: brand book, màu theo theme, thang chữ, spacing/radius/shadow/size, component có preview, logo/icon, cover; token đặt tên vai trò chuẩn, phần không quan sát được ghi TBD. Nhiều website: chỉ khác màu → 1 Design System mỗi site 1 theme; khác cả phong cách → mỗi website 1 Design System riêng. Đồng ý thì publish thành link private | `04_DesignSystem/` (`STATUS.md` + `project/`) |
 | **O5** | **Figma flow** — Output 1 Flow tổng quan + Output 2 Screen flow | link trong `05_Figma/figma-links.md` |
-| **O6** | **Tài liệu tổng hợp** — đã chạy gì, có gì, ở đâu | `06_Overview/Overview_….docx` |
-| **O7** | **Bug list hiện trạng** — chỉ lỗi **trên màn hình** phát hiện khi Playwright quét website, mức **Urgent / High** *(nếu chọn)* | `07_BugList/BugList_….xlsx` |
+| **O6** | **Tài liệu tổng hợp** — hệ thống làm gì, **luồng nghiệp vụ chính** (bước đánh số), trạng thái đối tượng chính; màn hình / API / database chỉ 1 bảng tổng (sơ đồ database là link Figma) | `06_Overview/Overview_….docx` |
+| **O7** | **Bug list hiện trạng** — 1 sheet; đọc code và mở thử website; chỉ lỗi **làm người dùng thao tác không được hoặc sai**, mức **High / Urgent** *(nếu chọn)* | `07_BugList/BugList_….xlsx` |
+| **O9** | **Hướng dẫn chạy local** — cho dev mới: lệnh cài / chạy, database local, **tên** các key cấu hình (không có giá trị), môi trường, pipeline, lịch batch | `09_DevSetup/DevSetup_….md` |
 | — | **Mục lục version** — mọi output, số lượng, kết quả kiểm tra | `README.md` |
 
-Mọi dòng trong tài liệu gắn với bằng chứng (ảnh chụp, dòng code, schema). Không có bằng chứng → ghi `UNKNOWN` / "cần xác minh", **không viết đại cho đẹp**. Danh sách điểm chưa chắc nằm ở Phụ lục A của O6.
+Mọi dòng trong tài liệu gắn với bằng chứng (ảnh chụp, dòng code, schema). Không có bằng chứng → ghi "Cần xác nhận — Q-xxx" (bản tiếng Nhật 「要確認 — Q-xxx」), **không viết đại cho đẹp**. Danh sách điểm chưa chắc AI liệt kê ở cuối phiên chạy.
 
 ---
 
@@ -114,7 +119,7 @@ Mọi dòng trong tài liệu gắn với bằng chứng (ảnh chụp, dòng co
 | Bên thứ 3 | Thêm liên kết nào? Ảnh hưởng liên kết hiện tại không? |
 | Mockup | Màn mới có nhất quán với Design System cũ không? |
 
-**Output Luồng 2** (`outputs/ver<N>_<DDMMYY>_CR-<id>-<tên>/`):
+**Output Luồng 2** (`outputs/CR-<id>_<DDMMYY>_<tên>/`):
 - `CR-<id>_Impact.xlsx` — **7 sheet**, gửi khách được:
   - `Summary`: chỉ cơ bản — **công số thay đổi** (実装 MD · 総工数 人日 · 人月, link sang Estimation; tách 最小改修案 / 拡張案) · **số đối tượng thay đổi** (màn hình / API / bảng DB / cột DB / rule / liên kết ngoài / mockup) × thêm / sửa / xoá / bị ảnh hưởng · link tới từng sheet
   - `Estimation`: đúng khung 見積書 của công ty (`templates/template_estimation.xlsx`, bóc bằng `extract-estimation-template.py`) — 1 dòng / hạng mục, 要件定義 / UI・UX / テスト / 管理 tính bằng hệ số của template
@@ -124,7 +129,7 @@ Mọi dòng trong tài liệu gắn với bằng chứng (ảnh chụp, dòng co
 
 > MD = đơn giá trong `.claude/config/md-unit-rates.json` × số lượng (AI chỉ chọn loại hạng mục, không tự gõ số). Bảng đơn giá đang **DRAFT** — PM / Tech Lead duyệt rồi đổi `status` thành `APPROVED`.
 
-CR đã được làm xong trong hệ thống → chạy `/analyze-system` (hoặc nói *"CR-001 đã code xong"*) — AI tự thấy CR đang mở và đề xuất **Delta** để có baseline mới.
+CR đã được **duyệt và làm xong** trong hệ thống → nói *"CR-001 đã duyệt, đã code xong"* (hoặc chạy `/analyze-system`) — AI xác nhận lại với bạn rồi mới tạo **baseline mới** (ver2) = ver1 + CR đó.
 
 ---
 
@@ -134,14 +139,17 @@ CR đã được làm xong trong hệ thống → chạy `/analyze-system` (ho�
 
 ```
 outputs/
-├── ver1_011026_baseline/              Luồng 1
-├── ver2_151026_CR-001-them-coupon/    Luồng 2 — trỏ về ver1
-└── ver3_201026_baseline-delta/        Luồng 1 Delta sau khi CR-001 đã code xong
+├── ver1_011026_baseline/              Luồng 1 — khảo sát lần đầu; chạy lại / bổ sung vẫn ghi vào đây
+│   └── _internal/history/20261005-1030/   bản cũ của các file bị ghi đè khi chạy lại
+├── CR-001_151026_them-coupon/         Luồng 2 — trỏ về ver1 (từ lúc này ver1 bị khoá)
+└── ver2_251026_baseline/              baseline mới = ver1 + CR-001 (chỉ tạo khi CR-001 đã duyệt + đã code xong)
 ```
 **AI tự quản version — bạn không phải làm gì:**
-- Mỗi lần chạy, AI tự đọc **version mới nhất** (baseline mới nhất, CR đang mở, góp ý chưa xử lý) — không cần chỉ folder.
-- Muốn góp ý → **nói thẳng trong chat**. AI tạo version mới từ bản mới nhất, sửa, và ghi góp ý vào `run-log.md`. Không bao giờ sửa version cũ.
-- CR đã code xong → AI tự đề xuất Delta khi bạn chạy `/analyze-system`.
+- Khảo sát lần đầu luôn là **ver1**. Chạy lại `/analyze-system` (thêm nguồn, thêm output, sửa theo góp ý) → AI **ghi vào ver1**, trước khi ghi đè thì cất bản cũ vào `_internal/history/<ngày-giờ>/`.
+- Có CR đầu tiên → ver1 **bị khoá** (không ghi đè nữa, để CR luôn đối chiếu đúng bản gốc).
+- CR đã duyệt **và** đã code xong → AI hỏi xác nhận rồi tạo **ver2** = ver1 + CR đó. ver3, ver4… cũng chỉ sinh theo cách này.
+- Mỗi lần chạy, AI tự đọc **version mới nhất** (baseline hiện hành, CR đang mở, góp ý chưa xử lý) — không cần chỉ folder. Muốn góp ý → **nói thẳng trong chat**.
+- Folder cũ dạng `ver<N>_…_CR-…` vẫn đọc được bình thường.
 
 ---
 
@@ -149,7 +157,7 @@ outputs/
 
 | Cam kết | Cách thực thi |
 |---|---|
-| **Không bịa** | Mọi khẳng định gắn bằng chứng; thiếu thì ghi `UNKNOWN` + câu hỏi |
+| **Không bịa** | Mọi khẳng định gắn bằng chứng; thiếu thì ghi "Cần xác nhận — Q-xxx" + câu hỏi |
 | **Không phá hệ thống** | Mặc định chỉ đọc; gặp nút xoá/thanh toán vẫn dừng hỏi; không bao giờ kết nối DB của khách |
 | **Không làm lộ dữ liệu** | Quét nhạy cảm trước khi đọc, hook chặn PII trước khi ghi/đẩy lên Figma, mật khẩu không bao giờ vào file |
 | **Tự chấm, không tự khen** | Mỗi output qua script kiểm tra, in số thật `N checks · X PASS · 0 FAIL` |

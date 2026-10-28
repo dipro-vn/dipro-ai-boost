@@ -7,7 +7,7 @@
 ## 1. Luật tối cao
 
 > **Mọi ô có `Status = Confirmed` PHẢI mang ≥ 1 `EV ID` phân giải được.**
-> Không có bằng chứng → `Inferred` hoặc `UNKNOWN`. **Không bao giờ để trống.**
+> Không có bằng chứng → `Inferred` hoặc `To verify` + Open Question (chữ hiển thị "Cần xác nhận — Q-xxx"). **Không bao giờ để trống, không lấp bằng nội dung không có căn cứ.**
 
 Để trống lặng lẽ = người đọc tưởng "không áp dụng". Tự điền = biến giả định thành spec.
 
@@ -24,8 +24,9 @@ outputs/ver<N>_<DDMMYY>_<slug>/_internal/
 │   └── ...
 ├── recon/
 │   ├── crawl/<WEB-xx>/      output cua crawl-site.js
-│   ├── code/<REPO-xx>/      output cua scan-repo.py
-│   └── db/                  output cua read-schema.py
+│   ├── code/<REPO-xx>/      output cua scan-repo.py (fe-api-calls.csv · api-roles.csv · seed-urls.txt ...)
+│   ├── db-code/<REPO-xx>/   output cua read-orm-schema.py (schema tu model / entity / migration + code-schema.csv)
+│   └── db/                  output cua read-schema.py (dump schema-only, nguon phu)
 └── inventory.xlsx       ← sheet 05_Evidence tro toi evidence/
 ```
 

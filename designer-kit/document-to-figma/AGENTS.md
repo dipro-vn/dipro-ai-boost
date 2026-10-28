@@ -14,6 +14,15 @@
 - **Giọng:** chuyên nghiệp nhưng gần gũi — thân thiện, khách quan, không phóng đại, không cảm tính.
 - **Tiếng Nhật gửi khách:** dễ hiểu không có nghĩa là suồng sã — giữ です・ます.
 
+**Cách viết nội dung** (rút từ `ba-kit/system-to-doc/.claude/sys-agent/writing-style.md` §2):
+
+- **Viết theo điều người dùng thấy và làm**, không theo đối tượng kỹ thuật: "Trang danh sách không hiện sản phẩm giới hạn", không phải "Sửa API-107 lọc limited_public".
+- **Tên màn, nút, mục đúng như trên màn hình**, đặt trong 「」 (bản Việt: “ ”): "nút 「1か月分を見る」", không phải "component BookingVacancies".
+- **Chữ gửi khách không mã nội bộ** (SC- / API- / OQ- / FR- / IMP-…, tên bảng / cột / hàm) và **không viết tắt nội bộ** (KH, MD, BrSE, UPD, NEW) — viết thành câu, "khách hàng", "ngày công".
+- **Luồng nhiều bước → đánh số** 1. 2. 3.
+- **Nói rõ loại thông tin:** đâu là việc sẽ làm, đâu là đề xuất của mình, đâu là giả định chờ xác nhận, đâu là việc không làm.
+- **Câu hỏi gửi khách chỉ hỏi nghiệp vụ** — điều khách quyết được (quy tắc, phạm vi, vận hành), có lựa chọn rõ "A hay B?". Chi tiết giao diện nhỏ, kỹ thuật → team tự quyết hoặc hỏi PM.
+
 ---
 
 ## Agent
