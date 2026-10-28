@@ -59,3 +59,22 @@ class Gate:
         print("\nSUMMARY: %d checks · %d PASS · %d FAIL · %d WARN" %
               (len(self.results), p, f, w), file=sys.stderr)
         return 1 if f else 0
+
+
+def frozen_sheets(path):
+    """-> [ten sheet con freeze panel] cua 1 file xlsx (R13: kit khong freeze panel)."""
+    from openpyxl import load_workbook
+    wb = load_workbook(path)
+    return [ws.title for ws in wb.worksheets if ws.freeze_panes is not None]
+
+
+def legacy_word_hits(path):
+    """-> [vi tri] con chu cu inv_schema.LEGACY_WORD trong xlsx / docx gui nguoi doc (D1: 'Cần xác nhận — Q-xxx')."""
+    import inv_schema as S
+    if path.lower().endswith(".docx"):
+        from docx_read import Docx
+        return ["docx"] if S.has_legacy(Docx(path).all_text) else []
+    from openpyxl import load_workbook
+    wb = load_workbook(path)
+    return ["%s!%s" % (ws.title, c.coordinate) for ws in wb.worksheets for row in ws.iter_rows()
+            for c in row if S.has_legacy(c.value)]

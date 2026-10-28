@@ -234,6 +234,7 @@ CASES = [
     ("Evidence trong", m_imp("IMP-005", evidence=""), None, "17", "FAIL", False),
     ("baseline_version lech", m_meta(baseline_version="ver0_010126_baseline"), None, "2", "FAIL", False),
     ("Conflict=Yes thieu detail", m_imp("IMP-004", conflict="Yes"), None, "13", "FAIL", False),
+    ("Impact xlsx con chu cu (D1)", m_imp("IMP-005", impact_on_current="Message " + S.LEGACY_WORD), None, "25", "FAIL", False),
 ]
 
 
@@ -370,6 +371,9 @@ def main():
                any("Ước lượng sơ bộ" in x for x in flat) and wb.sheetnames == S.CR_SHEETS
                and any(r and r[0] == C.L_IMPL and r[1] == grand for r in wb["Summary"].iter_rows(values_only=True)),
                "sheets=%s" % wb.sheetnames)
+        from gate_report import frozen_sheets
+        fz = frozen_sheets(xl)
+        record("R13: CR Impact xlsx khong freeze panel o moi sheet", not fz, "con freeze: %s" % fz)
         est = [r for r in wb["Estimation"].iter_rows(values_only=True) if r and len(r) > 2 and
                str(r[1] or "").startswith("IMP-")]
         record("Estimation 1 dong / hang muc (%d)" % len(c0["impacts"]), len(est) == len(c0["impacts"]),
@@ -458,8 +462,8 @@ def main():
                          ("pos ngoai 1..6", lambda L: L["nodes"][1].update(pos=9))]:
             L = lane(); fn(L)
             record("CR-1 use case %s -> renderer tu choi" % name, bool(rcf.usecase_lane_errors(L)))
-        record("Figma CR-1/CR-2 co chu UNKNOWN -> renderer tu choi",
-               bool(rcf.unknown_text_errors({"flows": [{"nodes": [{"label": "Message: UNKNOWN"}]}]})) and not rcf.unknown_text_errors({"flows": [lane()]}))
+        record("Figma CR-1/CR-2 co chu cu (S.LEGACY_WORD) -> renderer tu choi",
+               bool(rcf.unknown_text_errors({"flows": [{"nodes": [{"label": "Message: " + S.LEGACY_WORD}]}]})) and not rcf.unknown_text_errors({"flows": [lane()]}))
 
         # Layout DS 1 bo (04_DesignSystem/project/)
         write_ds_single(base)

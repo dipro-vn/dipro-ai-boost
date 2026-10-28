@@ -24,6 +24,10 @@ const DEF_PASS = 'input[type=password]';
 const DEF_SUBMIT = 'button[type=submit], input[type=submit], button:not([type])';
 const TEST_ONLY = 'chi dung credential cho moi truong TEST da xac nhan (POLICIES.md §3.2)';
 const NAME_RE = /^[A-Za-z0-9_-]+$/;
+const EXIT_LOGIN = 4;      // khong tu dang nhap duoc -> nho user dang nhap tay (--manual)
+const MAX_TRIES = 2;       // toi da 2 lan tu dang nhap moi lan goi
+// path cua trang login / SSO / callback (dang chuyen trang) -> chua tinh la da dang nhap
+const LOGIN_PATH_RE = /(^|[\/_.-])(log-?in|sign-?in|sso|saml2?|oauth2?|oidc|authorize|auth|cas)([\/_.-]|$)/i;
 
 function refuse(msg) { console.error('Tu choi: ' + msg); process.exit(3); }
 function fail(msg) { console.error(msg); process.exit(1); }
@@ -195,14 +199,50 @@ async function firstVisible(scope, sel) {
   return null;
 }
 
+/**
+ * Mac dinh: da dang nhap = URL quay ve dung origin cua site (opt.origin = origin <site>.URL / --url),
+ * khong phai trang login / SSO, va khong con o mat khau. Khac origin (vd dang o Cognito / IdP) = chua xong.
+ * --success-url-contains (so tren URL bo query, tranh khop redirect_uri) / --success-selector: ghi de mac dinh.
+ */
 async function loggedIn(page, loginUrl, opt, passSel) {
   try {
     const url = page.url();
-    if (opt && opt.urlContains) return url.includes(opt.urlContains);
+    if (opt && opt.urlContains) return strip(url).includes(opt.urlContains);
     if (opt && opt.selector) return !!(await firstVisible(page, opt.selector));
-    if (strip(url) === strip(loginUrl) || url === 'about:blank') return false;
+    if (url === 'about:blank' || strip(url) === strip(loginUrl)) return false;
+    const origin = (opt && opt.origin) || originOf(loginUrl);
+    if (origin && originOf(url) !== origin) return false;
+    let p = url; try { p = new URL(url).pathname; } catch { /* */ }
+    if (LOGIN_PATH_RE.test(p)) return false;
     return !(await firstVisible(page, passSel || DEF_PASS));
   } catch { return false; }   // dang chuyen trang
+}
+
+// Huong dan ngan cho user khi tu dang nhap that bai (in ra stderr, khong co gia tri credential)
+function manualHint({ site, loginUrl, save, reason }) {
+  const at = site ? `trang ${site}` : 'trang web';
+  return [
+    '',
+    `⚠ Chưa tự đăng nhập được vào ${at}${reason ? ' (' + reason + ')' : ''}.`,
+    'Thường do: cần mã xác thực (MFA), đăng nhập qua trang của bên khác (SSO), có captcha, hoặc tài khoản sai.',
+    'Cách làm tiếp: bạn tự đăng nhập trong cửa sổ trình duyệt — tôi không cần biết mật khẩu.',
+    `  node login-site.js --manual --url ${loginUrl || '<trang đăng nhập>'} --save ${save || '<project>/.auth/' + (site || 'WEB-xx') + '.json'}`,
+    'Khi trình duyệt mở ra: đăng nhập như bình thường, chờ vào được trang chính, rồi báo lại "xong".',
+    'Sau đó chạy crawl với --storage-state <file .json vừa lưu>.',
+  ].join('\n');
+}
+
+// Goi formLogin toi da `tries` lan (mac dinh 2) va khong qua `deadline` (ms epoch)
+async function formLoginRetry(page, args, { tries = MAX_TRIES, deadline = Infinity } = {}) {
+  let r = { ok: false, reason: 'chua thu' }, n = 0;
+  while (n < tries && Date.now() < deadline) {
+    n += 1;
+    r = await formLogin(page, args);
+    if (r.ok) break;
+    console.error(`Tu dang nhap lan ${n}/${tries} that bai: ${r.reason}`);
+  }
+  if (!r.ok && n < tries && Date.now() >= deadline) r.reason = (r.reason || '') + ' · qua thoi gian cho';
+  return Object.assign(r, { tries: n });
 }
 
 /**
@@ -219,6 +259,7 @@ async function formLogin(page, { loginUrl, user, pass, origin, userSel, passSel,
       try { await page.waitForLoadState('networkidle', { timeout: 5000 }); } catch { /* */ }
     }
     const here = page.url();
+    const okOpt = Object.assign({ origin: origin || originOf(loginUrl || here) }, opt || {});
     if (origin && originOf(here) !== origin) {
       return { ok: false, reason: `trang dang nhap thuoc origin khac (${originOf(here)}) — khong dien credential` };
     }
@@ -242,7 +283,7 @@ async function formLogin(page, { loginUrl, user, pass, origin, userSel, passSel,
       const end = Date.now() + 20000;
       while (Date.now() < end) {
         await new Promise(r => setTimeout(r, 500));
-        if (await loggedIn(page, here, opt, ps)) { ok = true; break; }
+        if (await loggedIn(page, here, okOpt, ps)) { ok = true; break; }
       }
       if (ok) { try { await page.waitForLoadState('networkidle', { timeout: 5000 }); } catch { /* */ } }
       return ok ? { ok: true, landedOn: strip(page.url()) } : { ok: false, reason: 'van o trang dang nhap sau 20s (sai tai khoan / can MFA?)' };
@@ -253,7 +294,7 @@ async function formLogin(page, { loginUrl, user, pass, origin, userSel, passSel,
 }
 
 module.exports = {
-  DEF_USER, DEF_PASS, DEF_SUBMIT, TEST_ONLY,
+  DEF_USER, DEF_PASS, DEF_SUBMIT, TEST_ONLY, EXIT_LOGIN, MAX_TRIES, LOGIN_PATH_RE,
   refuse, mask, strip, originOf, parseCredText, checkCredPath, loadCreds, initCredFile,
-  firstVisible, loggedIn, formLogin,
+  firstVisible, loggedIn, formLogin, formLoginRetry, manualHint,
 };

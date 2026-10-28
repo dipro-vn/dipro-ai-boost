@@ -1,4 +1,4 @@
-> **SOURCE:** `ba-kit/requirement-to-flow/.claude/ba-agent/figma-outputs/shared-rules.md` @ a8509b9 — copy self-contained cho kit system-to-doc. Đọc kèm `o5-figma.md` (bảng thay SPEC.md → inventory). Sửa quy tắc vẽ chung thì sửa CẢ HAI nơi.
+> **SOURCE:** `ba-kit/requirement-to-flow/.claude/ba-agent/figma-outputs/shared-rules.md` @ a8509b9 — copy self-contained cho kit system-to-doc. Đọc kèm `o5-figma.md` (bảng thay SPEC.md → inventory). Sửa quy tắc vẽ chung thì sửa CẢ HAI nơi. **Đã tách khỏi bản gốc (D1, 27/10/2026):** phân loại `To verify` của bản gốc ở kit này ghi là `To verify` (+ Open Question); chữ hiển thị "Cần xác nhận — Q-xxx".
 
 # Ba Agent — Figma Outputs Shared Rules
 
@@ -364,7 +364,7 @@ Màu sắc và ý nghĩa KHÔNG thay đổi dù dùng FigJam hay Design. Bảng 
 | Decision | `#FFF9EB` | `#F4860C` | Điểm rẽ nhánh |
 | System | `#EDFDF0` | `#1A7F37` | Hành động backend tự động — KHÔNG phải Actor B |
 | NG | `#FFF6F5` | `#CF222E` (dashed) | Lỗi ĐÃ ĐỊNH NGHĨA rõ (FACT), vẽ inline tại điểm phát sinh |
-| Edge / Exceptional | `#FBEEFF` | `#6639BA` (dashed) | Case CHƯA rõ hành vi (UNKNOWN/INFERENCE), tách panel riêng bên cạnh |
+| Edge / Exceptional | `#FBEEFF` | `#6639BA` (dashed) | Case CHƯA rõ hành vi (To verify/INFERENCE), tách panel riêng bên cạnh |
 
 ---
 

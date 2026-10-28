@@ -22,7 +22,7 @@ Schema <ver>/_internal/cr.json (agent viet):
  "questions": [{id:"CQ-001", question, why, axis, owner, status}],
  "impacts": [{id:"IMP-001", axis System|DB|Business|Screen|ThirdParty|Mockup,
               change_type NEW|UPD|DEL|IMPACT, baseline_ref "SC-014;DS:primary" | "—", item, change,
-              why_change, impact_on_current, conflict Yes|No|UNKNOWN, conflict_detail,
+              why_change, impact_on_current, conflict Yes|No|To verify, conflict_detail,
               risk High|Medium|Low, rate_code (ma trong md-unit-rates.json), qty > 0, md_note,
               evidence, question "CQ-001;CQ-002" | "", cr_item "CR-001.1", option true|false}]}
 """
@@ -294,7 +294,6 @@ def build_impact(ws, impacts, rates, empty_note=""):
         BD.banner(ws.cell(row=tr, column=i))
     ws.cell(row=tr, column=cols.index("Impact ID") + 1, value=C.L_TOTAL_MD)
     ws.cell(row=tr, column=cols.index("MD") + 1, value=round(total, 2))
-    ws.freeze_panes = "C2"
     ws.auto_filter.ref = "A1:%s%d" % (get_column_letter(len(cols)), last)
     ws.page_setup.orientation = "landscape"
     ws.sheet_properties.pageSetUpPr.fitToPage = True
@@ -511,6 +510,7 @@ def main():
     os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
     # lam tron so thuc: tranh duoi kieu 0.57000000000000006 (doc kho, va bi H06 nhan nham la so the)
     for ws in wb.worksheets:
+        ws.freeze_panes = None  # template_estimation co freeze san — kit khong freeze (R13)
         for row in ws.iter_rows():
             for c in row:
                 if isinstance(c.value, float):

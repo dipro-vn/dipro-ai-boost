@@ -7,7 +7,7 @@
 Nguon su that: 03_DB_Tables, 04_DB_Columns (+00_Meta db_mode, 01_Function, 05_Evidence).
 Sheet: 00_Overview · 01_Relationships · 02_ERD · T_<table> (moi bang 1 sheet).
 Quan he logic: dong trong 03_DB_Tables.Note dang `logical FK: a.col → b.id — inferred from EV-0102`.
-⚠ db_mode=NONE -> exit 1 (khong co DB, O3 khong sinh). O trong -> UNKNOWN / — (khong ap dung).
+⚠ db_mode=NONE -> exit 1 (khong co DB, O3 khong sinh). O trong -> "Cần xác nhận" (S.NEED_CONFIRM) / — (khong ap dung).
 """
 import argparse
 import datetime
@@ -40,7 +40,7 @@ EV_RE = re.compile(r"EV-\d{4,}")
 LINK_FONT = Font(name=ST.FONT, size=10, color="FF0563C1", underline="single")
 
 
-def v(x, empty=S.UNKNOWN):
+def v(x, empty=S.NEED_CONFIRM):
     x = "" if x is None else str(x).strip()
     return x if x else empty
 
@@ -126,6 +126,7 @@ def render_erd(tables, cols, rels, path, system, version, limit=60):
     try:
         import matplotlib
         matplotlib.use("Agg")
+        S.use_cjk_font(matplotlib)
         import matplotlib.pyplot as plt
         from matplotlib.patches import FancyBboxPatch
     except ImportError:
@@ -170,7 +171,7 @@ def render_erd(tables, cols, rels, path, system, version, limit=60):
             tag = []
             if c.get("PK") == "Yes":
                 tag.append("PK")
-            if (c.get("FK") or NA) not in (NA, "", S.UNKNOWN):
+            if (c.get("FK") or NA) not in (NA, "", S.NEED_CONFIRM):
                 tag.append("FK")
             elif (t, c.get("Column")) in logical:
                 tag.append("FK~")
@@ -285,7 +286,6 @@ def write_grid(ws, r0, header, rows, center_cols=()):
             ST.data(c, size=10, center=ci in center_cols)
     last = r0 + max(len(rows), 1)
     ws.auto_filter.ref = "A%d:%s%d" % (r0, get_column_letter(len(header)), last)
-    ws.freeze_panes = ws.cell(r0 + 1, 3)
 
 
 def kv_block(ws, r, pairs):
@@ -309,7 +309,7 @@ def main():
 
     data = S.load(a.inventory)
     meta = S.meta(data)
-    mode = (meta.get("db_mode") or S.UNKNOWN).strip().upper()
+    mode = (meta.get("db_mode") or S.NEED_CONFIRM).strip().upper()
     if mode == "NONE":
         print("db_mode=NONE: khong co DB — O3 khong sinh", file=sys.stderr)
         return 1
@@ -341,7 +341,7 @@ def main():
         ("Generated", datetime.date.today().isoformat()), ("DB Mode", mode),
         ("#Tables", len(tables)), ("#Columns", ncol),
         ("#Relationships", "%d (FK %d · Logical %d)" % (len(rels), n_fk, len(rels) - n_fk)),
-        ("Ghi chu", "UNKNOWN = chua co bang chung tu code/DB; — = khong ap dung. "
+        ("Ghi chu", S.NEED_CONFIRM + " = chua co bang chung tu code/DB; — = khong ap dung. "
                     "Bam ten bang de mo sheet chi tiet."),
     ])
     hdr = r + 1
@@ -355,11 +355,11 @@ def main():
         name = t["Table"]
         funcs = list(dict.fromkeys(S.split_ids(t.get("Related Function IDs")) +
                                    [f for f in fmap.get(name, []) if f]))
-        funcs = [f for f in funcs if f != S.UNKNOWN]
+        funcs = [f for f in funcs if f != S.NEED_CONFIRM]
         rows.append([i, name, v(t.get("Purpose")), len(cols.get(name, [])), v(t.get("PK"), NA),
                      ", ".join(dict.fromkeys(out_by.get(name, []))) or NA,
                      ", ".join(dict.fromkeys(in_by.get(name, []))) or NA,
-                     ", ".join(funcs) or S.UNKNOWN, v(t.get("Confidence"))])
+                     ", ".join(funcs) or S.NEED_CONFIRM, v(t.get("Confidence"))])
     write_grid(ws0, hdr, OVERVIEW_COLS, rows, center_cols=(1, 4, 9))
     for i, t in enumerate(tables):
         link(ws0.cell(hdr + 1 + i, 2), tsheet[t["Table"]], "B2")
@@ -422,13 +422,12 @@ def main():
                          v(c.get("PK"), "No"), fk, v(c.get("Constraint"), NA), v(c.get("Meaning")),
                          v(c.get("Evidence"), ev), v(c.get("Confidence"))])
         if not grow:
-            grow = [[1, S.UNKNOWN] + [S.UNKNOWN] * (len(GRID_COLS) - 2)]
+            grow = [[1, S.NEED_CONFIRM] + [S.NEED_CONFIRM] * (len(GRID_COLS) - 2)]
         write_grid(ws, r + 1, GRID_COLS, grow, center_cols=(1, 5, 6, 8, 13))
         for i, c in enumerate(cols.get(name, [])):
             m = re.match(r"^([\w.$]+)\.([\w$]+)$", (c.get("FK") or "").strip())
             if m and m.group(1) in tsheet:
                 link(ws.cell(r + 2 + i, 9), tsheet[m.group(1)], "B2")
-        ws.freeze_panes = ws.cell(r + 2, 3)
         set_widths(ws, [22, 24, 22, 22, 12, 10, 18, 7, 20, 30, 44, 14, 12])
 
     for ws in wb.worksheets:

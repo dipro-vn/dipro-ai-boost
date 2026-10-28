@@ -822,8 +822,8 @@ def usecase_lane_errors(L):
 
 
 def unknown_text_errors(view):
-    """Figma Output 1 / 2 (CR-1 / CR-2) khong hien chu UNKNOWN (feedback 20/10/2026): chua ro -> viet bang loi
-    ("chua quan sat", "chua xac dinh", "cho khach hang xac nhan"). Trang thai UNKNOWN chi nam o xlsx / inventory."""
+    """Figma Output 1 / 2 (CR-1 / CR-2) khong hien chu cu S.LEGACY_WORD (feedback 20/10/2026 · D1): chua ro -> ghi
+    "Cần xác nhận — Q-xxx" / "chưa quan sát được". Trang thai tuong ung trong xlsx / inventory = To verify."""
     errs = []
     def walk(o, where):
         if isinstance(o, dict):
@@ -832,8 +832,8 @@ def unknown_text_errors(view):
         elif isinstance(o, list):
             for i, v in enumerate(o):
                 walk(v, "%s[%d]" % (where, i))
-        elif isinstance(o, str) and re.search(r"unknown", o, re.I):
-            errs.append("%s chua chu UNKNOWN: %r — Figma khong hien UNKNOWN, viet 'chua quan sat' / 'chua xac dinh'" % (where, o[:60]))
+        elif S.has_legacy(o):
+            errs.append("%s chua chu %s: %r — ghi 'Cần xác nhận — Q-xxx' / 'chưa quan sát được'" % (where, S.LEGACY_WORD, o[:60]))
     for k in ("title", "subtitle", "flow_note", "screen_note", "flows", "tech", "screen_groups"):
         walk(view.get(k), k)
     return errs

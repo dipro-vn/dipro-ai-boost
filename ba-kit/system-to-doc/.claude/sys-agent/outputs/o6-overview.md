@@ -1,64 +1,70 @@
 # O6 — Tài liệu tổng hợp (docx)
 
-> **Yêu cầu:** tham khảo `templates/high-level-template.docx` · tổng hợp dự án **nhưng không dài dòng** — chủ yếu cho biết **đã chạy những gì, đã có những gì, nằm ở đâu**.
+> **Yêu cầu (feedback 28/10/2026):** tham khảo `templates/high-level-template.docx` · ngắn — cho khách hàng / BA biết **hệ thống làm gì, nghiệp vụ chính chạy thế nào**, còn màn hình / API / DB chỉ **1 bảng tổng**. Không có danh sách output, luồng tổng quan, phụ lục.
 >
-> Thành phẩm: `06_Overview/Overview_<sys>_ver<N>.docx`. Luôn chạy, **sinh cuối cùng** (cần index các output khác).
+> Thành phẩm: `06_Overview/Overview_<sys>_ver<N>.docx`. Luôn chạy, **sinh cuối cùng**.
 
 ---
 
-## 1. Nội dung — đếm và trỏ, không chép lại
+## 1. Nội dung
 
 | Chương | Nội dung | Nguồn |
 |---|---|---|
-| Khối tiêu đề | dự án · khách hàng · version · ngày · BASELINE | `00_Meta` |
+| Khối tiêu đề | dự án · khách hàng · version · ngày · BASELINE | `00_Meta` · `index.json` |
 | 0. Phạm vi & nguồn khảo sát | website (URL, môi trường, role) · repo · DB mode · Figma · quyền thao tác | `10_Site` · `11_Repo` · `00_Meta` |
-| 1. Tổng quan sản phẩm | 5–8 câu sản phẩm làm gì · actor · cấu thành hệ thống | `narrative.json` (agent viết) |
-| **2. Danh sách output đã sinh** | Output · nội dung · file/link · số lượng · gate — **trọng tâm của tài liệu** | `_internal/index.json` |
-| 3. Website & màn hình | mỗi site: số màn theo loại · mỗi module: số chức năng theo trạng thái | `02_Screen` · `01_Function` (chỉ đếm — danh sách đầy đủ ở O1) |
-| 4. API & Batch | số API theo group · số batch · Confirmed / To verify · **ảnh code map** | `07_API` · O2 |
-| 5. Database | số bảng / cột / quan hệ · **ảnh ERD** — hoặc `Database not available.` | `03/04` · O3 |
+| 1. Tổng quan sản phẩm | 3–5 câu sản phẩm làm gì · actor · cấu thành hệ thống | `narrative.json` (agent viết) |
+| **2. Nghiệp vụ chính** | 2.1 Hệ thống này làm gì · 2.2 Luồng nghiệp vụ chính (bước đánh số, link Figma Output 1) · 2.3 Trạng thái của đối tượng chính | `business.json` (agent viết) |
+| 3. Website & màn hình | **1 bảng tổng**: mỗi site — số màn theo loại | `02_Screen` (chi tiết ở O1) |
+| 4. API & Batch | **1 bảng tổng**: tổng · API · batch · webhook/queue · theo trạng thái bằng chứng | `07_API` (chi tiết ở O2) |
+| 5. Database | số bảng / cột / quan hệ · **link Figma ERD** — hoặc `Database not available.` | `03/04` · `figma-links.md` |
 | 6. Liên kết bên thứ 3 | tên · loại · mục đích · chiều · trạng thái | `09_Integration` |
-| 7. Luồng tổng quan | ảnh flow + vài câu diễn giải | `flow/flow.png` · `narrative.json` |
-| Phụ lục A | Open Questions còn mở | `06_OpenQuestions` |
-| Phụ lục B | điều kiện khảo sát (ngày, budget, chế độ) | `00_Meta` |
 
-**Phân chia trách nhiệm:** mọi **bảng và con số** do script sinh từ inventory; **văn xuôi** do agent viết trong `narrative.json` (`project_name`, `customer`, `product_overview`, `actors`, `system_composition`, `flow_explanation`). Script không bịa văn, agent không gõ tay số.
+**Phân chia trách nhiệm:** mọi **bảng và con số** do script sinh từ inventory; **văn xuôi** do agent viết trong `narrative.json` và `business.json`. Script không bịa văn, agent không gõ tay số.
 
-Văn xuôi chỉ khẳng định điều có bằng chứng; điều chưa chắc → Phụ lục A, không viết vào chương 1.
+### `business.json` — chương 2, viết cho khách hàng / BA
+
+```json
+{ "overview": "2-4 câu: hệ thống làm gì, ai dùng",
+  "flows":  [{"title": "Bệnh viện mời bác sĩ", "actor": "Bệnh viện", "screens": ["「医師検索」"],
+              "steps": ["Bệnh viện tìm bác sĩ theo chuyên khoa.", "..."], "figma": "<url, tuỳ chọn>",
+              "evidence": ["EV-0012"]}],
+  "states": [{"object": "Lời mời", "flow": ["Chờ trả lời", "Đã đồng ý", "Đã từ chối"], "explain": "1-2 câu",
+              "question": "Q-004"}] }
+```
+
+- Câu thường, theo văn phong `sys-agent/writing-style.md`: **không** mã nội bộ (`SC-` `API-` `EV-`…), tên bảng, enum, tên hàm, đường dẫn code.
+- Mỗi luồng / trạng thái có `evidence` (EV) hoặc `question` (Q). Chỉ có Q → docx tự ghi "Cần xác nhận — Q-xxx".
+- Mỗi luồng ≥ 2 bước.
 
 ---
 
-## 2. Flow tổng quan (ảnh chương 7)
+## 2. Sơ đồ DB trên Figma
 
-Viết `_internal/flow/flow.json` — **mọi node trỏ về ID có thật** (`F-` · `SC-` · `API-` · `EXT-` · `WEB-` · `table:<tên>`; node `actor`/`external` được phép không có `ref`). Mảng `explanation` (vài câu) phải **nhắc nguyên văn nhãn (`label`) của mọi node** — gate V5 check 8 đối chiếu, để không có node nào trên hình mà không được giải thích:
-
-```bash
-python3 $S/render-flow.py $I/flow/flow.json --out $I/flow/flow.png
-python3 $S/verify-flow-png.py $I/flow/flow.json --inventory $I/inventory.xlsx --png $I/flow/flow.png --out $I/gates/v5.md
-```
+- ERD vẽ ở file Figma design của P8 (`o5-figma.md` §3b) khi Brief đồng ý (B5). Link ghi ở dòng `Sơ đồ DB (ERD)` của `05_Figma/figma-links.md`; `render-overview-docx.py --figma-links` chèn vào chương 5 (và link `Output 1` vào mục 2.2).
+- Không có Figma → chương 5 ghi "Chưa có sơ đồ trên Figma — xem ảnh ERD trong thư mục 03_DB."
+- **Không có sơ đồ API (code map)** ở bất kỳ output nào.
 
 ---
 
 ## 3. Render + gate
 
 ```bash
-python3 $S/build-version-index.py $V --skip "O7=user không yêu cầu"        # → index.json cho chương 2
+python3 $S/build-version-index.py $V --skip "O7=user không yêu cầu"        # → index.json (bìa)
 python3 $S/render-overview-docx.py --inventory $I/inventory.xlsx --narrative $I/narrative.json \
-    --index $I/index.json --flow-png $I/flow/flow.png \
-    --codemap-png $V/02_API/CodeMap_<sys>_ver<N>.png --erd-png $V/03_DB/ERD_<sys>_ver<N>.png \
+    --business $I/business.json --index $I/index.json --figma-links $V/05_Figma/figma-links.md \
     --out $V/06_Overview/Overview_<sys>_ver<N>.docx
 python3 $S/verify-overview.py $V/06_Overview/Overview_<sys>_ver<N>.docx --inventory $I/inventory.xlsx \
-    --index $I/index.json --out $I/gates/v3.md
+    --business $I/business.json --out $I/gates/v3.md
 python3 $S/build-version-index.py $V --skip "O7=user không yêu cầu"        # chạy lại để README có gate của O6
 ```
 
-Gate V3 chặn: thiếu chương · placeholder còn sót · số liệu ≠ inventory · bảng output ≠ file thật trên đĩa · `db_mode = NONE` mà vẫn có bảng DB · ô trống · ảnh tràn khung · ID không tồn tại.
+Gate V3 chặn: thiếu chương 0–6 / 2.1–2.3 hoặc còn chương đã bỏ (danh sách output, luồng tổng quan, phụ lục) · placeholder còn sót · bảng tổng màn hình / API ≠ inventory · `db_mode = NONE` mà vẫn có bảng DB · chương 2 có mã nội bộ / tên bảng / enum / hàm · luồng / trạng thái không có EV hoặc Q · EV / Q không có trong inventory · luồng < 2 bước · ô trống · ID không tồn tại · còn chữ cũ (mọi kiểu viết hoa / thường) · link ERD không phải Figma mà cũng không có ghi chú.
 
 ---
 
 ## 4. Anti-pattern
 
-- ❌ Chép lại toàn bộ danh sách màn/API/bảng vào docx — đã có ở O1/O2/O3
+- ❌ Chép danh sách màn / API / bảng vào docx — đã có ở O1 / O2 / O3
 - ❌ Viết văn xuôi khẳng định hành vi không có bằng chứng
 - ❌ Gõ tay con số thay vì để script đếm
-- ❌ Sinh O6 trước khi các output khác xong — bảng output sẽ sai
+- ❌ Đưa sơ đồ DB lên Figma khi Brief chưa xác nhận (B5)

@@ -106,13 +106,13 @@ def _tabs(ax, x, y, names, active, w_total):
 def img_two_flows(path):
     plt, P, fig, ax = _canvas(12, 5.2)
     ax.text(0.2, 4.9, "LUỒNG 1 — Baseline  (/analyze-system)", fontsize=12, weight="bold", color=BLUE)
-    srcs = ["Website", "Source code", "Database\n(tuỳ chọn)", "Figma\n(tuỳ chọn)"]
+    srcs = ["Source code\n(đọc trước)", "Website\n(đối chiếu sau)", "Database\n(tuỳ chọn)", "Figma\n(tuỳ chọn)"]
     for i, s in enumerate(srcs):
         _box(ax, P, 0.2, 3.7 - i * 0.9, 1.9, 0.7, s, BLUE_BG, BLUE)
         _arrow(ax, 2.1, 4.05 - i * 0.9, 3.0, 2.6)
     _box(ax, P, 3.0, 2.1, 2.3, 1.0, "AI khảo sát\n(chỉ đọc)", ORANGE_BG, ORANGE, bold=True)
     _arrow(ax, 5.3, 2.6, 6.0, 2.6)
-    _box(ax, P, 6.0, 1.6, 2.6, 2.0, "outputs/\nver1_…_baseline/\n\nO1 … O7", GREEN_BG, GREEN, bold=True)
+    _box(ax, P, 6.0, 1.6, 2.6, 2.0, "outputs/\nver1_…_baseline/\n\nO1 … O9", GREEN_BG, GREEN, bold=True)
     ax.text(8.9, 4.9, "LUỒNG 2 — Change Request  (/change-request)", fontsize=12, weight="bold", color=RED)
     _box(ax, P, 9.2, 3.7, 2.6, 0.8, "Yêu cầu thay đổi\n(file · chat · link)", RED_BG, RED)
     _arrow(ax, 10.5, 3.7, 10.5, 3.05, RED)
@@ -120,7 +120,7 @@ def img_two_flows(path):
     _arrow(ax, 8.6, 2.6, 9.2, 2.6, GREEN)
     ax.text(8.62, 2.75, "đọc", fontsize=9, color=GREEN)
     _arrow(ax, 10.5, 2.1, 10.5, 1.4, RED)
-    _box(ax, P, 9.2, 0.4, 2.6, 1.0, "outputs/\nver2_…_CR-001-…/", GREEN_BG, GREEN, bold=True)
+    _box(ax, P, 9.2, 0.4, 2.6, 1.0, "outputs/\nCR-001_…/", GREEN_BG, GREEN, bold=True)
     _save(plt, fig, path)
 
 
@@ -135,8 +135,10 @@ def img_folder(path):
         ("cr/                  ← file yêu cầu thay đổi (Luồng 2)", 2, False),
         (".auth/                ← CÓ SẴN — tài khoản test, KHÔNG commit", 1, True),
         ("credentials.local.env ← bạn điền (copy từ credentials.example.env)", 2, False),
-        ("outputs/              ← AI tự tạo, mỗi lần chạy 1 folder", 1, True),
-        ("ver1_011026_baseline/", 2, False), ("ver2_151026_CR-001-them-coupon/", 2, False),
+        ("outputs/              ← AI tự tạo", 1, True),
+        ("_project/            ← câu trả lời AI đã nhớ (không commit)", 2, False),
+        ("ver1_011026_baseline/ ← khảo sát lần đầu, chạy lại vẫn ghi vào đây", 2, False),
+        ("CR-001_151026_them-coupon/ ← yêu cầu thay đổi", 2, False),
     ]
     for i, (t, lvl, bold) in enumerate(lines):
         name, _, note = t.partition("←")
@@ -151,9 +153,9 @@ def img_folder(path):
 
 def img_flow1_steps(path):
     plt, P, fig, ax = _canvas(13, 3.2)
-    steps = [("1", "Hỏi input\n(4 nhóm)", BLUE_BG, BLUE), ("2", "Bảng tổng hợp\n→ bạn OK", BLUE_BG, BLUE),
-             ("3", "Quét nhạy cảm\n(cảnh báo + dừng)", RED_BG, RED), ("4", "Khảo sát\nchỉ đọc", ORANGE_BG, ORANGE),
-             ("5", "Sinh O1–O7\n+ tự kiểm tra", ORANGE_BG, ORANGE), ("6", "Báo cáo:\nfile ở đâu", GREEN_BG, GREEN)]
+    steps = [("1", "Hỏi câu còn thiếu\n(câu cũ: xác nhận)", BLUE_BG, BLUE), ("2", "Quét nhạy cảm\n→ đọc code", RED_BG, RED),
+             ("3", "Bảng tổng hợp +\nquyết định lớn → OK", BLUE_BG, BLUE), ("4", "Mở website\nchỉ đọc", ORANGE_BG, ORANGE),
+             ("5", "Sinh O1–O9\n+ tự kiểm tra", ORANGE_BG, ORANGE), ("6", "Báo cáo:\nfile ở đâu", GREEN_BG, GREEN)]
     for i, (n, t, fc, ec) in enumerate(steps):
         x = 0.2 + i * 2.15
         _box(ax, P, x, 0.8, 1.8, 1.4, t, fc, ec, size=10)
@@ -186,20 +188,21 @@ def img_credentials(path):
 
 
 def img_outputs(path):
-    plt, P, fig, ax = _canvas(12, 6.2)
-    ax.text(0.2, 5.9, "outputs/ver1_011026_baseline/", fontsize=13, weight="bold", color=GREEN)
+    plt, P, fig, ax = _canvas(12, 7.5)
+    ax.text(0.2, 7.2, "outputs/ver1_011026_baseline/", fontsize=13, weight="bold", color=GREEN)
     items = [
         ("README.md", "Mục lục: mọi output · số lượng · kết quả kiểm tra", GREY_BG, GREY),
-        ("01_Screens/", "O1  Danh sách màn hình — xlsx, 1 file / website", BLUE_BG, BLUE),
-        ("02_API/", "O2  API Documentation — xlsx + png sơ đồ map code", BLUE_BG, BLUE),
+        ("01_Screens/", "O1  Danh sách màn hình — xlsx, 1 file / website, cột \"API gọi\"", BLUE_BG, BLUE),
+        ("02_API/", "O2  API Documentation — xlsx", BLUE_BG, BLUE),
         ("03_DB/", "O3  Database Documentation — xlsx + png ERD", BLUE_BG, BLUE),
-        ("04_DesignSystem/", "O4  Design System — folder + link artifact claude.ai", ORANGE_BG, ORANGE),
+        ("04_DesignSystem/", "O4  Design System (tuỳ chọn) — folder + link artifact claude.ai", ORANGE_BG, ORANGE),
         ("05_Figma/", "O5  Link Figma: Flow tổng quan + Screen flow", ORANGE_BG, ORANGE),
-        ("06_Overview/", "O6  Tài liệu tổng hợp — docx", GREEN_BG, GREEN),
-        ("07_BugList/", "O7  Bug trên màn hình Urgent / High — xlsx (nếu chọn)", RED_BG, RED),
+        ("06_Overview/", "O6  Tài liệu tổng hợp — docx: nghiệp vụ chính + bảng tổng màn hình / API / DB", GREEN_BG, GREEN),
+        ("07_BugList/", "O7  Bug mức High trở lên ảnh hưởng thao tác — xlsx 1 sheet (nếu chọn)", RED_BG, RED),
+        ("09_DevSetup/", "O9  Hướng dẫn chạy local cho dev — md (chỉ tên key cấu hình)", GREY_BG, GREY),
     ]
     for i, (f, d, fc, ec) in enumerate(items):
-        y = 5.0 - i * 0.66
+        y = 6.3 - i * 0.66
         _box(ax, P, 0.3, y, 2.8, 0.52, f, fc, ec, size=11, bold=True)
         ax.text(3.35, y + 0.26, d, fontsize=11, va="center")
     _save(plt, fig, path)
@@ -252,7 +255,7 @@ def img_badges(path):
 # ---------------------------------------------------------------- anh mau tong hop (du lieu gia ShopDemo)
 def img_bug_list(path):
     plt, P, fig, ax = _canvas(15, 4.6)
-    ax.text(0.1, 4.35, "BUG LIST — ShopDemo (ver1)  ·  chỉ lỗi thấy trên màn hình khi Playwright quét  ·  Urgent / High",
+    ax.text(0.1, 4.35, "BUG LIST — ShopDemo (ver1)  ·  lỗi ảnh hưởng thao tác — code + website  ·  High / Urgent",
             fontsize=11, weight="bold", color=XL_HEAD)
     widths = [0.8, 2.3, 1.1, 2.0, 1.1, 0.95, 3.4, 1.25, 1.1]
     rows = [["Bug ID", "Title", "Screen", "URL", "Category", "Severity", "Repro Steps", "Evidence", "Reproduced"],
@@ -264,11 +267,11 @@ def img_bug_list(path):
              "1. Mở chi tiết sản phẩm bất kỳ\n→ ảnh chính hỏng", "EV-0161.png", "Yes — 2/2"],
             ["BUG-004", "Layout tràn che nút Lưu", "SC-021", "/account/profile", "Giao diện", "High",
              "1. Đăng nhập  2. Mở Hồ sơ\nở 1366px → nút Lưu bị che", "EV-0170.png", "Yes — 2/2"]]
-    sev = {"Urgent": "#FFD8D3", "High": "#FFE8CC"}
+    sev = {"Urgent": "#FFD8D3", "High": "#FFE8CC", "Medium": "#FFF6CC"}
     fills = {(r, 5): sev[rows[r][5]] for r in range(1, len(rows))}
     fills.update({(r, 7): "#E8F4FD" for r in range(1, len(rows))})
     _grid(ax, 0.1, 4.05, widths, rows, rh=0.4, size=8.2, fills=fills)
-    _tabs(ax, 0.1, 0.05, ["Bug List", "Suspected", "Observations"], "Bug List", sum(widths))
+    _tabs(ax, 0.1, 0.05, ["Bug List"], "Bug List", sum(widths))
     _save(plt, fig, path)
 
 
@@ -600,7 +603,8 @@ def build(kit, samples, source_guide, shots):
     g.h1("BƯỚC 2 — CHẠY LUỒNG 1 VÀ TRẢ LỜI CÂU HỎI")
     g.p("Trong Claude Code (đang mở folder my-project), gõ lệnh:")
     g.code("/analyze-system")
-    g.p("AI hỏi lần lượt bằng hộp chọn — chọn đáp án hoặc gõ vào ô Other:")
+    g.p("Lệnh tự chạy bằng model Opus. AI đọc source code trước, rồi mới mở website. AI hỏi bằng hộp chọn "
+        "(mỗi lượt tối đa 4 câu cùng chủ đề) — chọn đáp án hoặc gõ vào ô Other:")
     g.table(["Nhóm", "AI hỏi", "Bạn chuẩn bị"], [
         ["Website", "Số site, URL, staging hay production; tài khoản role nào, ai cấp, được phép dùng để quét không; "
                     "chỉ ĐỌC hay được CREATE/UPDATE; vùng cấm", "URL + tài khoản TEST"],
@@ -611,8 +615,13 @@ def build(kit, samples, source_guide, shots):
          "Link figma.com/design/..."],
         ["Khác", "Có làm bug list không; ngôn ngữ; nguồn có dữ liệu người dùng thật không", ""],
     ])
-    g.note("trả lời đủ các nhóm để AI có đủ context. Thiếu thứ gì (không có DB, chưa có Figma…) → "
-           "AI ghi lại và chạy tiếp phần còn lại.")
+    g.note("chưa có thông tin nào (ví dụ chưa có link Figma) → chọn \"Chưa có — chạy v1 trước, bổ sung sau\". "
+           "Bổ sung sau thì AI cập nhật lại ver1. Riêng 4 câu an toàn (website thử nghiệm hay thật, tài khoản có được "
+           "phép quét, mức thao tác, có dữ liệu thật không) không bỏ qua được.")
+    g.h3("AI nhớ câu trả lời")
+    g.bullets(["Câu bạn đã trả lời được lưu ở outputs/_project/preflight-memory.json (không lưu mật khẩu, không commit).",
+               "Lần chạy sau AI không hỏi lại — chỉ in 1 bảng \"Tôi đang dùng các thông tin sau — có gì đổi không?\" để bạn xác nhận 1 lần.",
+               "4 câu an toàn luôn được hỏi lại gọn: \"vẫn như lần trước chứ?\"."])
     g.image(I("src_tra-loi-cau-hoi.png"), "Trả lời các câu hỏi của Claude", width_cm=10)
 
     # ---- BUOC 3
@@ -629,7 +638,10 @@ def build(kit, samples, source_guide, shots):
 
     # ---- BUOC 4
     g.h1("BƯỚC 4 — XÁC NHẬN BẢNG TỔNG HỢP, CHỜ AI CHẠY")
-    g.bullets(["AI in Bảng tổng hợp: website, tài khoản, quyền, repo, DB, Figma, output dự kiến.",
+    g.bullets(["AI đọc code trước, rồi in Bảng tổng hợp: website, tài khoản, quyền, repo, DB, Figma, output dự kiến.",
+               "Kèm các quyết định lớn có đề xuất, ví dụ: \"2 website khác nhau về cỡ chữ, bo góc nút → đề xuất 2 bộ quy "
+               "chuẩn giao diện riêng\", \"thư mục cũ không còn dùng → không khảo sát\", \"đồng ý vẽ sơ đồ database / "
+               "API lên Figma (dịch vụ bên ngoài)?\".",
                "Đúng → gõ OK. Sai chỗ nào → sửa ngay chỗ đó.",
                "Phát hiện dữ liệu nhạy cảm (.env, key, dump có dữ liệu thật…) → AI cảnh báo và DỪNG chờ bạn."])
     g.image(I("03_luong1-cac-buoc.png"), "Các bước AI chạy ở Luồng 1")
@@ -641,30 +653,33 @@ def build(kit, samples, source_guide, shots):
     g.image(I("04_outputs.png"), "Các output trong 1 folder version", width_cm=13)
     g.table(["Output", "Loại", "Nơi lưu"], [
         ["O1 Danh sách màn hình", "xlsx (1 file / website)", "01_Screens/BasicDesign_WEB-01_ver<N>.xlsx"],
-        ["O2 API Documentation", "xlsx + png code map", "02_API/"],
+        ["O2 API Documentation", "xlsx", "02_API/"],
         ["O3 Database Documentation", "xlsx + png ERD", "03_DB/"],
-        ["O4 Design System", "link artifact claude.ai + folder", "04_DesignSystem/ (STATUS.md + project/)"],
+        ["O4 Design System (tuỳ chọn)", "link artifact claude.ai + folder", "04_DesignSystem/ (STATUS.md + project/)"],
         ["O5 Figma flow", "link Figma", "05_Figma/figma-links.md"],
-        ["O6 Tài liệu tổng hợp", "docx", "06_Overview/Overview_….docx"],
-        ["O7 Bug list (tuỳ chọn)", "xlsx", "07_BugList/BugList_….xlsx"],
-        ["CR (Luồng 2)", "xlsx (7 sheet) + link Figma view CR", "ver<N>_…_CR-<id>-…/"],
+        ["O6 Tài liệu tổng hợp", "docx (nghiệp vụ chính + bảng tổng)", "06_Overview/Overview_….docx"],
+        ["O7 Bug list (tuỳ chọn)", "xlsx 1 sheet", "07_BugList/BugList_….xlsx"],
+        ["O9 Hướng dẫn chạy local", "md (dev)", "09_DevSetup/DevSetup_….md"],
+        ["CR (Luồng 2)", "xlsx (7 sheet) + 見積書 + link Figma view CR", "CR-<id>_<ngày>_<tên>/"],
     ])
     g.note("ảnh O1–O6 dưới đây chụp từ 1 dự án thật, phần thông tin dự án đã được che. "
-           "Ô ghi UNKNOWN / \"cần xác minh\" là chỗ AI chưa có bằng chứng — không phải lỗi.")
+           "Ô ghi “Cần xác nhận — Q-xxx” là chỗ AI chưa có bằng chứng — không phải lỗi; danh sách câu hỏi Q-xxx AI báo ở cuối phiên chạy.")
 
     g.h3("O1 — Danh sách màn hình (Basic Design xlsx)")
-    g.bullets(["Dùng để: biết mỗi website có bao nhiêu màn, item từng màn, xử lý, lỗi hiển thị, liên kết giữa các màn.",
+    g.bullets(["Dùng để: biết mỗi website có bao nhiêu màn, item từng màn, xử lý, lỗi hiển thị, liên kết giữa các màn; "
+               "cột \"API gọi\" cho biết mỗi nút / lúc mở màn gọi chức năng phía máy chủ nào.",
+               "AI đọc code trước (nút gọi xử lý gì, kiểm tra nhập liệu, thông báo lỗi), rồi mới mở website để đối chiếu.",
                "Mở: Excel, sheet Screen Index → mỗi màn 1 sheet SC-xxx; theo template Basic Design công ty."])
     g.image(I("output_O1.png"), "O1 — sheet Screen Index")
-    g.h3("O2 — API Documentation (xlsx + code map)")
+    g.h3("O2 — API Documentation (xlsx)")
     g.bullets(["Dùng để: tra mọi API / batch theo group — làm gì, method, request, response, màn nào gọi.",
-               "Mở: sheet 00_Index → bấm API ID để tới block chi tiết; CodeMap_….png = sơ đồ FE ↔ BE ↔ DB."])
+               "Mở: sheet 00_Index → bấm API ID để tới block chi tiết."])
     g.image(I("output_O2.png"), "O2 — sheet 00_Index")
     g.h3("O3 — Database Documentation (xlsx + ERD)")
     g.bullets(["Dùng để: xem các bảng, quan hệ, từng cột (kiểu, format, giới hạn, mục đích).",
                "Mở: sheet 00_Overview → 02_ERD (sơ đồ) → mỗi bảng 1 sheet T_…"])
     g.image(I("output_O3.png"), "O3 — sheet 02_ERD")
-    g.h3("O4 — Design System (link artifact claude.ai)")
+    g.h3("O4 — Design System (tuỳ chọn, link artifact claude.ai)")
     g.bullets(["Dùng để: tra màu, chữ, spacing, component có preview của hệ thống cũ — dùng lại khi làm màn mới "
                "(cùng chuẩn với designer-kit).",
                "Mở: link artifact private AI in ra (VD " + DS_LINK_EXAMPLE + "); bản file nằm ở 04_DesignSystem/.",
@@ -675,14 +690,20 @@ def build(kit, samples, source_guide, shots):
                "Mở: link trong 05_Figma/figma-links.md."])
     g.image(I("output_O5.png"), "O5 — Screen flow trên Figma")
     g.h3("O6 — Tài liệu tổng hợp (docx)")
-    g.bullets(["Dùng để: đọc nhanh hệ thống có gì, đã khảo sát gì, file nằm ở đâu; Phụ lục A = câu cần hỏi khách.",
+    g.bullets(["Dùng để: đọc nhanh hệ thống làm gì, các luồng nghiệp vụ chính (bước đánh số), trạng thái đối tượng chính.",
+               "Màn hình, API, database chỉ có bảng tổng; danh sách chi tiết ở O1 / O2 / O3. Sơ đồ DB là link Figma.",
                "Mở: 06_Overview/Overview_….docx bằng Word."])
     g.image(I("output_O6.png"), "O6 — tài liệu tổng hợp", width_cm=11)
     g.h3("O7 — Bug list (xlsx, tuỳ chọn)")
-    g.bullets(["Chỉ lỗi thấy trên MÀN HÌNH khi Playwright quét website — không gồm lỗi API hay review code.",
-               "Chỉ mức Urgent / High; mỗi bug có màn SC-xxx, URL, bước tái hiện, ảnh bằng chứng EV, đã tái hiện mấy lần.",
-               "Mở: 07_BugList/BugList_….xlsx — sheet Bug List gửi khách được."])
+    g.bullets(["Đọc code trước (nút nào gọi xử lý gì, thiếu kiểm tra lỗi ở đâu), rồi mở thử website để xác nhận.",
+               "Chỉ lỗi mức High / Urgent làm người dùng thao tác không được hoặc sai; mỗi bug có màn SC-xxx, bước tái hiện, bằng chứng (ảnh / dòng code).",
+               "1 sheet duy nhất \"Bug List\". Không có lỗi mức cao → sheet trống.",
+               "Mở: 07_BugList/BugList_….xlsx."])
     g.image(I("mau_O7_bug-list.png"), "O7 — sheet Bug List (dữ liệu giả ShopDemo)")
+    g.h3("O9 — Hướng dẫn chạy local (md, cho dev)")
+    g.bullets(["Lệnh cài / chạy, database local, môi trường, pipeline deploy, lịch batch — gom tự động từ source.",
+               "Cấu hình chỉ ghi TÊN key (lấy từ .env.example) — không bao giờ có giá trị, AI không đọc .env thật.",
+               "Mở: 09_DevSetup/DevSetup_….md."])
 
     # ---- BUOC 6
     g.h1("BƯỚC 6 — KHI CÓ 1 YÊU CẦU THAY ĐỔI (LUỒNG 2)")
@@ -721,11 +742,14 @@ def build(kit, samples, source_guide, shots):
     g.h1("BƯỚC 8 — VERSION VÀ CHẠY LẠI (AI TỰ LÀM)")
     g.p("Bạn không phải chỉ version, không phải mở run-log.md. AI tự quản lý version:")
     g.bullets(["Mỗi lần chạy, AI tự đọc version mới nhất: baseline mới nhất, CR đang mở, góp ý chưa xử lý.",
-               "Mỗi lần chạy = 1 folder mới ver<N>_<ngày>_<tên>, AI tự đặt tên. Không bao giờ sửa folder cũ.",
-               "Muốn góp ý: nói thẳng trong chat (VD \"MD màn coupon cao quá\"). AI tạo version mới từ bản mới nhất, "
-               "sửa và ghi góp ý vào run-log.md.",
-               "CR đã code xong: chạy /analyze-system (hoặc nói \"CR-001 đã code xong\") — AI thấy CR đang mở, "
-               "đề xuất Delta để có baseline mới cho các CR sau."])
+               "Khảo sát lần đầu luôn là ver1. Chạy lại / bổ sung nguồn / sửa theo góp ý → AI ghi vào ver1, "
+               "trước khi ghi đè thì cất bản cũ vào _internal/history/<ngày-giờ>/.",
+               "Có yêu cầu thay đổi đầu tiên → folder CR-001_<ngày>_<tên>/ trỏ về ver1, ver1 bị khoá (không ghi đè nữa).",
+               "CR đã được khách duyệt và đã code xong: nói \"CR-001 đã duyệt, đã code xong\" (hoặc chạy /analyze-system) — "
+               "AI hỏi xác nhận rồi tạo ver2 = ver1 + CR đó. ver3, ver4… cũng chỉ sinh theo cách này.",
+               "Muốn góp ý: nói thẳng trong chat (VD \"MD màn coupon cao quá\") — AI sửa và ghi vào run-log.md."])
+    if os.path.isfile(os.path.join(out_dir, "lifecycle-system-to-doc.png")):
+        g.image(os.path.join(out_dir, "lifecycle-system-to-doc.png"), "Vòng đời version: ver1 → CR → duyệt + code xong → ver2")
 
     # ---- LOI
     g.h1("MỘT SỐ LỖI KHI DÙNG")
@@ -743,8 +767,10 @@ def build(kit, samples, source_guide, shots):
     g.p("Xuất lại chỉ cấu trúc: mysqldump --no-data … hoặc pg_dump --schema-only …")
     g.h3("4- AI dừng vì phát hiện .env / key trong repo")
     g.p("Đây là chủ đích. Gỡ file nhạy cảm khỏi bản copy repo đưa cho AI (hoặc xác nhận là dữ liệu giả), rồi chạy lại.")
-    g.h3("5- Đăng nhập không được (trang 1 URL, SPA)")
-    g.p("Báo AI phần tử hiển thị sau khi đăng nhập (VD tên menu) để AI dùng --success-selector.")
+    g.h3("5- AI không tự đăng nhập được")
+    g.p("AI không thử mãi: sau 2 lần (hoặc quá thời gian) AI dừng, mở cửa sổ trình duyệt và nhắn "
+        "\"Bạn đăng nhập tay giúp tôi, xong trả lời 'xong'\". Bạn đăng nhập trong cửa sổ đó → AI lưu phiên và quét tiếp. "
+        "Trang đăng nhập 1 URL (SPA): báo AI phần tử chỉ hiện sau khi đăng nhập (VD tên menu) để AI dùng --success-selector.")
     g.h3("6- Claude Code chặn khi dùng tài khoản test")
     g.p("Không gõ tài khoản vào chat. Dùng file .auth/credentials.local.env: copy từ mẫu (hoặc AI tạo template) → bạn điền, "
         "ghi ENV=TEST → script tự đăng nhập (xem Bước 3).")

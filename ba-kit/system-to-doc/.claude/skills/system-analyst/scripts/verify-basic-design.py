@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 # SOURCE: ba-kit/requirement-to-flow/.claude/skills/business-analyst/scripts/verify-basic-design.py @ 447770e
-# Copy self-contained cho kit system-to-doc. Khi sua logic chung, sua CA HAI noi.
-"""Quality Gate O5 — Basic Design master workbook.
+# DA TACH KHOI BAN GOC requirement-to-flow (D2, 27/10/2026): kit nay them cot S "API gọi" + check 16-19.
+# Check 1-15 van la logic chung — sua check 1-15 thi sua CA HAI noi; check 16-19 chi o day.
+"""Quality Gate O5 — Basic Design master workbook (= gate V-BD cua kit system-to-doc).
 
-Chay 15 check tren master workbook (+ check 16 khi co --asis).
+Chay 15 check tren master workbook (+ check 16-19 khi co --asis):
+  16 item co mo ta -> cot R co EV-xxxx / code-ref REPO-xx:path#Lnn / "Cần xác nhận — Q-xxx"
+  17 item dang button / link / form -> cot S "API gọi" co API-xxx, "Không gọi API" hoac "Cần xác nhận — Q-xxx"
+  18 khong con chu cu inv_schema.LEGACY_WORD (D1)
+  19 khong o trong o cot I..Q cua item (khong ap dung ghi ー)
 Doc rule day du: .claude/sys-agent/outputs/output-2a-basic-design.md
 
 Usage:
@@ -15,8 +20,13 @@ Usage:
 Exit: 0 = PASS | 1 = co FAIL | 2 = thieu openpyxl / khong doc duoc file
 """
 import argparse
+import os
 import re
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import inv_schema as S  # noqa: E402
+from gate_report import legacy_word_hits  # noqa: E402
 
 try:
     import openpyxl
@@ -57,8 +67,12 @@ IMG_MAX_H = 900   # px
 
 SAMPLE_LIKE_RE = re.compile(r"(?i)(^|[_ -])(sample|example|demo|template|mau|copy)([_ -]|$)")
 
-EV_RE = re.compile(r"\bEV-\d{4,}\b")
-UNKNOWN_MARK = "UNKNOWN"
+EV_RE = re.compile(r"\bEV-\d{4,}\b|\bREPO-\d{2,}:\S+#L\d+")   # EV hoac code-ref (code-first, R3)
+CONFIRM_RE = re.compile(r"(%s|%s) — Q-\d{3,}" % (S.NEED_CONFIRM, S.NEED_CONFIRM_JP))
+API_CALL_COL = 19          # S — "API gọi" (D2: ngay sau cot R)
+API_CALL_HDR = "API gọi"
+CLICK_TYPES = ("button", "hyperlink", "link", "form", "submit")
+API_CALL_RE = re.compile(r"\bAPI-\d{3,}\b|Không gọi API|(%s|%s) — Q-\d{3,}" % (S.NEED_CONFIRM, S.NEED_CONFIRM_JP))
 
 CODE_RE = re.compile(r"\b(?:E_[A-Z0-9]+(?:_[A-Z])?_\d{3}|COMMON_[A-Z]+_\d{3})\b")
 
@@ -588,12 +602,11 @@ def run(master_path, before_path, expect_screens, approved, rep, asis_mode=False
         rep.add(15, "Bang ERROR SCENARIOS", "PASS",
                 f"{len(ws_list)} sheet, so row bang khop so error trong catalog")
 
-    # ---- Check 16 (RIENG cho kit system-to-doc) ----
-    # AS-IS: moi mo ta hanh vi khang dinh chac chan phai co EV o cot R (Comment).
-    # Kit forward khong co check nay vi noi dung la TO-BE (do nguoi quyet).
-    # Kit nay ghi lai hanh vi QUAN SAT DUOC -> phai tro ve bang chung.
+    # ---- Check 16-19 (RIENG cho kit system-to-doc, --asis) ----
+    # AS-IS: moi mo ta hanh vi phai tro ve bang chung o cot R (EV / code-ref) hoac khai "Cần xác nhận — Q-xxx".
+    # Kit forward khong co vi noi dung la TO-BE (do nguoi quyet).
     if asis_mode:
-        miss16 = []
+        miss16, miss17, miss19 = [], [], []
         for ws in ws_list:
             # chi quet data row bang item: sau header (H="#", P co 記述/Description),
             # dung truoc title ERROR SCENARIOS
@@ -607,6 +620,8 @@ def run(master_path, before_path, expect_screens, approved, rep, asis_mode=False
             if hdr is None:
                 miss16.append(f"{ws.title}: khong tim thay header bang item (H='#', P='記述')")
                 continue
+            if str(ws.cell(row=hdr, column=API_CALL_COL).value or "").strip() != API_CALL_HDR:
+                miss17.append(f"{ws.title}!S{hdr}: thieu header '{API_CALL_HDR}'")
             for r in range(hdr + 1, ws.max_row + 1):
                 if ERR_TITLE_MARK in str(ws.cell(row=r, column=8).value or ""):
                     break
@@ -614,24 +629,38 @@ def run(master_path, before_path, expect_screens, approved, rep, asis_mode=False
                         + str(ws.cell(row=r, column=10).value or "")).strip()
                 if not name:
                     continue
-                jp = ws.cell(row=r, column=16).value   # P
-                vn = ws.cell(row=r, column=17).value   # Q
+                miss19 += [f"{ws.title}!{chr(64 + c)}{r}" for c in range(9, 18)
+                           if not str(ws.cell(row=r, column=c).value or "").strip()]
+                kind = str(ws.cell(row=r, column=11).value or "").strip().lower()
+                api = str(ws.cell(row=r, column=API_CALL_COL).value or "")
+                if kind in CLICK_TYPES and not API_CALL_RE.search(api):
+                    miss17.append(f"{ws.title}!S{r} ({kind}='{api or 'rong'}')")
+                body = (str(ws.cell(row=r, column=16).value or "")
+                        + str(ws.cell(row=r, column=17).value or "")).strip()
                 cm = str(ws.cell(row=r, column=18).value or "")  # R
-                body = (str(jp or "") + str(vn or "")).strip()
-                if not body:
-                    continue
-                # mien tru chi khi cot R khai bao UNKNOWN (chua quan sat duoc)
-                if UNKNOWN_MARK in cm.upper():
-                    continue
-                if not EV_RE.search(cm):
+                if body and not (EV_RE.search(cm) or CONFIRM_RE.search(cm)):
                     miss16.append(f"{ws.title}!R{r}")
         if miss16:
-            rep.add(16, "AS-IS: item co mo ta phai tro EV o cot R", "FAIL",
+            rep.add(16, "AS-IS: item co mo ta phai tro bang chung o cot R", "FAIL",
                     "; ".join(miss16[:8]) +
-                    ". Mo ta hanh vi khong co bang chung -> them EV-xxxx hoac ghi UNKNOWN o cot R.")
+                    ". Them EV-xxxx / code-ref REPO-xx:path#Lnn, hoac ghi 'Cần xác nhận — Q-xxx' o cot R.")
         else:
-            rep.add(16, "AS-IS: item co mo ta phai tro EV o cot R", "PASS",
-                    f"{len(ws_list)} sheet, moi item co mo ta deu co EV hoac UNKNOWN o cot R")
+            rep.add(16, "AS-IS: item co mo ta phai tro bang chung o cot R", "PASS",
+                    f"{len(ws_list)} sheet, moi item co mo ta deu co EV / code-ref / Cần xác nhận — Q-xxx")
+        if miss17:
+            rep.add(17, "Cot S 'API gọi' cho button / link / form", "FAIL",
+                    "; ".join(miss17[:8]) + ". Ghi '<METHOD> <path> (API-xxx)' tu fe-api-calls.csv, "
+                    "'Không gọi API' hoac 'Cần xác nhận — Q-xxx'.")
+        else:
+            rep.add(17, "Cot S 'API gọi' cho button / link / form", "PASS",
+                    "Moi item bam duoc deu ghi API goi / khong goi API")
+        hits = legacy_word_hits(master_path)
+        rep.add(18, "Khong con chu cu (D1)", "FAIL" if hits else "PASS",
+                (f"{len(hits)} o con '{S.LEGACY_WORD}': " + ", ".join(hits[:8]) + " — ghi 'Cần xác nhận — Q-xxx'")
+                if hits else "Khong con chu cu")
+        rep.add(19, "Khong o trong o cot I..Q cua item", "FAIL" if miss19 else "PASS",
+                ("; ".join(miss19[:8]) + ". Khong ap dung -> 'ー'; chua co bang chung -> 'Cần xác nhận — Q-xxx'.")
+                if miss19 else "Moi item du cot I..Q")
 
     return wb, ws_list
 
@@ -670,8 +699,8 @@ def main():
                          "(phan cach dau phay). Chi dung sau khi co approval "
                          "that — xem output-5-basic-design.md muc 5 Buoc 5")
     ap.add_argument("--asis", action="store_true",
-                    help="Bat check 16 cho kit system-to-doc: moi mo ta hanh vi "
-                         "phai tro ve EV-xxxx o cot R hoac ghi UNKNOWN")
+                    help="Bat check 16-19 cho kit system-to-doc: mo ta co bang chung o cot R, "
+                         "cot S 'API gọi', khong chu cu, khong o trong")
     ap.add_argument("--out", help="ghi report markdown ra file")
     args = ap.parse_args()
 

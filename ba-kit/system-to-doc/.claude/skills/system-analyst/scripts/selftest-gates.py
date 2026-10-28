@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""GATE V9 — self-test: chung minh V1/V2/V3/V5/V8 that su bat loi.
+"""GATE V9 — self-test: chung minh V1/V2/V3/V8 + gate schema V-DB check 10 (R1) + preflight-memory (R9) that su bat loi.
 
   python3 selftest-gates.py [--keep]
 
@@ -10,6 +10,7 @@ Gate bao PASS chua chung minh duoc gi: mot gate hong cung "PASS" moi thu.
 Chay lai sau MOI lan sua verify-*.py / render-overview-docx.py / build-version-index.py.
 """
 import argparse
+import importlib.util
 import json
 import os
 import shutil
@@ -46,9 +47,8 @@ def paths(base):
     i = os.path.join(v, "_internal")
     return {"base": base, "ver": v, "root": i,
             "inv": os.path.join(i, "inventory.xlsx"),
-            "flow": os.path.join(i, "flow", "flow.json"),
-            "flow_png": os.path.join(i, "flow", "flow.png"),
             "nar": os.path.join(i, "narrative.json"),
+            "biz": os.path.join(i, "business.json"),
             "index": os.path.join(i, "index.json"),
             "bug": os.path.join(v, "07_BugList", "BugList_Fixture_ver1.xlsx"),
             "docx": os.path.join(v, "06_Overview", "Overview_Fixture_ver1.docx")}
@@ -149,7 +149,7 @@ def build_inventory(p):
     q = wb["06_OpenQuestions"]
     q.append(["Q-001", "Inference", "Muc dich batch dong bo ton kho",
               "Chi thay ten job trong crontab", "Hoi maintainer", "BrSE", "Open", ""])
-    q.append(["Q-002", "Unknown", "Handler cua batch API-002", "Khong thay file job",
+    q.append(["Q-002", S.QUESTION_TYPE[0], "Handler cua batch API-002", "Khong thay file job",
               "Hoi maintainer", "BrSE", "Open", ""])
 
     api = wb["07_API"]
@@ -157,7 +157,7 @@ def build_inventory(p):
                 "REPO-02:src/order/order.service.ts#L88-L104", "REPO-02", "SC-002", "orders",
                 "EV-0004", "Confirmed", "—", ""])
     api.append(["API-002", "Batch", "BATCH", "CRON", "0 2 * * *", "Dong bo ton kho", "—",
-                S.UNKNOWN, "REPO-02", "—", "orders", "—", "To verify", "Q-002", ""])
+                S.NEED_CONFIRM, "REPO-02", "—", "orders", "—", "To verify", "Q-002", ""])
     f8 = wb["08_API_Fields"]
     f8.append(["API-001", "REQUEST", "query", "status", "string", "No", "enum", "Loc trang thai",
                "EV-0004"])
@@ -170,42 +170,18 @@ def build_inventory(p):
     wb.save(p["inv"])
 
 
-def build_flow(p):
-    os.makedirs(os.path.dirname(p["flow"]), exist_ok=True)
-    json.dump({
-        "title": "Fixture flow",
-        "nodes": [
-            {"id": "n1", "label": "User", "kind": "actor", "row": 0, "ref": ""},
-            {"id": "n2", "label": "Admin site", "kind": "site", "row": 1, "ref": "WEB-01"},
-            {"id": "n3", "label": "Order API", "kind": "api", "row": 2, "ref": "API-001"},
-            {"id": "n4", "label": "Stripe", "kind": "external", "row": 2, "ref": "EXT-001"},
-            {"id": "n5", "label": "Database", "kind": "db", "row": 3, "ref": "table:orders"},
-        ],
-        "edges": [{"from": "n1", "to": "n2"}, {"from": "n2", "to": "n3"},
-                  {"from": "n3", "to": "n4"}, {"from": "n3", "to": "n5"}],
-        "explanation": ["1. User mo Admin site.", "2. Admin site goi Order API.",
-                        "3. Order API goi Stripe va doc Database."],
-    }, open(p["flow"], "w", encoding="utf8"), ensure_ascii=False)
-    fake_png(p["flow_png"])
-
-
 def build_buglist(p):
     wb = new_wb(S.BUG_SHEETS)
-    for k, v in (("bug_scan_scope", "Playwright — man hinh"), ("bug_recipient", "PM noi bo")):
-        wb["00_Meta"].append([k, v])
-    wb["Bugs"].append([
+    wb[S.BUG_SHEET].append([
         "BUG-001", "Nut Luu khong phan hoi", "SC-002", "/orders", "Functional",
         "High", "1. Mo /orders\n2. Bam Luu\n3. Khong co gi xay ra",
         "Luu thanh cong", "Khong phan hoi", "EV-0002", "Yes — 3/3", "Playwright",
-        "User khong luu duoc thay doi", "Chrome 129 · 2026-10-01", "Yes", "Yes", "Open", ""])
-    wb["Suspected"].append([
-        "BUG-002", "Cham khi tai danh sach lon", "SC-002", "/orders", "Performance",
-        "High", "1. Mo /orders\n2. Cuon toi cuoi", "Tai nhanh", "Doi khi cham",
-        "EV-0002", "Intermittent", "Playwright", "Anh huong trai nghiem",
-        "Chrome 129", "Unknown", "Internal only", "Open", ""])
-    wb["Observations"].append([
-        "OBS-001", "Cookie thieu flag Secure", "SC-001",
-        "Header Set-Cookie khong co Secure", "EV-0001", "Can pentest xac nhan", ""])
+        "User khong luu duoc thay doi", "Chrome 129 · 2026-10-01", "Yes", "Open", ""])
+    wb[S.BUG_SHEET].append([   # bug chi doc tu code van vao danh sach neu muc High tro len
+        "BUG-004", "Loc trang thai don bo qua gia tri da chon", "SC-002", "/orders", "Functional",
+        "High", "1. Mo /orders\n2. Chon trang thai roi bam Loc", "Danh sach chi con don dung trang thai",
+        "Handler khong truyen tham so status len API", "EV-0004", S.BUG_CODE_ONLY, "Code review",
+        "Nguoi dung loc don sai", "Chrome 129", S.BUG_PRE_EXISTING[1], "Open", ""])
     os.makedirs(os.path.dirname(p["bug"]), exist_ok=True)
     wb.save(p["bug"])
 
@@ -222,7 +198,6 @@ def build_outputs(p):
     for sub, name in (("02_API", "API_Doc_Fixture_ver1.xlsx"), ("03_DB", "DB_Doc_Fixture_ver1.xlsx")):
         os.makedirs(os.path.join(v, sub), exist_ok=True)
         Workbook().save(os.path.join(v, sub, name))
-    fake_png(os.path.join(v, "02_API", "CodeMap_Fixture_ver1.png"))
     fake_png(os.path.join(v, "03_DB", "ERD_Fixture_ver1.png"))
     os.makedirs(os.path.join(v, "04_DesignSystem", "project"), exist_ok=True)   # O4 = format artifact Design System
     json.dump({"v": 3, "layout": "files", "title": "Fixture"},
@@ -233,13 +208,20 @@ def build_outputs(p):
         "| D1 | primary-hover | khong quan sat duoc |\n| D6 | Toast | khong quan sat duoc |\n")
     os.makedirs(os.path.join(v, "05_Figma"), exist_ok=True)
     open(os.path.join(v, "05_Figma", "figma-links.md"), "w").write(
-        "- SC-001 https://www.figma.com/design/abc/F?node-id=1-2\n"
-        "- SC-002 https://www.figma.com/design/abc/F?node-id=1-3\n")
+        "| Output | Frame | Node URL |\n|---|---|---|\n"
+        "| Output 1 — Flow tổng quan | Flow | https://www.figma.com/design/abcdef/F?node-id=1-2 |\n"
+        "| Output 2 — Screen flow | Screens | https://www.figma.com/design/abcdef/F?node-id=1-3 |\n"
+        "| Sơ đồ DB (ERD) | ERD | https://www.figma.com/board/abcdef/F?node-id=2-2 |\n")
     json.dump({"project_name": "Fixture", "customer": "Cong ty ABC",
                "product_overview": "He thong quan ly don hang noi bo.",
                "actors": [{"actor": "User", "role": "Nhan vien", "main_usage": "Xem don"}],
                "system_composition": ["Frontend: React (REPO-01)", "Backend: NestJS (REPO-02)"]},
               open(p["nar"], "w", encoding="utf8"), ensure_ascii=False)
+    json.dump({"overview": "Nhan vien xem va cap nhat don hang.",
+               "flows": [{"title": "Xem don hang", "actor": "Nhan vien", "screens": ["「注文一覧」"],
+                          "steps": ["Dang nhap.", "Mo danh sach don hang."], "evidence": ["EV-0002"]}],
+               "states": [{"object": "Don hang", "flow": ["Moi", "Da giao"], "question": "Q-001"}]},
+              open(p["biz"], "w", encoding="utf8"), ensure_ascii=False)
     gdir = os.path.join(p["root"], "gates")
     os.makedirs(gdir, exist_ok=True)
     for name in ("v-bd-WEB-01", "v-api", "v-db"):
@@ -250,16 +232,14 @@ def build_outputs(p):
 def render_overview(p):
     sh("build-version-index.py", p["ver"])
     return sh("render-overview-docx.py", "--inventory", p["inv"], "--narrative", p["nar"],
-              "--index", p["index"], "--flow", p["flow"], "--flow-png", p["flow_png"],
-              "--codemap-png", os.path.join(p["ver"], "02_API", "CodeMap_Fixture_ver1.png"),
-              "--erd-png", os.path.join(p["ver"], "03_DB", "ERD_Fixture_ver1.png"),
+              "--business", p["biz"], "--index", p["index"],
+              "--figma-links", os.path.join(p["ver"], "05_Figma", "figma-links.md"),
               "--out", p["docx"])
 
 
 def make_fixture(base):
     p = paths(base)
     build_inventory(p)
-    build_flow(p)
     build_buglist(p)
     build_outputs(p)
     rc, o = render_overview(p)
@@ -356,7 +336,7 @@ def _(p):
     mutate(p["inv"], set_cell("01_Function", 2, "Screen IDs", "SC-999"))
 
 
-@case("V2", "De o trong thay vi ghi UNKNOWN", 11)
+@case("V2", "De o trong thay vi ghi 'Cần xác nhận'", 11)
 def _(p):
     mutate(p["inv"], set_cell("01_Function", 2, "Primary Actor", ""))
 
@@ -412,86 +392,96 @@ def _(p):
     mutate(p["inv"], set_cell("07_API", 3, "API ID", "API-1"))
 
 
-@case("V5", "Node tro toi Function khong ton tai", 4)
+@case("V8", "Workbook co them sheet ngoai 'Bug List'", 1)
 def _(p):
-    edit_json(p["flow"], lambda f: f["nodes"][1].update(ref="F-999"))
+    mutate(p["bug"], lambda wb: wb.create_sheet("Suspected"))
 
 
-@case("V5", "Node tro toi API khong ton tai", 4)
+@case("V8", "Bug website ghi Reproduced = No", 4)
 def _(p):
-    edit_json(p["flow"], lambda f: f["nodes"][2].update(ref="API-999"))
+    mutate(p["bug"], set_cell(S.BUG_SHEET, 2, "Reproduced", "No", S.BUG_SHEETS))
 
 
-@case("V5", "Node mo coi khong noi voi node nao", 6)
-def _(p):
-    edit_json(p["flow"], lambda f: f["nodes"].append(
-        {"id": "n9", "label": "Database", "kind": "db", "row": 4, "ref": "table:users"}))
-
-
-@case("V8", "Bug chua tai hien duoc lot sheet gui khach", 7)
-def _(p):
-    mutate(p["bug"], set_cell("Bugs", 2, "Reproduced", "No", S.BUG_SHEETS))
-
-
-@case("V8", "Bug API doc tu code (URL /api, evidence code-ref)", 8)
+@case("V8", "Bug gan URL /api thay vi man", 7)
 def _(p):
     def f(wb):
-        set_cell("Bugs", 2, "URL / Route", "/api/orders", S.BUG_SHEETS)(wb)
-        set_cell("Bugs", 2, "Evidence", "EV-0004", S.BUG_SHEETS)(wb)
+        set_cell(S.BUG_SHEET, 2, "URL / Route", "/api/orders", S.BUG_SHEETS)(wb)
+        set_cell(S.BUG_SHEET, 2, "Evidence", "EV-0004", S.BUG_SHEETS)(wb)
     mutate(p["bug"], f)
 
 
 @case("V8", "Category Data (khong quan sat tren man)", 4)
 def _(p):
-    mutate(p["bug"], set_cell("Bugs", 2, "Category", "Data", S.BUG_SHEETS))
+    mutate(p["bug"], set_cell(S.BUG_SHEET, 2, "Category", "Data", S.BUG_SHEETS))
 
 
-@case("V8", "Bug gan voi chuc nang F- thay vi man SC-", 15)
+@case("V8", "Bug gan voi chuc nang F- thay vi man SC-", 11)
 def _(p):
-    mutate(p["bug"], set_cell("Bugs", 2, "Screen / Module", "F-001", S.BUG_SHEETS))
+    mutate(p["bug"], set_cell(S.BUG_SHEET, 2, "Screen / Module", "F-001", S.BUG_SHEETS))
 
 
 @case("V8", "Repro Steps chi co 1 buoc", 5)
 def _(p):
-    mutate(p["bug"], set_cell("Bugs", 2, "Repro Steps", "1. Mo /orders", S.BUG_SHEETS))
+    mutate(p["bug"], set_cell(S.BUG_SHEET, 2, "Repro Steps", "1. Mo /orders", S.BUG_SHEETS))
 
 
-@case("V8", "Bug trung lap", 11)
+@case("V8", "Bug trung lap", 9)
 def _(p):
     def f(wb):
-        row = [wb["Bugs"].cell(row=2, column=c).value
-               for c in range(1, len(S.BUG_SHEETS["Bugs"]) + 1)]
+        ws = wb[S.BUG_SHEET]
+        row = [ws.cell(row=2, column=c).value for c in range(1, len(S.BUG_SHEETS[S.BUG_SHEET]) + 1)]
         row[0] = "BUG-003"
-        wb["Bugs"].append(row)
+        ws.append(row)
     mutate(p["bug"], f)
 
 
-@case("V8", "Severity Medium (chi ghi Urgent / High)", 4)
+@case("V8", "Severity Medium (chi ghi High / Urgent)", 4)
 def _(p):
-    mutate(p["bug"], set_cell("Bugs", 2, "Severity", "Medium", S.BUG_SHEETS))
+    mutate(p["bug"], set_cell(S.BUG_SHEET, 2, "Severity", "Medium", S.BUG_SHEETS))
 
 
-@case("V8", "00_Meta bug_recipient con UNKNOWN", 13)
+@case("V8", "00_Meta inventory bug_recipient con 'Cần xác nhận'", 10)
 def _(p):
-    mutate(p["bug"], set_meta("bug_recipient", S.UNKNOWN))
+    mutate(p["inv"], set_meta("bug_recipient", S.NEED_CONFIRM))
 
 
-@case("V8", "Screen / Module khong tro ve SC-/F- co that", 15)
+@case("V8", "code-ref cua bug tro dong khong co that", 7)
 def _(p):
-    mutate(p["bug"], set_cell("Bugs", 2, "Screen / Module", "SC-777", S.BUG_SHEETS))
+    mutate(p["inv"], set_cell("05_Evidence", 5, "Locator", "REPO-02:src/order/order.service.ts#L900"))
 
 
-@case("V3", "Bang output lech index.json (them output sau khi render)", 3)
+@case("V8", "console error la noise cua cong cu quet (read-only-block)", 7)
 def _(p):
-    edit_json(p["index"], lambda d: d["outputs"].append(dict(d["outputs"][0], id="O9")))
+    def f(wb):
+        set_cell("05_Evidence", 3, "Type", "console-log")(wb)
+        set_cell("05_Evidence", 3, "Note", "noise=read-only-block")(wb)
+    mutate(p["inv"], f)
 
 
-@case("V3", "Bang output tro toi file khong ton tai", 4)
+@case("V8", "Detected By Code review nhung chi co anh man", 7)
 def _(p):
-    os.remove(os.path.join(p["ver"], "02_API", "API_Doc_Fixture_ver1.xlsx"))
+    mutate(p["bug"], set_cell(S.BUG_SHEET, 2, "Detected By", "Code review", S.BUG_SHEETS))
 
 
-@case("V3", "Inventory them man hinh sau khi render -> so lieu chuong 3 lech", 5)
+@case("V8", "Bug list con chu cu viet thuong 'Unknown'", 12)
+def _(p):
+    mutate(p["bug"], set_cell(S.BUG_SHEET, 2, "Note", "Unknown", S.BUG_SHEETS))
+
+
+@case("V8", "Screen / Module khong tro ve SC- co that", 11)
+def _(p):
+    mutate(p["bug"], set_cell(S.BUG_SHEET, 2, "Screen / Module", "SC-777", S.BUG_SHEETS))
+
+
+@case("V3", "Docx con chuong cu 'Phụ lục'", 1)
+def _(p):
+    from docx import Document
+    d = Document(p["docx"])
+    d.add_heading("Phụ lục A. Open Questions", level=1)
+    d.save(p["docx"])
+
+
+@case("V3", "Inventory them man hinh sau khi render -> bang tong chuong 3 lech", 3)
 def _(p):
     def f(wb):
         wb["02_Screen"].append(["SC-003", "WEB-01", "/x", "X", "Detail", "User", "—", "F-002",
@@ -499,9 +489,37 @@ def _(p):
     mutate(p["inv"], f)
 
 
-@case("V3", "db_mode=NONE nhung chuong 5 van co bang DB", 8)
+@case("V3", "db_mode=NONE nhung chuong 5 van co bang DB", 5)
 def _(p):
     mutate(p["inv"], set_meta("db_mode", "NONE"))
+
+
+@case("V3", "Chuong 2 nghiep vu co ma noi bo SC-", 7)
+def _(p):
+    edit_json(p["biz"], lambda d: d.update(overview="Xem man SC-001."))
+    render_overview(p)
+
+
+@case("V3", "Luong nghiep vu khong co EV va khong co Q", 8)
+def _(p):
+    edit_json(p["biz"], lambda d: d["flows"][0].pop("evidence"))
+    render_overview(p)
+
+
+@case("V3", "Docx con chu cu viet thuong 'Unknow'", 13)
+def _(p):
+    edit_json(p["nar"], lambda d: d.update(product_overview="He thong Unknow"))
+    render_overview(p)
+
+
+@case("V3", "Khong co link ERD Figma va khong co ghi chu", 14)
+def _(p):
+    from docx import Document
+    d = Document(p["docx"])
+    for para in d.paragraphs:
+        if para.text.startswith("Sơ đồ trên Figma:") and "ERD" in para.text:
+            para._p.getparent().remove(para._p)
+    d.save(p["docx"])
 
 
 def run_gates(p):
@@ -511,11 +529,9 @@ def run_gates(p):
     out["V1"] = (rc, failed_checks(o))
     rc, o = sh("verify-inventory.py", p["inv"])
     out["V2"] = (rc, failed_checks(o))
-    rc, o = sh("verify-flow-png.py", p["flow"], "--inventory", p["inv"], "--png", p["flow_png"])
-    out["V5"] = (rc, failed_checks(o))
     rc, o = sh("verify-bug-list.py", p["bug"], "--inventory", p["inv"])
     out["V8"] = (rc, failed_checks(o))
-    rc, o = sh("verify-overview.py", p["docx"], "--inventory", p["inv"], "--index", p["index"])
+    rc, o = sh("verify-overview.py", p["docx"], "--inventory", p["inv"], "--business", p["biz"])
     out["V3"] = (rc, failed_checks(o))
     return out
 
@@ -543,6 +559,15 @@ def index_cases(tmp):
     got = {e.get("site"): (e.get("link", "")[-2:], e["status"]) for e in o4}
     out.append(("index", "O4 layout WEB-xx/project/ -> 1 dong / site, link + gate rieng",
                 got == {"WEB-01": ("01", "warn"), "WEB-02": ("02", "fail")}, "O4=%s" % got))
+
+    # Folder CR layout moi chua co Impact xlsx -> khong duoc ghi la BASELINE
+    cr0 = os.path.join(d, "CR-002_031026_coupon")
+    os.makedirs(os.path.join(cr0, "_internal"))
+    sh("build-version-index.py", cr0)
+    i0 = json.load(open(os.path.join(cr0, "_internal", "index.json"), encoding="utf8"))
+    out.append(("index", "Folder CR-<id>_… chua co Impact xlsx -> version_type CR, dong CR = chua co file",
+                i0["version_type"] == "CR" and i0["outputs"][0]["status"] == "fail", "%s %s" % (i0["version_type"], i0["outputs"])))
+    shutil.rmtree(cr0)
 
     # Thu muc CR
     cr = os.path.join(d, "ver2_021026_CR-001-otp")
@@ -581,6 +606,329 @@ def index_cases(tmp):
     e = {x["id"]: x for x in json.load(open(os.path.join(cr, "_internal", "index.json"), encoding="utf8"))["outputs"]}
     out.append(("index", "CR: co gate v-cr-figma -> dong Figma theo gate (FAIL)",
                 e["O5"]["gate"] == "FAIL" and e["CR"]["gate"] == "PASS", "O5=%s CR=%s" % (e["O5"]["gate"], e["CR"]["gate"])))
+
+    # O5: --skip luon duoc ton trong (ke ca da co figma-links.md); figma-links chua co link -> "chưa vẽ"
+    d5 = os.path.join(tmp, "o5skip")
+    shutil.copytree(os.path.join(tmp, "good"), d5)
+    v5 = os.path.join(d5, VER)
+
+    def o5(*args):
+        sh("build-version-index.py", v5, *args)
+        return next(x for x in json.load(open(os.path.join(v5, "_internal", "index.json"), encoding="utf8"))["outputs"]
+                    if x["id"] == "O5")
+    e5 = o5("--skip", "O5=lam o buoc sau")
+    out.append(("index", "--skip O5 khi da co 05_Figma/figma-links.md -> O5 skip dung ly do",
+                e5["status"] == "skip" and "lam o buoc sau" in e5["status_text"], str(e5.get("status_text"))))
+    open(os.path.join(v5, "05_Figma", "figma-links.md"), "w", encoding="utf8").write(
+        "# Figma\n\n| So do | Link |\n|---|---|\n| API map | (chua ve) |\n")
+    e5 = o5()
+    out.append(("index", "figma-links.md chua co link figma.com -> O5 'chưa vẽ' (khong phai 'chưa chạy gate')",
+                e5["status"] == "skip" and "chưa vẽ" in e5["status_text"], str(e5.get("status_text"))))
+    return out
+
+
+# ---------- scan-repo: tsconfig baseUrl/paths · template `${APIs.X}/${id}` · --sensitive-memory ----------
+SCAN_REPO = {
+    "package.json": '{"dependencies":{"next":"14.0.0","react":"18.2.0","axios":"1.6.0"}}',
+    "tsconfig.json": """{
+  // comment + dau phay thua (JSONC)
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "baseUrl": "./src", /* bare import -> src/ */
+    "paths": { "#lib/*": ["lib/*"], },
+  },
+}
+""",
+    "src/libs/apis.ts": "export const APIs = {\n  ORDER: '/api/orders',\n};\n",
+    "src/other/apis.ts": "export const APIs = {\n  ORDER: '/api/other',\n};\n",   # trung ten hang so
+    "src/lib/http.ts": "import axios from 'axios';\nexport const http = axios;\n",
+    "src/services/order.ts": """import { http } from '#lib/http';
+import { APIs } from 'libs/apis';
+export const removeOrder = (id: number) => http.delete(`${APIs.ORDER}/${id}`);
+export const listOrders = () => http.get(APIs.ORDER);
+""",
+    "src/components/ChangePasswordForm.tsx": """import { removeOrder } from 'services/order';
+export default function ChangePasswordForm({ id }) {
+  const handleRemove = async () => { await removeOrder(id); };
+  return <IconButton aria-label="delete" onClick={handleRemove}><DeleteIcon /></IconButton>;
+}
+""",
+    "src/pages/orders.tsx": """import { listOrders } from 'services/order';
+import ChangePasswordForm from 'components/ChangePasswordForm';
+import { useEffect } from 'react';
+export default function Orders() {
+  useEffect(() => { listOrders(); }, []);
+  return <div><ChangePasswordForm id={1} /></div>;
+}
+""",
+    "src/pages/api/orders/index.ts": "export default function h(req, res) { if (req.method === 'GET') return res.json([]); }\n",
+    "src/pages/api/orders/[id].ts": "export default function h(req, res) { if (req.method === 'DELETE') return res.json({}); }\n",
+    ".yarnrc.yml": "npmAuthToken: fixture\n",
+    ".env": "X=fixture\n",
+    "src/secret_token.ts": "export const x = 1;\n",
+}
+
+
+def scan_cases(tmp):
+    import csv as _csv
+    out = []
+    base = os.path.join(tmp, "scan")
+    repo = os.path.join(base, "web")
+    for rel, text in SCAN_REPO.items():
+        os.makedirs(os.path.dirname(os.path.join(repo, rel)), exist_ok=True)
+        open(os.path.join(repo, rel), "w", encoding="utf8").write(text)
+    mem = os.path.join(base, "preflight-memory.json")
+    json.dump({"answers": {}, "sensitive": [
+        {"classification": "[A] Báo nhầm — tên file chứa password", "by_role": "PM", "date": "2026-10-28",
+         "files": ["web/src/components/ChangePasswordForm.tsx", "web/.yarnrc.yml", "web/.env"]},
+        {"classification": "[B] Không mở", "by_role": "PM", "date": "2026-10-28", "files": ["web/src/secret_token.ts"]}]},
+        open(mem, "w", encoding="utf8"), ensure_ascii=False)
+
+    def run(*extra):
+        I = os.path.join(base, "I%d" % len(extra))
+        rc, o = sh("scan-repo.py", repo, "--repo-id", "REPO-01", "--out", I, *extra)
+        code = os.path.join(I, "recon", "code", "REPO-01")
+        edges = list(_csv.DictReader(open(os.path.join(code, "fe-api-calls.csv"), encoding="utf8"))) if rc == 0 else []
+        sk = json.load(open(os.path.join(code, "skipped-sensitive.json"), encoding="utf8")) if rc == 0 else {}
+        sf = json.load(open(os.path.join(code, "fe-screen-files.json"), encoding="utf8")) if rc == 0 else {}
+        return rc, edges, sk, sf
+    rc, edges, sk, sf = run()
+    got = sorted((e["Trigger"], e["Method"], e["Path"]) for e in edges)
+    out.append(("R1", "scan-repo: import theo tsconfig baseUrl ('services/order') + paths ('#lib/*'), JSONC -> co canh mount",
+                rc == 0 and ("mount", "GET", "/api/orders") in got, "got=%s" % got))
+    out.append(("R1", "scan-repo: khong --sensitive-memory -> file ten chua 'password' van bi bo qua",
+                "src/components/ChangePasswordForm.tsx" in {x["path"] for x in sk.get("sensitive", [])}
+                and not any(e["Method"] == "DELETE" for e in edges), str(sk.get("sensitive"))))
+    rc, edges, sk, sf = run("--sensitive-memory", mem)
+    got = sorted((e["Trigger"], e["Method"], e["Path"], e["API ID"] != "—") for e in edges)
+    skipped = {x["path"]: x["reason"] for x in sk.get("sensitive", [])}
+    out.append(("R1", "scan-repo: template `${APIs.ORDER}/${id}` -> /api/orders/:id (hang so cua file import, ten trung)",
+                ("handleRemove → onClick", "DELETE", "/api/orders/:id", True) in got, "got=%s" % got))
+    out.append(("R1", "--sensitive-memory: chi mo lai file 'báo nhầm' bi chan vi ten; .env / .yarnrc.yml / [B] van chan",
+                sk.get("reopened") == ["src/components/ChangePasswordForm.tsx"]
+                and skipped == {".env": "env-file", ".yarnrc.yml": "credential-config", "src/secret_token.ts": "name-keyword"},
+                "reopened=%s skipped=%s" % (sk.get("reopened"), skipped)))
+    out.append(("R1", "fe-screen-files.json: route -> file component cua man (cho build-basic-design tra handler)",
+                sf.get("/orders") == ["src/pages/orders.tsx", "src/components/ChangePasswordForm.tsx"], str(sf)))
+    return out
+
+
+# ---------- R1 code-first: Prisma + migration -> gate schema · do thi FE -> API · commit ----------
+R1_REPO = {
+    "package.json": '{"dependencies":{"next":"14.0.0","react":"18.2.0","@prisma/client":"5.0.0","axios":"1.6.0"}}',
+    "prisma/schema.prisma": """datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+enum Role {
+  ADMIN
+  USER
+}
+/// Tai khoan
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique @db.VarChar(255)
+  role      Role     @default(USER)
+  orders    Order[]
+  createdAt DateTime @default(now()) @map("created_at")
+  @@map("users")
+}
+model Order {
+  id     Int     @id @default(autoincrement())
+  userId Int     @map("user_id")
+  user   User    @relation(fields: [userId], references: [id])
+  note   String?
+  @@map("orders")
+}
+""",
+    "prisma/migrations/20240101000000_init/migration.sql": """CREATE TYPE "Role" AS ENUM ('ADMIN', 'USER');
+CREATE TABLE "users" ("id" SERIAL NOT NULL, "email" VARCHAR(255) NOT NULL, "role" "Role" NOT NULL DEFAULT 'USER',
+  "legacy" BOOLEAN, "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "users_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "orders" ("id" SERIAL NOT NULL, "user_id" INTEGER NOT NULL, CONSTRAINT "orders_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "tmp_import" ("id" SERIAL NOT NULL);
+ALTER TABLE "orders" ADD CONSTRAINT "orders_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id");
+""",
+    "prisma/migrations/20240201000000_note/migration.sql": """ALTER TABLE "orders" ADD COLUMN "note" TEXT;
+ALTER TABLE "users" DROP COLUMN "legacy";
+DROP TABLE "tmp_import";
+""",
+    "src/services/order.service.ts": """import axios from 'axios';
+export const getOrders = async () => (await axios.get('/api/orders')).data;
+export const createOrder = (body: unknown) => axios.post('/api/orders', body);
+""",
+    "src/services/index.ts": "export * from './order.service';\n",
+    "src/hooks/useOrders.ts": """import { useEffect, useState } from 'react';
+import { getOrders } from '@/services';
+export function useOrders() {
+  const [d, setD] = useState([]);
+  useEffect(() => { getOrders().then(setD); }, []);
+  return d;
+}
+""",
+    "src/components/Shared.tsx": "export default function Shared() { return <div>x</div>; }\n",
+    "src/pages/orders.tsx": """import { useOrders } from '@/hooks/useOrders';
+import { createOrder } from '@/services';
+import Shared from '@/components/Shared';
+const OrdersPage = () => {
+  const rows = useOrders();
+  const handleSave = async () => { await createOrder({}); };
+  return (<div><Shared /><button onClick={handleSave}>保存</button></div>);
+};
+export default OrdersPage;
+""",
+    "src/pages/about.tsx": """import Shared from '@/components/Shared';
+import { getOrders } from '@/services/order.service';
+export default function About() { return <Shared />; }
+""",
+    "src/pages/api/orders.ts": """export default async function handler(req, res) {
+  if (req.user?.role !== 'ADMIN') return res.status(403).end();
+  if (req.method === 'GET') return res.json([]);
+  if (req.method === 'POST') return res.json({});
+}
+""",
+}
+
+
+def r1_cases(tmp):
+    import csv as _csv
+    out = []
+    repo = os.path.join(tmp, "r1", "repo")
+    for rel, text in R1_REPO.items():
+        os.makedirs(os.path.dirname(os.path.join(repo, rel)), exist_ok=True)
+        open(os.path.join(repo, rel), "w", encoding="utf8").write(text)
+    I = os.path.join(tmp, "r1", "_internal")
+
+    # 1 read-orm-schema: model + replay migration (ADD / DROP COLUMN / DROP TABLE / enum co ngoac kep)
+    rc, o = sh("read-orm-schema.py", repo, "--repo-id", "REPO-01", "--out", I, "--ev-start", "1")
+    dbc = os.path.join(I, "recon", "db-code", "REPO-01")
+    cs = list(_csv.DictReader(open(os.path.join(dbc, "code-schema.csv"), encoding="utf8"))) if rc == 0 else []
+    got = sorted((r["Table"], r["Column"]) for r in cs)
+    want = sorted([("users", "id"), ("users", "email"), ("users", "role"), ("users", "created_at"),
+                   ("orders", "id"), ("orders", "user_id"), ("orders", "note")])
+    cols = list(_csv.DictReader(open(os.path.join(dbc, "columns.csv"), encoding="utf8"))) if rc == 0 else []
+    fk = next((c["FK"] for c in cols if c["Table"] == "orders" and c["Column"] == "user_id"), None)
+    out.append(("R1", "read-orm-schema: Prisma model + migration replay (@map, DROP, enum, FK)",
+                rc == 0 and got == want and fk == "users.id" and '"mismatches": 0' in o,
+                "rc=%s got=%s fk=%s" % (rc, got, fk)))
+
+    # 2 gate schema: inventory nap tu tables/columns -> check 10 PASS; mat 1 cot / 1 bang -> FAIL
+    def inventory(drop_col=None, drop_table=None):
+        wb = new_wb(S.SHEETS)
+        meta = {k: "—" for k in S.META_KEYS}
+        meta.update({"system_name": "R1", "db_mode": "MIGRATION"})
+        for k in S.META_KEYS:
+            wb["00_Meta"].append([k, meta[k]])
+        for sheet, fn in (("03_DB_Tables", "tables.csv"), ("04_DB_Columns", "columns.csv"), ("05_Evidence", "evidence.csv")):
+            for r in _csv.DictReader(open(os.path.join(dbc, fn), encoding="utf8")):
+                if (r.get("Table"), r.get("Column")) == drop_col or (drop_table and r.get("Table") == drop_table):
+                    continue
+                wb[sheet].append([r.get(h, "") for h in S.SHEETS[sheet]])
+        wb["11_Repo"].append(["REPO-01", repo, "FULLSTACK", "Next.js", "WEB-01", ""])
+        p = os.path.join(tmp, "r1", "inv_%s_%s.xlsx" % (drop_col and drop_col[1], drop_table))
+        wb.save(p)
+        return p
+
+    def gate(inv):
+        doc = inv.replace(".xlsx", "_doc.xlsx")
+        sh("build-db-doc.py", "--inventory", inv, "--system", "R1", "--version", "ver1", "--out", doc)
+        return sh("verify-db-doc.py", doc, "--inventory", inv, "--code-schema", os.path.join(dbc, "code-schema.csv"))
+    rc, o = gate(inventory())
+    out.append(("R1", "Gate schema: inventory du bang/cot tu code -> verify-db-doc check 10 PASS",
+                10 not in failed_checks(o) and "| 10 |" in o, "FAIL: %s" % failed_checks(o)))
+    rc, o = gate(inventory(drop_col=("orders", "note")))
+    out.append(("R1", "Gate schema: xoa cot orders.note khoi 04_DB_Columns -> check 10 FAIL",
+                10 in failed_checks(o) and "orders.note" in o, "FAIL: %s" % failed_checks(o)))
+    rc, o = gate(inventory(drop_table="users"))
+    out.append(("R1", "Gate schema: thieu ca bang users trong 03 -> check 10 FAIL",
+                10 in failed_checks(o) and "bang users" in o, "FAIL: %s" % failed_checks(o)))
+
+    # 3 scan-repo: do thi FE -> API muc ky hieu (about import getOrders nhung khong dung -> khong co canh)
+    rc, o = sh("scan-repo.py", repo, "--repo-id", "REPO-01", "--out", I, "--ev-start", "100")
+    code = os.path.join(I, "recon", "code", "REPO-01")
+    edges = list(_csv.DictReader(open(os.path.join(code, "fe-api-calls.csv"), encoding="utf8"))) if rc == 0 else []
+    got = sorted((e["Screen Route"], e["Trigger"], e["UI Label"], e["Method"], e["API ID"] != "—", e["Confidence"]) for e in edges)
+    want = sorted([("/orders", "mount", "—", "GET", True, "static"),
+                   ("/orders", "handleSave → onClick", "保存", "POST", True, "static")])
+    out.append(("R1", "scan-repo fe-api-calls.csv: man -> trigger/nut -> API ID, khong gan nham man khong goi",
+                got == want, "got=%s" % got))
+    roles = list(_csv.DictReader(open(os.path.join(code, "api-roles.csv"), encoding="utf8"))) if rc == 0 else []
+    out.append(("R1", "scan-repo api-roles.csv: role doc tu so sanh role trong handler",
+                bool(roles) and all(r["Roles"] == "ADMIN" for r in roles), str(roles)[:200]))
+
+    # 4 commit: lan sau so voi 00_Meta.repo_commit -> khong doi / doi
+    commit = json.loads(o[o.index("{"):o.rindex("}") + 1])["commit"] if rc == 0 else ""
+    wb = new_wb({"00_Meta": S.SHEETS["00_Meta"]})
+    wb["00_Meta"].append(["repo_commit", "REPO-01=%s;REPO-02=abc" % commit])
+    prev = os.path.join(tmp, "r1", "prev.xlsx")
+    wb.save(prev)
+    rc1, o1 = sh("scan-repo.py", repo, "--repo-id", "REPO-01", "--out", I, "--commit-only", "--prev-inventory", prev)
+    open(os.path.join(repo, "src", "pages", "about.tsx"), "a", encoding="utf8").write("// doi\n")
+    rc2, o2 = sh("scan-repo.py", repo, "--repo-id", "REPO-01", "--out", I, "--commit-only", "--prev-inventory", prev)
+    out.append(("R1", "repo_commit: hash khong doi -> commit_changed=false; sua 1 file -> true",
+                bool(commit) and '"commit_changed": false' in o1 and '"commit_changed": true' in o2,
+                "%s | %s" % (o1[-80:], o2[-80:])))
+    return out
+
+
+def legacy_cases(tmp):
+    """Version cu (truoc D1) con chu UNKNOWN -> carry bang build-inventory.py --carry-from tu doi."""
+    old = os.path.join(tmp, "legacy_old.xlsx")
+    wb = new_wb(S.SHEETS)
+    wb["07_API"].append(["API-001", "Order", "API", "GET", "/api/orders", "UNKNOWN", "UNKNOWN — chua ro",  # du lieu cu
+                         "—", "REPO-01", "—", "—", "—", "UNKNOWN", "Q-001", ""])
+    wb.save(old)
+    new = os.path.join(tmp, "legacy_new.xlsx")
+    rc, o = sh("build-inventory.py", "--out", new, "--carry-from", old)
+    r = S.load(new)["07_API"][0] if rc == 0 else {}
+    ok = (r.get("Status") == "To verify" and r.get("Summary") == S.NEED_CONFIRM
+          and r.get("Auth", "").startswith(S.NEED_CONFIRM + " —") and S.LEGACY_WORD not in str(r))
+    return [("legacy", "Carry version cu: UNKNOWN -> Status 'To verify', o noi dung 'Cần xác nhận'", ok,
+             "rc=%s %s" % (rc, {k: r.get(k) for k in ("Summary", "Auth", "Status")}))]
+
+
+def preflight_cases(tmp):
+    """R9 · D8: preflight-memory.py — memory du -> khong hoi lai (tru 4 cau an toan dang xac nhan), khong credential."""
+    out = []
+    outs = os.path.join(tmp, "pm", "outputs")
+    mem = os.path.join(outs, "_project", "preflight-memory.json")
+    spec = importlib.util.spec_from_file_location("pm", os.path.join(HERE, "preflight-memory.py"))
+    PM = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(PM)
+    # 00_Meta cua baseline -> P0a duoc ke thua, khong hoi lai
+    inv = os.path.join(outs, VER, "_internal", "inventory.xlsx")
+    os.makedirs(os.path.dirname(inv))
+    wb = new_wb({"00_Meta": S.SHEETS["00_Meta"]})
+    wb["00_Meta"].append(["system_name", "Fixture"])
+    wb["00_Meta"].append(["version_type", "BASELINE"])
+    wb.save(inv)
+    for code, _, _, _ in PM.QUESTIONS:
+        if code != "P0a":
+            sh("preflight-memory.py", "set", "--outputs", outs, "--code", code, "--answer", "ok " + code, "--by-role", "PM")
+    rc, o = sh("preflight-memory.py", "missing", "--outputs", outs)
+    j = json.loads(o) if rc == 0 else {}
+    p0a = [x for x in j.get("confirm_table", []) if x["code"] == "P0a"]
+    out.append(("R9", "Memory du + 00_Meta -> ask rong, 4 cau an toan o confirm_safety, P0a ke thua 00_Meta",
+                rc == 0 and j["ask"] == [] and sorted(x["code"] for x in j["confirm_safety"]) == sorted(PM.SAFETY)
+                and len(PM.SAFETY) == 4 and p0a and p0a[0]["source"] == PM.SOURCES["meta"], o[-300:]))
+    sh("preflight-memory.py", "set", "--outputs", outs, "--code", "P7", "--pending", "--by-role", "PM")
+    rc1, _ = sh("preflight-memory.py", "set", "--outputs", outs, "--code", "P11", "--pending", "--by-role", "PM")
+    j = json.loads(sh("preflight-memory.py", "missing", "--outputs", outs)[1])
+    out.append(("R9", "Bo qua cau thuong -> pending, hoi lai; cau an toan khong cho bo qua (exit 2)",
+                rc1 == 2 and [x["code"] for x in j["ask"]] == ["P7"] and j["ask"][0]["why"] == "pending", str(j["ask"])))
+    secret = "pass" + "word=" + "Abc" + "12345"
+    rc2, _ = sh("preflight-memory.py", "set", "--outputs", outs, "--code", "P2a", "--answer", "admin " + secret,
+                "--by-role", "PM")
+    txt = open(mem, encoding="utf8").read()
+    rc3 = subprocess.run(["node", os.path.join(HERE, "..", "..", "..", "hooks", "detect-pii.js"), "--scan", mem],
+                         capture_output=True, text=True).returncode
+    out.append(("R9", "Cau tra loi giong credential bi tu choi (exit 2); file memory khong co credential (H06 scan sach)",
+                rc2 == 2 and secret not in txt and not PM.CRED_RX.search(txt) and rc3 == 0, "rc=%s scan=%s" % (rc2, rc3)))
+    sh("preflight-memory.py", "set-sensitive", "--outputs", outs, "--classification", "Du lieu mau do khach tao",
+       "--files", "inputs/repo/api/seed.json", "--by-role", "PM")
+    j = json.loads(sh("preflight-memory.py", "missing", "--outputs", outs, "--sensitive-files",
+                      "inputs/repo/api/seed.json", "inputs/repo/api/new.json")[1])
+    out.append(("R9", "S1 da phan loai -> khong hoi lai; file moi -> sensitive_unclassified",
+                j["sensitive_unclassified"] == ["inputs/repo/api/new.json"], str(j["sensitive_unclassified"])))
     return out
 
 
@@ -602,6 +950,26 @@ def main():
     ok = o4.get("link") == "https://claude.ai/artifact/FixtureDs01" and "2 TBD · DRAFT" in str(o4.get("count"))
     results.append(("index", "O4 doc link/trang thai/TBD tu STATUS.md", ok, "O4=%s" % {k: o4.get(k) for k in ("link", "count")}))
     results += index_cases(tmp)
+    results += r1_cases(tmp)
+    results += scan_cases(tmp)
+    results += legacy_cases(tmp)
+    results += preflight_cases(tmp)
+    # Khong co link Figma -> chuong 5 ghi chu "xem anh ERD trong 03_DB" -> V3 van PASS
+    d = os.path.join(tmp, "nolink")
+    shutil.copytree(os.path.join(tmp, "good"), d)
+    pn = paths(d)
+    os.remove(os.path.join(pn["ver"], "05_Figma", "figma-links.md"))
+    render_overview(pn)
+    from docx_read import Docx
+    dx = Docx(pn["docx"])
+    fails = run_gates(pn)["V3"][1]
+    results.append(("V3", "Khong co link Figma -> ghi chu ERD o chuong 5 -> PASS", not fails and
+                    sum(1 for _, t in dx.paragraphs if t.startswith("Chưa có sơ đồ trên Figma")) == 1, "FAIL: %s" % fails))
+    gx = Docx(good["docx"])
+    ft = [t for _, t in gx.paragraphs if t.startswith("Sơ đồ trên Figma:") and "figma.com" in t]
+    results.append(("V3", "Co figma-links.md -> 2 link Figma (luong Output 1 · ERD), khong co so do API",
+                    len(ft) == 2 and not any("API" in t for t in ft),
+                    str([t for _, t in gx.paragraphs if "Figma" in t])))
 
     # 1 — tung ca tiem loi (repo gia nam trong thu muc fixture -> sua Path theo ban copy)
     for i, (gate, name, expect, fn) in enumerate(CASES):
@@ -623,7 +991,7 @@ def main():
     tpl = os.path.abspath(os.path.join(HERE, "..", "..", "..", "..",
                                        "templates", "high-level-template.docx"))
     if os.path.isfile(tpl):
-        rc, o = sh("verify-overview.py", tpl, "--inventory", good["inv"], "--index", good["index"])
+        rc, o = sh("verify-overview.py", tpl, "--inventory", good["inv"], "--business", good["biz"])
         fails = failed_checks(o)
         results.append(("V3", "Template goc (con placeholder) phai FAIL check 2",
                         2 in fails, "FAIL: %s" % fails))

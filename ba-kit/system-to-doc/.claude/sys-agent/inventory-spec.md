@@ -2,7 +2,7 @@
 
 > **Artifact nội bộ của agent. KHÔNG phải deliverable cho user, KHÔNG nhắc trong README.**
 >
-> File: `outputs/ver<N>_<DDMMYY>_<slug>/_internal/inventory.xlsx`. Mọi bảng trong O1–O7 sinh từ file này; Luồng 2 đọc nó làm baseline.
+> File: `outputs/ver<N>_<DDMMYY>_<slug>/_internal/inventory.xlsx`. Mọi bảng trong O1–O9 sinh từ file này; Luồng 2 đọc nó làm baseline.
 >
 > Tên sheet / cột là **hợp đồng cứng**, định nghĩa duy nhất ở `.claude/skills/system-analyst/scripts/inv_schema.py`. Đổi cột → sửa `inv_schema.py` + file này.
 
@@ -37,6 +37,8 @@
 
 Header luôn ở **row 1**. Data từ **row 2**. Không merge cell, không sheet ẩn, không công thức.
 
+**Ô chưa có bằng chứng (D1):** ghi `Cần xác nhận` (kèm `— Q-xxx` khi đã có câu hỏi), cột trạng thái = `To verify` + Open Question. Không để trống, không lấp bằng nội dung không có căn cứ. Enum trạng thái chỉ còn `Confirmed` · `Inferred` · `To verify` (+ `CONFLICT` ở `01_Function`). Inventory của version cũ còn chữ cũ → `inv_schema.load` tự đổi khi đọc; carry sang version mới bằng `build-inventory.py --out <mới> --carry-from <cũ>`.
+
 ---
 
 ## 2. `00_Meta` — 2 cột `Key` · `Value`
@@ -52,10 +54,12 @@ Header luôn ở **row 1**. Data từ **row 2**. Không merge cell, không sheet
 | `crawl_mode` | `READ_ONLY` · `SUBMIT_STAGING` · `SUBMIT_PROD` · `NO_CRAWL` | P3 (mặc định `READ_ONLY`) |
 | `forbidden_zones` | `/admin/batch/*; nút 削除` | P4 |
 | `source_repos` | `REPO-01=/src/web(FE→WEB-01);REPO-02=/src/api(BE)` | P5 |
+| `repo_commit` | `REPO-01=3f2a…;REPO-02=tree@9c1e…` (stdout `commit` của `scan-repo.py`; `+dirty:<hash>` = có thay đổi chưa commit) — lần sau `scan-repo.py --commit-only --prev-inventory` so để biết repo đổi chưa | Bước 4 Pha A |
 | `db_mode` | `DUMP` · `READONLY_CONN` · `MIGRATION` · `NONE` | P6 |
 | `figma_input_url` · `figma_output_url` | link hoặc `—` | P7 · P8 |
 | `bug_list` · `bug_recipient` · `bug_scan_scope` | `YES` · `Nội bộ review trước` · `Blackbox` | P9 |
 | `lang` · `audience` | `VN` · `Nội bộ` | P10 |
+| `baseline` | folder baseline gốc: CR → baseline CR trỏ tới · baseline mới (promote) → baseline trước · ver1 → `—` | `version-tool.py` (`version-meta.json`) |
 | `sensitive_scan` | `clean` / `stopped: <file> (đã xử lý: …)` | Bước 3 |
 | `env_observed` · `crawl_budget_used` | `Chrome · 2026-10-01 14:00–15:20` · `137/200 URL · 22 phút` | recon |
 
@@ -147,7 +151,7 @@ Chi tiết cách thu thập + quy ước đặt tên file → `evidence-ledger.m
 
 ## 8. `06_OpenQuestions`
 
-`Q ID` (`Q-001`) · `Type` (`Unknown` · `Inference` · `Risk` · `CONFLICT`) · `Item` · `Reason / Evidence` · `Required Action` · `Owner` · `Status` (`Open` · `Answered` · `Closed`) · `Note`
+`Q ID` (`Q-001`) · `Type` (`Thiếu thông tin` · `Inference` · `Risk` · `CONFLICT`) · `Item` · `Reason / Evidence` · `Required Action` · `Owner` · `Status` (`Open` · `Answered` · `Closed`) · `Note`
 
 = Appendix A của docx. Gate V2 đối chiếu cơ học: mọi dòng `01_Function` có `Status ≠ Confirmed` **phải** có `Q ID` tương ứng ở đây.
 
@@ -177,26 +181,16 @@ Chi tiết cách thu thập + quy ước đặt tên file → `evidence-ledger.m
 
 ## 11. Bug List workbook (O7) — schema riêng
 
-File `07_BugList/BugList_<sys>_ver<N>.xlsx`, 4 sheet:
+File `07_BugList/BugList_<sys>_ver<N>.xlsx`, **1 sheet `Bug List`** — bug mức High / Urgent ảnh hưởng thao tác người dùng, từ code và / hoặc website. Phạm vi quét (`bug_scan_scope`) + người nhận (`bug_recipient`) ở `00_Meta` của inventory.
 
-| Sheet | Nội dung | Gửi KH? |
-|---|---|---|
-| `00_Meta` | như trên (`bug_scan_scope`, `bug_recipient` bắt buộc) | — |
-| `Bugs` | bug đã reproduce được | ✅ |
-| `Suspected` | nghi ngờ, chưa reproduce | ❌ nội bộ |
-| `Observations` | quan sát cần điều tra (gồm mọi nghi vấn security chưa có PoC) | ❌ nội bộ |
-
-**Cột sheet `Bugs` / `Suspected`:**
-
-`Bug ID` · `Title` · `Screen / Module` · `URL / Route` · `Category` · `Severity` · `Repro Steps` · `Expected` · `Actual` · `Evidence` · `Reproduced` · `Detected By` · `Business Impact` · `Env` · `Pre-existing` · `Report To Customer` · `Status` · `Note`
+`Bug ID` · `Title` · `Screen / Module` · `URL / Route` · `Category` · `Severity` · `Repro Steps` · `Expected` · `Actual` · `Evidence` · `Reproduced` · `Detected By` · `Business Impact` · `Env` · `Pre-existing` · `Status` · `Note`
 
 | Cột | Enum |
 |---|---|
 | `Category` | `Functional` · `UI/Layout` · `Performance` · `Compatibility` |
-| `Severity` | `Urgent` · `High` (Medium / Low không ghi) |
-| `Reproduced` | `Yes — n/n` · `Intermittent` · `No` |
-| `Detected By` | `Playwright` (lỗi quan sát trên màn khi quét — kể cả console / network của chính trang đó) |
-| `Pre-existing` | `Yes` · `Unknown` |
-| `Report To Customer` | `Yes` · `Internal only` |
+| `Severity` | `Urgent` · `High` (thấp hơn không ghi) |
+| `Reproduced` | `Yes — n/n` · `Intermittent` · `Chỉ đọc từ code` |
+| `Detected By` | `Code review` · `Playwright` · `Code review + Playwright` — phải khớp loại EV (code-ref / screenshot·console-log·har) |
+| `Pre-existing` | `Yes` · `Cần xác nhận` |
 
 Ràng buộc gate V8 → `outputs/o7-bug-list.md`.

@@ -366,7 +366,6 @@ def write_sheet(ws, est, rates, rates_meta, tm, lang, internal=False):
     for k, line in enumerate(Lb["notes"]):
         ws.cell(row=r + 1 + k, column=ci["no"], value=line.format(**fmt))
     ws.print_area = "A1:%s%d" % (CL(maxc), r + 1 + len(Lb["notes"]))
-    ws.freeze_panes = "%s%d" % (col["content"], hdr + 2)
     return {"first": first, "last": last, "row_step1": tr, "row_all": tr + 2, "row_month": tr + 3, "col": col,
             "col_pattern": CL(extra["pattern"]), "rows": n}
 
@@ -422,7 +421,6 @@ def write_questions(wb, est, lang, font_name):
             c.alignment = Alignment(vertical="top", wrap_text=True, horizontal="center" if k in (1, 7) else "left")
         ws.cell(row=3 + n, column=8).fill = PatternFill("solid", fgColor="FFFFF9EB")
         ws.row_dimensions[3 + n].height = 70
-    ws.freeze_panes = "C4"
 
 
 def build_workbook(est, rates, rates_meta, template, lang, internal=False):
@@ -437,6 +435,7 @@ def build_workbook(est, rates, rates_meta, template, lang, internal=False):
     if est.get("questions"):
         write_questions(wb, est, lang, ws.cell(row=int(tm["row_header"]), column=2).font.name)
     for s in wb.worksheets:
+        s.freeze_panes = None  # template co the freeze san — kit khong freeze (R13)
         for row in s.iter_rows():
             for c in row:
                 if isinstance(c.value, float):

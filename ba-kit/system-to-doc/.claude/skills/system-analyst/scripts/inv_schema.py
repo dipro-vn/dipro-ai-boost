@@ -5,14 +5,18 @@ Moi gate script va build-inventory.py deu import tu day.
 Doi ten cot => chi doi o file nay, KHONG hardcode o noi khac.
 Tai lieu nguoi doc: .claude/sys-agent/inventory-spec.md
 """
+import re
 
 META_KEYS = [
     "system_name", "customer", "version_label", "version_folder", "version_type",
     "generated_date", "previous_version", "run_mode",
     "scope", "websites", "accounts", "access_approved_by", "crawl_mode",
-    "forbidden_zones", "source_repos", "db_mode", "figma_input_url", "ds_publish",
+    "forbidden_zones", "source_repos",
+    "repo_commit",  # "REPO-01=<commit>;REPO-02=<commit>" (scan-repo.py stdout) — so lan sau de biet repo doi chua
+    "db_mode", "figma_input_url", "ds_publish",
     "figma_output_url", "bug_list", "bug_recipient", "bug_scan_scope",
     "lang", "audience",
+    "baseline",  # folder baseline goc (CR: baseline CR tro toi · baseline moi: baseline truoc + CR da promote)
     "sensitive_scan", "env_observed", "crawl_budget_used",
 ]
 
@@ -67,20 +71,17 @@ SHEETS = {
     ],
 }
 
+# O7 — 1 sheet duy nhat (feedback 28/10/2026): bug muc High tro len, anh huong thao tac nguoi dung,
+# tim thay khi doc source code va / hoac khi crawl website. Pham vi quet + nguoi nhan nam o 00_Meta cua inventory.
+BUG_SHEET = "Bug List"
 BUG_SHEETS = {
-    "00_Meta": ["Key", "Value"],
-    "Bugs": [
+    BUG_SHEET: [
         "Bug ID", "Title", "Screen / Module", "URL / Route", "Category",
         "Severity", "Repro Steps", "Expected", "Actual", "Evidence",
         "Reproduced", "Detected By", "Business Impact", "Env",
-        "Pre-existing", "Report To Customer", "Status", "Note",
-    ],
-    "Observations": [
-        "Obs ID", "Title", "Screen / Module", "Why suspicious",
-        "Evidence", "Suggested investigation", "Note",
+        "Pre-existing", "Status", "Note",
     ],
 }
-BUG_SHEETS["Suspected"] = list(BUG_SHEETS["Bugs"])
 
 # --- Enum ---
 FUNCTION_STATUS = ["Confirmed", "To verify", "Inferred", "CONFLICT"]
@@ -89,7 +90,7 @@ SCREEN_TYPE = ["List", "Detail", "Form", "Modal", "Error", "Other"]
 EVIDENCE_TYPE = ["screenshot", "har", "console-log", "code-ref", "db-query", "doc-quote"]
 EVIDENCE_NEEDS_ARTIFACT = ["screenshot", "har", "console-log"]
 CONFIDENCE = ["High", "Medium", "Low"]
-QUESTION_TYPE = ["Unknown", "Inference", "Risk", "CONFLICT"]
+QUESTION_TYPE = ["Thiếu thông tin", "Inference", "Risk", "CONFLICT"]
 QUESTION_STATUS = ["Open", "Answered", "Closed"]
 SOURCE_TOKENS = ["UI", "Code", "DB", "Doc"]
 CRAWL_MODE = ["READ_ONLY", "SUBMIT_STAGING", "SUBMIT_PROD", "NO_CRAWL"]
@@ -106,12 +107,14 @@ INTEGRATION_DIRECTION = ["OUTBOUND", "INBOUND", "BOTH"]
 INTEGRATION_STATUS = ["Confirmed", "To verify", "Inferred"]
 REPO_KIND = ["FE", "BE", "FULLSTACK", "BATCH", "OTHER"]
 
-# O7: chi bug QUAN SAT TREN MAN khi Playwright quet website, chi muc Urgent / High
+# O7: code truoc, website sau; chi loi anh huong thao tac nguoi dung, muc High tro len.
 BUG_CATEGORY = ["Functional", "UI/Layout", "Performance", "Compatibility"]
 BUG_SEVERITY = ["Urgent", "High"]
-BUG_DETECTED_BY = ["Playwright"]
-BUG_SCREEN_EVIDENCE = ["screenshot", "console-log", "har"]
-BUG_REPORT = ["Yes", "Internal only"]
+BUG_DETECTED_BY = ["Code review", "Playwright", "Code review + Playwright"]
+BUG_EVIDENCE = ["screenshot", "console-log", "har", "code-ref"]
+BUG_CODE_ONLY = "Chỉ đọc từ code"   # gia tri cot Reproduced khi chua tai hien tren man
+BUG_NOISE = ["read-only-block", "csp-block"]   # console.json "noise" do crawl-site.js gan -> khong phai bug
+BUG_PRE_EXISTING = ["Yes", "Cần xác nhận"]
 
 ID_PATTERNS = {
     "01_Function": ("Function ID", r"^F-\d{3,}$"),
@@ -135,7 +138,7 @@ CR_META_KEYS = [
 ]
 CR_AXES = ["System", "DB", "Business", "Screen", "ThirdParty", "Mockup"]
 CR_CHANGE_TYPE = ["NEW", "UPD", "DEL", "IMPACT"]
-CR_CONFLICT = ["Yes", "No", "UNKNOWN"]
+CR_CONFLICT = ["Yes", "No", "To verify"]
 CR_RISK = ["High", "Medium", "Low"]
 CR_SOURCE_TYPE = ["FILE", "CHAT", "LINK"]
 CR_CRITERIA = {
@@ -166,7 +169,32 @@ MD_RATES_PATH = ".claude/config/md-unit-rates.json"
 
 NO_IMAGE = "NO IMAGE"
 NO_SCREEN = "SYSTEM — no screen"
-UNKNOWN = "UNKNOWN"
+# D1: chu hien thi khi chua co bang chung (code lan web deu khong co). O cu the ghi kem cau hoi:
+# "Cần xác nhận — Q-012" (ban JP "要確認 — Q-012"); trang thai tuong ung = "To verify" + bat buoc Open Question.
+NEED_CONFIRM = "Cần xác nhận"
+NEED_CONFIRM_JP = "要確認"
+# Chuyen doi du lieu cu (truoc D1): version cu con chu "UNKNOWN" / "Unknown" / "Unknow" -> khi doc / carry tu doi:
+# cot trang thai -> "To verify", loai cau hoi -> "Thiếu thông tin", o noi dung -> NEED_CONFIRM.
+# Day la cho DUY NHAT kit con giu chu nay (+ self-test); gate "khong con chu cu" dung has_legacy() — khong phan
+# biet hoa thuong (feedback 28/10/2026: triet de, ke ca chu trich tu code).
+LEGACY_WORD = "UNKNOWN"  # _legacy_unknown
+LEGACY_RX = re.compile(r"(?i)\bunknown?\b")
+STATUS_COLS = ("Status", "Confidence", "Xung đột")
+
+
+def has_legacy(value):
+    return isinstance(value, str) and bool(LEGACY_RX.search(value))
+
+
+def legacy(value, col=""):
+    """Gia tri doc tu version cu -> gia tri theo D1 (khong doi gia tri da dung)."""
+    if not has_legacy(value):
+        return value
+    if col in STATUS_COLS:
+        return "To verify"
+    if col == "Type" and LEGACY_RX.fullmatch(value.strip()):
+        return QUESTION_TYPE[0]
+    return LEGACY_RX.sub(NEED_CONFIRM, value)
 
 
 def load(path, sheets=None):
@@ -193,7 +221,7 @@ def load(path, sheets=None):
                 if not h:
                     continue
                 v = r[i] if i < len(r) else None
-                d[h] = "" if v is None else str(v).strip()
+                d[h] = legacy("" if v is None else str(v).strip(), h)
             d["__row__"] = ws.max_row
             rows.append(d)
         # gan so dong that
@@ -218,3 +246,21 @@ def split_ids(value):
         if c and c not in ("—", "-", "N/A"):
             out.append(c)
     return out
+
+
+# PNG matplotlib (ERD build-db-doc): DejaVu khong co chu Nhat -> o vuong.
+CJK_FONTS = ("Hiragino Sans", "Hiragino Kaku Gothic ProN", "Arial Unicode MS", "Noto Sans CJK JP", "Noto Sans JP",
+             "IPAexGothic", "IPAGothic", "TakaoGothic", "Yu Gothic", "Meiryo", "MS Gothic")
+
+
+def use_cjk_font(matplotlib):
+    """Dat font.family = font CJK co tren may (macOS / Linux / Windows) + DejaVu cho glyph con thieu."""
+    import sys
+    from matplotlib import font_manager
+    have = {f.name for f in font_manager.fontManager.ttflist}
+    pick = [f for f in CJK_FONTS if f in have]
+    matplotlib.rcParams["font.family"] = pick + ["DejaVu Sans"]
+    if not pick:
+        print("canh bao: may khong co font CJK (%s) -> chu Nhat trong PNG thanh o vuong" % ", ".join(CJK_FONTS[:4]),
+              file=sys.stderr)
+    return pick[0] if pick else None

@@ -12,7 +12,7 @@ Output (<_internal>/recon/db/):
   (sqlite) sqlite-schema.sql   DDL lay tu sqlite_master — Locator tro vao file nay
 
 ⚠ Dump co DU LIEU (INSERT/REPLACE/COPY FROM stdin) -> tu choi, exit 3. Can dump schema-only.
-⚠ Y NGHIA nghiep vu KHONG suy tu ten cot: Meaning=UNKNOWN tru khi DB co COMMENT (Confidence=Medium).
+⚠ Y NGHIA nghiep vu KHONG suy tu ten cot: Meaning="Cần xác nhận" tru khi DB co COMMENT (Confidence=Medium).
 """
 import argparse
 import csv
@@ -206,6 +206,7 @@ TYPE_RE = re.compile(r"""^(
   | double\s+precision
   | (?:timestamp|time)(?:\s*\(\s*\d+\s*\))?(?:\s+with(?:out)?\s+time\s+zone)?
   | [\w$]+(?:\s*\.\s*[\w$]+)?(?:\s*\((?:%s|[^)'])*\))?
+  | "[\w$]+"(?:\s*\.\s*"[\w$]+")?                       # kieu enum co ngoac kep (Prisma / pg_dump)
 )((?:\s*\[\s*\d*\s*\])*)""" % STR, re.I | re.X)
 
 
@@ -230,7 +231,7 @@ def parse_coldef(s, enum_types):
     tm = TYPE_RE.match(rest)
     if not tm:
         return None
-    ctype = re.sub(r"\s+", " ", tm.group(1).strip()) + re.sub(r"\s+", "", tm.group(2) or "")
+    ctype = re.sub(r"\s+", " ", tm.group(1).strip()).replace('"', "") + re.sub(r"\s+", "", tm.group(2) or "")
     rest = rest[tm.end():]
     bare = strip_strings(rest)
     up = bare.upper()
@@ -542,7 +543,7 @@ def fmt_of(c):
     if b in ("char", "character", "varchar", "nvarchar", "nchar", "text", "tinytext",
              "mediumtext", "longtext", "string", "clob", "citext", "bpchar", "national"):
         return "text"
-    return b or "UNKNOWN"
+    return b or S.NEED_CONFIRM
 
 
 def constraint_of(c, t):
@@ -570,6 +571,36 @@ def constraint_of(c, t):
             seen.add(x)
             res.append(x)
     return "; ".join(res) or "—"
+
+
+def table_rows(tables, dialect, note_of=None):
+    """tables (format parse_dump, moi bang co "ev") -> (rows 03_DB_Tables, rows 04_DB_Columns).
+    Dung chung voi read-orm-schema.py (note_of(t) -> ghi chu nguon them vao Note)."""
+    trows, crows = [], []
+    for name in sorted(tables):
+        t = tables[name]
+        fkmap = {f["column"]: "%s.%s" % (f["ref_table"], f["ref_column"]) for f in t["fks"]}
+        fk = "; ".join("%s->%s.%s" % (f["column"], f["ref_table"], f["ref_column"]) for f in t["fks"]) or "—"
+        imp = list(t["pks"]) + [f["column"] for f in t["fks"]]
+        imp += [c["name"] for c in t["columns"] if constraint_of(c, t) != "—"]
+        imp = list(dict.fromkeys(imp))[:8] or [c["name"] for c in t["columns"][:4]]
+        note = "Purpose/Related Function dien sau khi doi chieu code (code-ref)"
+        if t["options"]:
+            note += " · " + t["options"][:120]
+        if note_of:
+            note += note_of(t)
+        trows.append([name, t["comment"] or S.NEED_CONFIRM, ",".join(t["pks"]) or "—", fk,
+                      ",".join(imp) or "—", S.NEED_CONFIRM, S.NEED_CONFIRM, t["ev"],
+                      "Medium" if t["comment"] else "Low", note])
+        for c in t["columns"]:
+            crows.append([name, c["name"], c["type"],
+                          "Yes" if c["name"] in t["pks"] else "No",
+                          fkmap.get(c["name"], "—"), c["nullable"],
+                          c["default"] or "—", max_length(c, dialect), fmt_of(c),
+                          constraint_of(c, t), c["comment"] or S.NEED_CONFIRM, S.NEED_CONFIRM,
+                          t["ev"], "Medium" if c["comment"] else "Low"])
+            c["max_length"], c["format"], c["constraint"] = crows[-1][7:10]
+    return trows, crows
 
 
 # ---------------------------------------------------------------- main
@@ -619,28 +650,7 @@ def main():
                         "recon/db/schema.json", "CREATE TABLE %s (cau truc, khong co du lieu)" % name])
         ev += 1
 
-    trows, crows = [], []
-    for name in sorted(tables):
-        t = tables[name]
-        fkmap = {f["column"]: "%s.%s" % (f["ref_table"], f["ref_column"]) for f in t["fks"]}
-        fk = "; ".join("%s->%s.%s" % (f["column"], f["ref_table"], f["ref_column"]) for f in t["fks"]) or "—"
-        imp = list(t["pks"]) + [f["column"] for f in t["fks"]]
-        imp += [c["name"] for c in t["columns"] if constraint_of(c, t) != "—"]
-        imp = list(dict.fromkeys(imp))[:8] or [c["name"] for c in t["columns"][:4]]
-        note = "Purpose/Related Function dien sau khi doi chieu code (code-ref)"
-        if t["options"]:
-            note += " · " + t["options"][:120]
-        trows.append([name, t["comment"] or S.UNKNOWN, ",".join(t["pks"]) or "—", fk,
-                      ",".join(imp) or "—", S.UNKNOWN, S.UNKNOWN, t["ev"],
-                      "Medium" if t["comment"] else "Low", note])
-        for c in t["columns"]:
-            crows.append([name, c["name"], c["type"],
-                          "Yes" if c["name"] in t["pks"] else "No",
-                          fkmap.get(c["name"], "—"), c["nullable"],
-                          c["default"] or "—", max_length(c, dialect), fmt_of(c),
-                          constraint_of(c, t), c["comment"] or S.UNKNOWN, S.UNKNOWN,
-                          t["ev"], "Medium" if c["comment"] else "Low"])
-            c["max_length"], c["format"], c["constraint"] = crows[-1][7:10]
+    trows, crows = table_rows(tables, dialect)
 
     write_csv(os.path.join(outdir, "tables.csv"), S.SHEETS["03_DB_Tables"], trows)
     write_csv(os.path.join(outdir, "columns.csv"), S.SHEETS["04_DB_Columns"], crows)
@@ -663,10 +673,10 @@ def main():
 
     print(json.dumps({"dialect": dialect, "tables": len(tables), "columns": len(crows),
                       "fks": sum(len(t["fks"]) for t in tables.values()),
-                      "commented_columns": sum(1 for r in crows if r[10] != S.UNKNOWN),
+                      "commented_columns": sum(1 for r in crows if r[10] != S.NEED_CONFIRM),
                       "evidence": len(ev_rows), "next_ev": ev, "out": outdir}, indent=2))
-    print("\nLUU Y: Purpose/Meaning = UNKNOWN tru khi DB co COMMENT. Dien bang bang chung code-ref, "
-          "KHONG doan tu ten cot. Est Rows = UNKNOWN (khong dem dong du lieu).", file=sys.stderr)
+    print("\nLUU Y: Purpose/Meaning = \"Cần xác nhận\" tru khi DB co COMMENT. Dien bang bang chung code-ref, "
+          "KHONG doan tu ten cot. Est Rows = \"Cần xác nhận\" (khong dem dong du lieu).", file=sys.stderr)
     return 0
 
 

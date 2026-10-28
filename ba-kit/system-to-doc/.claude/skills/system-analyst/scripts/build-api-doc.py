@@ -6,7 +6,7 @@
 
 Nguon: 07_API, 08_API_Fields (+02_Screen ten man hinh, 11_Repo, 05_Evidence locator).
 Sheet: 00_Index (tong hop + link) · G_<group> (moi API 1 block: thong tin + Request + Response)
-       · Batch (moi BATCH/QUEUE). O trong -> UNKNOWN (hoac — neu khong ap dung).
+       · Batch (moi BATCH/QUEUE). O trong -> "Cần xác nhận" (S.NEED_CONFIRM, hoac — neu khong ap dung).
 """
 import argparse
 import datetime
@@ -27,7 +27,7 @@ except ImportError:
 import bd_styles as ST
 
 NA = "—"
-NO_FIELD = "UNKNOWN — chua xac dinh tu code"
+NO_FIELD = S.NEED_CONFIRM + " — chưa xác định từ code"
 INDEX_COLS = ["No", "API ID", "Group", "Kind", "Method", "Path / Schedule", "Summary", "Auth",
               "Called By Screens", "Related Tables", "Status"]
 BATCH_COLS = ["No", "API ID", "Schedule", "Handler", "Summary", "Related Tables", "Status", "Evidence"]
@@ -40,7 +40,7 @@ LINK_FONT = Font(name=ST.FONT, size=10, color="FF0563C1", underline="single")
 SECTION_FILL = "FFFFF2CC"
 
 
-def v(x, empty=S.UNKNOWN):
+def v(x, empty=S.NEED_CONFIRM):
     x = "" if x is None else str(x).strip()
     return x if x else empty
 
@@ -84,7 +84,6 @@ def write_grid(ws, r0, header, rows, center_cols=()):
         for ci, val in enumerate(row, start=1):
             ST.data(ws.cell(ri, ci, val), size=10, center=ci in center_cols)
     ws.auto_filter.ref = "A%d:%s%d" % (r0, get_column_letter(len(header)), r0 + max(len(rows), 1))
-    ws.freeze_panes = ws.cell(r0 + 1, 3)
 
 
 def main():
@@ -110,7 +109,7 @@ def main():
     def screens_txt(val, kind=""):
         ids = S.split_ids(val)
         if not ids:  # batch/queue/webhook khong do man hinh goi -> khong ap dung
-            return NA if (v(val, "") in ("—", "-", "N/A") or kind in ("BATCH", "QUEUE", "WEBHOOK")) else S.UNKNOWN
+            return NA if (v(val, "") in ("—", "-", "N/A") or kind in ("BATCH", "QUEUE", "WEBHOOK")) else S.NEED_CONFIRM
         return "; ".join("%s %s" % (i, screens[i]) if screens.get(i) else i for i in ids)
 
     def repo_txt(val):
@@ -123,7 +122,7 @@ def main():
                 out.append("%s (%s)" % (i, extra) if extra else i)
             else:
                 out.append(i)
-        return "; ".join(out) or S.UNKNOWN
+        return "; ".join(out) or S.NEED_CONFIRM
 
     def ev_txt(val):
         ids = S.split_ids(val)
@@ -131,7 +130,7 @@ def main():
         for i in ids:
             e = evloc.get(i)
             out.append("%s (%s: %s)" % (i, e.get("Type", ""), e.get("Locator", "")) if e else i)
-        return "\n".join(out) or S.UNKNOWN
+        return "\n".join(out) or S.NEED_CONFIRM
 
     wb = Workbook()
     wb.remove(wb.active)
@@ -215,7 +214,6 @@ def main():
                     r += 1
             r += 1  # dong trong ngan cach block
         set_widths(ws, [20, 28, 16, 12, 30, 44, 24])
-        ws.freeze_panes = "A2"
 
     # --- 00_Index
     n_batch = sum(1 for x in apis if x.get("Kind") in BATCH_KINDS)
@@ -234,7 +232,7 @@ def main():
                  ("Kind", " · ".join("%s %d" % kv for kv in sorted(kinds.items()))),
                  ("Status", " · ".join("%s %d" % (k, st[k]) for k in S.API_STATUS if k in st) +
                   "".join(" · %s %d" % (k, n) for k, n in st.items() if k not in S.API_STATUS)),
-                 ("Ghi chu", "Bam API ID de mo block chi tiet. UNKNOWN = chua co bang chung tu code; "
+                 ("Ghi chu", "Bam API ID de mo block chi tiet. " + S.NEED_CONFIRM + " = chua co bang chung tu code; "
                              "— = khong ap dung.")]
     r = 3
     for k, val in meta_rows:

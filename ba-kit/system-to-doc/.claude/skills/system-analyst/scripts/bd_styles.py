@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # SOURCE: ba-kit/requirement-to-flow/.claude/skills/business-analyst/scripts/bd_styles.py @ 447770e
-# Copy self-contained cho kit system-to-doc. Khi sua logic chung, sua CA HAI noi.
+# DA TACH KHOI BAN GOC requirement-to-flow (D2, 27/10/2026): style giu nguyen; kit nay ap them cho cot S
+# ("API gọi" o bang item, "Nguồn" o bang ERROR SCENARIOS) — build-basic-design.py goi header()/data() cho cot 19.
+# Sua style chung (mau / font / border) thi sua CA HAI noi.
 """Style chuan cho Basic Design workbook — dinh nghia TUONG MINH.
 
 Vi sao co file nay:
@@ -9,7 +11,7 @@ Vi sao co file nay:
   -> data row bi chu trang nen xanh, hoac mat het duong ke.
   Style phai duoc dinh nghia tuong minh, khong phu thuoc noi dung san co.
 
-Spec: .claude/ba-agent/basic-design/workbook-structure.md muc 2.8
+Spec: .claude/sys-agent/basic-design/workbook-structure.md muc 2.8
 """
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 

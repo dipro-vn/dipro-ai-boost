@@ -1,11 +1,11 @@
-> **SOURCE:** `ba-kit/requirement-to-flow/.claude/ba-agent/figma-outputs/output-2-screen-flow.md` @ a4cfc01 — copy self-contained cho kit system-to-doc. Đọc kèm `o5-figma.md` (bảng thay SPEC.md → inventory). Sửa quy tắc vẽ chung thì sửa CẢ HAI nơi.
+> **SOURCE:** `ba-kit/requirement-to-flow/.claude/ba-agent/figma-outputs/output-2-screen-flow.md` @ a4cfc01 — copy self-contained cho kit system-to-doc. Đọc kèm `o5-figma.md` (bảng thay SPEC.md → inventory). Sửa quy tắc vẽ chung thì sửa CẢ HAI nơi. **Đã tách khỏi bản gốc (D1, 27/10/2026):** phân loại `To verify` của bản gốc ở kit này ghi là `To verify` (+ Open Question); chữ hiển thị "Cần xác nhận — Q-xxx".
 
 > ## ⚠ KIT NÀY: bố cục Output 2 = **site → use case → section** (feedback 20/10/2026 — áp dụng cả `requirement-to-flow`)
 >
 > - Mỗi site 1 **Section** (`Site WEB-xx — <tên site> (n màn)`); hệ thống / tích hợp không có màn → Section riêng.
 > - Trong Section site, **mỗi use case (= lane FL-xx của Output 1, cùng tên) 1 Section con** `FL-xx · <tên use case>` chứa Group của use case đó (Start · Screen · Decision · NG · Terminal · Edge như mô tả bên dưới).
 > - Bảng ④ ⑤ ⑥ ⑦ + Master Map gom vào Section **Bảng tổng hợp** cuối (Luồng 2 / CR-2: ④ ⑦ theo từng site).
-> - **Không hiện chữ `UNKNOWN` trên Figma** (Output 1 · Output 2 · CR-1 · CR-2 — feedback 20/10/2026): điều chưa rõ viết bằng lời — "chưa quan sát", "chưa xác định", "màn chưa có tiêu đề", "thông báo: chưa quan sát", "chờ khách hàng xác nhận" — kèm khung tím nét đứt To verify. Nhãn `UNKNOWN` chỉ dùng trong xlsx / inventory / Evidence Ledger. Kiểm: quét chữ trên frame `UNKNOWN` = 0 (CR: `render-cr-figma.py` từ chối).
+> - **Không hiện mã trạng thái thô trên Figma** (Output 1 · Output 2 · CR-1 · CR-2 — feedback 20/10/2026 · D1): điều chưa rõ viết bằng lời — "Cần xác nhận — Q-xxx", "chưa quan sát", "màn chưa có tiêu đề", "chờ khách hàng xác nhận" — kèm khung tím nét đứt To verify. Mã `To verify` / `Inferred` chỉ dùng trong xlsx / inventory / Evidence Ledger. Kiểm: recheck Tiêu chí 10 = 0 (CR: `render-cr-figma.py` từ chối chữ cũ).
 > - Kiểm: mọi `SCREEN SC-` / `EDGE SC-` nằm trong đúng Section site của nó; tổng màn = số SC trong scope; không màn nào ngoài Section use case.
 
 
@@ -42,7 +42,7 @@ Khi đó rule "số groups = số business flows" đổi thành **"số groups =
 - **NHÁNH A / NHÁNH B / …** — mỗi nhánh = 1 flow gốc (hoặc nhóm flow có chung hành vi), vẽ Screen/System/Decision nối tiếp nhau; nơi 2 flow **giao nhau tại cùng 1 screen** (VD cùng quay về Login) → vẽ **1 node duy nhất** cho screen đó, nhiều mũi tên dẫn vào (không vẽ trùng lặp)
 - **NG inline**: mọi lỗi FACT của TỪNG flow con vẫn giữ nguyên — gộp lại tại đúng vị trí phát sinh trong nhánh tương ứng (không được bỏ bớt vì lý do "đã vẽ ở Group riêng")
 - **System node**: hành động backend dùng chung giữa các nhánh (VD gửi email) vẽ 1 lần, mũi tên từ mọi nhánh cần dùng trỏ vào
-- **Edge/Exceptional Panel**: gộp TẤT CẢ case UNKNOWN/INFERENCE của N flow vào 1 panel duy nhất bên cạnh (không tách panel theo từng flow)
+- **Edge/Exceptional Panel**: gộp TẤT CẢ case To verify/INFERENCE của N flow vào 1 panel duy nhất bên cạnh (không tách panel theo từng flow)
 - **Merge → fan-out terminal**: cuối cùng fan-out ra các terminal tương ứng từng flow gốc
 
 **Rule bắt buộc:**
@@ -105,7 +105,7 @@ Bảng đặt cạnh Bảng SCREEN INDEX (cột phải frame). **Mỗi Non-Happy
 **Rule bắt buộc:**
 - Cột **"Cần Screen Code riêng"** quyết định theo bảng phân loại mức hiển thị lỗi ở `spec-template.md` (Inline/Toast/Banner → ❌ · Modal → ⚠️ tuỳ nội dung · Full screen → ✅)
 - Dòng nào ✅ mà bảng `## Screens` trong SPEC **chưa có Screen Code tương ứng** → **thiếu screen, phải bổ sung SPEC trước khi vẽ tiếp**
-- Mỗi screen có submit/gọi API phải rà đủ **checklist 8 nhóm Non-Happy** (`spec-template.md`): Validation · Auth/session · Network · Server error · Empty · Conflict · Business rule · External integration. Nhóm không áp dụng → `N/A — lý do`; chưa rõ → `UNKNOWN` → vào Edge/Exceptional Panel
+- Mỗi screen có submit/gọi API phải rà đủ **checklist 8 nhóm Non-Happy** (`spec-template.md`): Validation · Auth/session · Network · Server error · Empty · Conflict · Business rule · External integration. Nhóm không áp dụng → `N/A — lý do`; chưa rõ → `To verify` → vào Edge/Exceptional Panel
 
 **Cross-check số học ở Quality Gate O2 (FAIL nếu sai):**
 - `số NG node vẽ ra` ≥ `số Non-Happy Case trong SPEC ## Screen Details`
@@ -221,14 +221,14 @@ Bảng liệt kê **100% error display** trong SPEC (không rút gọn), 4 cột
 | **Decision** | Rounded-rect, icon ◇ + rationale 1 dòng | Fill `#FFF9EB`, stroke `#F4860C` — label "YES/NO" trên nhánh ra |
 | **System** | Rectangle, icon ⚙ | Fill `#EDFDF0`, stroke `#1A7F37` — hành động backend tự động, KHÔNG có numbered badge |
 | **NG** | Rectangle nét đứt, icon ⚠, vẽ INLINE ngay tại điểm phát sinh | Fill `#FFF6F5`, stroke `#CF222E` — chỉ dùng cho lỗi đã ĐỊNH NGHĨA rõ (FACT) |
-| **Edge / Exceptional** | Rectangle nét đứt, icon ▲, đặt trong panel riêng bên cạnh (KHÔNG inline) | Fill `#FBEEFF`, stroke `#6639BA` — case UNKNOWN/INFERENCE chưa rõ hành vi |
+| **Edge / Exceptional** | Rectangle nét đứt, icon ▲, đặt trong panel riêng bên cạnh (KHÔNG inline) | Fill `#FBEEFF`, stroke `#6639BA` — case To verify/INFERENCE chưa rõ hành vi |
 | Terminal box | Rectangle 200×~50px | Fill `#F6F8FA`, stroke `#D0D7DE` — 1 box / flow nguồn (fan-out cuối) |
 | Happy/System arrow | Line 2px solid | `#0969DA` |
 | NG arrow | Line 2px dashed, ngắn (route tại chỗ) | `#CF222E` |
 
 **⚠️ Rule NG vs Edge (BẮT BUỘC phân biệt):**
 - Lỗi đã rõ cách xử lý (validation thông thường, đã có trong Function detail/SPEC, classification `FACT` trong Source Register) → vẽ **NG** inline trong flow chính
-- Case CHƯA rõ hành vi, cần BRSE confirm (`UNKNOWN`/`INFERENCE` trong Source Register) → **TUYỆT ĐỐI KHÔNG vẽ inline như NG** — đưa vào **Edge/Exceptional Panel** riêng (SKILL.md §5.6). Vẽ inline sẽ khiến flow chính trông như "đã confirm" trong khi thực ra chưa.
+- Case CHƯA rõ hành vi, cần BRSE confirm (`To verify`/`INFERENCE` trong Source Register) → **TUYỆT ĐỐI KHÔNG vẽ inline như NG** — đưa vào **Edge/Exceptional Panel** riêng (SKILL.md §5.6). Vẽ inline sẽ khiến flow chính trông như "đã confirm" trong khi thực ra chưa.
 
 **Format mỗi screen node — PHẢI có 1 dòng mục đích:**
 ```
@@ -251,7 +251,7 @@ Bảng đặt bên phải frame, cùng width với Bảng Index:
 | AUTH_REGISTER | AUTH_BLOCKED_EMAIL | Error (blocking) | Show modal + không transition | FACT | RQ-020 |
 | CALL_FLOW | CALL_ENDED_NORMAL | Success | Back to AX_FEAT_002 (Company Detail) + toast "Đã kết thúc" | FACT | RQ-025 |
 | CALL_FLOW | CALL_MISSED | Error (timeout) | Show AX_FEAT_005 (Missed screen) | FACT | RQ-026 |
-| CALL_FLOW | CALL_REJECTED | Error (peer reject) | Toast + back to AX_FEAT_002 | UNKNOWN | RQ-027 ⚠ chờ BRSE confirm |
+| CALL_FLOW | CALL_REJECTED | Error (peer reject) | Toast + back to AX_FEAT_002 | To verify | RQ-027 ⚠ chờ BRSE confirm |
 
 **Enum cột Type:**
 - `Success` — flow hoàn tất đúng happy path
@@ -263,13 +263,13 @@ Bảng đặt bên phải frame, cùng width với Bảng Index:
 **Enum cột Status:**
 - `FACT` — destination + hành vi đã confirmed bởi BRSE
 - `PROPOSAL` — BA đề xuất, chờ approve
-- `UNKNOWN` — chưa rõ destination — BLOCKING cho Phase 3
+- `To verify` — chưa rõ destination — BLOCKING cho Phase 3
 
 **Rule bắt buộc:**
 - **Mỗi flow trong Output 1 PHẢI có ≥ 2 terminals**: ít nhất 1 Success + 1 Exit (user có thể luôn cancel/back)
 - Nếu Group là Shared Cluster (N flow nguồn) → số terminal box = N = số flow đã liệt kê ở Start
-- Row `UNKNOWN` → PHẢI có tương ứng row trong Exception Matrix (⑤) với classification `UNKNOWN`
-- Cột "Destination sau terminal" KHÔNG được để trống — nếu chưa rõ ghi `UNKNOWN — chờ BRSE`
+- Row `To verify` → PHẢI có tương ứng row trong Exception Matrix (⑤) với classification `To verify`
+- Cột "Destination sau terminal" KHÔNG được để trống — nếu chưa rõ ghi `To verify — Cần xác nhận — Q-xxx`
 - Cross-verification: count terminal box trong flow diagram Figma = count row Terminal Nodes table — mismatch → refactor
 
 **Downstream impact:**
@@ -287,7 +287,7 @@ Bảng đặt dưới Bảng Screen Index bên phải frame, cùng width:
 
 | ID | Trigger (nguyên nhân) | Current requirement | Classification | Agent assessment | Need confirm? | Impact nếu bỏ qua |
 |---|---|---|---|---|---|---|
-| EX-01 | Mất mạng khi submit | Chưa có trong SPEC | UNKNOWN | Undefined behavior | ✅ Yes | User double-submit → duplicate record |
+| EX-01 | Mất mạng khi submit | Chưa có trong SPEC | To verify | Undefined behavior | ✅ Yes | User double-submit → duplicate record |
 | EX-02 | Email đã tồn tại | Toast "Email đã đăng ký" | FACT | Đã đủ | — | — |
 | EX-03 | Payment timeout 30s | Retry 3 lần rồi báo lỗi | PROPOSAL | BA đề xuất | ✅ Yes | Cần BRSE quyết retry count/interval |
 | EX-04 | Push notification bị deny | Fallback SMS OTP | INFERENCE | Suy từ pattern chung | ✅ Yes | Nếu sai → user không nhận được OTP |
@@ -297,19 +297,19 @@ Bảng đặt dưới Bảng Screen Index bên phải frame, cùng width:
 - `FACT` — user/BRSE đã confirm rule cụ thể
 - `PROPOSAL` — BA đề xuất, chờ BRSE approve
 - `INFERENCE` — BA suy từ pattern chung, cần verify
-- `UNKNOWN` — chưa có rule, blocking cho Phase 3
+- `To verify` — chưa có rule, blocking cho Phase 3
 - `CONFLICT` — có ≥ 2 source mâu thuẫn
 
 **Rule bắt buộc:**
 - Mọi NG box (inline trong flow chính) PHẢI có 1 row Exception Matrix classification `FACT`
-- Mọi box trong Edge/Exceptional Panel PHẢI có 1 row Exception Matrix classification `UNKNOWN` hoặc `INFERENCE`
-- Row `UNKNOWN` / `CONFLICT` KHÔNG được vẽ như FACT (không vẽ như NG inline trong flow chính) — luôn đưa vào Edge/Exceptional Panel
-- Sau Bảng Index + Exception Matrix, BA in ra count summary: `Tổng: N exceptions (FACT: X · PROPOSAL: Y · INFERENCE: Z · UNKNOWN: W · CONFLICT: V)`
+- Mọi box trong Edge/Exceptional Panel PHẢI có 1 row Exception Matrix classification `To verify` hoặc `INFERENCE`
+- Row `To verify` / `CONFLICT` KHÔNG được vẽ như FACT (không vẽ như NG inline trong flow chính) — luôn đưa vào Edge/Exceptional Panel
+- Sau Bảng Index + Exception Matrix, BA in ra count summary: `Tổng: N exceptions (FACT: X · PROPOSAL: Y · INFERENCE: Z · To verify: W · CONFLICT: V)`
 
 **Downstream impact:**
 - TL Design đọc row `FACT` để design error handling logic
 - QC đọc row `FACT + PROPOSAL` để viết test case
-- Row `UNKNOWN + CONFLICT` → PM tạo ticket hỏi BRSE trước khi Phase 3
+- Row `To verify + CONFLICT` → PM tạo ticket hỏi BRSE trước khi Phase 3
 
 ## AI Suggestion step — nếu feature có AI
 

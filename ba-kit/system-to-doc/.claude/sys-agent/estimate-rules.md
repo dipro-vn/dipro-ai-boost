@@ -39,7 +39,7 @@ Câu hỏi gửi khách khai trong `estimate.json → questions` (chỉ câu **n
 
 ## 4. Bản KH (ja) — cấm
 
-Chữ tiếng Việt · mã nội bộ `IMP- / API- / CQ- / SC- / EXT- / FL- / DS-` · `column: / table:` · "TBD" · ghi chú nội bộ (đơn giá nội bộ, man-month nội bộ, xung đột UNKNOWN). Gate E4 chặn. Sheet 前提条件・留意事項 đủ 4 khối (E7): 前提条件 · 既存システムへの影響 · クライアント側で事前に決定・準備が必要な事項 · 想定されるリスク — lấy từ `cr.json` (not_cr, recommendation, risk, questions).
+Chữ tiếng Việt · mã nội bộ `IMP- / API- / CQ- / SC- / EXT- / FL- / DS-` · `column: / table:` · "TBD" · ghi chú nội bộ (đơn giá nội bộ, man-month nội bộ, xung đột To verify). Gate E4 chặn. Sheet 前提条件・留意事項 đủ 4 khối (E7): 前提条件 · 既存システムへの影響 · クライアント側で事前に決定・準備が必要な事項 · 想定されるリスク — lấy từ `cr.json` (not_cr, recommendation, risk, questions).
 
 ## 5. Lệnh
 

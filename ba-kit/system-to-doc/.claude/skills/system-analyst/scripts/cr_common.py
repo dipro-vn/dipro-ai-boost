@@ -195,8 +195,8 @@ def validate_cr(cr, rates):
         return ["cr.json khong phai object"]
     meta = cr.get("meta") or {}
     for k in META_FIELDS:
-        if not txt(meta.get(k)) or txt(meta.get(k)) == S.UNKNOWN:
-            err.append("meta.%s rong/UNKNOWN" % k)
+        if not txt(meta.get(k)) or txt(meta.get(k)) == S.NEED_CONFIRM:
+            err.append("meta.%s rong/%s" % (k, S.NEED_CONFIRM))
     if txt(meta.get("source_type")) and meta["source_type"] not in S.CR_SOURCE_TYPE:
         err.append("meta.source_type=%s (chi %s)" % (meta["source_type"], "/".join(S.CR_SOURCE_TYPE)))
     if txt(meta.get("overall_risk")) and meta["overall_risk"] not in S.CR_RISK:

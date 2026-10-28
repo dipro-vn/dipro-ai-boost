@@ -14,3 +14,6 @@ inputs/cr/*
 !inputs/db/README.md
 !inputs/cr/.gitkeep
 !inputs/cr/README.md
+
+# Bo nho preflight cua du an (cau tra loi, URL, ten role) — du lieu khach, KHONG commit
+outputs/_project/
