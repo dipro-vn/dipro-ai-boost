@@ -3,10 +3,10 @@
 
   python3 selftest-design-system.py [--keep]
 
-Dung 1 04_DesignSystem HOP LE theo design-system-format.md (STATUS.md + project/: 1 theme, token vai tro §3.3
+Dung 1 06_Design_System HOP LE theo design-system-format.md (STATUS.md + project/: 1 theme, token vai tro §3.3
 co hoac ghi TBD, type Heading/Text 4 style, Button + Badge co bundle/d.ts/preview, component con lai ghi TBD,
 cover, nhom Icons) -> PASS. Sau do tiem tung loi vao ban copy -> khang dinh dung check do FAIL.
-Layout per-site (04_DesignSystem/WEB-01, WEB-02 + draft dsLayout): hop le PASS, loi 1 site FAIL dung site do,
+Layout per-site (06_Design_System/WEB-01, WEB-02 + draft dsLayout): hop le PASS, loi 1 site FAIL dung site do,
 tron layout / lech dsLayout.mode FAIL, --force-mode da ghi forced PASS.
 Chay lai sau MOI lan sua verify-design-system.py / ds_roles.py.
 """
@@ -154,7 +154,7 @@ ICON = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle c
 
 
 def build(root):
-    P = os.path.join(root, "04_DesignSystem", "project")
+    P = os.path.join(root, "06_Design_System", "project")
     for d in ("components/Button", "components/Badge", "components/Cover", "assets/Icons"):
         os.makedirs(os.path.join(P, d), exist_ok=True)
 
@@ -180,10 +180,10 @@ def build(root):
     w("components/Cover/preview.html", COVER)
     w("assets/Icons/search.svg", ICON)
     w("assets/Icons/README.md", "Icon net 2px, muc `text-high`.\n")
-    open(os.path.join(root, "04_DesignSystem", "STATUS.md"), "w", encoding="utf8").write(status())
+    open(os.path.join(root, "06_Design_System", "STATUS.md"), "w", encoding="utf8").write(status())
     dp = os.path.join(root, "tokens-draft.json")
     json.dump(draft(), open(dp, "w"))
-    return os.path.join(root, "04_DesignSystem"), P, dp
+    return os.path.join(root, "06_Design_System"), P, dp
 
 
 def results(output):
@@ -274,7 +274,7 @@ CASES = [
 ]
 
 
-# ---------- layout per-site (04_DesignSystem/WEB-xx/) ----------
+# ---------- layout per-site (06_Design_System/WEB-xx/) ----------
 WEB2_PRIMARY = "#c2410c"
 
 
@@ -297,10 +297,10 @@ def site_draft(mode="per-site", **k):
 
 
 def build_persite(root, mode="per-site", **k):
-    """root/04_DesignSystem/{WEB-01,WEB-02}/ = 2 DS hop le; WEB-02 primary rieng."""
+    """root/06_Design_System/{WEB-01,WEB-02}/ = 2 DS hop le; WEB-02 primary rieng."""
     tmp = os.path.join(root, "_tmp")
     ds1, _, _ = build(tmp)
-    top = os.path.join(root, "04_DesignSystem")
+    top = os.path.join(root, "06_Design_System")
     os.makedirs(top)
     for s_ in ("WEB-01", "WEB-02"):
         shutil.copytree(ds1, os.path.join(top, s_))
@@ -441,7 +441,7 @@ def main():
         for i, (name, fn, chk) in enumerate(CASES, 1):
             d = os.path.join(root, "c%02d" % i)
             shutil.copytree(base, d)
-            dsx, Px = os.path.join(d, "04_DesignSystem"), os.path.join(d, "04_DesignSystem", "project")
+            dsx, Px = os.path.join(d, "06_Design_System"), os.path.join(d, "06_Design_System", "project")
             fn(Px)
             code, out = run(dsx, os.path.join(d, "tokens-draft.json"))
             got = results(out).get(chk)
@@ -449,17 +449,17 @@ def main():
         # Figma: mau ngoai draft chi WARN khi --figma-used VA meta.source co figma
         d = os.path.join(root, "figma")
         shutil.copytree(base, d)
-        Px = os.path.join(d, "04_DesignSystem", "project")
+        Px = os.path.join(d, "06_Design_System", "project")
         edit_tokens(lambda t: (ctok("primary")(t).update(value="#123456"), t["meta"].update(source="website+figma")))(Px)
-        code, out = run(os.path.join(d, "04_DesignSystem"), os.path.join(d, "tokens-draft.json"), "--figma-used")
+        code, out = run(os.path.join(d, "06_Design_System"), os.path.join(d, "tokens-draft.json"), "--figma-used")
         record("mau ngoai draft + --figma-used + source figma -> check 5 WARN",
                results(out).get("5") == "WARN" and code == 0, "nhan %s (exit %d)" % (results(out).get("5"), code))
         # Base Design System: mau ngoai draft co nhan [base] trong usage -> check 5 PASS + 5b WARN; khong nhan -> 5 FAIL
         d = os.path.join(root, "basemark")
         shutil.copytree(base, d)
-        Px = os.path.join(d, "04_DesignSystem", "project")
+        Px = os.path.join(d, "06_Design_System", "project")
         edit_tokens(lambda t: ctok("primary")(t).update(value="#0017c1", usage=R_.BASE_MARK + " key-900 DADS — chua quan sat"))(Px)
-        code, out = run(os.path.join(d, "04_DesignSystem"), os.path.join(d, "tokens-draft.json"))
+        code, out = run(os.path.join(d, "06_Design_System"), os.path.join(d, "tokens-draft.json"))
         r = results(out)
         record("mau ngoai draft co nhan [base] -> check 5 PASS + 5b WARN",
                r.get("5") == "PASS" and r.get("5b") == "WARN" and code == 0, "nhan 5=%s 5b=%s (exit %d)" % (r.get("5"), r.get("5b"), code))

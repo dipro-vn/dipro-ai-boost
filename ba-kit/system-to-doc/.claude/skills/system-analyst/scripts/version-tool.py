@@ -3,7 +3,7 @@
 
   python3 version-tool.py next --outputs <project>/outputs --slug baseline [--date DDMMYY] [--create]
   python3 version-tool.py next --outputs <project>/outputs --cr-id CR-001 --slug them-coupon [--date DDMMYY] [--create]
-  python3 version-tool.py snapshot --ver <folder version> [--files 01_Screens/a.xlsx ...]
+  python3 version-tool.py snapshot --ver <folder version> [--files 05_Basic_Design/a.xlsx ...]
   python3 version-tool.py promote --outputs <project>/outputs --cr CR-001 [--cr CR-002] --approved --coded \
           [--slug baseline] [--date DDMMYY] [--create]
   python3 version-tool.py latest-baseline --outputs <project>/outputs
@@ -23,13 +23,13 @@ next            -> JSON {n, folder, path, reuse, created} ; --create mkdir _inte
                    version-meta.json (folder co san: chi bo sung thu muc con thieu). exit 3 = baseline da khoa
 snapshot        -> JSON {dir, files} ; copy file (mac dinh: moi file tru _internal/history) vao history truoc khi ghi de
 promote         -> JSON {n, folder, path, previous_version, promoted_crs} — baseline moi
-latest-baseline -> JSON {folder, path, n, inventory, outputs:{O1..O9: bool}} ; exit 1 neu khong co baseline
+latest-baseline -> JSON {folder, path, n, inventory, outputs:{O1..O8: bool}} ; exit 1 neu khong co baseline
 list            -> bang version + CR mo tren baseline moi nhat (canh bao xung dot CR-vs-CR)
 context         -> JSON agent doc o DAU MOI LAN CHAY (user khong phai tu tim version):
                    latest (version moi nhat bat ky loai) · latest_baseline (+ inventory, outputs, locked, locked_by) ·
                    open_crs (CR tro toi baseline moi nhat, chua promote) · latest_by_cr · pending_feedback (muc
                    "Feedback cua user" trong run-log chua co version nao ghi "Feedback da xu ly") ·
-                   suggest (flow1_action / mode de xuat cho Luong 1 / version doc lai cho Luong 2) · read (file can doc)
+                   suggest (flow1_action / mode de xuat cho Luong 1 / flow1_phase=2 khi Giai đoạn 1 xong chua chay Giai đoạn 2 / version doc lai cho Luong 2) · read (file can doc)
 Folder CR cu va baseline da khoa: KHONG sua noi dung.
 """
 import argparse
@@ -55,15 +55,15 @@ EXIT_LOCKED = 3
 
 # Duong dan output theo CONTRACT (glob tuong doi folder version)
 OUTPUT_GLOBS = {
-    "O1": ["01_Screens/BasicDesign_*.xlsx"],
+    "O1": ["01_Overview/Overview_*.docx"],
     "O2": ["02_API/API_Doc_*.xlsx"],
     "O3": ["03_DB/DB_Doc_*.xlsx"],
-    "O4": ["04_DesignSystem/project/design-system.json",            # 1 DS (single / themes)
-           "04_DesignSystem/WEB-*/project/design-system.json"],     # 1 DS / website (per-site)
-    "O5": ["05_Figma/figma-links.md"],
-    "O6": ["06_Overview/Overview_*.docx"],
-    "O7": ["07_BugList/BugList_*.xlsx"],
-    "O9": ["09_DevSetup/DevSetup_*.md"],
+    "O4": ["04_Figma/figma-links.md"],
+    "O5": ["05_Basic_Design/BasicDesign_*.xlsx"],
+    "O6": ["06_Design_System/project/design-system.json",            # 1 DS (single / themes)
+           "06_Design_System/WEB-*/project/design-system.json"],     # 1 DS / website (per-site)
+    "O7": ["07_Bug_List/BugList_*.xlsx"],
+    "O8": ["08_Huong_dan_chay_local/DevSetup_*.md"],
 }
 
 
@@ -419,6 +419,15 @@ def cmd_list(a):
     return 0
 
 
+def phase2_pending(ver):
+    try:
+        idx = json.load(open(os.path.join(ver, "_internal", "index.json"), encoding="utf8"))
+    except (OSError, ValueError):
+        return False
+    # dau "chờ giai đoạn 2" (ban cu ghi "chờ Phase 2")
+    return any(re.search(r"(?i)chờ (giai đoạn|phase) 2", e.get("reason") or "") for e in idx.get("outputs", []))
+
+
 def cmd_context(a):
     vers = scan(a.outputs)
     b = latest_baseline(vers)
@@ -494,6 +503,10 @@ def cmd_context(a):
         else:
             suggest["flow1_mode"] = "DELTA"
             suggest["why"] = "da co baseline, khong co CR / feedback moi"
+        # Giai đoạn 1 xong, nguoi dung dung lai review (index.json: O6 / O7 "chờ Giai đoạn 2") -> de xuat chay tiep Giai đoạn 2
+        if b and not lock and phase2_pending(b["path"]):
+            suggest["flow1_phase"] = 2
+            suggest["why"] = "Giai đoạn 1 da xong, chua chay Giai đoạn 2 (AI Playwright) — hoi: chay tiep Giai đoạn 2?"
     if flow != "1":
         cid = norm_cr_id(a.cr_id) if a.cr_id else None
         if cid and cid in by_cr:

@@ -1,4 +1,4 @@
-> **SOURCE:** `ba-kit/requirement-to-flow/.claude/ba-agent/granularity-principles.md` @ 06565d0 — copy self-contained cho kit system-to-doc. Đọc kèm `../outputs/o5-figma.md`. Sửa quy tắc chung thì sửa CẢ HAI nơi.
+> **SOURCE:** `ba-kit/requirement-to-flow/.claude/ba-agent/granularity-principles.md` @ 06565d0 — copy self-contained cho kit system-to-doc. Đọc kèm `../outputs/o4-figma.md`. Sửa quy tắc chung thì sửa CẢ HAI nơi.
 
 # Ba Agent — Nguyên tắc Granularity (Flow & Screen)
 

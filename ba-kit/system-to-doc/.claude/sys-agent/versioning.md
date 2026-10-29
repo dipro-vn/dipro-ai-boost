@@ -52,14 +52,14 @@ python3 $S/version-tool.py promote --outputs outputs --cr CR-001 --approved --co
 ver1_011026_baseline/
 ├── README.md                         ← index: output nào, ở đâu, bao nhiêu, gate ra sao
 ├── run-log.md
-├── 01_Screens/BasicDesign_WEB-01_ver1.xlsx       O1 (1 file / website)
+├── 01_Overview/Overview_<sys>_ver1.docx          O1 (nghiệp vụ chính + bảng tổng)
 ├── 02_API/API_Doc_<sys>_ver1.xlsx                O2
 ├── 03_DB/DB_Doc_<sys>_ver1.xlsx · ERD_<sys>_ver1.png   O3
-├── 04_DesignSystem/STATUS.md · project/           O4 tuỳ chọn (chuẩn chung với designer-kit; per-site: WEB-xx/STATUS.md · project/)
-├── 05_Figma/figma-links.md                       O5 (+ link ERD cho O6)
-├── 06_Overview/Overview_<sys>_ver1.docx          O6 (nghiệp vụ chính + bảng tổng)
-├── 07_BugList/BugList_<sys>_ver1.xlsx            O7 (tuỳ chọn, 1 sheet)
-├── 09_DevSetup/DevSetup_<sys>_ver1.md            O9 hướng dẫn chạy local (dev, khi có source)
+├── 04_Figma/figma-links.md                       O4 (+ link ERD cho O1)
+├── 05_Basic_Design/BasicDesign_WEB-01_ver1.xlsx       O5 (1 file / website)
+├── 06_Design_System/STATUS.md · project/           O6 tuỳ chọn (chuẩn chung với designer-kit; per-site: WEB-xx/STATUS.md · project/)
+├── 07_Bug_List/BugList_<sys>_ver1.xlsx            O7 (tuỳ chọn, 1 sheet)
+├── 08_Huong_dan_chay_local/DevSetup_<sys>_ver1.md            O8 hướng dẫn chạy local (dev, khi có source)
 └── _internal/                                    ← của agent, không phải deliverable
     ├── inventory.xlsx        bộ nhớ máy đọc — Luồng 2 đọc file này
     ├── evidence/  recon/  gates/  narrative.json  business.json  index.json
@@ -73,7 +73,7 @@ CR-001_151026_them-coupon/
 ├── run-log.md                     baseline: ver1_011026_baseline
 ├── input/                         CR nguyên văn (file copy / cr-request.md khi dán chat / link.md)
 ├── CR-001_Impact.xlsx             7 sheet: Summary (công số + số đối tượng) · Estimation (template 見積書) · Screen · API · Database · Figma · Q&A
-├── 05_Figma/figma-links.md        link view CR mới
+├── 04_Figma/figma-links.md        link view CR mới
 └── _internal/  cr.json · cr-figma.json · figma-js/ · cr-figma-nodes.json · gates/
 ```
 

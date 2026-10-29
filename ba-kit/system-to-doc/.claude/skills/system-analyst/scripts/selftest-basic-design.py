@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 # SOURCE: ba-kit/requirement-to-flow/.claude/skills/business-analyst/scripts/selftest-basic-design.py @ 447770e
 # DA TACH KHOI BAN GOC requirement-to-flow (D2, 27/10/2026): tu sinh fixture bang build-basic-design.py khi
-# khong truyen workbook + case check 16-19 (cot S "API gọi"). Case check 1-15 van dung chung.
-"""Self-test cho Quality Gate O5 — chung minh gate KHONG pass rong.
+# khong truyen workbook + case check 16-24 (cot S "API gọi", ten / mo ta khong ma, Giai đoạn 1/2). Case check 1-15
+# van dung chung.
+"""Self-test cho Quality Gate O4 — chung minh gate KHONG pass rong.
 
 Cach dung:
     python3 selftest-basic-design.py                     # tu sinh fixture (inventory + recon + spec) -> --asis
     python3 selftest-basic-design.py <workbook-da-PASS.xlsx> [--before <backup.xlsx>] [--asis]
 
---asis: gate chay voi --asis + them case check 16-19 (AS-IS, kit system-to-doc).
+--asis: gate chay voi --asis + them case check 16-24 (AS-IS, kit system-to-doc).
 Case nao thieu dieu kien tien quyet (vd workbook AS-IS khong co error) -> SKIP, khong tinh la loi.
 
 Lay 1 workbook da PASS gate, tiem tung loi da biet vao ban copy, roi xac nhan
@@ -51,6 +52,11 @@ def unmerge_at(ws, r):
 
 def screen_sheets(wb):
     return _gate.working_sheets(wb)
+
+
+def by_sid(wb, sid):
+    """Sheet man tim theo Screen ID o F1 (ten sheet = ten man, khong phai SC-xxx)."""
+    return next(ws for ws in screen_sheets(wb) if str(ws["F1"].value) == sid)
 
 
 def first_screen_sheet(wb):
@@ -178,6 +184,62 @@ def _blank_cell(wb):
     ws.cell(r, 13).value = None   # M required
 
 
+def _blank_err_catalog(wb):
+    es = wb["Screen Error message"]
+    for r in range(_gate.CATALOG_HEADER_ROW + 1, es.max_row + 1):
+        if es.cell(r, 2).value:          # dong loi (banner khong co cot B)
+            es.cell(r, 10).value = None  # Nguon
+            return None
+    return "dong loi trong Screen Error message"
+
+
+def _blank_err_scenario(wb):
+    for ws in screen_sheets(wb):
+        for r in range(1, ws.max_row + 1):
+            if "ERROR SCENARIOS" in str(ws.cell(r, 8).value or ""):
+                ws.cell(r + 2, 16).value = None   # Message hien thi (VN) cua dong loi dau
+                return None
+    return "bang ERROR SCENARIOS"
+
+
+def _draft_status(wb):
+    ws = first_screen_sheet(wb)
+    ws["E4"], ws["F4"] = "Status", "DRAFT"
+
+
+def _status_col(wb):
+    wb["Screen Index"].cell(5, 12).value = "Status"
+
+
+def _maxlen_dash(wb):
+    ws, r = _item_row(wb, lambda w, r: str(w.cell(r, 11).value).lower() == "textbox")
+    if not ws:
+        return "item Textbox"
+    ws.cell(r, 14).value = "ー"
+
+
+def _api_in_desc(wb):
+    ws, r = _item_row(wb, lambda w, r: True)
+    if not ws:
+        return "item"
+    ws.cell(r, 17).value = "Hành vi khi nhấn: gọi POST /api/orders"
+
+
+def _handler_name(wb):
+    ws, r = _item_row(wb, lambda w, r: True)
+    if not ws:
+        return "item"
+    ws.cell(r, 9).value = "fetchData"
+
+
+def _sid_sheet_name(wb):
+    ws = first_screen_sheet(wb)
+    idx = wb["Screen Index"]
+    r = next(r for r in range(6, idx.max_row + 1) if idx.cell(r, 5).value == ws.title)
+    ws.title = str(ws["F1"].value)
+    idx.cell(r, 5).value = ws.title
+
+
 CASES = [
     ("xoa duong ke data row", 14, _no_border),
     ("data row to fill header", 14, _header_fill),
@@ -188,10 +250,26 @@ CASES = [
     ("xoa row Screen Index", 5, _drop_index_row),
     ("tro Message Code ma", 6, _ghost_code),
 ]
-CASE_ASIS = [("xoa EV o cot R item dau", 16, _strip_ev),
+def _unnumbered_image(wb):
+    ws = next((w for w in screen_sheets(wb) if w._images), None)
+    if not ws:
+        return "anh UI trong screen sheet"
+    ws["A9"] = "Ảnh website — ảnh chưa đánh số"
+
+
+CASE_ASIS = [("anh chen vao nhung chua danh so", 13, _unnumbered_image),
+             ("xoa EV o cot R item dau", 16, _strip_ev),
              ("xoa o 'API gọi' cua nut", 17, _blank_api),
              ("con chu cu trong mo ta (D1)", 18, _legacy_word),
-             ("bo trong o required cua item", 19, _blank_cell)]
+             ("bo trong o required cua item", 19, _blank_cell),
+             ("bo trong Nguon o Screen Error message", 20, _blank_err_catalog),
+             ("bo trong message o ERROR SCENARIOS", 20, _blank_err_scenario),
+             ("ghi lai Status / DRAFT o E4/F4", 21, _draft_status),
+             ("Screen Index co cot Status", 21, _status_col),
+             ("maxlength textbox = ー", 22, _maxlen_dash),
+             ("mo ta item co POST /api/...", 23, _api_in_desc),
+             ("ten item la ten ham fetchData", 23, _handler_name),
+             ("ten sheet = SC-xxx", 24, _sid_sheet_name)]
 
 
 def make_fixture(tmp):
@@ -206,9 +284,14 @@ def make_fixture(tmp):
     for name, cols in S.SHEETS.items():
         wb.create_sheet(name).append(cols)
     wb["10_Site"].append(["WEB-01", "Admin", "https://stg.example.jp", "STG", "test_user", "READ_ONLY", "REPO-01", 2, ""])
-    wb["02_Screen"].append(["SC-001", "WEB-01", "/login", "ログイン", "Form", "User", "—", "F-001", "EV-0001", 2, "Confirmed", ""])
+    # Screen Name lan ma / route -> ten sheet phai la "ログイン"
+    wb["02_Screen"].append(["SC-001", "WEB-01", "/login", "SC-001 ログイン (/login)", "Form", "User", "—", "F-001",
+                            "EV-0001", 2, "Confirmed", ""])
     wb["02_Screen"].append(["SC-002", "WEB-01", "/orders/:id", "注文詳細", "Detail", "User", "SC-001", "F-002", "EV-0002", 3,
                             "Confirmed", ""])
+    wb["08_API_Fields"].append(["API-009", "Request", "body", "password", "string", "Yes", "maxLength 64", "",
+                                "REPO-02:src/dto/login.ts#L8"])
+    wb["04_DB_Columns"].append(["users", "nick_name", "varchar(30)", "", "", "YES", "", "30", "", "", "", "", "DB-01", ""])
     wb.save(os.path.join(i, "inventory.xlsx"))
     cols = ["Screen Route", "Screen File", "Trigger", "UI Label", "Method", "Path", "API ID", "Via", "Trigger Ref",
             "Code Ref", "Confidence"]
@@ -223,6 +306,13 @@ def make_fixture(tmp):
         w.writerow(["/orders/[id]", "REPO-01:src/pages/orders/[id].tsx", "handleDelete → onClick", "削除", "DELETE",
                     "/api/orders/:id", "API-003", "axios", "REPO-01:src/pages/orders/[id].tsx#L12",
                     "REPO-01:src/services/o.ts#L4", "static"])
+        # man co spec items day du + trigger khong khop (nhan "—") -> KHONG duoc them dong
+        w.writerow(["/login", "REPO-01:src/pages/login.tsx", "submitLogin → onClick", "—", "POST", "/api/session",
+                    "API-010", "axios", "REPO-01:src/pages/login.tsx#L31", "REPO-01:src/services/a.ts#L2", "static"])
+        # nut chi co trong code, khong co nhan -> ten "Cần xác nhận", ten ham chi o cot R
+        w.writerow(["/orders/[id]", "REPO-01:src/pages/orders/[id].tsx", "fetchStats → onClick", "—", "GET",
+                    "/api/stats", "API-004", "axios", "REPO-01:src/pages/orders/[id].tsx#L15",
+                    "REPO-01:src/services/o.ts#L5", "static"])
     page2 = "https://stg.example.jp/orders/1"
     json.dump([{"url": "https://stg.example.jp/login", "evId": "EV-0001", "items": []},
                {"url": page2, "evId": "EV-0002", "items": [
@@ -236,23 +326,30 @@ def make_fixture(tmp):
               open(os.path.join(i, "crawl", "network.json"), "w"))
     json.dump([{"url": page2, "text": "Failed to fetch", "noise": "read-only-block"}],
               open(os.path.join(i, "crawl", "console.json"), "w"))
-    os.makedirs(os.path.join(v, "annotated"))
-    try:
+    os.makedirs(os.path.join(i, "crawl", "evidence"))
+    try:   # Giai đoạn 2: anh chup cua crawl + "mark" o item -> builder tu danh so theo cot #
         from PIL import Image
-        Image.new("RGB", (1400, 900), "white").save(os.path.join(v, "annotated", "SC-001.png"))
-        img = {"image": "annotated/SC-001.png"}
+        Image.new("RGB", (1400, 900), "white").save(os.path.join(i, "crawl", "evidence", "EV-0001.png"))
     except ImportError:
-        img = {}
-    spec = {"screens": {"SC-001": dict(img, purpose="ログインする", items=[
+        pass
+    spec = {"screens": {"SC-002": {"title": "注文の詳細"}, "SC-001": dict(purpose="ログインする", items=[
         {"name_jp": "メールアドレス", "name_vn": "Email", "type": "Textbox", "status": "Enable", "required": "Yes",
          "maxlength": "256", "default": "ー", "p": "・必須\n1. 未入力 → E_SC001_001", "q": "・Bắt buộc\n1. Chưa nhập → E_SC001_001",
-         "r": "REPO-01:src/pages/login.tsx#L20"}],
+         "r": "REPO-01:src/pages/login.tsx#L20", "mark": [0.5, 0.2]},
+        {"name_jp": "パスワード", "name_vn": "Mật khẩu", "type": "Password", "status": "Enable", "field": "password",
+         "p": "・パスワード", "q": "・Mật khẩu", "r": "REPO-01:src/pages/login.tsx#L24", "mark": [0.5, 0.3]},
+        {"name_jp": "ニックネーム", "name_vn": "Biệt danh", "type": "Textbox", "status": "Enable", "required": "No",
+         "field": "nickName", "p": "・ニックネーム", "q": "・Biệt danh", "r": "REPO-01:src/pages/login.tsx#L26",
+         "mark": [0.5, 0.4]},
+        {"name_jp": "ログイン", "name_vn": "Đăng nhập", "type": "Button", "status": "Enable", "next": "SC-002",
+         "api": "POST /api/login (API-009)", "p": "・ログイン", "q": "・Đăng nhập", "r": "REPO-01:src/pages/login.tsx#L30",
+         "mark": [0.5, 0.5]}],
         errors=[{"item": "メールアドレス", "category": "🔴 Validation", "display": "Inline", "code": "E_SC001_001",
                  "msg_jp": "メールアドレスを入力してください。", "msg_vn": "Vui lòng nhập email.",
                  "action_jp": "未入力で「ログイン」を押す", "action_vn": "Để trống rồi nhấn 「ログイン」",
                  "next": "Không gửi form, focus ô email", "source": "REPO-01:src/i18n/ja.json#L3"}])}}
     json.dump(spec, open(os.path.join(i, "spec.json"), "w", encoding="utf8"), ensure_ascii=False)
-    out = os.path.join(v, "01_Screens", "BasicDesign_WEB-01_ver1.xlsx")
+    out = os.path.join(v, "05_Basic_Design", "BasicDesign_WEB-01_ver1.xlsx")
     before = os.path.join(i, "bd_before_WEB-01.xlsx")
     p = subprocess.run([sys.executable, os.path.join(HERE, "build-basic-design.py"), "--inventory",
                         os.path.join(i, "inventory.xlsx"), "--site", "WEB-01", "--version", "ver1",
@@ -267,7 +364,7 @@ def make_fixture(tmp):
 def fixture_checks(out, stat):
     """build-basic-design: cot S dung nguon fe-api-calls, nut chi co trong code co dong, loi web vao ERROR SCENARIOS."""
     wb = openpyxl.load_workbook(out)
-    ws = wb["SC-002"]
+    ws = by_sid(wb, "SC-002")
     rows = {str(ws.cell(r, 10).value): r for r in range(9, ws.max_row + 1) if ws.cell(r, 10).value}
     api = {k: str(ws.cell(r, 19).value) for k, r in rows.items()}
     txt = " ".join(str(c.value) for row in ws.iter_rows() for c in row if c.value)
@@ -280,6 +377,44 @@ def fixture_checks(out, stat):
           ("loi web HTTP 500 vao ERROR SCENARIOS, noise bi bo", "HTTP 500" in txt and "Failed to fetch" not in txt),
           ("khong freeze panel (R13)", all(w.freeze_panes is None for w in wb.worksheets)),
           ("stdout dem o Cần xác nhận + next_q", stat.get("confirm_cells", 0) >= 1 and stat.get("next_q", 0) > 10)]
+    ws1 = by_sid(wb, "SC-001")
+    r1 = {str(ws1.cell(r, 9).value): r for r in range(9, ws1.max_row + 1) if ws1.cell(r, 9).value}
+    pw, nk, lg = r1.get("パスワード", 1), r1.get("ニックネーム", 1), r1.get("ログイン", 1)
+    err1 = next((r for r in range(9, ws1.max_row + 1) if "ERROR SCENARIOS" in str(ws1.cell(r, 8).value or "")),
+                ws1.max_row + 1)
+    idx = wb["Screen Index"]
+    names = {str(w["F1"].value): w.title for w in screen_sheets(wb)}
+    fx = next((r for r, v in rows.items() if v and str(ws.cell(v, 9).value).startswith(S.NEED_CONFIRM_JP)), None)
+    item_txt = " ".join(str(ws.cell(r, c).value) for r in rows.values() for c in (9, 10, 16, 17))
+    ok += [("spec co items + trigger khong khop -> khong them dong (4 item, khong ten ham)",
+            sum(1 for r in range(9, ws1.max_row + 1) if isinstance(ws1.cell(r, 8).value, int)
+                and "ERROR" not in str(ws1.cell(r - 1, 8).value or "") and r < err1) == 4 and "submitLogin" not in " ".join(str(c.value) for row in ws1.iter_rows() for c in row if c.value)),
+           ("ten sheet = ten man (bo SC-xxx / route), title spec",
+            names == {"SC-001": "ログイン", "SC-002": "注文の詳細"}),
+           ("Screen Index: khong cot Status, B co hyperlink toi sheet",
+            "Status" not in [c.value for c in idx[5]] and idx["B6"].hyperlink is not None
+            and "ログイン" in str(idx["B6"].hyperlink.location)),
+           ("sheet khong con o Status E4/F4", ws1["E4"].value is None and ws1["F4"].value is None),
+           ("field password -> 08_API_Fields: Yes / 64 + nguon o R",
+            ws1.cell(pw, 13).value == "Yes" and ws1.cell(pw, 14).value == "64"
+            and "08_API_Fields API-009.password" in str(ws1.cell(pw, 18).value)),
+           ("field nickName ~ nick_name -> 04_DB_Columns maxlength 30",
+            ws1.cell(nk, 13).value == "No" and ws1.cell(nk, 14).value == "30"
+            and "04_DB_Columns users.nick_name" in str(ws1.cell(nk, 18).value)),
+           ("next SC-002 -> 「注文の詳細」 o P / Q",
+            "「注文の詳細」へ遷移" in str(ws1.cell(lg, 16).value)
+            and "Bấm → chuyển sang màn 「注文の詳細」" in str(ws1.cell(lg, 17).value)),
+           ("nut code khong nhan -> ten Cần xác nhận, ten ham chi o R",
+            fx is not None and "fetchStats" not in item_txt and "fetchStats" in str(ws.cell(rows[fx], 18).value)),
+           ("Textbox web khong co required -> Cần xác nhận (khong ghi ー)",
+            str(ws.cell(rows.get("メモ", 1), 13).value).startswith(S.NEED_CONFIRM))]
+    try:
+        import PIL  # noqa: F401
+        ok.append(("Giai đoạn 2: mark + evidence/EV-0001.png -> anh danh so chen vao sheet",
+                   len(ws1._images) == 1 and stat.get("images") == 1 and os.path.isfile(
+                       os.path.join(os.path.dirname(os.path.dirname(out)), "_internal", "bd", "annotated", "SC-001.png"))))
+    except ImportError:
+        pass
     bad = 0
     for name, good in ok:
         bad += not good
@@ -344,7 +479,7 @@ def code_checks(tmp):
         {"tag": "button", "type": "button", "label": "10/28"},
         {"tag": "button", "type": "button", "label": "10/29"}]}],
         open(os.path.join(i, "crawl", "pages.json"), "w", encoding="utf8"), ensure_ascii=False)
-    out = os.path.join(v, "01_Screens", "BasicDesign_WEB-01_ver1.xlsx")
+    out = os.path.join(v, "05_Basic_Design", "BasicDesign_WEB-01_ver1.xlsx")
     p = subprocess.run([sys.executable, os.path.join(HERE, "build-basic-design.py"), "--inventory",
                         os.path.join(i, "inventory.xlsx"), "--site", "WEB-01", "--version", "ver1",
                         "--fe-api-calls", os.path.join(code, "fe-api-calls.csv"), "--crawl", os.path.join(i, "crawl"),
@@ -353,7 +488,7 @@ def code_checks(tmp):
         print("build (code): loi\n" + p.stdout + p.stderr)
         return 1
     stat = json.loads(p.stdout)
-    ws = openpyxl.load_workbook(out)["SC-001"]
+    ws = by_sid(openpyxl.load_workbook(out), "SC-001")
     rows = {str(ws.cell(r, 10).value): r for r in range(9, ws.max_row + 1) if ws.cell(r, 10).value}
     api = {k: str(ws.cell(r, 19).value) for k, r in rows.items()}
     ref_of = {k: str(ws.cell(r, 18).value) for k, r in rows.items()}
@@ -380,6 +515,54 @@ def code_checks(tmp):
     return bad
 
 
+def gate_levels(path, extra=()):
+    """-> (exit, {check: PASS|FAIL|WARN})."""
+    p = subprocess.run([sys.executable, GATE, path, "--asis"] + list(extra), capture_output=True, text=True)
+    lv = {}
+    for line in p.stdout.splitlines():
+        c = [x.strip() for x in line.split("|")]
+        if len(c) > 4 and c[1].isdigit():
+            lv[int(c[1])] = c[3].strip("*")
+    return p.returncode, lv
+
+
+def phase_checks(tmp, out2):
+    """Giai đoạn 1 (khong --crawl): build chay, gate PASS, check 10/13 PASS; Giai đoạn 2 thieu anh -> check 10 WARN."""
+    import json
+    v = os.path.join(tmp, "ver1_011026_baseline")
+    i = os.path.join(v, "_internal")
+    out1 = os.path.join(v, "05_Basic_Design", "BasicDesign_WEB-01_ver1_phase1.xlsx")
+    p = subprocess.run([sys.executable, os.path.join(HERE, "build-basic-design.py"), "--inventory",
+                        os.path.join(i, "inventory.xlsx"), "--site", "WEB-01", "--version", "ver1",
+                        "--fe-api-calls", os.path.join(i, "fe-api-calls.csv"), "--spec", os.path.join(i, "spec.json"),
+                        "--q-start", "50", "--out", out1, "--questions-out", os.path.join(i, "q1.csv"),
+                        "--date", "2026-10-29"], capture_output=True, text=True)
+    if p.returncode:
+        print("phase 1: build loi\n" + p.stdout + p.stderr)
+        return 1
+    stat = json.loads(p.stdout)
+    wb = openpyxl.load_workbook(out1)
+    e1, l1 = gate_levels(out1)
+    e1b, l1b = gate_levels(out1, ["--phase", "2"])
+    _, l2 = gate_levels(out2)
+    ok = [("Giai đoạn 1: stdout phase=1, khong anh", stat.get("phase") == 1 and stat.get("images") == 0),
+          ("Giai đoạn 1: A9 = 'Chưa có ảnh — bổ sung ở Giai đoạn 2 (Playwright)'",
+           all(str(w["A9"].value) == "Chưa có ảnh — bổ sung ở Giai đoạn 2 (Playwright)" for w in screen_sheets(wb))),
+          ("Giai đoạn 1: gate --asis exit 0, check 10/13 PASS (khong WARN)",
+           e1 == 0 and l1.get(10) == "PASS" and l1.get(13) == "PASS"),
+          ("Giai đoạn 1 ep --phase 2 -> check 10 WARN", l1b.get(10) == "WARN"),
+          ("Giai đoạn 2: man thieu anh -> check 10 WARN", l2.get(10) == "WARN"),
+          ("check 20-24 PASS tren workbook dung", all(l1.get(k) == "PASS" for k in range(20, 25))
+           and all(l2.get(k) == "PASS" for k in range(20, 25)))]
+    bad = 0
+    for name, good in ok:
+        bad += not good
+        print(f"{'phase: ' + name:60} {'OK' if good else 'THAT BAI'}")
+    if bad:
+        print(json.dumps({"l1": l1, "l1b": l1b, "l2": l2, "stat": stat}, ensure_ascii=False))
+    return bad
+
+
 def run_gate(path, before, screens, asis=False):
     cmd = [sys.executable, GATE, path, "--expect-screens", screens]
     if before:
@@ -400,12 +583,39 @@ def run_gate(path, before, screens, asis=False):
     return p.returncode, fails
 
 
+def automark_checks():
+    """Giai doan 2: crawl ghi box -> auto_marks ghep theo nhan (dung truoc, chua nhau sau), moi vi tri 1 lan."""
+    sp = importlib.util.spec_from_file_location("bdb2", os.path.join(HERE, "build-basic-design.py"))
+    m = importlib.util.module_from_spec(sp)
+    sp.loader.exec_module(m)
+    page = {"items": [{"label": "保存する", "box": [0.5, 0.8, 0.1, 0.05]}, {"label": "メールアドレス", "box": [0.2, 0.3, 0.4, 0.04]}],
+            "tables": [{"headers": ["氏名"], "boxes": [[0.1, 0.5, 0.1, 0.03]]}],
+            "linkBoxes": [{"text": "戻る", "box": [0.05, 0.9, 0.05, 0.03]}]}
+    items = [{"name_jp": "メールアドレス"}, {"name_jp": "氏名"}, {"name_jp": "保存"}, {"name_jp": "戻る"}, {"name_jp": "見えない項目"}]
+    mk = {x["n"]: (round(x["x"], 3), round(x["y"], 3)) for x in m.auto_marks(items, page)}
+    ok = sorted(mk) == [1, 2, 3, 4] and mk[1] == (0.22, 0.32) and 5 not in mk
+    print("%-34s %s" % ("auto-mark: nhan -> vi tri crawl", "OK" if ok else "THAT BAI %s" % mk))
+    return 0 if ok else 1
+
+
+def next_checks():
+    """"next" = ー / trong -> khong co man dich (khong hoi); nhieu SC -> noi ten man."""
+    sp = importlib.util.spec_from_file_location("bdb", os.path.join(HERE, "build-basic-design.py"))
+    m = importlib.util.module_from_spec(sp)
+    sp.loader.exec_module(m)
+    ctx = {"titles": {"SC-004": "予約管理", "SC-012": "店舗一覧"}, "routes": {}, "fields": None}
+    ok = ("ー" in m.NO_NEXT and m.screen_ref("SC-004 / SC-012", ctx) == "予約管理」・「店舗一覧"
+          and m.screen_ref("ー（マスタータイプは SC-012）", ctx) == "店舗一覧" and m.screen_ref("SC-999", ctx) is None)
+    print("%-34s %s" % ("next: ー / nhieu SC / SC la", "OK" if ok else "THAT BAI"))
+    return 0 if ok else 1
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("workbook", nargs="?", help="bo trong -> tu sinh fixture bang build-basic-design.py (--asis)")
     ap.add_argument("--before")
     ap.add_argument("--asis", action="store_true",
-                    help="gate chay --asis + them case check 16-19")
+                    help="gate chay --asis + them case check 16-24")
     args = ap.parse_args()
     pre_bad = 0
     fixture_dir = None
@@ -413,7 +623,8 @@ def main():
         fixture_dir = tempfile.mkdtemp(prefix="selftest-bd-")
         args.workbook, args.before, stat = make_fixture(fixture_dir)
         args.asis = True
-        pre_bad = fixture_checks(args.workbook, stat) + code_checks(fixture_dir)
+        pre_bad = fixture_checks(args.workbook, stat) + code_checks(fixture_dir) + \
+            phase_checks(fixture_dir, args.workbook) + next_checks() + automark_checks()
     cases = CASES + (CASE_ASIS if args.asis else [])
 
     wb = openpyxl.load_workbook(args.workbook)

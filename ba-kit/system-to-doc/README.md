@@ -11,10 +11,10 @@
 | | Luồng 1 — Baseline | Luồng 2 — Change Request |
 |---|---|---|
 | Khi nào | Lần đầu nhận dự án · hệ thống đã đổi nhiều | Khách gửi yêu cầu thay đổi |
-| Lệnh | `/analyze-system` | `/change-request <file / link / nội dung>` |
+| Lệnh | `/analyze-system` — Giai đoạn 1 đọc source code → dừng cho bạn xem trước → Giai đoạn 2 AI Playwright trên website | `/change-request <file / link / nội dung>` |
 | Model | Opus (tự chọn khi gõ lệnh) | Opus |
 | Đọc | Website · Source · DB · Figma | Baseline mới nhất + nội dung CR |
-| Ra | `outputs/ver1_<DDMMYY>_<tên>/` — 9 output (chạy lại vẫn ghi vào ver1) | `outputs/CR-<id>_<DDMMYY>_<tên>/` — impact 6 trục |
+| Ra | `outputs/ver1_<DDMMYY>_<tên>/` — 8 output: Giai đoạn 1 ra 6, Giai đoạn 2 thêm 2 (chạy lại vẫn ghi vào ver1) | `outputs/CR-<id>_<DDMMYY>_<tên>/` — impact 6 trục |
 
 ---
 
@@ -22,7 +22,7 @@
 
 Copy toàn bộ folder `system-to-doc` vào folder dự án → mở bằng Claude Code. **Không cần cài gì thêm.**
 
-> 🔧 **Kit tự lo môi trường.** Khi chạy `/analyze-system` hoặc `/change-request`, AI tự kiểm tra và **tự cài** những gì còn thiếu: thư viện Python, Playwright + trình duyệt (khi quét website), kết nối Figma MCP (khi vẽ Figma). Việc duy nhất bạn có thể được nhờ: gõ `/mcp` → chọn **figma** → **Authenticate** để đăng nhập Figma (tài khoản có quyền EDIT).
+> 🔧 **Kit tự lo môi trường.** Khi chạy `/analyze-system` hoặc `/change-request`, AI tự kiểm tra và **tự cài** những gì còn thiếu: thư viện Python, Playwright + trình duyệt (khi quét website), kết nối Figma MCP (khi vẽ Figma). Việc duy nhất bạn có thể được nhờ: gõ `/mcp` → chọn **figma** → **Authenticate** để đăng nhập Figma (tài khoản có quyền EDIT). Giai đoạn 1 cần **Node.js** có sẵn trên máy (cài 1 lần): AI tự cài bộ đọc code ts-morph (~15 MB, chỉ trong thư mục kit) để lấy Basic Design trực tiếp từ source.
 
 Kit **có sẵn các folder để bạn bỏ file vào** — AI tự tìm ở đó trước khi hỏi lại đường dẫn:
 
@@ -51,22 +51,37 @@ Nội dung `inputs/repo|db|cr/` và `.auth/` đã `.gitignore` — không bị c
 
 ---
 
-## Luồng 1 — chạy lần đầu
+## Luồng 1 — chạy lần đầu (1 lệnh, 2 giai đoạn)
+
+Mục tiêu: có output nhanh để bạn xem trước, phần chạy trên website (lâu) để sau.
+
+| | Giai đoạn 1 — đọc source code | Giai đoạn 2 — AI Playwright kiểm tra trên website |
+|---|---|---|
+| Lệnh | `/analyze-system` | cùng lệnh — sau điểm dừng, bạn chọn chạy tiếp |
+| AI làm | Đọc source code (BE · FE · Mobile), **không mở website** | Mở website thật, đối chiếu toàn bộ output Giai đoạn 1, chụp ảnh màn hình |
+| Ra | O1 Tổng hợp · O2 API · O3 DB · O4 Figma · O5 Basic Design · O8 Hướng dẫn chạy local | Cập nhật O1–O5 (thêm ảnh màn hình, sửa chỗ khác code) · thêm **O6 Design System** · **O7 Bug list** |
+| Kết thúc | AI báo "Giai đoạn 1 đã chạy xong" và hỏi: **chạy tiếp Giai đoạn 2 ngay** hay **dừng để review** (lần sau gọi lại `/analyze-system` là chạy tiếp) | AI báo "Giai đoạn 2 đã chạy xong" + phần đã đổi |
+| Chi phí | Tốn token (đọc code) | Lâu nhưng ít token — máy thao tác trên màn hình, bạn xem được |
+
+> 📱 **Phần mềm là app** (không mở bằng trình duyệt được) → không có Giai đoạn 2; README ghi O6 · O7 "không chạy — ứng dụng di động".
 
 ```bash
 cd my-project && claude
-/analyze-system
+/analyze-system      # Giai đoạn 1 → AI dừng, hỏi: chạy tiếp Giai đoạn 2 hay dừng để review
+# chọn "dừng" → xem output → gọi lại:
+/analyze-system      # AI đề xuất chạy tiếp Giai đoạn 2
 ```
 
-AI **đọc source code trước**, rồi mới mở website. AI sẽ hỏi (chọn đáp án hoặc gõ vào ô *Other*; mỗi lượt gom tối đa 4 câu cùng chủ đề):
+AI hỏi (chọn đáp án hoặc gõ vào ô *Other*; mỗi lượt gom tối đa 4 câu cùng chủ đề):
 
-| Nhóm | AI hỏi | Chuẩn bị sẵn |
-|---|---|---|
-| **Website** | Bao nhiêu site · URL · staging/production · tài khoản role nào · **ai cấp, có được phép dùng để quét không** · chỉ ĐỌC hay được CREATE/UPDATE · vùng cấm | URL, tài khoản **test** |
-| **Source code** | Repo nào (AI tự liệt kê từ `inputs/repo/`) · FE/BE · repo FE thuộc website nào | Repo đã bỏ vào `inputs/repo/` |
-| **Database** *(tuỳ chọn)* | Có file schema / quyền đọc DB / chỉ có migration / không có | File `.sql` chỉ cấu trúc trong `inputs/db/` |
-| **Figma** *(tuỳ chọn)* | Link design hiện tại · **link file để vẽ flow** | Link `figma.com/design/...` |
-| Khác | Có làm bug list không · ngôn ngữ · nguồn có dữ liệu thật không | |
+| Giai đoạn | Nhóm | AI hỏi | Chuẩn bị sẵn |
+|---|---|---|---|
+| 1 | **Phạm vi** | Tên hệ thống · khảo sát tới đâu · **website hay app** | |
+| 1 | **Source code** | Repo nào (AI tự liệt kê từ `inputs/repo/`) · FE/BE/Mobile · repo FE thuộc website nào | Repo đã bỏ vào `inputs/repo/` |
+| 1 | **Database** *(tuỳ chọn)* | Có file schema / quyền đọc DB / chỉ có migration / không có | File `.sql` chỉ cấu trúc trong `inputs/db/` |
+| 1 | **Figma** *(tuỳ chọn)* | Link design hiện tại · **link file để vẽ flow** | Link `figma.com/design/...` |
+| 2 | **Website** | Bao nhiêu site · URL · staging/production · tài khoản role nào · **ai cấp, có được phép dùng để quét không** · chỉ ĐỌC hay được CREATE/UPDATE · vùng cấm | URL, tài khoản **test** |
+| 2 | Khác | Có làm bug list không · website có dữ liệu thật không | |
 
 > ⚠️ **Mật khẩu không gõ vào chat.**
 > - **Môi trường kiểm thử (dev / staging, tài khoản test):** điền sẵn `.auth/credentials.local.env` (copy từ `credentials.example.env`; chưa có thì AI tạo file với chỗ trống) → bạn mở file, điền URL, tài khoản (+ Basic Auth nếu có) và ghi `ENV=TEST` → AI cho Playwright tự đăng nhập và quét toàn bộ màn, **tự đăng nhập lại** nếu app đá phiên. AI không đọc file này; script từ chối nếu không phải `TEST`.
@@ -78,21 +93,21 @@ AI **đọc source code trước**, rồi mới mở website. AI sẽ hỏi (ch�
 > 🧠 **AI nhớ câu trả lời.** Lần chạy sau AI không hỏi lại — chỉ in 1 bảng *"Tôi đang dùng các thông tin sau — có gì đổi không?"*. Riêng 4 câu an toàn (website thử nghiệm hay thật · tài khoản có được phép quét · mức thao tác · có dữ liệu thật không) luôn được hỏi lại gọn *"vẫn như lần trước chứ?"*. Chưa có thông tin (ví dụ chưa có link Figma) → chọn **"Chưa có — chạy v1 trước, bổ sung sau"**; khi bổ sung, AI cập nhật lại ver1.
 > 🔐 **Không đăng nhập được?** AI không thử mãi: sau 2 lần sẽ mở trình duyệt và nhờ bạn **đăng nhập tay**, xong trả lời "xong".
 
-Sau khi đọc code, AI in **bảng tổng hợp** kèm **các quyết định lớn có đề xuất** (ví dụ "2 website khác nhau về cỡ chữ, bo góc nút → đề xuất 2 bộ quy chuẩn giao diện riêng", "đồng ý vẽ sơ đồ database / API lên Figma?") → bạn trả lời `OK` → AI khảo sát và sinh output. Phát hiện dữ liệu nhạy cảm (`.env`, key, dump có dữ liệu thật…) → AI **cảnh báo và dừng** chờ bạn xử lý.
+Giai đoạn 1: sau khi đọc code, AI in **bảng tổng hợp** kèm **các quyết định lớn có đề xuất** (ví dụ "2 website khác nhau về cỡ chữ, bo góc nút → đề xuất 2 bộ quy chuẩn giao diện riêng", "đồng ý vẽ sơ đồ database / API lên Figma?") → bạn trả lời `OK` → AI sinh output Giai đoạn 1. Phát hiện dữ liệu nhạy cảm (`.env`, key, dump có dữ liệu thật…) → AI **cảnh báo và dừng** chờ bạn xử lý.
 
 ### Output Luồng 1
 
-| # | Output | File trong `outputs/ver<N>_.../` |
-|---|---|---|
-| **O1** | **Danh sách màn hình theo website** — tổng số màn, item từng màn, xử lý, **API mỗi nút gọi** (cột "API gọi"), lỗi hiển thị, liên kết giữa các màn (template Basic Design công ty; đọc code trước rồi mới mở website) | `01_Screens/BasicDesign_WEB-01_ver<N>.xlsx` (1 file / website) |
-| **O2** | **API Documentation** — mọi API theo group (+ batch): làm gì, method, request, response; sheet tổng hợp có link tới từng API | `02_API/API_Doc_….xlsx` |
-| **O3** | **Database Documentation** — tổng quan bảng, quan hệ, từng bảng: field · kiểu · format · giới hạn · maxlength · mục đích · ERD | `03_DB/DB_Doc_….xlsx` · `03_DB/ERD_….png` |
-| **O4** | *(tuỳ chọn — không chạy thì bỏ qua)* **Design System** hệ thống cũ (từ website / Figma + source) — **cùng chuẩn với `designer-kit`** và format artifact **Design System** của claude.ai: brand book, màu theo theme, thang chữ, spacing/radius/shadow/size, component có preview, logo/icon, cover; token đặt tên vai trò chuẩn, phần không quan sát được ghi TBD. Nhiều website: chỉ khác màu → 1 Design System mỗi site 1 theme; khác cả phong cách → mỗi website 1 Design System riêng. Đồng ý thì publish thành link private | `04_DesignSystem/` (`STATUS.md` + `project/`) |
-| **O5** | **Figma flow** — Output 1 Flow tổng quan + Output 2 Screen flow | link trong `05_Figma/figma-links.md` |
-| **O6** | **Tài liệu tổng hợp** — hệ thống làm gì, **luồng nghiệp vụ chính** (bước đánh số), trạng thái đối tượng chính; màn hình / API / database chỉ 1 bảng tổng (sơ đồ database là link Figma) | `06_Overview/Overview_….docx` |
-| **O7** | **Bug list hiện trạng** — 1 sheet; đọc code và mở thử website; chỉ lỗi **làm người dùng thao tác không được hoặc sai**, mức **High / Urgent** *(nếu chọn)* | `07_BugList/BugList_….xlsx` |
-| **O9** | **Hướng dẫn chạy local** — cho dev mới: lệnh cài / chạy, database local, **tên** các key cấu hình (không có giá trị), môi trường, pipeline, lịch batch | `09_DevSetup/DevSetup_….md` |
-| — | **Mục lục version** — mọi output, số lượng, kết quả kiểm tra | `README.md` |
+| # | Output | Giai đoạn | File trong `outputs/ver<N>_.../` |
+|---|---|---|---|
+| **O1** | **Tài liệu tổng hợp** — **hình luồng nghiệp vụ** (vẽ bằng Archify) ngay ở phần tổng quan hệ thống, hệ thống làm gì, **luồng nghiệp vụ chính** (bước đánh số), trạng thái đối tượng chính; màn hình / API / database chỉ 1 bảng tổng (sơ đồ database là link Figma) | Giai đoạn 1 (cập nhật ở Giai đoạn 2) | `01_Overview/Overview_….docx` |
+| **O2** | **API Documentation** — mọi API theo group (+ batch): làm gì, method, request, response; sheet tổng hợp có link tới từng API | Giai đoạn 1 | `02_API/API_Doc_….xlsx` |
+| **O3** | **Database Documentation** — tổng quan bảng, quan hệ, từng bảng: field · kiểu · format · giới hạn · maxlength · mục đích · ERD | Giai đoạn 1 | `03_DB/DB_Doc_….xlsx` · `03_DB/ERD_….png` |
+| **O4** | **Figma flow** — Output 1 Flow tổng quan + Output 2 Screen flow + sơ đồ DB | Giai đoạn 1 | link trong `04_Figma/figma-links.md` |
+| **O5** | **Basic Design** — AI đọc code bằng AST (lấy nguyên văn nhãn, bắt buộc nhập, độ dài tối đa, thông báo lỗi) rồi viết lại theo nghiệp vụ; mỗi màn 1 sheet đặt theo **tên màn dễ hiểu**; item người dùng thấy (bắt buộc nhập, độ dài tối đa lấy từ code), mô tả theo nghiệp vụ ("bấm → chuyển sang màn …"), thông báo lỗi đầy đủ; Giai đoạn 2 thêm ảnh màn hình đánh số (template Basic Design công ty) | Giai đoạn 1 · ảnh ở Giai đoạn 2 | `05_Basic_Design/BasicDesign_WEB-01_ver<N>.xlsx` (1 file / website) |
+| **O6** | *(tuỳ chọn — không chạy thì bỏ qua)* **Design System** hệ thống cũ (từ website / Figma + source) — **cùng chuẩn với `designer-kit`** và format artifact **Design System** của claude.ai: brand book, màu theo theme, thang chữ, spacing/radius/shadow/size, component có preview, logo/icon, cover; token đặt tên vai trò chuẩn, phần không quan sát được ghi TBD. Nhiều website: chỉ khác màu → 1 Design System mỗi site 1 theme; khác cả phong cách → mỗi website 1 Design System riêng. Đồng ý thì publish thành link private | Giai đoạn 2 | `06_Design_System/` (`STATUS.md` + `project/`) |
+| **O7** | **Bug list hiện trạng** — 1 sheet; đọc code và mở thử website; chỉ lỗi **làm người dùng thao tác không được hoặc sai**, mức **High / Urgent** *(nếu chọn)* | Giai đoạn 2 | `07_Bug_List/BugList_….xlsx` |
+| **O8** | **Hướng dẫn chạy local** — cho dev mới: lệnh cài / chạy, database local, **tên** các key cấu hình (không có giá trị), môi trường, pipeline, lịch batch | Giai đoạn 1 | `08_Huong_dan_chay_local/DevSetup_….md` |
+| — | **Mục lục version** — mọi output, số lượng, kết quả kiểm tra | 1 · 2 | `README.md` |
 
 Mọi dòng trong tài liệu gắn với bằng chứng (ảnh chụp, dòng code, schema). Không có bằng chứng → ghi "Cần xác nhận — Q-xxx" (bản tiếng Nhật 「要確認 — Q-xxx」), **không viết đại cho đẹp**. Danh sách điểm chưa chắc AI liệt kê ở cuối phiên chạy.
 

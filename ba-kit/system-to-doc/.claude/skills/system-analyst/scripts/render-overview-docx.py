@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Render O6 — Overview docx (tom tat khao sat) tu inventory + narrative + business + index.
+"""Render O1 — Overview docx (tom tat khao sat) tu inventory + narrative + business + index.
 
   python3 render-overview-docx.py --inventory <_internal>/inventory.xlsx \
       --narrative <_internal>/narrative.json --business <_internal>/business.json \
-      --index <_internal>/index.json [--figma-links <ver>/05_Figma/figma-links.md] \
-      [--template templates/high-level-template.docx] --out <ver>/06_Overview/Overview_<sys>_ver<N>.docx
+      --index <_internal>/index.json [--figma-links <ver>/04_Figma/figma-links.md] \
+      [--flow-image <_internal>/archify/<folder>/luong-nghiep-vu.png] \
+      [--template templates/high-level-template.docx] --out <ver>/01_Overview/Overview_<sys>_ver<N>.docx
 
-Chay build-version-index.py TRUOC (sinh index.json) va SAU (cap nhat gate O6).
-Cau truc (feedback 28/10/2026): 0 pham vi · 1 tong quan · 2 nghiep vu chinh (business.json: he thong lam gi ·
+Chay build-version-index.py TRUOC (sinh index.json) va SAU (cap nhat gate O1).
+Cau truc (feedback 28-29/10/2026): 0 pham vi · 1 tong quan he thong (+ hinh luong nghiep vu Archify) · 2 nghiep vu chinh (business.json: he thong lam gi ·
 luong nghiep vu · trang thai) · 3 man hinh (1 bang tong) · 4 API & Batch (1 bang tong) · 5 DB (+ link ERD Figma)
 · 6 lien ket ben thu 3. Khong co danh sach output, luong tong quan, phu luc.
 BANG/SO LIEU -> may sinh tu inventory; VAN XUOI -> agent viet:
@@ -35,6 +36,8 @@ HEADER = "LABO / MAINTAIN PROJECT — SYSTEM OVERVIEW"
 FOOTER = "AI-generated analysis must be reviewed before use"
 DASH = "—"
 FIGMA_LINK = "Sơ đồ trên Figma:"
+FLOW_CAPTION = "Hình 1. Luồng nghiệp vụ chính (vẽ bằng Archify từ source code)"
+NO_FLOW_IMG = "Chưa có hình luồng nghiệp vụ — vẽ bằng Archify rồi chạy lại với --flow-image."
 NO_FIGMA = "Chưa có sơ đồ trên Figma — xem ảnh ERD trong thư mục 03_DB."
 FIGMA_RX = re.compile(r"https://(?:www\.)?figma\.com/(?:design|board|file)/[A-Za-z0-9]{6,}[^\s|)<>]*")
 # dong figma-links.md (cot dau, chu thuong) -> so do
@@ -46,7 +49,7 @@ SCREEN_TYPES = S.SCREEN_TYPE
 API_STATUS = S.API_STATUS
 
 CHAPTERS = [
-    "0. Phạm vi & nguồn khảo sát", "1. Tổng quan sản phẩm", "2. Nghiệp vụ chính",
+    "0. Phạm vi & nguồn khảo sát", "1. Tổng quan hệ thống", "2. Nghiệp vụ chính",
     "3. Website & màn hình", "4. API & Batch", "5. Database", "6. Liên kết bên thứ 3",
 ]
 BIZ_SECTIONS = ["2.1 Hệ thống này làm gì", "2.2 Luồng nghiệp vụ chính", "2.3 Trạng thái của đối tượng chính"]
@@ -191,7 +194,8 @@ def main():
     ap.add_argument("--narrative", required=True)
     ap.add_argument("--business", required=True, help="business.json (chuong 2: nghiep vu chinh)")
     ap.add_argument("--index", required=True)
-    ap.add_argument("--figma-links", default=None, help="<ver>/05_Figma/figma-links.md (link Output 1 + ERD)")
+    ap.add_argument("--figma-links", default=None, help="<ver>/04_Figma/figma-links.md (link Output 1 + ERD)")
+    ap.add_argument("--flow-image", default=None, help="PNG luong nghiep vu ve bang Archify (chen vao chuong 1)")
     ap.add_argument("--template", default=DEFAULT_TPL)
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
@@ -241,6 +245,13 @@ def main():
     # 1
     doc.add_heading(CHAPTERS[1], level=1)
     doc.add_paragraph(nar.get("product_overview") or S.NEED_CONFIRM)
+    if a.flow_image and os.path.isfile(a.flow_image):
+        from docx.shared import Emu
+        sec = doc.sections[-1]
+        doc.add_picture(a.flow_image, width=Emu(sec.page_width - sec.left_margin - sec.right_margin))
+        doc.add_paragraph(FLOW_CAPTION)
+    else:
+        doc.add_paragraph(NO_FLOW_IMG)
     add_table(doc, ["Actor", "Vai trò", "Sử dụng chính"],
               [[x.get("actor"), x.get("role"), x.get("main_usage")] for x in nar.get("actors", [])]
               or [[S.NEED_CONFIRM, S.NEED_CONFIRM, S.NEED_CONFIRM]])
@@ -278,7 +289,7 @@ def main():
 
     # 3
     doc.add_heading(CHAPTERS[3], level=1)
-    doc.add_paragraph("Số màn hình theo site và loại. Danh sách chi tiết: O1 Basic Design.")
+    doc.add_paragraph("Số màn hình theo site và loại. Danh sách chi tiết: O5 Basic Design.")
     add_table(doc, ["Site", "Số màn hình"] + SCREEN_TYPES, cnt["sites"])
 
     # 4

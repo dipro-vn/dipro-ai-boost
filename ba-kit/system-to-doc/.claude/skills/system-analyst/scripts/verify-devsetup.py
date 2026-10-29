@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""GATE V-DEV — O9 DevSetup md (R12 · D7).
+"""GATE V-DEV — O8 DevSetup md (R12 · D7).
 
-  python3 verify-devsetup.py <ver>/09_DevSetup/DevSetup_<sys>_ver<N>.md [--out report.md]
+  python3 verify-devsetup.py <ver>/08_Huong_dan_chay_local/DevSetup_<sys>_ver<N>.md [--out report.md]
 
 Chan: thieu muc 1-7 · con chu cu · H06 (detect-pii.js --scan) bat duoc PII / credential · co dang KEY=gia tri
 hoac `KEY: gia tri` cho key cua muc 4 · nguon cua muc 4 khong phai file mau (.env.example/.sample/.template) ·
@@ -44,7 +44,7 @@ def main():
     a = ap.parse_args()
     text = open(a.md, encoding="utf8").read()
     lines = text.splitlines()
-    g = Gate("GATE V-DEV — DevSetup (O9)")
+    g = Gate("GATE V-DEV — DevSetup (O8)")
 
     g.check(1, "Du muc 1-7", [h for h in DEV.SECTIONS if h not in lines])
     g.check(2, "Khong con chu '%s'" % S.LEGACY_WORD, ["md"] if S.has_legacy(text) else [])

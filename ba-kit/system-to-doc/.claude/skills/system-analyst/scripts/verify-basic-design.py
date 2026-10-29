@@ -1,20 +1,28 @@
 #!/usr/bin/env python3
 # SOURCE: ba-kit/requirement-to-flow/.claude/skills/business-analyst/scripts/verify-basic-design.py @ 447770e
-# DA TACH KHOI BAN GOC requirement-to-flow (D2, 27/10/2026): kit nay them cot S "API gọi" + check 16-19.
-# Check 1-15 van la logic chung — sua check 1-15 thi sua CA HAI noi; check 16-19 chi o day.
-"""Quality Gate O5 — Basic Design master workbook (= gate V-BD cua kit system-to-doc).
+# DA TACH KHOI BAN GOC requirement-to-flow (D2, 27/10/2026): kit nay them cot S "API gọi" + check 16-24.
+# Check 1-15 van la logic chung — sua check 1-15 thi sua CA HAI noi; check 16-24 chi o day.
+# Rieng kit nay (29/10/2026): bo cot / o "Status" (check 4 khong doi F4), check 10/13 theo Phase.
+"""Quality Gate O4 — Basic Design master workbook (= gate V-BD cua kit system-to-doc).
 
-Chay 15 check tren master workbook (+ check 16-19 khi co --asis):
+Chay 15 check tren master workbook (+ check 16-24 khi co --asis):
   16 item co mo ta -> cot R co EV-xxxx / code-ref REPO-xx:path#Lnn / "Cần xác nhận — Q-xxx"
   17 item dang button / link / form -> cot S "API gọi" co API-xxx, "Không gọi API" hoac "Cần xác nhận — Q-xxx"
   18 khong con chu cu inv_schema.LEGACY_WORD (D1)
   19 khong o trong o cot I..Q cua item (khong ap dung ghi ー)
-Doc rule day du: .claude/sys-agent/outputs/output-2a-basic-design.md
+  20 khong o trong o dong loi: Screen Error message, Common mesage, bang ERROR SCENARIOS
+  21 khong con "Status" / DRAFT: Screen Index khong co cot Status, screen sheet E4/F4 trong
+  22 item nhap lieu: required (M) / maxlength (N) co gia tri hoac "Cần xác nhận — Q-xxx"
+     ("ー" chi khi khong ap dung: maxlength cua select / radio / checkbox / date; required cua item Disable)
+  23 ten item (I/J) va mo ta (P/Q) khong chua "GET /api/..", chu "API", ten ham camelCase
+  24 ten sheet / Screen Name doc duoc: khong SC-xxx, route /..., camelCase, placeholder "chưa có tiêu đề"
+  10/13 theo Phase: Giai đoạn 1 (chua chay Playwright) chua co anh -> PASS; Giai đoạn 2 -> WARN nhu cu
+Doc rule day du: .claude/sys-agent/outputs/o5-basic-design.md
 
 Usage:
   python3 verify-basic-design.py <master.xlsx> \
       [--before <backup.xlsx>] \
-      [--expect-screens "ID1,ID2"] \
+      [--expect-screens "ID1,ID2"] [--asis] [--phase 1|2|auto] \
       [--out <report.md>]
 
 Exit: 0 = PASS | 1 = co FAIL | 2 = thieu openpyxl / khong doc duoc file
@@ -30,6 +38,7 @@ from gate_report import legacy_word_hits  # noqa: E402
 
 try:
     import openpyxl
+    import openpyxl.utils
 except ImportError:
     sys.stderr.write(
         "FAIL: thieu openpyxl. Chay: pip install openpyxl\n")
@@ -48,7 +57,6 @@ META = {
     "screen_id": "F1",
     "flow_id": "F2",
     "version": "F3",
-    "status": "F4",
     "source_flow_version": "F5",
     "sheet_type": "F6",
 }
@@ -75,6 +83,18 @@ CLICK_TYPES = ("button", "hyperlink", "link", "form", "submit")
 API_CALL_RE = re.compile(r"\bAPI-\d{3,}\b|Không gọi API|(%s|%s) — Q-\d{3,}" % (S.NEED_CONFIRM, S.NEED_CONFIRM_JP))
 
 CODE_RE = re.compile(r"\b(?:E_[A-Z0-9]+(?:_[A-Z])?_\d{3}|COMMON_[A-Z]+_\d{3})\b")
+
+PHASE1_MARK = "bổ sung ở Giai đoạn 2"   # A9 cua sheet chua co anh khi build Giai đoạn 1 (build-basic-design.py)
+# dong bo voi build-basic-design.py INPUT_TYPES / NO_MAXLEN / CODE_RX
+INPUT_TYPES = {"textbox", "text", "input", "textarea", "select", "dropdown", "combobox", "radio", "checkbox",
+               "date", "datepicker", "time", "number", "password", "email"}
+NO_MAXLEN = {"select", "dropdown", "combobox", "radio", "checkbox", "date", "datepicker", "time"}
+TEXT_MAXLEN = {"textbox", "text", "input", "textarea", "password", "email"}
+# shortcut: camelCase bat ca ten rieng kieu iPhone / YouTube — gap thi doi ten hien thi, khong ha check
+CODE_TXT_RE = re.compile(r"\b(?:GET|POST|PUT|PATCH|DELETE)\s+/|\bAPI\b|\b[a-z]+[A-Z][A-Za-z0-9]*\b|=>|\w+\(\)")
+BAD_NAME_RE = re.compile(r"\bSC-\d+\b|(^|\s)/[A-Za-z0-9_:\[\]{}.\-]|\b[a-z]+[A-Z][A-Za-z0-9]*\b|"
+                         r"(?i:chưa có tiêu đề|chưa đặt tên|no title|untitled|\[SCREEN NAME\]|^TEMPLATE$)|"
+                         r"%s|%s" % (S.NEED_CONFIRM, S.NEED_CONFIRM_JP))
 
 
 class Report:
@@ -154,6 +174,8 @@ def read_screen_index(wb):
     if "Screen Index" not in wb.sheetnames:
         return None, []
     ws = wb["Screen Index"]
+    # tim cot theo header (kit nay da bo cot "Status" -> UI Source o H thay vi I)
+    col = {str(c.value or "").strip(): c.column_letter for c in ws[SCREEN_INDEX_HEADER_ROW] if c.value}
     rows = []
     for r in range(SCREEN_INDEX_HEADER_ROW + 1, ws.max_row + 1):
         screen_id = cell(ws, f"B{r}")
@@ -164,8 +186,8 @@ def read_screen_index(wb):
             "row": r,
             "screen_id": screen_id,
             "sheet_name": sheet_name,
-            "ui_source": cell(ws, f"I{r}"),
-            "status": cell(ws, f"H{r}"),
+            "screen_name": cell(ws, f"D{r}"),
+            "ui_source": cell(ws, f"{col.get('UI Source', 'I')}{r}"),
         })
     return ws, rows
 
@@ -207,7 +229,7 @@ def change_history_rows(wb):
     return n
 
 
-def run(master_path, before_path, expect_screens, approved, rep, asis_mode=False):
+def run(master_path, before_path, expect_screens, approved, rep, asis_mode=False, phase="auto"):
     try:
         wb = openpyxl.load_workbook(master_path)
     except Exception as exc:  # noqa: BLE001
@@ -224,6 +246,8 @@ def run(master_path, before_path, expect_screens, approved, rep, asis_mode=False
 
     ws_list = working_sheets(wb)
     idx_ws, idx_rows = read_screen_index(wb)
+    if phase == "auto":   # build Giai đoạn 1 ghi PHASE1_MARK o A9 cua sheet chua co anh
+        phase = "1" if any(PHASE1_MARK in cell(ws, "A9") for ws in ws_list) else "2"
 
     # --- Check 1: Sample immutable -------------------------------------
     if TEMPLATE_SHEET not in wb.sheetnames:
@@ -273,18 +297,17 @@ def run(master_path, before_path, expect_screens, approved, rep, asis_mode=False
     # --- Check 4: metadata day du -------------------------------------
     missing = []
     for ws in ws_list:
-        for key in ("screen_id", "flow_id", "version", "status",
-                    "source_flow_version"):
+        for key in ("screen_id", "flow_id", "version", "source_flow_version"):
             v = cell(ws, META[key])
             if key == "screen_id" and v.upper() in PLACEHOLDERS:
                 missing.append(f"{ws.title}.{META[key]}({key})")
             elif not v:
                 missing.append(f"{ws.title}.{META[key]}({key})")
     if missing:
-        rep.add(4, "Metadata F1..F5 day du", "FAIL",
+        rep.add(4, "Metadata F1,F2,F3,F5 day du", "FAIL",
                 "Thieu/placeholder: " + ", ".join(missing[:12]))
     else:
-        rep.add(4, "Metadata F1..F5 day du", "PASS", "Moi working sheet du metadata")
+        rep.add(4, "Metadata F1,F2,F3,F5 day du", "PASS", "Moi working sheet du metadata")
 
     # --- Check 5: Screen Index dong bo --------------------------------
     if idx_ws is None:
@@ -426,6 +449,10 @@ def run(master_path, before_path, expect_screens, approved, rep, asis_mode=False
             rep.add(10, "Khai bao UI Source", "FAIL",
                     "Sheet khong co anh nhung khong khai bao `NO IMAGE`: "
                     + ", ".join(undeclared))
+        elif declared and phase == "1":
+            rep.add(10, "Khai bao UI Source", "PASS",
+                    f"Giai đoạn 1 (chua chay Playwright): {len(declared)} sheet chua co anh, da khai bao — "
+                    "bo sung o Giai đoạn 2")
         elif declared:
             rep.add(10, "Khai bao UI Source", "WARN",
                     f"{len(declared)} sheet chua co anh, da khai bao dung: "
@@ -509,15 +536,18 @@ def run(master_path, before_path, expect_screens, approved, rep, asis_mode=False
         no_cap = [ws.title for ws in ws_list
                   if getattr(ws, "_images", [])
                   and "so do tren anh" not in _fold(str(ws["A9"].value or ""))]
-        if no_cap:
-            rep.add(13, "Anh UI vua vung A-F", "WARN",
+        if no_cap:   # yeu cau nguoi dung 29/10/2026: anh chen vao Basic Design BAT BUOC danh so -> FAIL
+            rep.add(13, "Anh UI vua vung A-F", "FAIL",
                     f"{n_img} anh vua khung, NHUNG {len(no_cap)} sheet thieu caption A9 "
                     f"'so do tren anh = # trong bang item' (anh chua duoc danh so?): "
-                    + "; ".join(no_cap[:6]) + ". Xem output-5-basic-design.md muc 1.1h.")
+                    + "; ".join(no_cap[:6]) + ". Chay giai doan 2 (crawl ghi vi tri -> tu danh so) hoac khai 'mark'.")
         else:
             rep.add(13, "Anh UI vua vung A-F", "PASS",
                     f"{n_img} anh, deu nam trong {IMG_MAX_W}x{IMG_MAX_H}px, co caption danh so "
                     f"(do bang anchor.ext — kich thuoc Excel thuc su render)")
+    elif phase == "1":
+        rep.add(13, "Anh UI vua vung A-F", "PASS",
+                "Giai đoạn 1: chua co anh (bo sung o Giai đoạn 2) — khong co gi de kiem")
     else:
         rep.add(13, "Anh UI vua vung A-F", "WARN",
                 "Khong co anh nao de kiem (moi sheet deu NO IMAGE)")
@@ -548,9 +578,11 @@ def run(master_path, before_path, expect_screens, approved, rep, asis_mode=False
         return bad, n
 
     style_bad, style_n = [], 0
+    idx_cols = max([c.column for c in wb["Screen Index"][SCREEN_INDEX_HEADER_ROW] if c.value] or [12]) \
+        if "Screen Index" in wb.sheetnames else 12
     for nm, hdr, cols in (("Common mesage", CATALOG_HEADER_ROW, range(1, 10)),
                           ("Screen Error message", CATALOG_HEADER_ROW, range(1, 11)),
-                          ("Screen Index", SCREEN_INDEX_HEADER_ROW, range(1, 13)),
+                          ("Screen Index", SCREEN_INDEX_HEADER_ROW, range(1, idx_cols + 1)),
                           ("Change History", CHANGE_HISTORY_HEADER_ROW, range(1, 17))):
         if nm in wb.sheetnames:
             b, n = scan_rows(wb[nm], hdr, list(cols), nm)
@@ -606,7 +638,7 @@ def run(master_path, before_path, expect_screens, approved, rep, asis_mode=False
     # AS-IS: moi mo ta hanh vi phai tro ve bang chung o cot R (EV / code-ref) hoac khai "Cần xác nhận — Q-xxx".
     # Kit forward khong co vi noi dung la TO-BE (do nguoi quyet).
     if asis_mode:
-        miss16, miss17, miss19 = [], [], []
+        miss16, miss17, miss19, miss22, miss23 = [], [], [], [], []
         for ws in ws_list:
             # chi quet data row bang item: sau header (H="#", P co 記述/Description),
             # dung truoc title ERROR SCENARIOS
@@ -632,6 +664,17 @@ def run(master_path, before_path, expect_screens, approved, rep, asis_mode=False
                 miss19 += [f"{ws.title}!{chr(64 + c)}{r}" for c in range(9, 18)
                            if not str(ws.cell(row=r, column=c).value or "").strip()]
                 kind = str(ws.cell(row=r, column=11).value or "").strip().lower()
+                if kind in INPUT_TYPES:
+                    req, mx = cell(ws, f"M{r}"), cell(ws, f"N{r}")
+                    st = cell(ws, f"L{r}").lower()
+                    if not req or (req == "ー" and "disable" not in st and "read" not in st):
+                        miss22.append(f"{ws.title}!M{r} ({kind} required='{req or 'rong'}')")
+                    if not mx or (mx == "ー" and kind in TEXT_MAXLEN):
+                        miss22.append(f"{ws.title}!N{r} ({kind} maxlength='{mx or 'rong'}')")
+                for c in (9, 10, 16, 17):
+                    m = CODE_TXT_RE.search(str(ws.cell(row=r, column=c).value or ""))
+                    if m:
+                        miss23.append(f"{ws.title}!{chr(64 + c)}{r} ('{m.group(0)}')")
                 api = str(ws.cell(row=r, column=API_CALL_COL).value or "")
                 if kind in CLICK_TYPES and not API_CALL_RE.search(api):
                     miss17.append(f"{ws.title}!S{r} ({kind}='{api or 'rong'}')")
@@ -662,13 +705,66 @@ def run(master_path, before_path, expect_screens, approved, rep, asis_mode=False
                 ("; ".join(miss19[:8]) + ". Khong ap dung -> 'ー'; chua co bang chung -> 'Cần xác nhận — Q-xxx'.")
                 if miss19 else "Moi item du cot I..Q")
 
+        # 20: o dong loi khong trong (banner = dong merge ca hang -> bo qua)
+        def blank_rows(ws, first, cols, label, stop=False):
+            out = []
+            for r in range(first, ws.max_row + 1):
+                vals = [str(ws.cell(row=r, column=c).value or "").strip() for c in cols]
+                if not any(vals):
+                    if stop:      # bang ERROR SCENARIOS ket thuc o dong trong dau tien
+                        break
+                    continue
+                if any(m.min_row == r and m.min_col == cols[0] and m.max_col >= cols[-1]
+                       for m in ws.merged_cells.ranges):
+                    continue
+                out += [f"{label}!{openpyxl.utils.get_column_letter(c)}{r}" for c, v in zip(cols, vals) if not v]
+            return out
+        miss20 = []
+        for nm, cols in (("Screen Error message", range(1, 11)), ("Common mesage", range(1, 10))):
+            if nm in wb.sheetnames:
+                miss20 += blank_rows(wb[nm], CATALOG_HEADER_ROW + 1, list(cols), nm)
+        for ws in ws_list:
+            t = next((r for r in range(1, ws.max_row + 1)
+                      if ERR_TITLE_MARK in str(ws.cell(row=r, column=8).value or "")), None)
+            if t:
+                miss20 += blank_rows(ws, t + 2, [8, 9, 10, 11, 13, 16, 17, 19], ws.title, stop=True)
+        rep.add(20, "Khong o trong o dong loi (error message)", "FAIL" if miss20 else "PASS",
+                ("; ".join(miss20[:8]) + ". Khong ap dung -> 'ー'; chua biet -> 'Cần xác nhận — Q-xxx' + Open Question.")
+                if miss20 else "Screen Error message · Common mesage · ERROR SCENARIOS du o")
+
+        # 21: khong con trang thai "Status" / DRAFT
+        miss21 = []
+        if idx_ws is not None and any(str(c.value or "").strip().lower() == "status"
+                                      for c in idx_ws[SCREEN_INDEX_HEADER_ROW]):
+            miss21.append("Screen Index con cot 'Status'")
+        miss21 += [f"{ws.title}!E4/F4 ('{cell(ws, 'E4')}'/'{cell(ws, 'F4')}')" for ws in ws_list
+                   if cell(ws, "E4").lower() == "status" or "DRAFT" in cell(ws, "F4").upper()]
+        rep.add(21, "Khong con trang thai Status / DRAFT", "FAIL" if miss21 else "PASS",
+                "; ".join(miss21[:8]) if miss21 else "Screen Index khong co cot Status, sheet khong co o Status")
+
+        rep.add(22, "Item nhap lieu co required / maxlength", "FAIL" if miss22 else "PASS",
+                ("; ".join(miss22[:8]) + ". Lay tu validation FE / DTO / 08_API_Fields / 04_DB_Columns (spec 'field'); "
+                 "khong co -> 'Cần xác nhận — Q-xxx'.") if miss22 else "Moi item nhap lieu du required / maxlength")
+        rep.add(23, "Ten / mo ta item khong chua ma (API, ham)", "FAIL" if miss23 else "PASS",
+                ("; ".join(miss23[:8]) + ". Viet theo dieu nguoi dung thay / lam; API o cot S, ten ham / code-ref o cot R.")
+                if miss23 else "Cot I/J/P/Q khong co METHOD /api, chu API, ten ham")
+
+        # 24: ten man doc duoc
+        miss24 = [f"sheet '{ws.title}'" for ws in ws_list if BAD_NAME_RE.search(ws.title)]
+        miss24 += [f"{ws.title}!B1 '{cell(ws, 'B1')}'" for ws in ws_list if BAD_NAME_RE.search(cell(ws, "B1"))]
+        miss24 += [f"Screen Index D{r['row']} '{r['screen_name']}'" for r in idx_rows
+                   if BAD_NAME_RE.search(r["screen_name"])]
+        rep.add(24, "Ten man doc duoc (khong ma / route)", "FAIL" if miss24 else "PASS",
+                ("; ".join(miss24[:8]) + ". Them 'title' cho man trong spec (ten ngan, khach doc duoc).")
+                if miss24 else f"{len(ws_list)} ten sheet / Screen Name doc duoc")
+
     return wb, ws_list
 
 
 def render(rep, master_path, ws_list):
     ok, fail, warn = rep.counts()
     lines = [
-        "# Quality Gate O5 — Basic Design",
+        "# Quality Gate O4 — Basic Design",
         "",
         f"- Workbook: `{master_path}`",
         f"- Working sheets: {len(ws_list)}"
@@ -689,7 +785,7 @@ def render(rep, master_path, ws_list):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Quality Gate O5 — Basic Design")
+    ap = argparse.ArgumentParser(description="Quality Gate O4 — Basic Design")
     ap.add_argument("master", help="duong dan master workbook (.xlsx)")
     ap.add_argument("--before", help="ban backup truoc khi ghi (de so diff)")
     ap.add_argument("--expect-screens", default="",
@@ -699,15 +795,18 @@ def main():
                          "(phan cach dau phay). Chi dung sau khi co approval "
                          "that — xem output-5-basic-design.md muc 5 Buoc 5")
     ap.add_argument("--asis", action="store_true",
-                    help="Bat check 16-19 cho kit system-to-doc: mo ta co bang chung o cot R, "
-                         "cot S 'API gọi', khong chu cu, khong o trong")
+                    help="Bat check 16-24 cho kit system-to-doc: mo ta co bang chung o cot R, "
+                         "cot S 'API gọi', khong chu cu, khong o trong, khong Status, ten / mo ta khong ma")
+    ap.add_argument("--phase", choices=["1", "2", "auto"], default="auto",
+                    help="1 = chi doc code (chua co anh -> khong WARN check 10/13); 2 = da chay Playwright; "
+                         "auto = doc tu workbook (A9 'bổ sung ở Giai đoạn 2')")
     ap.add_argument("--out", help="ghi report markdown ra file")
     args = ap.parse_args()
 
     expect = [s.strip() for s in args.expect_screens.split(",") if s.strip()]
     approved = {s.strip() for s in args.approved_scope.split(",") if s.strip()}
     rep = Report()
-    _, ws_list = run(args.master, args.before, expect, approved, rep, args.asis)
+    _, ws_list = run(args.master, args.before, expect, approved, rep, args.asis, args.phase)
 
     out = render(rep, args.master, ws_list)
     print(out)

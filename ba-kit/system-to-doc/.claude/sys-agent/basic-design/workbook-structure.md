@@ -1,8 +1,8 @@
 # Ba Agent — Basic Design Workbook Structure (map thật của master workbook)
 
 > **SOURCE:** `ba-kit/requirement-to-flow/.claude/ba-agent/basic-design/workbook-structure.md` @ 447770e — copy self-contained cho kit `system-to-doc`. Khi master workbook cua cong ty doi, sua CA HAI noi.
-> **Đã tách khỏi bản gốc requirement-to-flow (D2, 27/10/2026):** bản của kit này thêm cột **`S` "API gọi"** ngay sau cột `R` (bảng item) và cột `S` "Nguồn" (bảng ERROR SCENARIOS), chữ chưa rõ ghi **"Cần xác nhận — Q-xxx"** (bản JP 「要確認 — Q-xxx」). Sheet `Sample` vẫn giữ nguyên (cột `S` chỉ thêm ở working sheet). Không sửa requirement-to-flow. Dựng tự động: `build-basic-design.py` (`../outputs/o1-screens.md` §4).
-> Khác biệt của kit này (AS-IS thay vì TO-BE, 1 workbook / website) nằm ở `../outputs/o1-screens.md`. Ở kit này **"Quality Gate O5" = gate V-BD** (`verify-basic-design.py --asis`).
+> **Đã tách khỏi bản gốc requirement-to-flow (D2, 27/10/2026):** bản của kit này thêm cột **`S` "API gọi"** ngay sau cột `R` (bảng item) và cột `S` "Nguồn" (bảng ERROR SCENARIOS), chữ chưa rõ ghi **"Cần xác nhận — Q-xxx"** (bản JP 「要確認 — Q-xxx」). Sheet `Sample` vẫn giữ nguyên (cột `S` chỉ thêm ở working sheet). Không sửa requirement-to-flow. Dựng tự động: `build-basic-design.py` (`../outputs/o5-basic-design.md` §4).
+> Khác biệt của kit này (AS-IS thay vì TO-BE, 1 workbook / website) nằm ở `../outputs/o5-basic-design.md`. Ở kit này **"Quality Gate O4" = gate V-BD** (`verify-basic-design.py --asis`).
 
 > **Nguồn:** đọc trực tiếp từ `sample/sample_basic_design.xlsx` ngày 23/09/2026 bằng `openpyxl`.
 > Mọi con số dòng/cột dưới đây là **thật**, không phải mô tả từ tài liệu kiến trúc. Khi master workbook của dự án khác file mẫu, BA **PHẢI đọc lại workbook thật** và cập nhật mapping trước khi ghi — KHÔNG được ghi theo trí nhớ file mẫu.
@@ -16,7 +16,7 @@
 | 1 | `Common mesage` | Catalog message dùng chung cho nhiều màn | **Append-only** + update đúng row. Reuse trước khi tạo mới |
 | 2 | `Screen Error message` | Catalog error theo từng màn | **Append** theo block Screen ID + update đúng row |
 | 3 | `Sample` | **Template chuẩn** cho 1 Screen Basic Design | ⛔ **IMMUTABLE** — chỉ duplicate. Không điền, không đổi tên, không xóa |
-| 4 | `Screen Index` | Bảng tra Screen ID → sheet name + status | Append 1 row / 1 working sheet mới; update status khi đổi |
+| 4 | `Screen Index` | Bảng tra Screen ID → tên màn / tên sheet (Screen ID có hyperlink tới sheet) | Append 1 row / 1 working sheet mới. Kit này **bỏ cột `Status`** (§5) |
 | 5 | `Change History` | Log mọi thay đổi | **Append-only**. Không sửa, không xóa row cũ |
 
 > ⚠️ **Khác với tài liệu kiến trúc v3.0:** file thật **không có** sheet `Error message` riêng và **không có sheet hidden nào**. Chỉ có `Common mesage` (typo có chủ ý — giữ nguyên) và `Screen Error message`. Nếu tài liệu và workbook mâu thuẫn → **workbook thắng**.
@@ -39,18 +39,20 @@
 | `A5` | `Logic chung` | `B5:D5` (merged) | `[GENERAL LOGIC]` |
 | `A6` | `Cách access` | `B6:D6` (merged) | `[ACCESS METHOD]` |
 
-**Cột metadata phải (E/F) — BẮT BUỘC điền đủ 6 dòng:**
+**Cột metadata phải (E/F) — BẮT BUỘC điền `F1`, `F2`, `F3`, `F5`, `F6`** (`E4`/`F4` để trống ở kit này):
+
+> **Tên sheet = tên màn** khách đọc được (spec `title`, hoặc `Screen Name` ở `02_Screen` đã bỏ mã / route): bỏ `[]:*?/\`, tối đa 31 ký tự, trùng thì thêm ` (2)`. **Không dùng `SC-xxx` làm tên sheet** — Screen ID nằm ở `F1` và `Screen Index` cột `B` (gate check 24). Script khác tìm sheet theo `F1` / `Screen Index`, không theo tên tab.
 
 | Cell | Key | Giá trị ở `Sample` | Giá trị phải điền ở working sheet |
 |---|---|---|---|
 | `E1`/`F1` | `Screen ID` | `TEMPLATE` | Screen Code từ SPEC `## Screens` (VD `AU_AUTH_001`) |
 | `E2`/`F2` | `Flow ID` | `TEMPLATE` | Flow ID từ Output 1/2 |
 | `E3`/`F3` | `Version` | `1.1` | `1` cho sheet mới, tăng dần mỗi lần change |
-| `E4`/`F4` | `Status` | `TEMPLATE` | `DRAFT` → `WAITING APPROVAL` → `APPROVED` |
+| `E4`/`F4` | ~~`Status`~~ | `TEMPLATE` | **Kit system-to-doc: để trống** (bỏ trạng thái DRAFT theo feedback; gate check 21) |
 | `E5`/`F5` | `Source Flow Version` | `N/A` | Version của Output 2 đã approve (VD `v2_23092026`) |
 | `E6`/`F6` | `Sheet Type` | `TEMPLATE_SCREEN` | **`WORKING_SCREEN`** — đổi ngay sau khi duplicate |
 
-> ⛔ Nếu sau khi duplicate mà `F6` vẫn là `TEMPLATE_SCREEN` → Quality Gate O5 **FAIL**. Đây là dấu hiệu agent quên neutralize sheet.
+> ⛔ Nếu sau khi duplicate mà `F6` vẫn là `TEMPLATE_SCREEN` → Quality Gate O4 **FAIL**. Đây là dấu hiệu agent quên neutralize sheet.
 
 ### 2.2 Banner cảnh báo
 
@@ -87,7 +89,7 @@ Quy ước: **ảnh UI nằm cột A–F bên trái, bảng item nằm cột H�
 | Chiều rộng ảnh tối đa cho phép | **840 px** (chừa lề 14 px) |
 | Chiều cao ảnh tối đa | **900 px** |
 
-> ⚠️ **Lỗi có thật trong sheet mẫu gốc:** 2 ảnh của `Login_Sample` đều là `1521 px` chèn vào vùng 854 px → **tràn ~670 px sang cột H–R, đè lên bảng item**. Gate check 13 bắt lỗi này. Quy tắc resize: ảnh ≤ 840×900 px, anchor cột `A` (`../outputs/o1-screens.md` §4 bước 6).
+> ⚠️ **Lỗi có thật trong sheet mẫu gốc:** 2 ảnh của `Login_Sample` đều là `1521 px` chèn vào vùng 854 px → **tràn ~670 px sang cột H–R, đè lên bảng item**. Gate check 13 bắt lỗi này. Quy tắc resize: ảnh ≤ 840×900 px, anchor cột `A` (`../outputs/o5-basic-design.md` §4 bước 6).
 
 ### 2.4 Bảng item (cột H–R)
 
@@ -111,7 +113,7 @@ Quy ước: **ảnh UI nằm cột A–F bên trái, bảng item nằm cột H�
 **Số dòng đã format sẵn:** `Sample` có **11 dòng item (row 9 → row 19)** với border + row height đặt sẵn.
 Nếu screen có > 11 item → **copy format của 1 row chuẩn xuống**, không được chèn row trần không border.
 
-**Quy ước viết `P` / `Q`:** dùng `・` mở đầu mỗi bullet; nhánh validation đánh số `1.` `2.` `3.`; mọi nhánh lỗi **phải trỏ tới Message Code có thật** trong `Screen Error message` (VD `→ E_L_001`). Trỏ tới code không tồn tại → Quality Gate O5 FAIL.
+**Quy ước viết `P` / `Q`:** dùng `・` mở đầu mỗi bullet; nhánh validation đánh số `1.` `2.` `3.`; mọi nhánh lỗi **phải trỏ tới Message Code có thật** trong `Screen Error message` (VD `→ E_L_001`). Trỏ tới code không tồn tại → Quality Gate O4 FAIL.
 
 ### 2.5 Layout phải giữ nguyên khi duplicate
 
@@ -131,13 +133,13 @@ Nếu screen có > 11 item → **copy format của 1 row chuẩn xuống**, khô
 
 | # | Nhóm | Vùng trong sheet | Bắt buộc |
 |---|---|---|---|
-| 1 | **Metadata** | `B1`/`D1` tên + URL · `B2`/`D2` tác giả + ngày tạo · `B3`/`D3` người sửa + ngày sửa · `F1`–`F6` Screen ID / Flow ID / Version / Status / Source Flow Version / Sheet Type | ✅ |
+| 1 | **Metadata** | `B1`/`D1` tên + URL · `B2`/`D2` tác giả + ngày tạo · `B3`/`D3` người sửa + ngày sửa · `F1`–`F6` Screen ID / Flow ID / Version / (trống) / Source Flow Version / Sheet Type | ✅ |
 | 2 | **Overview** | `B4` (merged `B4:D4`) block `■目的` + `■アクセス方法` · `B5` Logic chung · `B6` Cách access | ✅ |
-| 3 | **UI reference** | Vùng ảnh `A9+`. **Không có ảnh** → `Screen Index` cột `I` = `NO IMAGE — text only` | ✅ (khai báo bắt buộc, ảnh thì không) |
+| 3 | **UI reference** | Vùng ảnh `A9+` (`A9` caption, ảnh neo `A10`). **Không có ảnh** → `Screen Index` cột `H` (UI Source) = `NO IMAGE — …`; `A9` = `Chưa có ảnh — bổ sung ở Giai đoạn 2 (Playwright)` (Giai đoạn 1) | ✅ (khai báo bắt buộc, ảnh thì không) |
 | 4 | **Items** | Bảng `H9:R19` — 11 dòng có sẵn format, mở rộng bằng cách copy format row chuẩn | ✅ |
 | 5 | **Behavior** | **Không có vùng riêng** → viết trong cột `P` (JP) / `Q` (VN) của chính item gây ra hành vi: action, state, validation, transition, error reference | ✅ |
 | 6 | **Traceability** | **Không có vùng riêng** → thêm block thứ ba vào `B4`:<br>`■トレーサビリティ / Traceability`<br>`FR No. <n> · RQ-<id> · SPEC ## Screen Details <Screen Code>`<br>Cấp flow đã có sẵn ở `F2` (Flow ID) + `F5` (Source Flow Version) | ✅ |
-| 7 | **Known gaps** | **Không có vùng riêng** → cấp item: cột `R` (Comment), tiền tố `⚠`<br>cấp screen: `Screen Index` cột `L` (Notes) | ✅ khi có gap |
+| 7 | **Known gaps** | **Không có vùng riêng** → cấp item: cột `R` (Comment), tiền tố `⚠`<br>cấp screen: `Screen Index` cột `K` (Notes) | ✅ khi có gap |
 | 8 | **Error scenarios** | Bảng riêng **dưới bảng item** — xem §2.9 | ✅ khi màn có Non-Happy Case |
 
 **Quy ước viết nhóm 5 Behavior trong `P`/`Q`** (theo đúng `Login_Sample`):
@@ -335,25 +337,26 @@ Banner `A<n>:J<n>` (merged): `🔴 Validation / バリデーション — Login`
 
 ## 5. Sheet `Screen Index`
 
-- `A1:L1` title. Metadata: `A2`=`Master Version`/`B2` · `D2`=`Template Sheet`/`E2` · `G2`=`Last Standardized`/`H2` · `A3`=`Master Status`/`B3` · `D3`=`Runtime Rule`/`E3` · `G3`=`Maintained By`/`H3`
+- `A1:K1` title (kit này đã bỏ cột `Status` → template `A1:L1` thu còn `A1:K1`). Metadata: `A2`=`Master Version`/`B2` · `D2`=`Template Sheet`/`E2` · `G2`=`Last Standardized`/`H2` · `A3`=`Master Status`/`B3` · `D3`=`Runtime Rule`/`E3` · `G3`=`Maintained By`/`H3`
 - **Header = row 5**, data từ row 6
 
 | Cột | Header | Nguồn giá trị |
 |---|---|---|
 | `A` | `No` | tăng dần |
-| `B` | `Screen ID` | = `F1` của working sheet |
+| `B` | `Screen ID` | = `F1` của working sheet · **hyperlink tới sheet** |
 | `C` | `Flow ID` | = `F2` |
-| `D` | `Screen Name` | = `B1` |
-| `E` | `Sheet Name` | tên tab thật |
+| `D` | `Screen Name` | = `B1` = tên màn (không mã / route — check 24) |
+| `E` | `Sheet Name` | tên tab thật (= tên màn) |
 | `F` | `Sheet Type` | `WORKING_SCREEN` |
 | `G` | `Version` | = `F3` |
-| `H` | `Status` | = `F4` |
-| `I` | `UI Source` | `Output 3 approved` · `Figma <node>` · `Embedded UI images` · **`NO IMAGE — text only`** |
-| `J` | `Source Flow Version` | = `F5` |
-| `K` | `Last Updated` | ngày ghi |
-| `L` | `Notes` | ghi chú / lý do thiếu ảnh |
+| `H` | `UI Source` | `Embedded UI images` · **`NO IMAGE — Giai đoạn 1 (chưa chạy Playwright)`** · `NO IMAGE — <lý do>` |
+| `I` | `Source Flow Version` | = `F5` |
+| `J` | `Last Updated` | ngày ghi |
+| `K` | `Notes` | ghi chú / lý do thiếu ảnh |
 
-> **Screen Index là single source of truth để resolve sheet theo Screen ID.** Mọi working sheet mới **bắt buộc** có 1 row ở đây. Thiếu row → Quality Gate O5 FAIL.
+> Cột `Status` (cũ `H`) **đã bỏ** ở kit system-to-doc (feedback: không dùng DRAFT). Gate tìm cột theo tên header nên đọc được cả workbook cũ.
+
+> **Screen Index là single source of truth để resolve sheet theo Screen ID.** Mọi working sheet mới **bắt buộc** có 1 row ở đây. Thiếu row → Quality Gate O4 FAIL.
 
 ---
 

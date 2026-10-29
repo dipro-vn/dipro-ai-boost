@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""GATE V3 (+V4 nhat quan DB, +V6 khong o trong) — Overview docx (O6).
+"""GATE V3 (+V4 nhat quan DB, +V6 khong o trong) — Overview docx (O1).
 
-  python3 verify-overview.py <ver>/06_Overview/Overview_<sys>_ver<N>.docx \
+  python3 verify-overview.py <ver>/01_Overview/Overview_<sys>_ver<N>.docx \
       --inventory <_internal>/inventory.xlsx --business <_internal>/business.json [--out report.md]
 
 Chan: thieu / thua chuong (0-6, khong danh sach output, luong tong quan, phu luc) · con placeholder template ·
 bang tong man hinh / API lech inventory · bia DB · chuong 2 (nghiep vu) co ma noi bo / ten bang / enum / ham,
 muc khong co EV va khong co Q, EV / Q khong co trong inventory, luong < 2 buoc · o trong · nhac ID khong co trong
-inventory · con chu cu · link ERD khong phai Figma va khong co ghi chu.
+inventory · con chu cu · link ERD khong phai Figma va khong co ghi chu · (WARN) chuong 1 thieu hinh luong nghiep vu.
 """
 import argparse
 import importlib.util
@@ -71,7 +71,7 @@ def main():
     biz = json.load(open(a.business, encoding="utf8"))
     cnt = OV.summary_counts(data)
     db_mode = meta.get("db_mode", "")
-    g = Gate("GATE V3 — Overview document (O6)")
+    g = Gate("GATE V3 — Overview document (O1)")
 
     heads = [h.strip() for h in d.headings()]
     miss = [c for c in OV.CHAPTERS + OV.BIZ_SECTIONS if c not in heads]
@@ -145,6 +145,12 @@ def main():
     if db_mode != "NONE" and not any("ERD" in tx for tx in links) and not nolink:
         bad.append("chuong 5 khong co link ERD Figma va khong co ghi chu")
     g.check(14, "Link Figma hop le; ERD co link hoac ghi chu", bad)
+
+    imgs = d.images()[1]
+    if imgs and any(tx.startswith(OV.FLOW_CAPTION) for _, tx in d.paragraphs):
+        g.check(15, "Chuong 1 co hinh luong nghiep vu (Archify)", [])
+    else:
+        g.warn(15, "Chuong 1 co hinh luong nghiep vu (Archify)", "chua co hinh — ve bang Archify, chay lai --flow-image")
 
     return g.emit(a.out)
 

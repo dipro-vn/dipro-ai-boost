@@ -56,9 +56,9 @@ def baseline_lanes(bdir):
 
 
 def token_colors(bdir, site):
-    p = os.path.join(bdir, "04_DesignSystem", site, "project", "tokens.json")
+    p = os.path.join(bdir, "06_Design_System", site, "project", "tokens.json")
     if not os.path.isfile(p):
-        p = os.path.join(bdir, "04_DesignSystem", "project", "tokens.json")
+        p = os.path.join(bdir, "06_Design_System", "project", "tokens.json")
     if not os.path.isfile(p):
         return set()
     t = C.load_json(p)
@@ -82,7 +82,7 @@ def main():
     ap.add_argument("--view", default=None, help="cr-figma.json (de doi chieu man CR-3 + ds_read)")
     ap.add_argument("--rates", default=os.path.join(KIT, S.MD_RATES_PATH))
     ap.add_argument("--out", default=None)
-    ap.add_argument("--ds-baseline", default=None, help="version chua 04_DesignSystem dung khi ve (mac dinh --baseline)")
+    ap.add_argument("--ds-baseline", default=None, help="version chua 06_Design_System dung khi ve (mac dinh --baseline)")
     a = ap.parse_args()
 
     # --nodes nhan 1 file hoac nhieu file cach nhau dau phay (readback chia PART vi gioi han 20 KB cua use_figma)
@@ -99,7 +99,7 @@ def main():
     _rm, rates = C.load_rates(a.rates)
     B = C.load_baseline(a.baseline)
     if a.ds_baseline:  # cung DS voi render-cr-figma.py --ds-baseline
-        B["ds"] = C.load_ds_sites(os.path.join(a.ds_baseline, "04_DesignSystem"))
+        B["ds"] = C.load_ds_sites(os.path.join(a.ds_baseline, "06_Design_System"))
         B["has_ds"] = bool(B["ds"])
     view = C.load_json(a.view) if a.view and os.path.isfile(a.view) else None
     IMP = cr.get("impacts") or []

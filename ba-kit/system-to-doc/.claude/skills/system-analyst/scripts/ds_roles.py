@@ -40,7 +40,7 @@ UNOBSERVABLE = {"primary-hover", "primary-active", "surface-disabled", "divider-
 SOURCES = {"figma", "screens", "docs", "code", "website"}
 
 # usage chua nhan nay = gia tri lay tu Base Design System (.claude/base-design-system), khong quan sat duoc
-# tren he thong -> V-DS check 5 khong FAIL, bao WARN 5b (o4-design-system.md §3b)
+# tren he thong -> V-DS check 5 khong FAIL, bao WARN 5b (o6-design-system.md §3b)
 BASE_MARK = "[base]"
 
 # §8 STATUS.md

@@ -124,7 +124,7 @@ Giọng trung tính. ❌ Không "khách đổi ý liên tục", "yêu cầu vô 
 
 ### 4.1 Cách lần ra ảnh hưởng (không phải cảm giác)
 
-1. **Điểm chạm trực tiếp:** từ nội dung CR, tìm ID trong baseline inventory (`02_Screen`, `01_Function`, `07_API`, `03/04_DB`, `09_Integration`, `10_Site`) và Design System (`04_DesignSystem/…/project/README.md` trước, rồi `tokens.json`, `components/<Comp>/README.md`; đã publish → `read` artifact theo dòng `- Artifact:` trong `STATUS.md`).
+1. **Điểm chạm trực tiếp:** từ nội dung CR, tìm ID trong baseline inventory (`02_Screen`, `01_Function`, `07_API`, `03/03_DB`, `09_Integration`, `10_Site`) và Design System (`06_Design_System/…/project/README.md` trước, rồi `tokens.json`, `components/<Comp>/README.md`; đã publish → `read` artifact theo dòng `- Artifact:` trong `STATUS.md`).
 2. **Lan 1–2 bước** theo liên kết đã có trong inventory:
 ```
 Screen ──Function IDs──▶ Function ──Screen IDs/Related Tables──▶ Table
@@ -213,10 +213,10 @@ Giữ letterhead / logo / header / validation / ◆前提条件; bỏ dữ liệ
 - **CR-1 Flow** = Output 1 dạng use case (lane `FL-xx` bị chạm: Actor → đường đi → ✓ kết thúc · non-happy hàng dưới → ✗ kết thúc · chip CHƯA CHỐT) + bảng Technology bên phải (feedback 20/10/2026). **CR-2 Screen Flow** = Output 2 (Group · Start · Screen · Decision · System · NG inline · Terminal · Edge/Exceptional · ④ Screen Index). Mọi node nối bằng **mũi tên thật**.
 - **Phạm vi — POLICY:** chỉ hạng mục có dòng Impact + hàng xóm **đúng 1 bước** / lane `FL-xx` baseline làm ngữ cảnh (`AS-IS`).
 - **CR Change Table = THỐNG KÊ**: số đối tượng NEW / UPD / DEL / IMPACT (Màn hình · API · Bảng DB · Cột DB · …) + 実装 MD · 総工数 人日 · 人月 · 最小改修案 / 拡張案. **Không** liệt kê lại từng hạng mục (đã có trong xlsx).
-- **CR-3 màn đề xuất**: **đọc Design System trước** (README → tokens.json → component README → STATUS.md, khai vào `screens.ds_read`) → chỉ token / component của DS; thiếu → theo CR-3b. Máy kiểm màu ⊆ token. **Baseline không có DS** → Base Design System tạm (`.claude/base-design-system/`, `figma/cr-view.md` §4 bước 7) copy vào `$V/04_DesignSystem/<WEB-xx>/`, chạy `--ds-baseline $V`.
+- **CR-3 màn đề xuất**: **đọc Design System trước** (README → tokens.json → component README → STATUS.md, khai vào `screens.ds_read`) → chỉ token / component của DS; thiếu → theo CR-3b. Máy kiểm màu ⊆ token. **Baseline không có DS** → Base Design System tạm (`.claude/base-design-system/`, `figma/cr-view.md` §4 bước 7) copy vào `$V/06_Design_System/<WEB-xx>/`, chạy `--ds-baseline $V`.
 - Mỗi node đúng 1 badge, tên `<BADGE> · <REF> · <nhãn>`, `setSharedPluginData("crkit", "kind", …)` (Figma bắt buộc namespace ≥ 3 ký tự).
 - **Không tự viết JS vẽ**: agent viết `_internal/cr-figma.json` → `render-cr-figma.py` sinh JS → `use_figma` → `99-readback.js` → `verify-cr-figma.py` `FAIL = 0`.
-- Ghi link node vào `<ver>/05_Figma/figma-links.md`.
+- Ghi link node vào `<ver>/04_Figma/figma-links.md`.
 
 ---
 
@@ -229,7 +229,7 @@ CR-<id>_<DDMMYY>_<slug>/       (folder cũ ver<N>_<DDMMYY>_CR-<id>-<slug>/ vẫn
 ├── input/                     CR nguyên văn
 ├── CR-<id>_Impact.xlsx        7 sheet: Summary · Estimation · Screen · API · Database · Figma · Q&A   ← nội bộ (tiếng Việt)
 ├── CR-<id>_見積書.xlsx         詳細見積書 + 前提条件・留意事項 (tiếng Nhật)                             ← gửi KH sau khi PM duyệt
-├── 05_Figma/figma-links.md    (nếu vẽ)
+├── 04_Figma/figma-links.md    (nếu vẽ)
 └── _internal/  cr.json · estimate.json · cr-figma.json · figma-js/ · cr-figma-nodes.json · gates/
 ```
 

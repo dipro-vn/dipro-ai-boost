@@ -18,7 +18,16 @@
 | **Mơ hồ** | Hỏi lại đúng câu đó, **không đoán** |
 | **Ghi nhớ** | Mỗi câu trả lời: `preflight-memory.py set --code <mã> --answer "<câu trả lời>" --by-role "<vai trò người trả lời>" [--source user\|code\|meta]` (nguồn: người dùng trả lời / đọc từ code / kế thừa 00_Meta) + ghi `00_Meta` của inventory như cũ. **Không bao giờ lưu mật khẩu / token** — chỉ tên role, đường dẫn file (script từ chối, exit 2) |
 
-**Thứ tự:** G-R (khi đã có baseline) → bảng "đang dùng" + xác nhận an toàn (mục 1) → các lượt còn thiếu (Lượt 1–5) → Pha A đọc code + so token nháp (R10) → **Discovery Brief** có mục *Quyết định lớn* (mục 7) → recon → G9 / G10 khi phát sinh.
+**Thứ tự Giai đoạn 1:** G-R (khi đã có baseline) → bảng "đang dùng" (mục 1) → lượt còn thiếu của Giai đoạn 1 → Pha A đọc code + so token nháp (R10) → **Discovery Brief** có mục *Quyết định lớn* (mục 7). **Thứ tự Giai đoạn 2:** bảng "đang dùng" + xác nhận an toàn (mục 1b) → Lượt 2 · P9 · P11 còn thiếu → crawl → G9 / G10 khi phát sinh.
+
+### 0b. Câu nào hỏi ở giai đoạn nào
+
+| Giai đoạn | Lệnh | Hỏi | Không hỏi |
+|---|---|---|---|
+| **Giai đoạn 1** — đọc source code | `preflight-memory.py missing --phase 1` | Lượt 1 (tên · phạm vi · **web hay app**) · Lượt 3 (source code · DB) · Lượt 4 (Figma) · P10 (ngôn ngữ) · Quyết định lớn | Website, tài khoản, **4 câu an toàn**, Bug list — chưa mở website nên chưa cần |
+| **Giai đoạn 2** — AI Playwright (sau điểm dừng) | `preflight-memory.py missing --phase 2` | Lượt 2 (website · môi trường · tài khoản · mức thao tác · vùng cấm) · P9 (Bug list) · P11 (dữ liệu thật) — **4 câu an toàn luôn hỏi lại** | Câu Giai đoạn 1 đã có (chỉ in lại trong bảng xác nhận nếu đổi) |
+
+App (P0d = app) → không có Giai đoạn 2; không hỏi Lượt 2.
 
 Memory: `outputs/_project/preflight-memory.json` — ngoài folder version, dùng chung cho ver1 / CR / ver<N+1>, gitignore (`.gitignore` của kit). Xem nhanh: `preflight-memory.py list --outputs outputs`.
 
@@ -71,19 +80,21 @@ Lần này bạn muốn:
 
 ---
 
-## Lượt 1 — Tên & phạm vi (P0a · P0b · P0c)
+## Lượt 1 — Tên & phạm vi (P0a · P0b · P0c · P0d) — Giai đoạn 1
 
 ```
 1. Hệ thống tên là gì? (dùng đặt tên file)                                           → gõ ở ô Other
 2. Đặt tên ngắn cho lần khảo sát này?                    [baseline] [khao-sat-lan-dau] (Other)
 3. Lần này khảo sát tới đâu?
    [A] Toàn bộ hệ thống  [B] Chỉ một số phần — ghi tên phần  [C] Chỉ một luồng nghiệp vụ, ví dụ "đặt hàng → thanh toán"
+4. Phần mềm chạy trên đâu?
+   [A] Website (mở bằng trình duyệt)  [B] App điện thoại / máy tính — không mở bằng trình duyệt được  [C] Cả hai
 ```
-<!-- P0a system_name · P0b slug/version_label · P0c scope. P0a và P0c KHÔNG có option "chạy trước": chưa trả lời → DỪNG, không đoán [A]. P0b có thể mặc định "baseline" -->
+<!-- P0a system_name · P0b slug/version_label · P0c scope · P0d loại phần mềm ([B] → không có Giai đoạn 2: O6 · O7 ⬜ "ứng dụng di động"; [C] → Giai đoạn 2 chỉ cho phần website). P0a và P0c KHÔNG có option "chạy trước": chưa trả lời → DỪNG, không đoán [A]. P0b có thể mặc định "baseline" -->
 
 ---
 
-## Lượt 2 — Website (P1 · P1-env · P2a · P2b) và (P3 · P4) ⚠️ lượt quan trọng nhất về an toàn
+## Lượt 2 — Website (P1 · P1-env · P2a · P2b) và (P3 · P4) — Giai đoạn 2 ⚠️ lượt quan trọng nhất về an toàn
 
 Lượt 2a (4 câu):
 ```
@@ -114,7 +125,7 @@ Lượt 2b (2 câu):
 <!-- 5=P3 (AN TOÀN) → crawl_mode · 6=P4 forbidden_zones → crawl-site.js --forbid -->
 
 - Có bản thử nghiệm mà vẫn chọn bản thật → hỏi lại 1 lần: *"Bản thử nghiệm an toàn hơn. Bạn chắc muốn tôi mở bản đang dùng thật?"*
-- Câu 1 `[C]` → O1 = ⬜ (`không có website`), O4 chỉ chạy nếu có Figma. Chạy tiếp phần khác.
+- Câu 1 `[C]` → O5 = ⬜ (`không có website`), O6 chỉ chạy nếu có Figma. Chạy tiếp phần khác.
 
 | Câu 4 (P2b) | Hành vi |
 |---|---|
@@ -148,7 +159,7 @@ DELETE **không bao giờ** được cấp qua câu này — gặp nút xoá lu�
 
 ---
 
-## Lượt 3 — Source code & database (P5a · P5b · P6)
+## Lượt 3 — Source code & database (P5a · P5b · P6) — Giai đoạn 1
 
 > **Agent tự `Glob inputs/repo/*/` và `inputs/db/*.sql` trước khi hỏi.** Có folder / file → in danh sách để người dùng xác nhận thay vì bắt gõ lại đường dẫn.
 
@@ -171,11 +182,11 @@ DELETE **không bao giờ** được cấp qua câu này — gặp nút xoá lu�
 | `[A]` | `DUMP` | `read-schema.py --dump`. File có dữ liệu → script exit 3 → yêu cầu file chỉ cấu trúc |
 | `[B]` | `READONLY_CONN` | Agent đưa lệnh `mysqldump --no-data` / `pg_dump --schema-only`; **người dùng tự chạy** (agent không giữ mật khẩu DB) → như `[A]` |
 | `[C]` | `MIGRATION` | Dựng bảng / cột từ code (`read-orm-schema.py`), evidence `code-ref` |
-| `[D]` | `NONE` | O3 = ⬜, O6 chương DB ghi `Database not available.` |
+| `[D]` | `NONE` | O3 = ⬜, O1 chương DB ghi `Database not available.` |
 
 ---
 
-## Lượt 4 — Figma (P7 · P7b · P8)
+## Lượt 4 — Figma (P7 · P7b · P8) — Giai đoạn 1
 
 ```
 1. Có file Figma thiết kế của hệ thống hiện tại không? (dùng để bổ sung bộ quy chuẩn giao diện)
@@ -185,14 +196,14 @@ DELETE **không bao giờ** được cấp qua câu này — gặp nút xoá lu�
 3. Tôi vẽ luồng nghiệp vụ, luồng màn hình và sơ đồ dữ liệu ở file Figma nào?
    [A] Có file — dán link figma.com/design/… (trang sẽ vẽ)  [B] Chưa có link — tôi gửi sau  [C] Không vẽ Figma lần này
 ```
-<!-- 1=P7 figma_input_url (O4) · 2=P7b ds_publish (không trả lời → không publish) · 3=P8 figma_output_url (O5 + sơ đồ DB cho O6, R4) -->
-- Câu 3 `[B]` → làm các output khác trước, O5 + link sơ đồ O6 chờ link; cuối lượt nhắc lại 1 lần. Không tự bỏ.
+<!-- 1=P7 figma_input_url (O6) · 2=P7b ds_publish (không trả lời → không publish) · 3=P8 figma_output_url (O4 + sơ đồ DB cho O1, R4) -->
+- Câu 3 `[B]` → làm các output khác trước, O4 + link sơ đồ O1 chờ link; cuối lượt nhắc lại 1 lần. Không tự bỏ.
 - Link `/board/` (FigJam) → nói rõ kit vẽ mọi thứ (Output 1 / 2 và sơ đồ DB) trên **file Figma design**; xin link `figma.com/design/…`. Không tự tạo file mới.
 - Nhắc 1 câu: *"Figma và claude.ai là dịch vụ bên ngoài công ty — tôi chỉ đưa lên tên màn, luồng, chữ trên giao diện, logo; không đưa dữ liệu thật."* Việc đưa **sơ đồ database** lên Figma được hỏi riêng ở Brief (B5, D5).
 
 ---
 
-## Lượt 5 — Tài liệu & dữ liệu (P9 · P10 · P11)
+## Lượt 5 — Tài liệu & dữ liệu (P9 · P11 → Giai đoạn 2 · P10 → Giai đoạn 1)
 
 ```
 1. Có lập danh sách lỗi hiện có của hệ thống không? (lỗi làm người dùng thao tác không được hoặc sai;
@@ -209,7 +220,7 @@ DELETE **không bao giờ** được cấp qua câu này — gặp nút xoá lu�
 | Câu 3 (P11) | Hành vi |
 |---|---|
 | `[A]` | Chạy bình thường |
-| `[B]` | ⚠️ Báo: *"Ảnh chụp màn hình sẽ có dữ liệu thật. Nên dùng tài khoản / bản thử nghiệm."* Vẫn giữ `[B]` → hỏi **ai duyệt** (vai trò), ghi `access_approved_by`, **không** chèn ảnh vào output gửi ra ngoài (O1 dùng `NO IMAGE — text only`), không đưa ảnh lên Figma |
+| `[B]` | ⚠️ Báo: *"Ảnh chụp màn hình sẽ có dữ liệu thật. Nên dùng tài khoản / bản thử nghiệm."* Vẫn giữ `[B]` → hỏi **ai duyệt** (vai trò), ghi `access_approved_by`, **không** chèn ảnh vào output gửi ra ngoài (O5 dùng `NO IMAGE — text only`), không đưa ảnh lên Figma |
 | `[C]` | Như `[B]` |
 
 ---
@@ -271,9 +282,9 @@ Folder: outputs/ver1_<DDMMYY>_<slug>/
 → Đúng chưa? ("OK" để bắt đầu, hoặc sửa hạng mục sai)
 ```
 <!-- Agent: Brief là 1 lượt AskUserQuestion — câu 1 "Thông tin trên đúng chưa?" + tối đa 3 câu cho Quyết định lớn chưa có trong memory
-     (B1 DS 1/nhiều = dsLayout.mode, căn cứ = dsLayout.diffs · B2 O4 (tuỳ chọn) / O5 / O7 / O9 làm không · B3 repo legacy · B4 site/role · B5 D5 đưa sơ đồ DB lên Figma).
+     (B1 DS 1/nhiều = dsLayout.mode, căn cứ = dsLayout.diffs · B2 O6 (tuỳ chọn) / O4 / O7 / O8 làm không · B3 repo legacy · B4 site/role · B5 D5 đưa sơ đồ DB lên Figma).
      > 3 quyết định chưa có → lượt 2 cùng chủ đề "Quyết định lớn". Mỗi quyết định: preflight-memory.py set --code B<n> …
-     B5 = không → O6 ghi chú trỏ ảnh ERD trong 03_DB (o6-overview.md), không vẽ sơ đồ DB lên Figma.
+     B5 = không → O1 ghi chú trỏ ảnh ERD trong 03_DB (o1-overview.md), không vẽ sơ đồ DB lên Figma.
      Không giao source (D9) → dòng Source ghi "chế độ chỉ website — API / database chỉ suy từ màn hình và request quan sát được". -->
 
 ⛔ **Không quét website khi chưa có xác nhận.** Xác nhận xong mới `version-tool.py next --create`.
@@ -289,7 +300,7 @@ Màn 「<tên màn>」 có nút 「<nhãn>」 — bấm nút này có thể thay
   [B] Được bấm — đây là bản thử nghiệm có dữ liệu thử
   [C] Tôi tự thao tác và gửi ảnh chụp
 ```
-`[A]` → item vẫn vào O1, hành vi mô tả từ handler trong code (code-ref ở cột R); code cũng không rõ → "Cần xác nhận — Q-xxx" + Open Question.
+`[A]` → item vẫn vào O5, hành vi mô tả từ handler trong code (code-ref ở cột R); code cũng không rõ → "Cần xác nhận — Q-xxx" + Open Question.
 
 ## G10 — Tài liệu của khách khác hệ thống thật (≥ 3 điểm)
 ```

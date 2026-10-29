@@ -4,7 +4,7 @@ Bỏ file vào đúng folder con. AI **tự tìm** ở đây trước khi hỏi 
 
 | Folder | Bỏ gì | Dùng ở | Ví dụ |
 |---|---|---|---|
-| [`repo/`](repo/) | Source code của hệ thống (mỗi repo 1 folder con) | Luồng 1 — O2 API, O3 DB (migration/ORM), O1 màn hình | `repo/web-fe/` · `repo/api/` |
+| [`repo/`](repo/) | Source code của hệ thống (mỗi repo 1 folder con) | Luồng 1 — O2 API, O3 DB (migration/ORM), O5 màn hình | `repo/web-fe/` · `repo/api/` |
 | [`db/`](db/) | File DB **chỉ cấu trúc** (`.sql`), không có dữ liệu | Luồng 1 — O3 Database | `db/schema.sql` |
 | [`cr/`](cr/) | File yêu cầu thay đổi của khách (`.docx` `.pdf` `.xlsx` `.md` ảnh) | Luồng 2 — `/change-request` | `cr/yc-ma-giam-gia.docx` |
 

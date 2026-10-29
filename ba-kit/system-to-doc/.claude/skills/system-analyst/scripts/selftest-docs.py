@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Self-test cho O2 (API doc) + O3 (DB doc) + read-schema + O9 DevSetup (phan nghiep vu O6: selftest-gates V3) — chung minh gate KHONG pass rong.
+"""Self-test cho O2 (API doc) + O3 (DB doc) + read-schema + O8 DevSetup (phan nghiep vu O1: selftest-gates V3) — chung minh gate KHONG pass rong.
 
   python3 selftest-docs.py [--keep]
 
@@ -335,7 +335,7 @@ def main():
         case("PNG chu Nhat: font CJK (%s), build-db-doc goi use_cjk_font" % font,
              "S.use_cjk_font(matplotlib)" in src, font or "khong co font CJK")
 
-        # --- O9 DevSetup (R12 · D7): chi ten key, khong doc .env that
+        # --- O8 DevSetup (R12 · D7): chi ten key, khong doc .env that
         repo = os.path.join(tmp, "devrepo")
         os.makedirs(os.path.join(repo, ".github", "workflows"))
         open(os.path.join(repo, "package.json"), "w").write('{"scripts":{"dev":"next dev"}}')
@@ -346,7 +346,7 @@ def main():
         rc, o = run(["build-devsetup.py", "--repo", "REPO-01=" + repo, "--inventory", inv, "--system", "T",
                      "--version", "ver1", "--out", md_out])
         txt = open(md_out, encoding="utf8").read() if rc == 0 else ""
-        case("O9 DevSetup: key tu .env.example, khong doc .env that, co batch + moi truong",
+        case("O8 DevSetup: key tu .env.example, khong doc .env that, co batch + moi truong",
              rc == 0 and "`DATABASE_URL`" in txt and "REAL_ONLY_KEY" not in txt and SECRET not in txt
              and "staging" in txt and "API-003" in txt, o[-200:])
 
@@ -361,11 +361,11 @@ def main():
         bad = os.path.join(tmp, "DevSetup_bad.md")
         open(bad, "w", encoding="utf8").write(txt.replace("| `API_BASE` |", "| `API_BASE` |\n\nAPI_BASE=" + "https://x.example/v1"))
         rc, f = dev_gate(bad)
-        case("O9: co KEY=gia tri -> check 4 FAIL", 4 in f, str(f))
+        case("O8: co KEY=gia tri -> check 4 FAIL", 4 in f, str(f))
         bad2 = os.path.join(tmp, "DevSetup_pii.md")
         open(bad2, "w", encoding="utf8").write(txt + "\nLien he: tran.thi" + "@" + "congty-thuc.vn\n")   # example.com nam trong allowValues
         rc, f = dev_gate(bad2)
-        case("O9: lot email / PII -> check 3 FAIL (detect-pii --scan)", 3 in f, str(f))
+        case("O8: lot email / PII -> check 3 FAIL (detect-pii --scan)", 3 in f, str(f))
     finally:
         if a.keep:
             print("Giu thu muc tam:", tmp)

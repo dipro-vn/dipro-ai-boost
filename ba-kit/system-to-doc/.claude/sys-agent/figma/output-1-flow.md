@@ -1,4 +1,4 @@
-> **SOURCE:** `ba-kit/requirement-to-flow/.claude/ba-agent/figma-outputs/output-1-flow.md` @ a8509b9 — copy self-contained cho kit system-to-doc. Đọc kèm `o5-figma.md` (bảng thay SPEC.md → inventory). Sửa quy tắc vẽ chung thì sửa CẢ HAI nơi.
+> **SOURCE:** `ba-kit/requirement-to-flow/.claude/ba-agent/figma-outputs/output-1-flow.md` @ a8509b9 — copy self-contained cho kit system-to-doc. Đọc kèm `o4-figma.md` (bảng thay SPEC.md → inventory). Sửa quy tắc vẽ chung thì sửa CẢ HAI nơi.
 
 > ## ⚠ Output 1 dạng USE CASE (feedback 20/10/2026 — áp dụng cả `requirement-to-flow`)
 >

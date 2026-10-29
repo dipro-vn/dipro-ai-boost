@@ -7,9 +7,10 @@
 Việc làm (idempotent — đã có thì bỏ qua):
   · Thư viện Python   Luồng 1: openpyxl python-docx matplotlib · Luồng 2: openpyxl
                       thiếu → `python -m pip install --user …` (môi trường externally-managed → thử thêm --break-system-packages)
+  · Luồng 1 luôn kiểm bộ trích AST (ts-morph, scripts/ast/) — thiếu node_modules → `npm ci` trong scripts/ast/
   · --browser         Playwright + Chromium cho login-site.js / crawl-site.js (Luồng 1 có website)
                       thiếu → `npm i -D playwright` + `npx playwright install chromium`
-  · --figma           Figma MCP (vẽ O5 / view CR). Chưa có server nào tên *figma* → `claude mcp add --transport http figma https://mcp.figma.com/mcp`
+  · --figma           Figma MCP (vẽ O4 / view CR). Chưa có server nào tên *figma* → `claude mcp add --transport http figma https://mcp.figma.com/mcp`
                       Server có nhưng chưa xác thực → trạng thái NEED_AUTH (phiên đã có tool mcp__*figma* gọi được thì bỏ qua): việc DUY NHẤT user phải làm là `/mcp` → figma → Authenticate
                       (OAuth phải do người bấm; vừa add mà /mcp chưa thấy → khởi động lại Claude Code)
 
@@ -103,6 +104,31 @@ def ensure_browser(root, check_only):
         rows.append(("Chromium cho Playwright", "BLOCKED", (out.strip().splitlines() or [f"exit {code}"])[-1][:160]))
 
 
+def ensure_ast(check_only):
+    """Bo trich AST (ts-morph) cho Basic Design giai doan 1 — cai trong scripts/ast/ cua kit (package.json + lock rieng),
+    khong cai vao source khach. Thieu node_modules -> npm ci."""
+    ast = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ast")
+    if not shutil.which("node") or not shutil.which("npm"):
+        rows.append(("Bộ trích AST (ts-morph)", "BLOCKED", "máy chưa có Node.js — cài Node LTS (nodejs.org) 1 lần, cần quyền máy"))
+        return
+    ver = "console.log(require('ts-morph/package.json').version)"
+    code, out = run(["node", "-e", ver], cwd=ast)
+    if code == 0 and out.strip().startswith("28."):
+        rows.append(("Bộ trích AST (ts-morph)", "OK", "ts-morph " + out.strip()))
+        return
+    if check_only:
+        rows.append(("Bộ trích AST (ts-morph)", "MISSING", "chạy lại không có --check-only để tự cài (npm ci trong scripts/ast/)"))
+        return
+    code, out = run(["npm", "ci", "--no-audit", "--no-fund"], cwd=ast)
+    if code != 0:
+        rows.append(("Bộ trích AST (ts-morph)", "BLOCKED", "npm ci lỗi — proxy / registry nội bộ? cấu hình `npm config set registry …` "
+                     "theo chính sách IT · " + ((out.strip().splitlines() or ["npm exit %d" % code])[-1][:120])))
+        return
+    code, out = run(["node", "-e", ver], cwd=ast)
+    rows.append(("Bộ trích AST (ts-morph)", "INSTALLED" if code == 0 else "BLOCKED",
+                 ("npm ci trong scripts/ast/ — ts-morph " + out.strip()) if code == 0 else out.strip()[-160:]))
+
+
 def figma_lines(root):
     code, out = run(["claude", "mcp", "list"], timeout=120, cwd=root)
     if code == 127:
@@ -139,13 +165,15 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--flow", type=int, choices=[1, 2], required=True)
     ap.add_argument("--browser", action="store_true", help="cần Playwright + Chromium (Luồng 1 có website)")
-    ap.add_argument("--figma", action="store_true", help="cần Figma MCP (O5 / view CR)")
+    ap.add_argument("--figma", action="store_true", help="cần Figma MCP (O4 / view CR)")
     ap.add_argument("--check-only", action="store_true", help="chỉ kiểm, không cài")
     ap.add_argument("--root", default=os.getcwd(), help="folder dự án (mặc định: thư mục hiện tại)")
     ap.add_argument("--out", help="ghi bảng kết quả ra file .md (VD <ver>/_internal/gates/env.md)")
     a = ap.parse_args()
 
     ensure_python(a.flow, a.check_only)
+    if a.flow == 1:
+        ensure_ast(a.check_only)   # giai doan 1: Basic Design doc code bang AST
     if a.browser:
         ensure_browser(a.root, a.check_only)
     if a.figma:

@@ -56,7 +56,7 @@ def build(path, sheets, meta_keys=None, carry_from=None):
             for r in rows:
                 wb[name].append([r.get(h, "") for h in sheets[name]])
 
-    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)  # vd 07_BugList/ chua co
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)  # vd 07_Bug_List/ chua co
     wb.save(path)
     print("Da tao %s (%d sheet)" % (path, len(sheets)))
     return 0

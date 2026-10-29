@@ -31,7 +31,7 @@
  *                  (giet session) va link co tu khoa pha du lieu -> ghi vao blocked.json
  *
  * Output (--out = thu muc _internal/ cua version):
- *   evidence/EV-NNNN.png                 screenshot fullPage tung man
+ *   evidence/EV-NNNN.png                 screenshot fullPage tung man (items[].box · tables[].boxes · linkBoxes = vi tri 0..1 tren anh nay)
  *   recon/crawl/<site>/urls.txt          URL da tham, tru trang HTTP >= 400 (input cho verify-inventory.py --crawled)
  *   recon/crawl/<site>/pages.json        title · heading · form · header bang · item (KHONG luu gia tri input)
  *                                        trang HTTP >= 400: status + errorPage:true (giu screenshot lam bang chung bug)
@@ -477,6 +477,11 @@ function httpCreds(arg, url) {
           return T(el.title, 60);
         };
 
+        // vi tri tren anh fullPage (0..1) — de build-basic-design.py tu danh so item tren anh (giai doan 2)
+        const DW = Math.max(document.documentElement.scrollWidth, document.body.scrollWidth, 1);
+        const DH = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight, 1);
+        const boxOf = el => { const r = el.getBoundingClientRect();
+          return [+((r.left + scrollX) / DW).toFixed(4), +((r.top + scrollY) / DH).toFixed(4), +(r.width / DW).toFixed(4), +(r.height / DH).toFixed(4)]; };
         const sel = 'input,select,textarea,button,a[href],[role="button"]';
         const all = Array.from(document.querySelectorAll(sel));
         const itemSel = 'input:not([type=hidden]),select,textarea,button,[role="button"]';
@@ -499,17 +504,18 @@ function httpCreds(arg, url) {
             disabled: !!el.disabled || el.getAttribute('aria-disabled') === 'true',
             readonly: el.hasAttribute('readonly'),
             optionsCount: tag === 'select' ? el.options.length : null,
-            hasValue,
+            hasValue, box: boxOf(el),
           });
         }
 
         const tables = Array.from(document.querySelectorAll('table')).filter(visible).map(t => {
           let ths = Array.from(t.querySelectorAll('thead th'));
           if (!ths.length) { const r = t.querySelector('tr'); ths = r ? Array.from(r.querySelectorAll('th')) : []; }
-          return { headers: ths.map(th => T(th.innerText, 80)) };   // CHI header, khong lay gia tri o
+          return { headers: ths.map(th => T(th.innerText, 80)), boxes: ths.map(boxOf) };   // CHI header, khong lay gia tri o
         });
 
-        const anchors = Array.from(document.querySelectorAll('a[href]')).map(a => ({ href: a.href, text: T(a.innerText || a.title || a.getAttribute('aria-label'), 80) }));
+        const anchors = Array.from(document.querySelectorAll('a[href]')).map(a => ({ href: a.href, text: T(a.innerText || a.title || a.getAttribute('aria-label'), 80),
+          box: visible(a) ? boxOf(a) : null }));
 
         // --- mau computed-style (cho design token) ---
         const cs = el => getComputedStyle(el);
@@ -787,6 +793,7 @@ function httpCreds(arg, url) {
       url, title: info.title, status, evId, loadMs,
       headings: info.headings, forms: info.forms, tables: info.tables, links,
       items: info.items, itemCount: info.itemCount, ...(errorPage ? { errorPage: true } : {}),
+      linkBoxes: info.anchors.filter(a => a.box && a.text).map(a => ({ text: a.text, box: a.box })),   // vi tri chu link tren anh
     });
     if (!errorPage) {
       styles.push(Object.assign({ url, evId }, info.style));

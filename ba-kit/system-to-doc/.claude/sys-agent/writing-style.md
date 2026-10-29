@@ -17,7 +17,7 @@
 | Câu hỏi gửi khách (`estimate.json → questions`) | Khách hàng | Nhật + Việt |
 | Giải trình "vì sao là CR" (sheet Q&A của Impact, `flow-2-change-request.md` §3.3) | Khách hàng | Theo yêu cầu dự án |
 | **Câu hỏi `AskUserQuestion` + option, Discovery Brief** (`preflight-questions.md`, `flow-2-change-request.md`, `figma/cr-view.md` §3) | BA / PM / khách hàng | Tiếng Việt (P10) |
-| Chương 2 "Nghiệp vụ chính" của O6 (`business.json`) | Khách hàng / BA | Theo P10 |
+| Chương 2 "Nghiệp vụ chính" của O1 (`business.json`) | Khách hàng / BA | Theo P10 |
 
 Không áp dụng cho phần **nội bộ** (`cr.json`, sheet Screen / API / Database, cột Impact / căn cứ mã đơn giá, run-log) — ở đó được dùng mã kỹ thuật.
 

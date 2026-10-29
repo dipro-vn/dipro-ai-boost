@@ -51,24 +51,24 @@ Không hỏi CR-3b → không được dùng component site khác. Câu trả l�
 
 ## 4. Đọc Design System TRƯỚC khi vẽ CR-3 (bắt buộc — máy kiểm)
 
-1. Với mỗi site có màn đề xuất, **Read**: `outputs/<baseline>/04_DesignSystem/<WEB-xx>/project/README.md` → `tokens.json` → `components/<Comp>/README.md` của component sẽ dùng → `../STATUS.md` (TBD).
+1. Với mỗi site có màn đề xuất, **Read**: `outputs/<baseline>/06_Design_System/<WEB-xx>/project/README.md` → `tokens.json` → `components/<Comp>/README.md` của component sẽ dùng → `../STATUS.md` (TBD).
 2. Ghi danh sách file đã đọc vào `cr-figma.json → screens.ds_read`. Thiếu README / tokens của site → `render-cr-figma.py` **từ chối sinh JS**, V-CR-FIGMA check 10 FAIL.
 3. Mỗi block màn chỉ dùng component có trong DS của site (`BLOCK_COMP` trong script). Component chưa có → khai `"from": "<WEB-yy>"` theo câu CR-3b; không khai → script từ chối.
 4. Màu / chữ / bo góc / chiều cao control lấy từ `tokens.json` (renderer đọc thẳng). V-CR-FIGMA đọc ngược mọi màu fill trong màn → **màu ngoài token của site (và site mượn) = FAIL**.
 5. Font DS không có trên Figma (VD Hiragino Kaku Gothic Pro) → renderer dùng Noto Sans JP và **ghi rõ trên màn** "font thay thế". Không im lặng đổi.
 6. Dữ liệu trên màn: bộ mẫu `DATA-PRIVACY.md` §4 (Nguyễn Văn A / 山田太郎 · `user_a@example.com` · `090-0000-0000` · `SO-0001` · `1,000` · Công ty ABC). Figma là cloud — không dữ liệu thật.
-7. **Không có Design System** (mọi baseline không có `04_DesignSystem/` — hệ thống không cung cấp UI / Figma, O4 đã skip) → dùng **Base Design System tạm thời** (`.claude/base-design-system/` trong kit — chuẩn UI Nhật DADS + lớp tên chuẩn công ty):
+7. **Không có Design System** (mọi baseline không có `06_Design_System/` — hệ thống không cung cấp UI / Figma, O6 đã skip) → dùng **Base Design System tạm thời** (`.claude/base-design-system/` trong kit — chuẩn UI Nhật DADS + lớp tên chuẩn công ty):
    ```bash
    BDS=.claude/base-design-system
-   for W in <WEB-xx có màn đề xuất>; do mkdir -p $V/04_DesignSystem/$W && cp -R $BDS/project $V/04_DesignSystem/$W/; done
-   # mỗi site: $V/04_DesignSystem/$W/STATUS.md = copy $BDS/STATUS.md, sửa dòng đầu "- Trạng thái: TBD — BASE tạm thời (hệ thống không có Design System)"
+   for W in <WEB-xx có màn đề xuất>; do mkdir -p $V/06_Design_System/$W && cp -R $BDS/project $V/06_Design_System/$W/; done
+   # mỗi site: $V/06_Design_System/$W/STATUS.md = copy $BDS/STATUS.md, sửa dòng đầu "- Trạng thái: TBD — BASE tạm thời (hệ thống không có Design System)"
    ```
-   - Đọc `$BDS/README.md` + `prompt_design_system.md` (nguyên tắc) rồi bước 1 với `$V/04_DesignSystem/<WEB-xx>/…`; `ds_read` khai đường dẫn trong `$V`.
+   - Đọc `$BDS/README.md` + `prompt_design_system.md` (nguyên tắc) rồi bước 1 với `$V/06_Design_System/<WEB-xx>/…`; `ds_read` khai đường dẫn trong `$V`.
    - Chạy renderer / V-CR-FIGMA với **`--ds-baseline $V`**. Ref DS ghi `DS:<WEB-xx>:primary` / `DS-component:<WEB-xx>:TextField` (tên chuẩn — alias DADS).
    - Base không có `SideNav` / `Toast` / `AppShell` / `sidebar-width` → shell `mypage` / `admin` bị từ chối: dùng shell `public` / `auth` / `modal`, hoặc hỏi CR-3b `[B]` (UI-TOKEN-NEW + CQ cho designer).
    - Trên mỗi màn CR-3 ghi rõ (note section): "Dựng từ Base Design System (デジタル庁デザインシステム) — hệ thống chưa có Design System, chờ designer xác nhận". Run-log + Q&A sheet: 1 CQ "dùng design system nào cho màn mới".
    - Không publish base thành artifact của hệ thống; không ghi `APPROVED`.
-8. **Sau khi CR-3 clone UI thật của designer** mà V-CR-FIGMA check 10 WARN (màu thật chưa có token): mở **version DS mới** (DELTA O4, copy `04_DesignSystem` bản mới nhất) → tra từng màu dùng ở đâu trên UI thật (node Figma, khối nào) → thêm token **tên theo vai trò** + `usage` ghi node nguồn; màu Figma **mâu thuẫn** với website cho cùng vai trò → **chọn website**, ghi `STATUS.md` § Mâu thuẫn và tô lại mockup bằng màu website (không thêm token). Chạy V-DS, rồi V-CR-FIGMA với `--ds-baseline <version DS mới>` → check 10 PASS. Publish artifact chỉ khi user đồng ý (P7b).
+8. **Sau khi CR-3 clone UI thật của designer** mà V-CR-FIGMA check 10 WARN (màu thật chưa có token): mở **version DS mới** (DELTA O6, copy `06_Design_System` bản mới nhất) → tra từng màu dùng ở đâu trên UI thật (node Figma, khối nào) → thêm token **tên theo vai trò** + `usage` ghi node nguồn; màu Figma **mâu thuẫn** với website cho cùng vai trò → **chọn website**, ghi `STATUS.md` § Mâu thuẫn và tô lại mockup bằng màu website (không thêm token). Chạy V-DS, rồi V-CR-FIGMA với `--ds-baseline <version DS mới>` → check 10 PASS. Publish artifact chỉ khi user đồng ý (P7b).
 
 ## 5. `cr-figma.json` (agent viết)
 
@@ -88,13 +88,13 @@ Không hỏi CR-3b → không được dùng component site khác. Câu trả l�
                               {"key": "n1", "type": "screen", "badge": "NEW", "ref": "IMP-047", "label": "団体専用予約"},
                               {"key": "e1", "type": "edge", "badge": "IMPACT", "ref": "table:ticket_booking_schedules", "label": "Sức chứa dùng chung — CQ-010"}],
                     "edges": [["s", "n1", ""]]}],
- "screens": {"ds_read": ["outputs/ver1_.../04_DesignSystem/WEB-02/project/README.md", "outputs/ver1_.../04_DesignSystem/WEB-02/project/tokens.json"],
+ "screens": {"ds_read": ["outputs/ver1_.../06_Design_System/WEB-02/project/README.md", "outputs/ver1_.../06_Design_System/WEB-02/project/tokens.json"],
              "items": [{"badge": "NEW", "ref": "IMP-046", "site": "WEB-02", "shell": "auth", "label": "[WEB-02] 団体登録",
                         "blocks": [{"t": "title", "text": "団体登録"}, {"t": "field", "label": "団体名・法人名", "required": true, "placeholder": "例：Công ty ABC"},
                                    {"t": "table", "cols": ["No", "領収書番号"], "rows": [["1", "R-0001"]], "from": "WEB-01"},
                                    {"t": "buttons", "items": [{"text": "確認する", "variant": "solid"}]}]}]}}
 ```
-- **Bắt buộc mới:** CR-1 lane: ≥ 1 node `type: "ng"` (nối bằng cạnh kiểu `ng` từ decision) hoặc `no_ng`. CR-2 group: ≥ 1 node `type: "ng" | "popup"` với `display` (`Modal|Popup|Toast|Banner|Full screen|Inline|Tooltip|Empty state`) · `trigger` · `msg` (message thật của hệ thống nếu có ở O1 `Screen Error message`; chưa có → message đề xuất ghi rõ `(đề xuất)`) · `parent` (màn cha) · `next`; node `screen` có `stype` + `desc`.
+- **Bắt buộc mới:** CR-1 lane: ≥ 1 node `type: "ng"` (nối bằng cạnh kiểu `ng` từ decision) hoặc `no_ng`. CR-2 group: ≥ 1 node `type: "ng" | "popup"` với `display` (`Modal|Popup|Toast|Banner|Full screen|Inline|Tooltip|Empty state`) · `trigger` · `msg` (message thật của hệ thống nếu có ở O5 `Screen Error message`; chưa có → message đề xuất ghi rõ `(đề xuất)`) · `parent` (màn cha) · `next`; node `screen` có `stype` + `desc`.
 - `site_order` [WEB-xx…] · `site_labels` {WEB-xx: "Màn hình người dùng"} — tên section theo site (không hardcode trong renderer).
 - CR-3 item: **`flow`** (id Group CR-2 / lane FL-xx, bắt buộc; ngoài danh sách → thêm `flow_title`), `stype`, `entry`, `purpose`, `changes` (UPD), `happy` [..], `items` [{`n`,`title`,`desc`,`action`,`chg`}], `errors` [{`trigger`,`display`,`msg`}], `base` (UPD: SC- màn gốc), `cq` (câu hỏi chờ). Block có `n` (số item) và `chg` (NEW/UPD/DEL) — số item trong bảng phải có trên mockup. Popup: `shell: "modal"` (+ `scrim`).
 - Màn `To verify` ở baseline (chưa quan sát UI) mà vẫn UPD → dựng AS-IS từ code (nhãn trong page) và ghi `cq` "AS-IS dựng từ code — chờ xác nhận UI".
@@ -108,7 +108,7 @@ Không hỏi CR-3b → không được dùng component site khác. Câu trả l�
 ```bash
 S=.claude/skills/system-analyst/scripts; V=outputs/<ver CR>; BL=outputs/<baseline>
 # 0. use_figma đọc bbox thấp nhất của page (get_metadata) -> Y = đáy + 400
-python3 $S/render-cr-figma.py --cr-json $V/_internal/cr.json --view $V/_internal/cr-figma.json --baseline $BL [--ds-baseline outputs/<ver có 04_DesignSystem mới nhất>] \
+python3 $S/render-cr-figma.py --cr-json $V/_internal/cr.json --view $V/_internal/cr-figma.json --baseline $BL [--ds-baseline outputs/<ver có 06_Design_System mới nhất>] \
     --rates .claude/config/md-unit-rates.json --page-id <page id> --y <Y> --out-dir $V/_internal/figma-js
 # 1. use_figma lần lượt: 01-shell-flow.js · 02-screen-flow.js · 03-change-table.js · 04-screens-*.js
 #    (mỗi call trả bottom/created; lỗi → section chưa đủ: chỉ xoá section của CHÍNH lần chạy này rồi chạy lại từ 01)
