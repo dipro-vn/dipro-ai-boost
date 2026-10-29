@@ -50,7 +50,7 @@ def paths(base):
             "nar": os.path.join(i, "narrative.json"),
             "biz": os.path.join(i, "business.json"),
             "index": os.path.join(i, "index.json"),
-            "bug": os.path.join(v, "07_BugList", "BugList_Fixture_ver1.xlsx"),
+            "bug": os.path.join(v, "07_Bug_List", "BugList_Fixture_ver1.xlsx"),
             "docx": os.path.join(v, "01_Overview", "Overview_Fixture_ver1.docx")}
 
 
@@ -193,16 +193,16 @@ def build_outputs(p):
     wb.active.title = "Screen Index"
     for title in ("SC-001", "SC-002"):
         wb.create_sheet(title)["F6"] = "WORKING_SCREEN"
-    os.makedirs(os.path.join(v, "05_BasicDesign"), exist_ok=True)
-    wb.save(os.path.join(v, "05_BasicDesign", "BasicDesign_WEB-01_ver1.xlsx"))
+    os.makedirs(os.path.join(v, "05_Basic_Design"), exist_ok=True)
+    wb.save(os.path.join(v, "05_Basic_Design", "BasicDesign_WEB-01_ver1.xlsx"))
     for sub, name in (("02_API", "API_Doc_Fixture_ver1.xlsx"), ("03_DB", "DB_Doc_Fixture_ver1.xlsx")):
         os.makedirs(os.path.join(v, sub), exist_ok=True)
         Workbook().save(os.path.join(v, sub, name))
     fake_png(os.path.join(v, "03_DB", "ERD_Fixture_ver1.png"))
-    os.makedirs(os.path.join(v, "06_DesignSystem", "project"), exist_ok=True)   # O6 = format artifact Design System
+    os.makedirs(os.path.join(v, "06_Design_System", "project"), exist_ok=True)   # O6 = format artifact Design System
     json.dump({"v": 3, "layout": "files", "title": "Fixture"},
-              open(os.path.join(v, "06_DesignSystem", "project", "design-system.json"), "w"))
-    open(os.path.join(v, "06_DesignSystem", "STATUS.md"), "w", encoding="utf8").write(
+              open(os.path.join(v, "06_Design_System", "project", "design-system.json"), "w"))
+    open(os.path.join(v, "06_Design_System", "STATUS.md"), "w", encoding="utf8").write(
         "# Design System — Fixture\n\n- Trạng thái: DRAFT\n- Artifact: https://claude.ai/artifact/FixtureDs01\n"
         "- Nguồn: website WEB-01\n\n## Thiếu (TBD)\n\n| D# | Token / component | Ghi chú |\n|---|---|---|\n"
         "| D1 | primary-hover | khong quan sat duoc |\n| D6 | Toast | khong quan sat duoc |\n")
@@ -539,11 +539,11 @@ def run_gates(p):
 def index_cases(tmp):
     """build-version-index: O6 moi site 1 bo (WEB-xx/project/) + thu muc CR (Impact xlsx, Figma CR, input/)."""
     out = []
-    # O6 layout moi: 06_DesignSystem/WEB-01/ + WEB-02/
+    # O6 layout moi: 06_Design_System/WEB-01/ + WEB-02/
     d = os.path.join(tmp, "o4sites")
     shutil.copytree(os.path.join(tmp, "good"), d)
     v = os.path.join(d, VER)
-    ds = os.path.join(v, "06_DesignSystem")
+    ds = os.path.join(v, "06_Design_System")
     for site in ("WEB-01", "WEB-02"):
         shutil.copytree(os.path.join(ds, "project"), os.path.join(ds, site, "project"))
         txt = open(os.path.join(ds, "STATUS.md"), encoding="utf8").read()
@@ -887,6 +887,10 @@ def legacy_cases(tmp):
 
 
 def preflight_cases(tmp):
+    global PMX
+    _s = importlib.util.spec_from_file_location("pmx", os.path.join(HERE, "preflight-memory.py"))
+    PMX = importlib.util.module_from_spec(_s)
+    _s.loader.exec_module(PMX)
     """R9 · D8: preflight-memory.py — memory du -> khong hoi lai (tru 4 cau an toan dang xac nhan), khong credential."""
     out = []
     outs = os.path.join(tmp, "pm", "outputs")
@@ -929,6 +933,13 @@ def preflight_cases(tmp):
                       "inputs/repo/api/seed.json", "inputs/repo/api/new.json")[1])
     out.append(("R9", "S1 da phan loai -> khong hoi lai; file moi -> sensitive_unclassified",
                 j["sensitive_unclassified"] == ["inputs/repo/api/new.json"], str(j["sensitive_unclassified"])))
+    j1 = json.loads(sh("preflight-memory.py", "missing", "--outputs", outs, "--phase", "1")[1])
+    j2 = json.loads(sh("preflight-memory.py", "missing", "--outputs", outs, "--phase", "2")[1])
+    c1 = {q["code"] for q in j1["ask"]} | {q["code"] for q in j1["confirm_safety"]}
+    c2 = {q["code"] for q in j2["ask"]} | {q["code"] for q in j2["confirm_safety"]}
+    out.append(("R9", "Giai đoạn 1 khong hoi website / 4 cau an toan; Giai đoạn 2 chi hoi website + an toan",
+                not (c1 & PMX.PHASE2) and "P0d" in c1 | {q["code"] for q in j1["confirm_table"]}
+                and c2 <= PMX.PHASE2 and {"P1-env", "P2b", "P3", "P11"} <= c2, "p1=%s p2=%s" % (sorted(c1), sorted(c2))))
     return out
 
 
@@ -945,11 +956,22 @@ def main():
     for gate, (rc, fails) in run_gates(good).items():
         results.append(("baseline", "Fixture dung -> %s PASS" % gate, not fails,
                         "" if not fails else "FAIL o check %s" % fails))
-    # O6 trong index: link + trang thai + so TBD doc tu 06_DesignSystem/STATUS.md
+    # O6 trong index: link + trang thai + so TBD doc tu 06_Design_System/STATUS.md
     o4 = next((e for e in json.load(open(good["index"], encoding="utf8"))["outputs"] if e["id"] == "O6"), {})
     ok = o4.get("link") == "https://claude.ai/artifact/FixtureDs01" and "2 TBD · DRAFT" in str(o4.get("count"))
     results.append(("index", "O6 doc link/trang thai/TBD tu STATUS.md", ok, "O6=%s" % {k: o4.get(k) for k in ("link", "count")}))
     results += index_cases(tmp)
+    # Diem dung giua 2 giai doan: README liet ke giai doan 2 se lam gi
+    d = os.path.join(tmp, "stage2")
+    shutil.copytree(os.path.join(tmp, "good"), d)
+    v2 = paths(d)["ver"]
+    sh("build-version-index.py", v2, "--skip", "O7=chờ giai đoạn 2")
+    r2 = open(os.path.join(v2, "README.md"), encoding="utf8").read()
+    sh("build-version-index.py", v2)
+    r0 = open(os.path.join(v2, "README.md"), encoding="utf8").read()
+    results.append(("index", "O7 'chờ giai đoạn 2' -> README co muc 'Giai đoạn 2 — chưa chạy' (7 viec); het cho -> khong co",
+                    "## Giai đoạn 2 — chưa chạy" in r2 and "7. Cập nhật Tài liệu tổng hợp" in r2
+                    and "Giai đoạn 2 — chưa chạy" not in r0, ""))
     results += r1_cases(tmp)
     results += scan_cases(tmp)
     results += legacy_cases(tmp)
@@ -966,6 +988,19 @@ def main():
     results.append(("V3", "Khong co link Figma -> ghi chu ERD o chuong 5 -> PASS", not fails and
                     sum(1 for _, t in dx.paragraphs if t.startswith("Chưa có sơ đồ trên Figma")) == 1, "FAIL: %s" % fails))
     gx = Docx(good["docx"])
+    # Chuong 1: co --flow-image -> hinh + chu thich, V3 check 15 khong WARN; khong co -> WARN 15
+    d = os.path.join(tmp, "flowimg")
+    shutil.copytree(os.path.join(tmp, "good"), d)
+    pf = paths(d)
+    png = os.path.join(pf["root"], "archify", "luong.png")
+    fake_png(png)
+    sh("render-overview-docx.py", "--inventory", pf["inv"], "--narrative", pf["nar"], "--business", pf["biz"],
+       "--index", pf["index"], "--flow-image", png, "--out", pf["docx"])
+    rc1, o1 = sh("verify-overview.py", pf["docx"], "--inventory", pf["inv"], "--business", pf["biz"])
+    rc0, o0 = sh("verify-overview.py", good["docx"], "--inventory", good["inv"], "--business", good["biz"])
+    results.append(("V3", "Hinh luong nghiep vu Archify o chuong 1: co -> PASS 15, khong co -> WARN 15",
+                    "| 15 |" in o1 and "| 15 | " in o0 and "WARN" in [l for l in o0.splitlines() if l.startswith("| 15 |")][0]
+                    and "PASS" in [l for l in o1.splitlines() if l.startswith("| 15 |")][0], o1[-200:]))
     ft = [t for _, t in gx.paragraphs if t.startswith("Sơ đồ trên Figma:") and "figma.com" in t]
     results.append(("V3", "Co figma-links.md -> 2 link Figma (luong Output 1 · ERD), khong co so do API",
                     len(ft) == 2 and not any("API" in t for t in ft),

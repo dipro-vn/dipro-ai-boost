@@ -1,8 +1,10 @@
 # O6 — Design System của hệ thống cũ
 
+> **Giai đoạn 2** (sau điểm dừng của `/analyze-system`): chỉ sinh khi AI Playwright đã mở được website (token đo trên màn hình thật). App / không chạy Giai đoạn 2 → README ghi ⬜.
+
 > **Yêu cầu:** O6 ra **đúng chuẩn design system chung của công ty** — cùng chuẩn với `designer-kit/document-to-figma`, là format của Artifact type **Design System** trên claude.ai (bản mẫu: https://claude.ai/artifact/ModdSpJmnWd9yA4onTCtpp). Chỉ tạo khi **có đọc từ website hoặc Figma**; nguồn gồm website + source code (+ Figma).
 >
-> Dùng lại về sau: `designer-kit` copy thẳng `06_DesignSystem/` thành `design-system/` để vẽ màn mới · Luồng 2 trục **Mockup** đối chiếu với nó.
+> Dùng lại về sau: `designer-kit` copy thẳng `06_Design_System/` thành `design-system/` để vẽ màn mới · Luồng 2 trục **Mockup** đối chiếu với nó.
 
 ---
 
@@ -35,12 +37,12 @@ Script so "dấu vân tay" style của từng website (font chính · thang ch�
 
 | Chế độ | Khi nào | Cấu trúc |
 |---|---|---|
-| `single` | 1 website, hoặc các site giống nhau cả màu | `06_DesignSystem/STATUS.md` + `project/` — 1 theme `light` |
-| `themes` | Các site **chỉ khác màu** (cùng font, thang chữ, bo góc, control…) | `06_DesignSystem/STATUS.md` + `project/` — **mỗi website 1 theme** (`web-01`, `web-02`…), chỉ token màu đổi theo theme |
-| `per-site` | Các site **khác cả ngôn ngữ thiết kế** (font / thang chữ / bo góc / control / nav) | `06_DesignSystem/WEB-01/{STATUS.md, project/}`, `06_DesignSystem/WEB-02/{…}` — **mỗi website 1 Design System riêng**, mỗi cái là 1 artifact riêng. Ở gốc không có file nào khác |
+| `single` | 1 website, hoặc các site giống nhau cả màu | `06_Design_System/STATUS.md` + `project/` — 1 theme `light` |
+| `themes` | Các site **chỉ khác màu** (cùng font, thang chữ, bo góc, control…) | `06_Design_System/STATUS.md` + `project/` — **mỗi website 1 theme** (`web-01`, `web-02`…), chỉ token màu đổi theo theme |
+| `per-site` | Các site **khác cả ngôn ngữ thiết kế** (font / thang chữ / bo góc / control / nav) | `06_Design_System/WEB-01/{STATUS.md, project/}`, `06_Design_System/WEB-02/{…}` — **mỗi website 1 Design System riêng**, mỗi cái là 1 artifact riêng. Ở gốc không có file nào khác |
 
 ```
-06_DesignSystem/            (single / themes)          06_DesignSystem/            (per-site)
+06_Design_System/            (single / themes)          06_Design_System/            (per-site)
 ├── STATUS.md                                          ├── WEB-01/  STATUS.md · project/
 └── project/                                           └── WEB-02/  STATUS.md · project/
 ```
@@ -57,7 +59,7 @@ Quyết định + bằng chứng (từng khác biệt: site · khía cạnh · c
 # crawl ở Bước 4 đã thu style component, kích thước khung màn, logo + icon (styles.json, assets.json)
 python3 $S/extract-design-tokens.py --crawl $I/recon/crawl \
     --css-root REPO-01@WEB-01=<fe-repo-site-1> [--css-root REPO-03@WEB-02=<fe-repo-site-2>] \
-    --out $I/recon/design --name "<system_name>" --emit-root $V/06_DesignSystem [--force-mode …]
+    --out $I/recon/design --name "<system_name>" --emit-root $V/06_Design_System [--force-mode …]
 # rồi copy phần còn thiếu từ template (README, components/_Example, Cover, assets/*/README.md) vào từng project/
 ```
 
@@ -109,10 +111,10 @@ O6 dựng **trên khung Base Design System** (DADS + lớp tên chuẩn công ty
 ## 5. Gate V-DS
 
 ```bash
-python3 $S/verify-design-system.py $V/06_DesignSystem --draft $I/recon/design/tokens-draft.json \
+python3 $S/verify-design-system.py $V/06_Design_System --draft $I/recon/design/tokens-draft.json \
     [--figma-used] [--published-url <url> | --published-url WEB-01=<url> …] [--approved-by "<người duyệt>"] \
     --out $I/gates/v-ds.md
-# luôn chạy trên GỐC 06_DesignSystem: per-site thì gate tự kiểm từng WEB-xx (check id dạng WEB-02.5)
+# luôn chạy trên GỐC 06_Design_System: per-site thì gate tự kiểm từng WEB-xx (check id dạng WEB-02.5)
 python3 $S/selftest-design-system.py >> $I/gates/selftest.md
 ```
 Danh sách token vai trò / component bắt buộc mà gate kiểm nằm ở `scripts/ds_roles.py` — **sửa chuẩn chung thì sửa cả file này**. `--approved-by` chỉ dùng khi người thật đã duyệt và ghi `APPROVED` vào `STATUS.md`.
@@ -132,7 +134,7 @@ Chặn: **cấu trúc không khớp chế độ trong `dsLayout`** (VD dữ li�
 | 1 | V-DS `FAIL = 0` |
 | 2 | Artifact `publish` với `type_url` (§0) + `title` = `<system_name>` + `auto_open: "after_first_write"`, **không file** → `url`. Ghi vào `STATUS.md` `- Artifact: <url>`. Không bao giờ gọi `type_url` lần 2 |
 | 3 | Upload ảnh / SVG trong `project/assets/` (`asset: true`, `file_paths` ≤ 25 / call) → ghi `blob` id vào `assetGroups.<Group>.files` (`size` = kích thước file trên đĩa) |
-| 4 | Publish `root = $V/06_DesignSystem`, `file_path` = đường dẫn tuyệt đối `project/design-system.json`, `files` = map mọi file `project/…` còn lại. **`index.d.ts` khai `{"from": "project/components/index.d.ts", "contentType": "text/plain"}`** (`.ts` không được phục vụ — thiếu thì cả lượt bị từ chối). **Không gửi `STATUS.md`.** > 255 file → nhiều call, index ở call cuối |
+| 4 | Publish `root = $V/06_Design_System`, `file_path` = đường dẫn tuyệt đối `project/design-system.json`, `files` = map mọi file `project/…` còn lại. **`index.d.ts` khai `{"from": "project/components/index.d.ts", "contentType": "text/plain"}`** (`.ts` không được phục vụ — thiếu thì cả lượt bị từ chối). **Không gửi `STATUS.md`.** > 255 file → nhiều call, index ở call cuối |
 | 5 | Chạy lại V-DS với `--published-url <url>` |
 
 P7b = Không → giữ file local, `STATUS.md` ghi `- Artifact: — (chưa publish: <lý do>)`.
@@ -141,7 +143,7 @@ P7b = Không → giữ file local, `STATUS.md` ghi `- Artifact: — (chưa publi
 
 **Version sau:** không tạo artifact mới — revise artifact cũ theo `SKILL.md` § Revising (đọc index + file sẽ sửa, gửi chỉ file đổi, index cuối, `lastChange.note`); Changelog trong `STATUS.md`.
 
-**Sang designer-kit:** `single` / `themes` → copy `06_DesignSystem/` → `designer-kit/document-to-figma/design-system/`; `per-site` → copy `06_DesignSystem/WEB-xx/` của site đang vẽ. Cùng cấu trúc. Designer duyệt → `STATUS.md` `APPROVED <ngày>`.
+**Sang designer-kit:** `single` / `themes` → copy `06_Design_System/` → `designer-kit/document-to-figma/design-system/`; `per-site` → copy `06_Design_System/WEB-xx/` của site đang vẽ. Cùng cấu trúc. Designer duyệt → `STATUS.md` `APPROVED <ngày>`.
 
 ---
 

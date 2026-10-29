@@ -56,10 +56,10 @@ ver1_011026_baseline/
 ├── 02_API/API_Doc_<sys>_ver1.xlsx                O2
 ├── 03_DB/DB_Doc_<sys>_ver1.xlsx · ERD_<sys>_ver1.png   O3
 ├── 04_Figma/figma-links.md                       O4 (+ link ERD cho O1)
-├── 05_BasicDesign/BasicDesign_WEB-01_ver1.xlsx       O5 (1 file / website)
-├── 06_DesignSystem/STATUS.md · project/           O6 tuỳ chọn (chuẩn chung với designer-kit; per-site: WEB-xx/STATUS.md · project/)
-├── 07_BugList/BugList_<sys>_ver1.xlsx            O7 (tuỳ chọn, 1 sheet)
-├── 08_DevSetup/DevSetup_<sys>_ver1.md            O8 hướng dẫn chạy local (dev, khi có source)
+├── 05_Basic_Design/BasicDesign_WEB-01_ver1.xlsx       O5 (1 file / website)
+├── 06_Design_System/STATUS.md · project/           O6 tuỳ chọn (chuẩn chung với designer-kit; per-site: WEB-xx/STATUS.md · project/)
+├── 07_Bug_List/BugList_<sys>_ver1.xlsx            O7 (tuỳ chọn, 1 sheet)
+├── 08_Huong_dan_chay_local/DevSetup_<sys>_ver1.md            O8 hướng dẫn chạy local (dev, khi có source)
 └── _internal/                                    ← của agent, không phải deliverable
     ├── inventory.xlsx        bộ nhớ máy đọc — Luồng 2 đọc file này
     ├── evidence/  recon/  gates/  narrative.json  business.json  index.json

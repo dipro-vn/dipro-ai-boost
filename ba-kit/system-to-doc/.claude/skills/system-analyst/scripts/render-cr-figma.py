@@ -42,7 +42,7 @@ Schema cr-figma.json:
  "tech": [{"badge","ref","label","sub"}],
  "screen_groups": [{"id": "G1", "title": "...", "site": "WEB-02", "nodes": [{"key","type": start|screen|decision|
             system|ng|terminal|edge, "badge","ref","label","sub"}], "edges": [["a","b","nhan","ng|"]]}],
- "screens": {"ds_read": ["outputs/<baseline>/06_DesignSystem/WEB-02/project/README.md", ...],
+ "screens": {"ds_read": ["outputs/<baseline>/06_Design_System/WEB-02/project/README.md", ...],
              "items": [{"badge","ref","site","shell": public|mypage|admin|auth|modal|mobile (mobile: + viewport_width, viewport_note khi DS chua co token viewport-mobile), "title","label","nav_active",
                         "blocks": [ {"t": "title"|"breadcrumb"|"section"|"text"|"field"|"field2"|"select"|"radio"|
                                      "checkbox"|"buttons"|"table"|"badge"|"card"|"steps"|"modal"|"search"|
@@ -83,9 +83,9 @@ SHELL_COMP = {"public": ["AppHeader"], "mypage": ["AppHeader", "SideNav"], "admi
 
 
 def load_tokens(bdir, site):
-    p = os.path.join(bdir, "06_DesignSystem", site, "project", "tokens.json")
+    p = os.path.join(bdir, "06_Design_System", site, "project", "tokens.json")
     if not os.path.isfile(p):
-        p = os.path.join(bdir, "06_DesignSystem", "project", "tokens.json")
+        p = os.path.join(bdir, "06_Design_System", "project", "tokens.json")
     t = C.load_json(p)
     themes = [th.get("id") for th in (t.get("color") or {}).get("themes") or []]
     flat = {}
@@ -852,14 +852,14 @@ def main():
     ap.add_argument("--template", default=None)
     ap.add_argument("--per-file", type=int, default=2, help="so man CR-3 moi file JS")
     ap.add_argument("--redraw", default=None, help="cr1,cr2 — ve lai CR-1 / CR-2 trong section da co (00-clear.js luu ban cu ra section luu tru, 98-restack.js xep lai)")
-    ap.add_argument("--ds-baseline", default=None, help="version chua 06_DesignSystem moi nhat (mac dinh = --baseline)")
+    ap.add_argument("--ds-baseline", default=None, help="version chua 06_Design_System moi nhat (mac dinh = --baseline)")
     a = ap.parse_args()
     cr = C.load_json(a.cr_json)
     view = C.load_json(a.view)
     _rm, rates = C.load_rates(a.rates)
     B = C.load_baseline(a.baseline)
     if a.ds_baseline:  # DS dung khi ve (DS moi hon, hoac Base Design System tam o version CR) thay DS cua baseline
-        B["ds"] = C.load_ds_sites(os.path.join(a.ds_baseline, "06_DesignSystem"))
+        B["ds"] = C.load_ds_sites(os.path.join(a.ds_baseline, "06_Design_System"))
         B["has_ds"] = bool(B["ds"])
     tpl = C.find_template(a.template, KIT)
     est = C.load_estimation_template(tpl)[1] if tpl else None
@@ -921,7 +921,7 @@ def main():
     items = scr.get("items") or []
     if items:
         for st in sites:
-            need = [os.path.join("06_DesignSystem", st, "project", f) for f in ("README.md", "tokens.json")]
+            need = [os.path.join("06_Design_System", st, "project", f) for f in ("README.md", "tokens.json")]
             for nd in need:
                 if not any(nd in p for p in ds_read):
                     errors.append("CR-3: chua khai da doc %s (screens.ds_read) — doc Design System TRUOC khi ve" % nd)

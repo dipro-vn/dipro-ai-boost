@@ -4,8 +4,8 @@
   python3 build-version-index.py <ver folder> [--skip "O7=user khong yeu cau"] [--skip "O4=..."]
 
 Tu nhan dien output theo duong dan chuan (O1..O8, hoac output CR neu co CR-*_Impact.xlsx: so hang muc + tong
-MD + trang thai don gia, Figma CR (gate v-cr-figma), input/). O6 = 06_DesignSystem/project/ (1 bo) hoac
-06_DesignSystem/WEB-xx/project/ (moi site 1 dong); link artifact + trang thai + so TBD lay tu STATUS.md
+MD + trang thai don gia, Figma CR (gate v-cr-figma), input/). O6 = 06_Design_System/project/ (1 bo) hoac
+06_Design_System/WEB-xx/project/ (moi site 1 dong); link artifact + trang thai + so TBD lay tu STATUS.md
 canh project/ (dong "- Artifact:" / "- Trạng thái:" / bang "## Thiếu (TBD)"),
 dem so luong, doc ket qua gate tu _internal/gates/*.md (dong "N checks · X PASS · Y FAIL · Z WARN").
 index.json la dau vao cua render-overview-docx.py (bia: version, ngay). Chay lai sau moi gate.
@@ -30,6 +30,20 @@ FIGMA_RX = re.compile(r"https?://(?:www\.)?figma\.com/[^\s)>\]]+")
 ARTIFACT_RX = re.compile(r"https://claude\.ai/(?:code/)?artifact/[A-Za-z0-9_-]+")
 VER_RX = re.compile(r"^ver(\d+)_(\d{2})(\d{2})(\d{2})_(.+)$")
 CR_RX = re.compile(r"^(CR-\d+)_(\d{2})(\d{2})(\d{2})_(.+)$", re.I)   # folder CR layout moi (versioning.md D3)
+# Diem dung giua 2 giai doan: README liet ke giai doan 2 se lam gi (nguoi dung quyet chay tiep hay chua)
+STAGE2_TODO = [
+    "## Giai đoạn 2 — chưa chạy", "",
+    "Đã xong giai đoạn 1 (đọc source code). Chạy lại `/analyze-system` và chọn chạy tiếp để làm giai đoạn 2. "
+    "AI Playwright sẽ mở website thật và:", "",
+    "1. Đăng nhập bằng tài khoản thử nghiệm bạn cung cấp — hỏi lại 4 câu an toàn (môi trường thử nghiệm hay thật · "
+    "tài khoản có được phép quét · mức thao tác · có dữ liệu thật không).",
+    "2. Đi qua từng màn, đối chiếu với kết quả giai đoạn 1; chỗ màn hình khác code → ghi thành câu hỏi, không tự sửa.",
+    "3. Chụp ảnh từng màn, đánh số các mục trên ảnh, chèn vào Basic Design (O5).",
+    "4. Bổ sung phần code không đọc được (nhãn nút, thông báo lỗi, màn chỉ thấy khi đăng nhập) → giảm ô \"Cần xác nhận\".",
+    "5. Lập Design System (O6) từ giao diện thật: màu, chữ, khoảng cách, component.",
+    "6. Lập Bug list (O7): thao tác thử, ghi lỗi mức High trở lên kèm bước tái hiện và ảnh.",
+    "7. Cập nhật Tài liệu tổng hợp (O1) và README với số liệu mới.", "",
+    "Chạy lâu (tuỳ số màn) nhưng ít token; bạn xem được AI thao tác trên màn hình. Phần mềm là app → không có giai đoạn 2.", ""]
 BD_SYSTEM_SHEETS = {"Common mesage", "Screen Error message", "Screen Index",
                     "Change History", "Sample"}
 ICON = {"ok": "✅", "warn": "⚠️", "fail": "❌", "skip": "⬜"}
@@ -171,14 +185,14 @@ def ds_summary(ds_dir, label):
 
 
 def ds_entries(ver, gates, skips):
-    """O6: 06_DesignSystem/project/ (1 bo) va/hoac 06_DesignSystem/WEB-xx/project/ (moi site 1 bo)."""
-    root = os.path.join(ver, "06_DesignSystem")
+    """O6: 06_Design_System/project/ (1 bo) va/hoac 06_Design_System/WEB-xx/project/ (moi site 1 bo)."""
+    root = os.path.join(ver, "06_Design_System")
     sets = [(site, d) for site, d in C.ds_dirs(root)]
     if not sets:
         sets = [("", root)]
     outs = []
     for site, d in sets:
-        ds = ds_summary(d, "06_DesignSystem/" + (site + "/" if site else ""))
+        ds = ds_summary(d, "06_Design_System/" + (site + "/" if site else ""))
         kw = {"site": site} if site else {}
         if ds["link"]:
             kw["link"] = ds["link"]
@@ -236,7 +250,7 @@ def baseline_outputs(ver, data, meta, sysname, n, gates, skips):
     for r in (data or {}).get("02_Screen", []):
         screens_by_site[r.get("Site", "")] = screens_by_site.get(r.get("Site", ""), 0) + 1
     bd = {}
-    for p in sorted(glob.glob(os.path.join(ver, "05_BasicDesign", "BasicDesign_*.xlsx"))):
+    for p in sorted(glob.glob(os.path.join(ver, "05_Basic_Design", "BasicDesign_*.xlsx"))):
         m = re.match(r"BasicDesign_(.+?)_ver\d+\.xlsx$", os.path.basename(p))
         bd[m.group(1) if m else os.path.basename(p)] = p
     for site in sites + [s for s in bd if s not in sites]:
@@ -250,26 +264,26 @@ def baseline_outputs(ver, data, meta, sysname, n, gates, skips):
             ("%d màn hình (inventory)" % screens_by_site.get(site, 0) if data else S.NEED_CONFIRM)
         outs.append(finish(entry(
             "O5", "Basic Design %s" % site, "Thiết kế cơ bản từng màn hình của site %s" % site,
-            [rel(ver, p)] if p else ["05_BasicDesign/BasicDesign_%s_ver%s.xlsx" % (site, n)],
+            [rel(ver, p)] if p else ["05_Basic_Design/BasicDesign_%s_ver%s.xlsx" % (site, n)],
             count, bool(p), site=site, count_value=cnt), gates, skips))
 
     outs += ds_entries(ver, gates, skips)
 
-    bl = sorted(glob.glob(os.path.join(ver, "07_BugList", "BugList_*.xlsx")))
+    bl = sorted(glob.glob(os.path.join(ver, "07_Bug_List", "BugList_*.xlsx")))
     nb = None
     if bl:
         wb = load_xlsx(bl[0])
         nb = sheet_rows(wb[S.BUG_SHEET]) if S.BUG_SHEET in wb.sheetnames else 0
     outs.append(finish(entry(
         "O7", "Bug List", "Lỗi mức High trở lên ảnh hưởng thao tác người dùng",
-        [rel(ver, p) for p in bl] or ["07_BugList/BugList_%s_ver%s.xlsx" % (sysname, n)],
+        [rel(ver, p) for p in bl] or ["07_Bug_List/BugList_%s_ver%s.xlsx" % (sysname, n)],
         ("%d bug" % nb) if nb is not None else DASH, bool(bl), count_value=nb), gates, skips,
         auto_skip=("bug_list=%s" % meta.get("bug_list")) if meta.get("bug_list") != "YES" else None))
 
-    dv = sorted(glob.glob(os.path.join(ver, "08_DevSetup", "DevSetup_*.md")))
+    dv = sorted(glob.glob(os.path.join(ver, "08_Huong_dan_chay_local", "DevSetup_*.md")))
     outs.append(finish(entry(
         "O8", "Dev setup", "Hướng dẫn chạy local + môi trường cho dev (md)",
-        [rel(ver, p) for p in dv] or ["08_DevSetup/DevSetup_%s_ver%s.md" % (sysname, n)],
+        [rel(ver, p) for p in dv] or ["08_Huong_dan_chay_local/DevSetup_%s_ver%s.md" % (sysname, n)],
         "1 tài liệu" if dv else DASH, bool(dv), count_value=1 if dv else 0), gates, skips,
         auto_skip="không có source code" if data is not None and not (data or {}).get("11_Repo") else None))
     return outs
@@ -441,8 +455,10 @@ def main():
         lines.append("| %s | %s | %s | %s | %s | %s |" % (
             e["id"], e["name"], "<br>".join("`%s`" % f for f in e["files"]) or DASH,
             e["count"], e["gate"], e["status_text"]))
-    lines += ["", "Kiểm chứng dữ liệu nguồn (V1/V2): %s" % ig, "",
-              "## Cách dùng khi có yêu cầu mới", "",
+    lines += ["", "Kiểm chứng dữ liệu nguồn (V1/V2): %s" % ig, ""]
+    if any(re.search(r"(?i)chờ (giai đoạn|phase) 2", e.get("reason") or "") for e in outs):
+        lines += STAGE2_TODO
+    lines += ["## Cách dùng khi có yêu cầu mới", "",
               "Chạy `/change-request <file | link | mô tả>` — agent đọc baseline mới nhất "
               "và sinh thư mục version mới (không sửa thư mục này).", ""]
     with open(os.path.join(ver, "README.md"), "w", encoding="utf8") as fh:

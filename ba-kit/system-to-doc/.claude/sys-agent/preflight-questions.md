@@ -18,7 +18,16 @@
 | **Mơ hồ** | Hỏi lại đúng câu đó, **không đoán** |
 | **Ghi nhớ** | Mỗi câu trả lời: `preflight-memory.py set --code <mã> --answer "<câu trả lời>" --by-role "<vai trò người trả lời>" [--source user\|code\|meta]` (nguồn: người dùng trả lời / đọc từ code / kế thừa 00_Meta) + ghi `00_Meta` của inventory như cũ. **Không bao giờ lưu mật khẩu / token** — chỉ tên role, đường dẫn file (script từ chối, exit 2) |
 
-**Thứ tự:** G-R (khi đã có baseline) → bảng "đang dùng" + xác nhận an toàn (mục 1) → các lượt còn thiếu (Lượt 1–5) → Pha A đọc code + so token nháp (R10) → **Discovery Brief** có mục *Quyết định lớn* (mục 7) → recon → G9 / G10 khi phát sinh.
+**Thứ tự Giai đoạn 1:** G-R (khi đã có baseline) → bảng "đang dùng" (mục 1) → lượt còn thiếu của Giai đoạn 1 → Pha A đọc code + so token nháp (R10) → **Discovery Brief** có mục *Quyết định lớn* (mục 7). **Thứ tự Giai đoạn 2:** bảng "đang dùng" + xác nhận an toàn (mục 1b) → Lượt 2 · P9 · P11 còn thiếu → crawl → G9 / G10 khi phát sinh.
+
+### 0b. Câu nào hỏi ở giai đoạn nào
+
+| Giai đoạn | Lệnh | Hỏi | Không hỏi |
+|---|---|---|---|
+| **Giai đoạn 1** — đọc source code | `preflight-memory.py missing --phase 1` | Lượt 1 (tên · phạm vi · **web hay app**) · Lượt 3 (source code · DB) · Lượt 4 (Figma) · P10 (ngôn ngữ) · Quyết định lớn | Website, tài khoản, **4 câu an toàn**, Bug list — chưa mở website nên chưa cần |
+| **Giai đoạn 2** — AI Playwright (sau điểm dừng) | `preflight-memory.py missing --phase 2` | Lượt 2 (website · môi trường · tài khoản · mức thao tác · vùng cấm) · P9 (Bug list) · P11 (dữ liệu thật) — **4 câu an toàn luôn hỏi lại** | Câu Giai đoạn 1 đã có (chỉ in lại trong bảng xác nhận nếu đổi) |
+
+App (P0d = app) → không có Giai đoạn 2; không hỏi Lượt 2.
 
 Memory: `outputs/_project/preflight-memory.json` — ngoài folder version, dùng chung cho ver1 / CR / ver<N+1>, gitignore (`.gitignore` của kit). Xem nhanh: `preflight-memory.py list --outputs outputs`.
 
@@ -71,19 +80,21 @@ Lần này bạn muốn:
 
 ---
 
-## Lượt 1 — Tên & phạm vi (P0a · P0b · P0c)
+## Lượt 1 — Tên & phạm vi (P0a · P0b · P0c · P0d) — Giai đoạn 1
 
 ```
 1. Hệ thống tên là gì? (dùng đặt tên file)                                           → gõ ở ô Other
 2. Đặt tên ngắn cho lần khảo sát này?                    [baseline] [khao-sat-lan-dau] (Other)
 3. Lần này khảo sát tới đâu?
    [A] Toàn bộ hệ thống  [B] Chỉ một số phần — ghi tên phần  [C] Chỉ một luồng nghiệp vụ, ví dụ "đặt hàng → thanh toán"
+4. Phần mềm chạy trên đâu?
+   [A] Website (mở bằng trình duyệt)  [B] App điện thoại / máy tính — không mở bằng trình duyệt được  [C] Cả hai
 ```
-<!-- P0a system_name · P0b slug/version_label · P0c scope. P0a và P0c KHÔNG có option "chạy trước": chưa trả lời → DỪNG, không đoán [A]. P0b có thể mặc định "baseline" -->
+<!-- P0a system_name · P0b slug/version_label · P0c scope · P0d loại phần mềm ([B] → không có Giai đoạn 2: O6 · O7 ⬜ "ứng dụng di động"; [C] → Giai đoạn 2 chỉ cho phần website). P0a và P0c KHÔNG có option "chạy trước": chưa trả lời → DỪNG, không đoán [A]. P0b có thể mặc định "baseline" -->
 
 ---
 
-## Lượt 2 — Website (P1 · P1-env · P2a · P2b) và (P3 · P4) ⚠️ lượt quan trọng nhất về an toàn
+## Lượt 2 — Website (P1 · P1-env · P2a · P2b) và (P3 · P4) — Giai đoạn 2 ⚠️ lượt quan trọng nhất về an toàn
 
 Lượt 2a (4 câu):
 ```
@@ -148,7 +159,7 @@ DELETE **không bao giờ** được cấp qua câu này — gặp nút xoá lu�
 
 ---
 
-## Lượt 3 — Source code & database (P5a · P5b · P6)
+## Lượt 3 — Source code & database (P5a · P5b · P6) — Giai đoạn 1
 
 > **Agent tự `Glob inputs/repo/*/` và `inputs/db/*.sql` trước khi hỏi.** Có folder / file → in danh sách để người dùng xác nhận thay vì bắt gõ lại đường dẫn.
 
@@ -175,7 +186,7 @@ DELETE **không bao giờ** được cấp qua câu này — gặp nút xoá lu�
 
 ---
 
-## Lượt 4 — Figma (P7 · P7b · P8)
+## Lượt 4 — Figma (P7 · P7b · P8) — Giai đoạn 1
 
 ```
 1. Có file Figma thiết kế của hệ thống hiện tại không? (dùng để bổ sung bộ quy chuẩn giao diện)
@@ -192,7 +203,7 @@ DELETE **không bao giờ** được cấp qua câu này — gặp nút xoá lu�
 
 ---
 
-## Lượt 5 — Tài liệu & dữ liệu (P9 · P10 · P11)
+## Lượt 5 — Tài liệu & dữ liệu (P9 · P11 → Giai đoạn 2 · P10 → Giai đoạn 1)
 
 ```
 1. Có lập danh sách lỗi hiện có của hệ thống không? (lỗi làm người dùng thao tác không được hoặc sai;

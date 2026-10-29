@@ -56,6 +56,49 @@ def parse_marks(s):
     return out
 
 
+def annotate(src, dst, marks, expect=None, size=None):
+    """-> (errs, msg). Dung chung cho CLI va build-basic-design.py (Giai đoạn 2: tu danh so theo cot #)."""
+    if os.path.abspath(src) == os.path.abspath(dst):
+        return ["dst phai khac src — khong ghi de anh goc"], ""
+    im = Image.open(src).convert("RGBA")
+    W, H = im.size
+    nums = [m["n"] for m in marks]
+    errs = []
+    if len(set(nums)) != len(nums):
+        errs.append(f"trung so: {sorted(n for n in set(nums) if nums.count(n) > 1)}")
+    if expect is not None:
+        want = set(range(1, expect + 1))
+        miss, extra = sorted(want - set(nums)), sorted(set(nums) - want)
+        if miss:
+            errs.append(f"thieu so {miss} (sheet co {expect} item)")
+        if extra:
+            errs.append(f"thua so {extra} (sheet chi co {expect} item)")
+    pts = []
+    for m in marks:
+        x = m["x"] * W if 0 <= m["x"] <= 1 else m["x"]
+        y = m["y"] * H if 0 <= m["y"] <= 1 else m["y"]
+        if not (0 <= x <= W and 0 <= y <= H):
+            errs.append(f"so {m['n']}: toa do ({x:.0f},{y:.0f}) ngoai anh {W}x{H}")
+        pts.append((m["n"], x, y))
+    if errs:
+        return errs, ""
+    d = size or max(28, round(W * 0.045))
+    r = d / 2
+    font = load_font(int(d * 0.62))
+    layer = Image.new("RGBA", im.size, (0, 0, 0, 0))
+    g = ImageDraw.Draw(layer)
+    for n, x, y in sorted(pts):
+        # giu badge nam tron trong anh
+        x = min(max(x, r + 2), W - r - 2)
+        y = min(max(y, r + 2), H - r - 2)
+        g.ellipse([x - r, y - r, x + r, y + r], fill=RED, outline=WHITE, width=max(2, d // 14))
+        g.text((x, y), str(n), fill=WHITE, font=font, anchor="mm")
+    out = Image.alpha_composite(im, layer).convert("RGB")
+    os.makedirs(os.path.dirname(os.path.abspath(dst)), exist_ok=True)
+    out.save(dst, "PNG")
+    return [], f"OK: {len(pts)} badge -> {dst} ({W}x{H}px, badge {int(d)}px)"
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("src")
@@ -74,49 +117,11 @@ def main():
         print("Can --marks hoac --marks-json", file=sys.stderr)
         return 1
 
-    if os.path.abspath(a.src) == os.path.abspath(a.dst):
-        print("dst phai khac src — khong ghi de anh goc", file=sys.stderr)
-        return 1
-
-    im = Image.open(a.src).convert("RGBA")
-    W, H = im.size
-    nums = [m["n"] for m in marks]
-    errs = []
-    if len(set(nums)) != len(nums):
-        errs.append(f"trung so: {sorted(n for n in set(nums) if nums.count(n) > 1)}")
-    if a.expect is not None:
-        want = set(range(1, a.expect + 1))
-        miss, extra = sorted(want - set(nums)), sorted(set(nums) - want)
-        if miss:
-            errs.append(f"thieu so {miss} (sheet co {a.expect} item)")
-        if extra:
-            errs.append(f"thua so {extra} (sheet chi co {a.expect} item)")
-    pts = []
-    for m in marks:
-        x = m["x"] * W if 0 <= m["x"] <= 1 else m["x"]
-        y = m["y"] * H if 0 <= m["y"] <= 1 else m["y"]
-        if not (0 <= x <= W and 0 <= y <= H):
-            errs.append(f"so {m['n']}: toa do ({x:.0f},{y:.0f}) ngoai anh {W}x{H}")
-        pts.append((m["n"], x, y))
+    errs, msg = annotate(a.src, a.dst, marks, a.expect, a.size)
     if errs:
         print("LOI: " + "; ".join(errs), file=sys.stderr)
         return 1
-
-    d = a.size or max(28, round(W * 0.045))
-    r = d / 2
-    font = load_font(int(d * 0.62))
-    layer = Image.new("RGBA", im.size, (0, 0, 0, 0))
-    g = ImageDraw.Draw(layer)
-    for n, x, y in sorted(pts):
-        # giu badge nam tron trong anh
-        x = min(max(x, r + 2), W - r - 2)
-        y = min(max(y, r + 2), H - r - 2)
-        g.ellipse([x - r, y - r, x + r, y + r], fill=RED, outline=WHITE, width=max(2, d // 14))
-        g.text((x, y), str(n), fill=WHITE, font=font, anchor="mm")
-    out = Image.alpha_composite(im, layer).convert("RGB")
-    os.makedirs(os.path.dirname(os.path.abspath(a.dst)), exist_ok=True)
-    out.save(a.dst, "PNG")
-    print(f"OK: {len(pts)} badge -> {a.dst} ({W}x{H}px, badge {int(d)}px)")
+    print(msg)
     return 0
 
 

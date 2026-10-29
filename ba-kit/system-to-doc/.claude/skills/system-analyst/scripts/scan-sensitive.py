@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """S1 — quet secret / du lieu that TRUOC KHI agent doc nguon (repo, dump, file input, CR).
 
-  python3 scan-sensitive.py --path <repo|dump|inputs> [--path ...] --out <_internal>/gates/sensitive.md
+  python3 scan-sensitive.py --path <repo|dump|inputs> [--path ...] --out <_internal>/gates/sensitive.md [--high-list <_internal>/gates/high-files.txt [--sensitive-memory outputs/_project/preflight-memory.json]]
           [--json <file>] [--threshold 5] [--max-mb 2] [--patterns <pii-patterns.json>]
 
 Exit: 0 = sach (chi LOW/INFO) · 3 = co HIGH -> agent DUNG, bao user, hoi cach xu ly (POLICIES §5 muc 1)
@@ -341,11 +341,19 @@ def render(scan, paths):
     return "\n".join(L) + "\n", hi, lo
 
 
+# --high-list + --sensitive-memory: chi mo lai file nguoi dung da phan loai "bao nham" khi moi phat hien deu dua tren
+# TEN (ten file / ten khoa nhu FORGOT_PASSWORD = route). Mau gia tri that (password_kv, private key, the...) van chan.
+REOPENABLE = {"name-keyword-file", "hardcoded-credential"}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--path", action="append", required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--json", default="")
+    ap.add_argument("--sensitive-memory", default="", help="preflight-memory.json — file chi bi bat vi TEN (ten file / ten khoa) "
+                    "ma nguoi dung da phan loai 'bao nham' -> khong dua vao --high-list")
+    ap.add_argument("--high-list", default="", help="ghi danh sach file HIGH (1 duong dan / dong) — dau vao --s1-list cua ast/extract-screen.mjs")
     ap.add_argument("--threshold", type=int, default=5, help="so gia tri PII khac nhau / file de coi la du lieu that")
     ap.add_argument("--max-mb", type=float, default=2.0)
     ap.add_argument("--patterns", default=DEFAULT_PATTERNS)
@@ -368,6 +376,21 @@ def main():
         with open(a.json, "w", encoding="utf8") as fh:
             json.dump({"paths": a.path, "files_scanned": scan.files, "high": hi, "low": lo,
                        "skipped": [{"path": s[0], "reason": s[1]} for s in scan.skipped]}, fh, indent=2, ensure_ascii=False)
+    if a.high_list:
+        files = {}
+        for f in hi:
+            files.setdefault(f["where"].split("#L")[0], set()).add(f["pattern"])
+        reopen = set()
+        if a.sensitive_memory:
+            import importlib.util
+            sp = importlib.util.spec_from_file_location("scan_repo", os.path.join(os.path.dirname(os.path.abspath(__file__)), "scan-repo.py"))
+            sr = importlib.util.module_from_spec(sp)
+            sp.loader.exec_module(sr)
+            reopen = sr.load_reopen(a.sensitive_memory)
+        keep = [w for w, pats in sorted(files.items())
+                if not (pats <= REOPENABLE and any(w == r or ("/" + r).endswith("/" + w) or r.endswith("/" + w) for r in reopen))]
+        with open(a.high_list, "w", encoding="utf8") as fh:
+            fh.write("".join("%s\n" % w for w in keep))
     print(text)
     print("SUMMARY: %d file · %d HIGH · %d LOW/INFO · %d bo qua -> exit %d"
           % (scan.files, len(hi), len(lo), len(scan.skipped), 3 if hi else 0), file=sys.stderr)

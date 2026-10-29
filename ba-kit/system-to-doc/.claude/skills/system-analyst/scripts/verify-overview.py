@@ -7,7 +7,7 @@
 Chan: thieu / thua chuong (0-6, khong danh sach output, luong tong quan, phu luc) · con placeholder template ·
 bang tong man hinh / API lech inventory · bia DB · chuong 2 (nghiep vu) co ma noi bo / ten bang / enum / ham,
 muc khong co EV va khong co Q, EV / Q khong co trong inventory, luong < 2 buoc · o trong · nhac ID khong co trong
-inventory · con chu cu · link ERD khong phai Figma va khong co ghi chu.
+inventory · con chu cu · link ERD khong phai Figma va khong co ghi chu · (WARN) chuong 1 thieu hinh luong nghiep vu.
 """
 import argparse
 import importlib.util
@@ -145,6 +145,12 @@ def main():
     if db_mode != "NONE" and not any("ERD" in tx for tx in links) and not nolink:
         bad.append("chuong 5 khong co link ERD Figma va khong co ghi chu")
     g.check(14, "Link Figma hop le; ERD co link hoac ghi chu", bad)
+
+    imgs = d.images()[1]
+    if imgs and any(tx.startswith(OV.FLOW_CAPTION) for _, tx in d.paragraphs):
+        g.check(15, "Chuong 1 co hinh luong nghiep vu (Archify)", [])
+    else:
+        g.warn(15, "Chuong 1 co hinh luong nghiep vu (Archify)", "chua co hinh — ve bang Archify, chay lai --flow-image")
 
     return g.emit(a.out)
 

@@ -1,8 +1,10 @@
 # O7 — Bug list hiện trạng (tuỳ chọn)
 
+> **Giai đoạn 2** (sau điểm dừng của `/analyze-system`): sinh sau khi AI Playwright chạy trên website; lỗi đọc từ code ở Giai đoạn 1 được ghi tạm vào inventory, Giai đoạn 2 tái hiện rồi mới đưa vào Bug list. App / không chạy Giai đoạn 2 → README ghi ⬜.
+
 > **Yêu cầu (feedback 28/10/2026):** file xlsx **1 sheet duy nhất `Bug List`** · liệt kê bug mức **High trở lên** (High · Urgent) tìm thấy khi **đọc source code** và / hoặc khi **crawl website**, chỉ lỗi **liên quan tới thao tác của người dùng**. Không có bug mức này → sheet chỉ có dòng tiêu đề.
 >
-> Thành phẩm: `07_BugList/BugList_<sys>_ver<N>.xlsx`. Chỉ chạy khi P9 = Có. Tài liệu có thể đi ra ngoài công ty → ngưỡng bằng chứng cao nhất trong kit.
+> Thành phẩm: `07_Bug_List/BugList_<sys>_ver<N>.xlsx`. Chỉ chạy khi P9 = Có. Tài liệu có thể đi ra ngoài công ty → ngưỡng bằng chứng cao nhất trong kit.
 
 ---
 
@@ -29,12 +31,12 @@ Chọn theo **tác động tới thao tác của người dùng**, không theo �
 
 ## 3. Cấu trúc
 
-`build-inventory.py --bug-list --out $V/07_BugList/BugList_<sys>_ver<N>.xlsx` → 1 sheet `Bug List`. Phạm vi quét (`bug_scan_scope`) + người nhận (`bug_recipient`, P9) khai ở `00_Meta` của inventory.
+`build-inventory.py --bug-list --out $V/07_Bug_List/BugList_<sys>_ver<N>.xlsx` → 1 sheet `Bug List`. Phạm vi quét (`bug_scan_scope`) + người nhận (`bug_recipient`, P9) khai ở `00_Meta` của inventory.
 
 Cột: `Bug ID` · `Title` · `Screen / Module` (**`SC-` bắt buộc**) · `URL / Route` (URL **màn**, không phải `/api/…`) · `Category` (Functional · UI/Layout · Performance · Compatibility) · `Severity` (**Urgent / High**) · `Repro Steps` (≥ 2 bước trên màn) · `Expected` · `Actual` · `Evidence` (≥ 1 EV screenshot / console-log / har / code-ref) · `Reproduced` (`Yes — n/n` · `Intermittent` · `Chỉ đọc từ code`) · `Detected By` (`Code review` · `Playwright` · `Code review + Playwright`) · `Business Impact` · `Env` · `Pre-existing` (`Yes` · `Cần xác nhận`) · `Status` · `Note`.
 
 ```bash
-python3 $S/verify-bug-list.py $V/07_BugList/BugList_<sys>_ver<N>.xlsx --inventory $I/inventory.xlsx --out $I/gates/v8.md
+python3 $S/verify-bug-list.py $V/07_Bug_List/BugList_<sys>_ver<N>.xlsx --inventory $I/inventory.xlsx --out $I/gates/v8.md
 ```
 
 Gate V8 chặn: workbook không đúng 1 sheet `Bug List` · mức ngoài High / Urgent · Category ngoài danh sách · URL là API · không có EV hợp lệ · code-ref trỏ file / dòng không có thật · EV console là `noise` của công cụ · `Detected By` không khớp loại EV · `Screen / Module` không phải `SC-` có thật · thiếu bước tái hiện · thiếu Business Impact · trùng lặp · `00_Meta` thiếu phạm vi quét / người nhận · còn chữ cũ (mọi kiểu viết hoa / thường).

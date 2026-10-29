@@ -2,7 +2,7 @@
 """O8 — Huong dan chay local + moi truong cho dev moi (R12 · D7). CHI DOC repo.
 
   python3 build-devsetup.py --repo REPO-01=/path/fe --repo REPO-02=/path/api [--inventory <_internal>/inventory.xlsx] \
-          --system <sys> --version ver<N> --out <ver>/08_DevSetup/DevSetup_<sys>_ver<N>.md
+          --system <sys> --version ver<N> --out <ver>/08_Huong_dan_chay_local/DevSetup_<sys>_ver<N>.md
 
 Gom tu dong (moi dong ghi file nguon <REPO-xx>:<path>):
   1 Repo va cong cu  : package.json (engines, package manager theo lockfile) · composer / requirements / pyproject /

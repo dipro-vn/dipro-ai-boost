@@ -181,7 +181,7 @@ Chi tiết cách thu thập + quy ước đặt tên file → `evidence-ledger.m
 
 ## 11. Bug List workbook (O7) — schema riêng
 
-File `07_BugList/BugList_<sys>_ver<N>.xlsx`, **1 sheet `Bug List`** — bug mức High / Urgent ảnh hưởng thao tác người dùng, từ code và / hoặc website. Phạm vi quét (`bug_scan_scope`) + người nhận (`bug_recipient`) ở `00_Meta` của inventory.
+File `07_Bug_List/BugList_<sys>_ver<N>.xlsx`, **1 sheet `Bug List`** — bug mức High / Urgent ảnh hưởng thao tác người dùng, từ code và / hoặc website. Phạm vi quét (`bug_scan_scope`) + người nhận (`bug_recipient`) ở `00_Meta` của inventory.
 
 `Bug ID` · `Title` · `Screen / Module` · `URL / Route` · `Category` · `Severity` · `Repro Steps` · `Expected` · `Actual` · `Evidence` · `Reproduced` · `Detected By` · `Business Impact` · `Env` · `Pre-existing` · `Status` · `Note`
 

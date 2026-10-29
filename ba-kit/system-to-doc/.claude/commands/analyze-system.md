@@ -1,21 +1,27 @@
 ---
-description: Luồng 1 — khảo sát hệ thống có sẵn (website / source / DB / Figma) và dựng bộ tài liệu baseline có version
+description: Luồng 1 — khảo sát hệ thống có sẵn, 1 lệnh 2 giai đoạn: Giai đoạn 1 đọc source code ra output nhanh (Overview · API · DB · Figma · Basic Design · chạy local) → dừng cho xem trước → Giai đoạn 2 AI Playwright kiểm tra trên website, thêm Design System + Bug list
 model: opus
 ---
 
-Hãy là **System Analyst**. Đọc `.claude/agents/system-analyst.md` và chạy **Luồng 1 — Baseline** đúng 9 bước.
+Hãy là **System Analyst**. Đọc `.claude/agents/system-analyst.md` và chạy **Luồng 1** (§3): **1 lệnh, 2 giai đoạn** — Giai đoạn 1 đọc source code cho ra output nhanh, **dừng để người dùng xem trước**, rồi Giai đoạn 2 (AI Playwright) khi người dùng đồng ý.
 
 Đối tượng / gợi ý ban đầu của user: $ARGUMENTS
 
-Bắt buộc, không rút gọn:
-0. `ensure-env.py --flow 1` — **tự cài** thư viện còn thiếu; user không phải cài gì. Sau Discovery Brief chạy lại với `--browser` (có website) / `--figma` (vẽ O4) — xem §4 *Môi trường* của agent
-1. `version-tool.py context --outputs outputs --flow 1` — **agent tự đọc version mới nhất** (baseline mới nhất · CR mở sau baseline · feedback chưa xử lý) và Read các file trong `read`; user **không** phải chỉ version, không phải mở `run-log.md`. Có baseline → hỏi **G-R** với mode đề xuất `suggest.flow1_mode` (Delta / Toàn bộ / Chỉ đọc / Đây là CR → Luồng 2) — xem `sys-agent/versioning.md` §6–7
-2. `preflight-memory.py missing --outputs outputs` → câu đã có: 1 bảng "Tôi đang dùng các thông tin sau — có gì đổi không?" · 4 câu an toàn luôn hỏi lại gọn · chỉ hỏi câu còn thiếu bằng `AskUserQuestion`, gom theo chủ đề ≤ 4 câu / lượt (quy tắc duy nhất: `.claude/sys-agent/preflight-questions.md` §0) — **không đoán** URL, tài khoản, quyền, đường dẫn repo. Câu không an toàn được chọn "Chưa có — chạy v1 trước, bổ sung sau". Mỗi câu trả lời → `preflight-memory.py set`
-2b. Quét nhạy cảm repo → Pha A đọc code → `extract-design-tokens.py --code-only` → đề xuất **Quyết định lớn** (số Design System · output nào làm · repo legacy · phạm vi · đưa sơ đồ DB lên Figma)
-3. In **Discovery Brief** (kèm Quyết định lớn), DỪNG chờ confirm → `version-tool.py next --outputs outputs --slug <slug> --create` — chưa có baseline → tạo ver1; baseline chưa khoá → trả về **chính ver đó** (`reuse:true`): ghi vào đó, **`version-tool.py snapshot --ver <ver> [--files …]` trước mỗi lần ghi đè**; exit 3 `locked` → báo user "ver<N> đã khoá vì đã có CR", CR nào đã duyệt + code xong (hỏi `AskUserQuestion`) → `version-tool.py promote --outputs outputs --cr CR-<id> --approved --coded --create` rồi ghi vào ver<N+1>; chưa có → chỉ đọc lại
-4. `scan-sensitive.py --path … --out <ver>/_internal/gates/sensitive.md` trên mọi repo / dump / file input — exit 3 → **cảnh báo + DỪNG**, hỏi cách khắc phục
-5. Recon **read-only** (trừ khi P3 cho phép khác) → inventory → gate V1 · V2
-6. Sinh O2 → O3 → O5 → O6 (tuỳ chọn, không chạy thì bỏ qua) → O7 → O4 → O8 (mỗi output qua gate của nó, `FAIL = 0`)
-7. Viết `business.json` → sinh O1 docx tổng hợp (nghiệp vụ chính + bảng tổng; link Figma ERD) → gate V3
-8. Self-test · `detect-pii.js --scan` · `build-version-index.py` · run-log (ghi **Feedback đã xử lý** = các version trong `pending_feedback` đã làm theo)
-9. Báo cáo cuối theo §8 của agent: **đường dẫn folder version + bảng từng output (file · số lượng · gate) + output không chạy và lý do**
+**Giai đoạn 1 — đọc source code (BE · FE · Mobile), không mở website:**
+0. `ensure-env.py --flow 1` (tự cài thư viện thiếu) → `version-tool.py context --outputs outputs --flow 1`. Có baseline → hỏi **G-R**; `suggest.flow1_phase = 2` (Giai đoạn 1 đã xong lần trước) → hỏi "chạy tiếp Giai đoạn 2 hay sửa Giai đoạn 1 theo góp ý trước" → chạy tiếp thì nhảy tới Giai đoạn 2
+1. Preflight Giai đoạn 1 (`preflight-questions.md` §0 · §0b, `preflight-memory.py missing --phase 1`): tên / phạm vi · **web hay app** · source code · DB · Figma · ngôn ngữ. **Chưa hỏi tài khoản website / 4 câu an toàn**
+2. `scan-sensitive.py` (exit 3 → **cảnh báo + DỪNG**) → đọc code (Pha A) → `extract-design-tokens.py --code-only` → **Discovery Brief** + Quyết định lớn, DỪNG chờ confirm → `version-tool.py next --outputs outputs --slug <slug> --create` (ghi đè ver chưa khoá: `version-tool.py snapshot` trước)
+3. Inventory từ code → gate V1 · V2
+4. Sinh O2 → O3 → O5 → O4 → O8 (mỗi output qua gate, `FAIL = 0`; V-BD `--phase 1`). O5: `scan-sensitive.py --high-list` → bộ trích AST `ast/extract-screen.mjs` (thiếu S1 → không trích; không phải React JSX → báo chưa hỗ trợ) → LLM viết spec theo nghiệp vụ → `build-basic-design.py --spec … --ast-spec …`
+5. Viết `business.json` → vẽ luồng nghiệp vụ bằng skill **archify** (workflow, `finalize` PASS) → xuất PNG → O1 `render-overview-docx.py --flow-image <png>` → gate V3
+6. Self-test · `detect-pii.js --scan` · `build-version-index.py --skip "O6=chờ Giai đoạn 2" --skip "O7=chờ Giai đoạn 2"` · run-log
+
+**Điểm dừng:**
+7. Báo cáo Giai đoạn 1 (§8 của agent: đường dẫn + bảng output + **danh sách 7 việc giai đoạn 2 sẽ làm**, đúng mẫu "Báo cáo ở điểm dừng") → `AskUserQuestion`: **"Giai đoạn 1 đã chạy xong — bạn xem trước các output trên. Chạy tiếp Giai đoạn 2?"** `[A] Chạy tiếp ngay` · `[B] Dừng để tôi review — lần sau gọi /analyze-system sẽ chạy tiếp` · `[C] Không chạy Giai đoạn 2`. App → không hỏi, báo "Phần mềm là app nên không có Giai đoạn 2", đóng. **Không tự sang Giai đoạn 2 khi chưa có câu trả lời.**
+
+**Giai đoạn 2 — AI Playwright trên website (chạy lâu, ít token):**
+8. Preflight Giai đoạn 2 (`preflight-memory.py missing --phase 2`): website (URL · môi trường) · tài khoản + quyền · mức thao tác · vùng cấm · dữ liệu thật · Bug list — **4 câu an toàn luôn hỏi lại** → `ensure-env.py --flow 1 --browser`
+9. `version-tool.py snapshot --ver <ver>` → `login-site.js` / `crawl-site.js` (seed từ route FE của Giai đoạn 1; đăng nhập lỗi → nhờ đăng nhập tay `--manual`)
+10. Đối chiếu inventory với màn hình thật — chỉ bổ sung phần code không cho biết; khác code → Open Question → gate V1 · V2 (`--crawled`)
+11. O5: chụp màn hình, đánh số item, chèn vào từng sheet (V-BD) · cập nhật O2 / O3 / O4 nếu đổi · O6 Design System (tuỳ chọn, V-DS) · O7 Bug list (V8)
+12. Render lại O1 → self-test · `detect-pii.js --scan` · `build-version-index.py` (bỏ `--skip` O6 / O7) · run-log → báo cáo cuối **"Giai đoạn 2 đã chạy xong"** + bảng output + phần đã đổi so với Giai đoạn 1

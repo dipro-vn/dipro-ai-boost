@@ -26,14 +26,15 @@ Workflow canonical: `.claude/agents/system-analyst.md`. Skill này chỉ liệt 
 
 | Script | Việc |
 |---|---|
-| `preflight-memory.py` | Bộ nhớ preflight `outputs/_project/preflight-memory.json`: `missing` (câu cần hỏi · 4 câu an toàn cần xác nhận lại · bảng "đang dùng" · file S1 chưa phân loại, gộp `00_Meta` baseline mới nhất) · `set` (`--pending` = chạy v1 trước; từ chối credential, exit 2) · `confirm` · `set-sensitive` · `list` · `get` |
+| `preflight-memory.py` | Bộ nhớ preflight `outputs/_project/preflight-memory.json`: `missing [--phase 1\|2]` (câu cần hỏi · 4 câu an toàn cần xác nhận lại · bảng "đang dùng" · file S1 chưa phân loại, gộp `00_Meta` baseline mới nhất) · `set` (`--pending` = chạy v1 trước; từ chối credential, exit 2) · `confirm` · `set-sensitive` · `list` · `get` |
 | `inv_schema.py` | Hợp đồng schema dùng chung (inventory 12 sheet, bug list, CR impact) — đổi cột chỉ sửa ở đây |
 | `build-inventory.py` | Workbook rỗng đúng schema: inventory · `--bug-list` (1 sheet `Bug List`) · `--cr` · `--carry-from <version cũ>` (chép dòng, chữ cũ tự đổi theo D1) |
 | `version-tool.py` | **`context`** (chạy đầu MỌI lần: version mới nhất · baseline · CR mở · feedback treo · mode đề xuất · file cần đọc) · `next` (Luồng 1: ver1 / baseline chưa khoá → chính nó, khoá → exit 3; `--cr-id` → `CR-<id>_<DDMMYY>_<slug>`) · `snapshot` (cất file sắp ghi đè vào `_internal/history/`) · `promote --cr … --approved --coded` (baseline mới) · `latest-baseline` · `list` |
 | `build-basic-design.py` | O5 — Basic Design 1 workbook / site từ inventory + `fe-api-calls.csv` + crawl + spec agent viết từ code (cột S "API gọi", ERROR SCENARIOS code + web, Q-ID cho ô "Cần xác nhận"). Nút không khớp nhãn → tự tra code của màn (`fe-screen-files.json`, `--repo` hoặc `11_Repo`); nhãn có ngày / số được chuẩn hoá; ô nhiều EV ghép từng EV |
+| `ast/extract-screen.mjs` | O5 giai đoạn 1 — bộ trích AST (ts-morph, Node; `ensure-env.py --flow 1` tự `npm ci` trong `ast/`): dữ kiện màn hình từ code React JSX → spec JSON + `fe-api-calls.ast.csv`. Bắt buộc `--s1-list` (`scan-sensitive.py --high-list`) |
 | `build-api-doc.py` | O2 — API Documentation xlsx |
 | `build-db-doc.py` | O3 — Database Documentation xlsx + ERD png (font có chữ Nhật: `inv_schema.use_cjk_font`) |
-| `render-overview-docx.py` | O1 — docx tổng hợp; chương 2 nghiệp vụ từ `--business _internal/business.json` (agent viết); `--figma-links` chèn link Output 1 + ERD |
+| `render-overview-docx.py` | O1 — docx tổng hợp; chương 1 chèn hình luồng nghiệp vụ `--flow-image` (PNG vẽ bằng skill `archify`); chương 2 nghiệp vụ từ `--business _internal/business.json` (agent viết); `--figma-links` chèn link Output 1 + ERD |
 | `build-devsetup.py` | O8 — hướng dẫn chạy local md từ repo (chỉ tên key từ `.env.example`, không đọc `.env`) |
 | `build-cr-impact.py` | Luồng 2 — `CR-<id>_Impact.xlsx` 7 sheet (Summary · Estimation · Screen · API · Database · Figma · Q&A) từ `cr.json` |
 | `extract-estimation-template.py` | Bóc 見積書 của công ty → `templates/template_estimation.xlsx` (khung + hệ số công đoạn từ công thức) cho sheet Estimation |
@@ -56,7 +57,7 @@ Workflow canonical: `.claude/agents/system-analyst.md`. Skill này chỉ liệt 
 | V8 | `verify-bug-list.py` | O7 |
 | V-CR | `verify-cr-impact.py` | Luồng 2 — xlsx 7 sheet |
 | V-CR-FIGMA | `verify-cr-figma.py` | Luồng 2 — view CR (format Output 1/2, thống kê, mũi tên, màn đề xuất bám DS) |
-| V9 | `selftest-gates.py` · `selftest-docs.py` · `selftest-basic-design.py` · `selftest-cr-impact.py` · `selftest-design-system.py` · `selftest-version.py` | gate không rỗng |
+| V9 | `selftest-gates.py` · `selftest-docs.py` · `selftest-basic-design.py` · `selftest-ast.py` · `selftest-cr-impact.py` · `selftest-design-system.py` · `selftest-version.py` | gate không rỗng |
 
 Tên file báo cáo gate quyết định nó được tính cho output nào trong README version: `_internal/gates/v1.md` `v2.md` `v-bd-<WEB>.md` `v-api.md` `v-db.md` `v-ds.md` `v3.md` `v8.md` `v-devsetup.md` `v-cr.md` `v-cr-figma.md`.
 

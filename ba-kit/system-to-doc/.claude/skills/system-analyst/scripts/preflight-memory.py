@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Bo nho cau tra loi preflight cap du an (R9 · R10 · D8) — outputs/_project/preflight-memory.json.
 
-  python3 preflight-memory.py missing --outputs outputs [--memory <json>] [--sensitive-files f1 f2 ...]
+  python3 preflight-memory.py missing --outputs outputs [--phase 1|2] [--memory <json>] [--sensitive-files f1 f2 ...]
   python3 preflight-memory.py list    --outputs outputs [--memory <json>]
   python3 preflight-memory.py get     --code P2b [--memory <json>]
   python3 preflight-memory.py set     --code P2b --answer "..." --by-role "PM" [--source user|code|meta] [--pending]
@@ -40,6 +40,7 @@ QUESTIONS = [
     ("P0a", "Tên & phạm vi", "system_name", False),
     ("P0b", "Tên & phạm vi", "version_label", False),
     ("P0c", "Tên & phạm vi", "scope", False),
+    ("P0d", "Tên & phạm vi", None, False),          # loai phan mem: web / app (app -> khong co Giai đoạn 2)
     ("P1", "Website", "websites", False),
     ("P1-env", "Website", None, True),            # an toan: moi truong thu nghiem hay that
     ("P2a", "Website", "accounts", False),
@@ -62,6 +63,8 @@ QUESTIONS = [
     ("B5", "Quyết định lớn", None, False),   # dong y dua so do DB / API len Figma (cloud ngoai) — D5
 ]
 SAFETY = [q[0] for q in QUESTIONS if q[3]]
+# Giai đoạn 2 (sau diem dung cua /analyze-system, Playwright tren website) — cau con lai thuoc Giai đoạn 1 (doc source code)
+PHASE2 = {"P1", "P1-env", "P2a", "P2b", "P3", "P4", "P9", "P11"}
 EMPTY = ("", "—", "-", S.NEED_CONFIRM)
 # shortcut: chi bat dang "key=value" / "key: value" / user:pass@host, khong bat mat khau dung tran — van chay H06
 CRED_RX = re.compile(r"(?i)(pass(word)?|passwd|pwd|secret|token|api[_-]?key|mật\s*khẩu|mat\s*khau)\s*[:=]\s*\S+"
@@ -114,6 +117,8 @@ def cmd_missing(a, mem):
     ans, today = merged(mem, a.outputs), datetime.date.today()
     res = {"ask": [], "confirm_safety": [], "confirm_table": [], "sensitive_unclassified": []}
     for code, topic, _, safe in QUESTIONS:
+        if a.phase and (code in PHASE2) != (a.phase == 2):
+            continue
         e = ans.get(code)
         if not e or e.get("status") != "answered" or is_stale(e, today):
             res["ask"].append({"code": code, "topic": topic, "safety": safe,
@@ -218,6 +223,8 @@ def main():
             p.add_argument("--pending", action="store_true", help="nguoi dung chon 'Chưa có — chạy v1 trước'")
         if name == "missing":
             p.add_argument("--sensitive-files", nargs="*", default=[])
+            p.add_argument("--phase", type=int, choices=[1, 2], default=None,
+                           help="chi cau cua Giai đoạn 1 (doc code) hoac Giai đoạn 2 (Playwright)")
         if name == "confirm":
             p.add_argument("--codes", required=True)
             p.add_argument("--by-role", default=None)

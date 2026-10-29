@@ -74,6 +74,13 @@ def main():
              ctx.get("suggest", {}).get("flow1_action") == "rerun_in_place"
              and ctx["suggest"].get("flow1_target") == "ver1_011026_baseline"
              and not ctx["latest_baseline"]["locked"] and len(ctx["latest_baseline"]["history"]) == 3, ctx.get("suggest"))
+        # Giai đoạn 1 xong, dung lai review -> lan sau de xuat chay tiep Giai đoạn 2
+        json.dump({"outputs": [{"id": "O6", "status": "skip", "reason": "chờ Giai đoạn 2"}]},
+                  open(os.path.join(v1, "_internal", "index.json"), "w", encoding="utf8"), ensure_ascii=False)
+        rc, ctx2, _ = vt("context", "--outputs", out, "--flow", "1")
+        os.remove(os.path.join(v1, "_internal", "index.json"))
+        case("context: index.json co 'chờ Giai đoạn 2' -> flow1_phase = 2",
+             ctx2.get("suggest", {}).get("flow1_phase") == 2 and "flow1_phase" not in ctx.get("suggest", {}), ctx2.get("suggest"))
 
         # --- CR moi -> ten CR-<id>_<DDMMYY>_<slug>, tro ver1 -> ver1 khoa
         rc, j, _ = vt("next", "--outputs", out, "--cr-id", "1", "--slug", "Thêm coupon", "--date", "151026", "--create")

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """GATE V-DEV — O8 DevSetup md (R12 · D7).
 
-  python3 verify-devsetup.py <ver>/08_DevSetup/DevSetup_<sys>_ver<N>.md [--out report.md]
+  python3 verify-devsetup.py <ver>/08_Huong_dan_chay_local/DevSetup_<sys>_ver<N>.md [--out report.md]
 
 Chan: thieu muc 1-7 · con chu cu · H06 (detect-pii.js --scan) bat duoc PII / credential · co dang KEY=gia tri
 hoac `KEY: gia tri` cho key cua muc 4 · nguon cua muc 4 khong phai file mau (.env.example/.sample/.template) ·

@@ -1,4 +1,4 @@
-> **SOURCE:** `designer-kit/document-to-figma/.claude/designer-agent/design-system-format.md` — copy self-contained cho kit system-to-doc; **đây là chuẩn chung** của design system giữa 2 kit. Sửa chuẩn thì sửa CẢ HAI nơi + `skills/system-analyst/scripts/ds_roles.py` (danh sách token vai trò / component bắt buộc mà gate V-DS kiểm). Ở kit này: thư mục là `06_DesignSystem/` (thay `design-system/`), cách lấy dữ liệu từ hệ thống đang chạy ở `../outputs/o6-design-system.md`.
+> **SOURCE:** `designer-kit/document-to-figma/.claude/designer-agent/design-system-format.md` — copy self-contained cho kit system-to-doc; **đây là chuẩn chung** của design system giữa 2 kit. Sửa chuẩn thì sửa CẢ HAI nơi + `skills/system-analyst/scripts/ds_roles.py` (danh sách token vai trò / component bắt buộc mà gate V-DS kiểm). Ở kit này: thư mục là `06_Design_System/` (thay `design-system/`), cách lấy dữ liệu từ hệ thống đang chạy ở `../outputs/o6-design-system.md`.
 
 # Định dạng Design System (chuẩn bắt buộc)
 

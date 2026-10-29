@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """GATE V8 — Bug List (O7).
 
-  python3 verify-bug-list.py <07_BugList/BugList_<sys>_ver<N>.xlsx> --inventory <_internal/inventory.xlsx> [--out report.md]
+  python3 verify-bug-list.py <07_Bug_List/BugList_<sys>_ver<N>.xlsx> --inventory <_internal/inventory.xlsx> [--out report.md]
 
 File nay di ra NGOAI cong ty (bao khach hang) nen nguong bang chung cao.
 1 sheet duy nhat "Bug List" (feedback 28/10/2026): bug muc High / Urgent anh huong thao tac nguoi dung, tim thay

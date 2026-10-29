@@ -1,6 +1,6 @@
 # O8 — Hướng dẫn chạy local và môi trường (md, dev đọc)
 
-> **Yêu cầu (R12 · D7):** dev mới clone repo về chạy được trong ngày đầu. Thành phẩm: `08_DevSetup/DevSetup_<sys>_ver<N>.md`. Chạy khi có source (không có → `⬜ Không chạy — không có source code`). Sinh sau Pha A + inventory (cần batch).
+> **Yêu cầu (R12 · D7):** dev mới clone repo về chạy được trong ngày đầu. Thành phẩm: `08_Huong_dan_chay_local/DevSetup_<sys>_ver<N>.md`. Chạy khi có source (không có → `⬜ Không chạy — không có source code`). Sinh sau Pha A + inventory (cần batch).
 
 ---
 
@@ -22,8 +22,8 @@ Chỗ máy không tìm thấy → "Cần xác nhận — <cần hỏi gì>". Age
 
 ```bash
 python3 $S/build-devsetup.py --repo REPO-01=<fe> --repo REPO-02=<be> --inventory $I/inventory.xlsx \
-    --system <sys> --version ver<N> --out $V/08_DevSetup/DevSetup_<sys>_ver<N>.md
-python3 $S/verify-devsetup.py $V/08_DevSetup/DevSetup_<sys>_ver<N>.md --out $I/gates/v-devsetup.md
+    --system <sys> --version ver<N> --out $V/08_Huong_dan_chay_local/DevSetup_<sys>_ver<N>.md
+python3 $S/verify-devsetup.py $V/08_Huong_dan_chay_local/DevSetup_<sys>_ver<N>.md --out $I/gates/v-devsetup.md
 ```
 
 Gate V-DEV chặn: thiếu mục 1–7 · chữ cũ · `detect-pii.js --scan` bắt được PII / credential · có `KEY=giá trị` hoặc `KEY: giá trị` · nguồn mục 4 không phải file mẫu · ô trống.

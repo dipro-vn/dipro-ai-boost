@@ -12,27 +12,27 @@
 
 | Luồng | Lệnh | Spec |
 |---|---|---|
-| **1 — Baseline** | `/analyze-system` | `system-analyst.md` §3 |
+| **1 — Baseline** — 1 lệnh, 2 giai đoạn: Giai đoạn 1 đọc source code → **điểm dừng** (báo xong, hỏi chạy tiếp hay dừng để review) → Giai đoạn 2 AI Playwright trên website (app → không có) | `/analyze-system` | `system-analyst.md` §3 |
 | **2 — Change Request** | `/change-request <file / link / nội dung>` | `.claude/sys-agent/flow-2-change-request.md` |
 
 **Môi trường — kit tự cài:** đầu Luồng 1 / Luồng 2 agent chạy `ensure-env.py` (thư viện Python · Playwright + Chromium · Figma MCP), thiếu thì tự cài. User **không** cài tay; chỉ bấm Authenticate Figma (`/mcp`) khi agent nhờ.
 
 **Preflight nhớ câu trả lời:** `outputs/_project/preflight-memory.json` (`preflight-memory.py`) — câu đã trả lời không hỏi lại (1 bảng xác nhận), 4 câu an toàn (thử nghiệm hay thật · tài khoản được phép · mức thao tác · dữ liệu thật) luôn hỏi lại gọn, câu khác cho "chạy v1 trước, bổ sung sau". Quy tắc hỏi duy nhất: `preflight-questions.md` §0. Sau khi đọc code → **Quyết định lớn** hỏi sớm trong Discovery Brief (số Design System nhờ `extract-design-tokens.py --code-only`, output nào làm, repo legacy, phạm vi, đưa sơ đồ DB lên Figma).
 
-**Input Luồng 1** (hỏi bằng `AskUserQuestion`, không đoán): Website (URL · tài khoản + quyền được dùng · READ/WRITE) · Source code (repo · FE/BE · FE↔website) · DB (tuỳ chọn, schema-only) · Figma (tuỳ chọn: design hiện tại + link để vẽ flow).
+**Input Luồng 1** (hỏi bằng `AskUserQuestion`, không đoán): Giai đoạn 1 — Source code (repo · FE/BE/Mobile · FE↔website) · DB (tuỳ chọn, schema-only) · Figma (tuỳ chọn: design hiện tại + link để vẽ flow) · web hay app. Giai đoạn 2 — Website (URL · tài khoản + quyền được dùng · READ/WRITE) + 4 câu an toàn (`preflight-questions.md` §0b).
 
 **Output Luồng 1** → `outputs/ver<N>_<DDMMYY>_<slug>/` (khảo sát lần đầu = ver1, chạy lại ghi vào ver1; ver<N+1> chỉ khi CR đã duyệt + code xong — `sys-agent/versioning.md`):
 
-| # | Output | Gate |
-|---|---|---|
-| O1 | docx tổng hợp — phạm vi · tổng quan · **nghiệp vụ chính** (hệ thống làm gì · luồng · trạng thái, từ `business.json`) · 1 bảng tổng màn hình / API / DB (+ link ERD Figma) · liên kết ngoài. Không danh sách output, luồng tổng quan, phụ lục | V3 |
-| O2 | API Documentation xlsx (+ batch) — không có sơ đồ API (code map) | V-API |
-| O3 | Database Documentation xlsx + ERD | V-DB |
-| O4 | Figma Output 1 (**use case**: Actor → đường đi → kết thúc, non-happy hàng dưới · Technology Stack · Sitemap Site → Actor → Nhóm → Màn) + Output 2 (**site → use case → section**) · chưa rõ ghi "Cần xác nhận — Q-xxx", không mã trạng thái trên hình | recheck bbox · phủ SC |
-| O5 | Danh sách màn hình theo website (Basic Design xlsx, 1 file / site — `build-basic-design.py`, code trước rồi website, cột S "API gọi") | V-BD |
-| O6 | **Tuỳ chọn** (không chạy thì bỏ qua, README ghi ⬜) — Design System — chuẩn chung với designer-kit (= format Artifact type "Design System" của claude.ai), **dựng trên Base Design System chuẩn Nhật** `.claude/base-design-system/` (giá trị hệ thống thắng; phần không quan sát được lấy base, nhãn `[base]`), publish khi user đồng ý. Hệ thống không có DS → CR-3 dùng base tạm | V-DS |
-| O7 | Bug list (tuỳ chọn) — **1 sheet `Bug List`**: bug mức High / Urgent ảnh hưởng thao tác người dùng, từ code và / hoặc crawl website | V8 |
-| O8 | Hướng dẫn chạy local + môi trường md (dev đọc) — chỉ tên key cấu hình (`build-devsetup.py`) | V-DEV |
+| # | Output | Giai đoạn | Gate |
+|---|---|---|---|
+| O1 | docx tổng hợp — phạm vi · tổng quan hệ thống (**hình luồng nghiệp vụ vẽ bằng skill `archify`**, PNG chèn thẳng) · **nghiệp vụ chính** (hệ thống làm gì · luồng · trạng thái, từ `business.json`) · 1 bảng tổng màn hình / API / DB (+ link ERD Figma) · liên kết ngoài. Không danh sách output, luồng tổng quan, phụ lục | 1 (cập nhật ở 2) | V3 |
+| O2 | API Documentation xlsx (+ batch) — không có sơ đồ API (code map) | 1 | V-API |
+| O3 | Database Documentation xlsx + ERD | 1 | V-DB |
+| O4 | Figma Output 1 (**use case**: Actor → đường đi → kết thúc, non-happy hàng dưới · Technology Stack · Sitemap Site → Actor → Nhóm → Màn) + Output 2 (**site → use case → section**) · chưa rõ ghi "Cần xác nhận — Q-xxx", không mã trạng thái trên hình | 1 | recheck bbox · phủ SC |
+| O5 | Basic Design xlsx, 1 file / site — giai đoạn 1: **bộ trích AST** (`ast/extract-screen.mjs`, ts-morph, kit tự cài) lấy dữ kiện từ code → LLM viết theo nghiệp vụ → `build-basic-design.py --spec … --ast-spec …`: tên màn dễ hiểu làm tên sheet · item người dùng thấy, required / maxlength từ code · mô tả nghiệp vụ (bấm → chuyển màn nào) · thông báo lỗi không ô trống · Giai đoạn 2 thêm ảnh đánh số | 1 · ảnh ở 2 | V-BD |
+| O6 | **Tuỳ chọn** (không chạy thì bỏ qua, README ghi ⬜) — Design System — chuẩn chung với designer-kit (= format Artifact type "Design System" của claude.ai), **dựng trên Base Design System chuẩn Nhật** `.claude/base-design-system/` (giá trị hệ thống thắng; phần không quan sát được lấy base, nhãn `[base]`), publish khi user đồng ý. Hệ thống không có DS → CR-3 dùng base tạm | 2 | V-DS |
+| O7 | Bug list (tuỳ chọn) — **1 sheet `Bug List`**: bug mức High / Urgent ảnh hưởng thao tác người dùng, từ code và / hoặc crawl website | 2 | V8 |
+| O8 | Hướng dẫn chạy local + môi trường md (dev đọc) — chỉ tên key cấu hình (`build-devsetup.py`) | 1 | V-DEV |
 
 **Output Luồng 2** → `outputs/CR-<id>_<DDMMYY>_<slug>/` (trỏ baseline gốc, khoá baseline đó): `CR-<id>_Impact.xlsx` (7 sheet: `Summary` công số + số đối tượng thay đổi + link · `Estimation` = bản vi nội bộ của 見積書, 1 dòng / chức năng (`--estimate`) · `Screen` · `API` · `Database` · `Figma` · `Q&A` giải trình CR + câu hỏi KH) · Figma view CR mới (`sys-agent/figma/cr-view.md`): CR-1 Flow format Output 1 (**mỗi lane có NON-HAPPY**) · CR-2 Screen Flow format Output 2 (**màn / popup lỗi + Screen Index có Loại + ⑦ Error/Popup Index**) · CR Change Table thống kê · CR-3 màn đề xuất **format Output 3** (mockup trái · mô tả + ITEMS + ERROR SCENARIOS phải · NEW + UPD tô màu phần đổi + popup lỗi) bám Design System (badge NEW/UPD/DEL/IMPACT/AS-IS, chỉ phần liên quan). **> 1 site → mỗi site 1 Section riêng (CR-2 · CR-3 · Output 2 Luồng 1); trong section: site → flow nghiệp vụ → màn; section CR-3 nền `#9DA5AD`.** Gate V-CR-FIGMA check 11–14. **`CR-<id>_見積書.xlsx`** gửi KH (tiếng Nhật, 詳細見積書 + 前提条件・留意事項, theo `templates/template_mitsumori.xlsx`) sinh từ `_internal/estimate.json` — quy tắc `sys-agent/estimate-rules.md` + **văn phong cho khách `sys-agent/writing-style.md`** (gate V-EST E4 / E9 / E10), câu hỏi nghiệp vụ gửi khách sinh thành sheet 確認事項 / Câu hỏi nghiệp vụ, câu hỏi CR-4. Gate V-CR · V-EST · V-CR-FIGMA. Đơn giá: `.claude/config/function-rates.json` (見積書, theo chức năng) · `md-unit-rates.json` (impact nội bộ).
 
@@ -46,7 +46,7 @@
 .claude/
 ├── agents/system-analyst.md          ← canonical workflow (sửa quy trình thì sửa file này)
 ├── commands/
-│   ├── analyze-system.md             /analyze-system   (Luồng 1)
+│   ├── analyze-system.md             /analyze-system   (Luồng 1 — Giai đoạn 1 đọc code → điểm dừng → Giai đoạn 2 AI Playwright)
 │   └── change-request.md             /change-request   (Luồng 2)
 ├── sys-agent/
 │   ├── preflight-questions.md        quy tắc hỏi (§0) · bảng "đang dùng" · G-R · P0–P11 · S1 · Brief + Quyết định lớn · G9 · G10
@@ -59,7 +59,7 @@
 │   ├── design-system/                          chuẩn design system + template (copy từ designer-kit)
 │   └── figma/                                  (copy từ requirement-to-flow) + cr-view.md (view CR Luồng 2 — riêng kit này)
 ├── skills/
-│   ├── system-analyst/               SKILL.md + scripts/ (ensure-env · recon · render · gate · self-test)
+│   ├── system-analyst/               SKILL.md + scripts/ (ensure-env · recon · render · gate · self-test) + scripts/ast/ (bộ trích AST, package.json riêng)
 │   └── ba-figma-output/              (copy từ requirement-to-flow) quy tắc vẽ Figma
 ├── base-design-system/                Base Design System chuẩn UI Nhật (DADS + tên chuẩn công ty) — O6 dựa vào, CR-3 dùng tạm khi hệ thống không có DS
 ├── rules/                            DATA-PRIVACY · SECURITY · RELIABILITY · POLICY
@@ -91,7 +91,7 @@ templates/                            sample_basic_design.xlsx · high-level-tem
 | Chiều | requirement → tài liệu (TO-BE) | hệ thống → tài liệu (AS-IS) + impact CR |
 | Chống sai | Source Register + R1–R8 | Evidence Ledger + RE1–RE4 |
 
-O6 theo **chuẩn design system chung** với `designer-kit` (= format Artifact type **Design System** của claude.ai) → `06_DesignSystem/` copy thẳng sang `designer-kit/.../design-system/` dùng được.
+O6 theo **chuẩn design system chung** với `designer-kit` (= format Artifact type **Design System** của claude.ai) → `06_Design_System/` copy thẳng sang `designer-kit/.../design-system/` dùng được.
 
 **Phần copy self-contained** (file `.md`/`.py` mang header `SOURCE: …`; hook/config/settings copy nguyên — sửa logic chung thì **sửa cả hai nơi**):
 
