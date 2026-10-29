@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Dung O1 Basic Design (1 workbook / website) tu inventory + recon, theo template cong ty.
+"""Dung O2 Basic Design (1 workbook / website) tu inventory + recon, theo template cong ty.
 
   python3 build-basic-design.py --inventory $I/inventory.xlsx --site WEB-01 --version ver1 \
       --fe-api-calls $I/recon/code/REPO-01/fe-api-calls.csv [--fe-api-calls ...] \
       [--crawl $I/recon/crawl/WEB-01] [--spec $I/bd/WEB-01.json] --q-start <next_q> \
-      --out $V/01_Screens/BasicDesign_WEB-01_ver1.xlsx --before $I/bd_before_WEB-01.xlsx \
+      --out $V/02_Screens/BasicDesign_WEB-01_ver1.xlsx --before $I/bd_before_WEB-01.xlsx \
       [--template templates/sample_basic_design.xlsx] [--questions-out $I/bd/questions-WEB-01.csv] \
       [--repo REPO-01=inputs/repo/web]     # mac dinh lay Path o 11_Repo; can de tra nhan nut -> handler trong code
 
@@ -90,7 +90,7 @@ class Q:
         qid = "Q-%03d" % self.n
         self.n += 1
         self.rows.append([qid, S.QUESTION_TYPE[0], item, reason, "Đọc handler trong code hoặc hỏi khách hàng",
-                          "BrSE", "Open", "O1 Basic Design %s" % self.site])
+                          "BrSE", "Open", "O2 Basic Design %s" % self.site])
         return qid
 
 

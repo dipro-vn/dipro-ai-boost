@@ -2,7 +2,7 @@
 
 > **Yêu cầu:** dùng toàn bộ input + output đã sinh ở trên · hỏi user link Figma · vẽ **figma_output1** và **figma_output2** từ hệ thống có sẵn, **cách vẽ y hệt kit `requirement-to-flow`**.
 >
-> Chạy **cuối Luồng 1** (sau O1–O4), chỉ khi P8 có link. Thành phẩm: node trên Figma + `05_Figma/figma-links.md` (+ sơ đồ API / DB vẽ trên cùng file Figma design, cho O6 — §3b).
+> Chạy **cuối Luồng 1** (sau O2–O6), chỉ khi P8 có link. Thành phẩm: node trên Figma + `05_Figma/figma-links.md` (+ sơ đồ DB vẽ trên cùng file Figma design, cho O1 — §3b).
 
 ---
 
@@ -32,10 +32,10 @@
 | Tech stack (Câu 0.8) → Technology Table | `11_Repo.Stack` + `recon/code/*/stack.json` + `09_Integration` | Đều là **FACT từ code** — không cần nhãn `[PROPOSAL]` |
 | `FLOW_GRANULARITY` (Câu 0.9) | Mặc định **Standard** | Test E ngưỡng 8–10 flow |
 | `## Screens` (Screen Code, loại hiển thị) | `02_Screen`: **`SC-xxx`** + `Screen Name` + `Type` (List/Detail/Form/Modal/Error) + `Site` | Nhiều website → mỗi site 1 nhóm, ghi `WEB-xx` trên nhãn group |
-| `## Screen Details` — error display `E-xxx` | Message Code trong O1 (`Screen Error message` / `Common mesage`) + bảng ERROR SCENARIOS | Bảng ⑦ = 100% message code của O1. O1 chưa xong → làm O1 trước |
-| `## Non-Happy Case` | ERROR SCENARIOS của O1 | |
+| `## Screen Details` — error display `E-xxx` | Message Code trong O2 (`Screen Error message` / `Common mesage`) + bảng ERROR SCENARIOS | Bảng ⑦ = 100% message code của O2. O2 chưa xong → làm O2 trước |
+| `## Non-Happy Case` | ERROR SCENARIOS của O2 | |
 | Source Register `FACT` / `INFERENCE` / chưa rõ | `Status`: `Confirmed` = FACT · `Inferred` = INFERENCE · `To verify` = chưa rõ (bắt buộc Open Question) | Chỉ `Confirmed` được vẽ inline (NG); còn lại → **Edge / Exceptional panel**. Trên Figma **không in mã trạng thái** — viết "Cần xác nhận — Q-xxx" / "chưa quan sát" / "màn chưa có tiêu đề" |
-| Màn chuyển tiếp (arrow) | `02_Screen.Entry From` + `→ SC-xxx` trong cột P/Q của O1 + link trong `pages.json` | Arrow không có bằng chứng → nét đứt + ghi `Inferred` |
+| Màn chuyển tiếp (arrow) | `02_Screen.Entry From` + `→ SC-xxx` trong cột P/Q của O2 + link trong `pages.json` | Arrow không có bằng chứng → nét đứt + ghi `Inferred` |
 | `## BA Deliverables` (ghi ngược node URL) | `05_Figma/figma-links.md` | |
 | Technology Stack (Phần B) | `07_API` (group/handler) + `09_Integration` | Lane use case **không** ghi API / bảng / thư viện (feedback 20/10/2026); việc tự động ghi bằng lời trong lane (`⏱ Tự động: …`) |
 
@@ -43,7 +43,7 @@
 
 | Nhắc trong file copy | Ở kit này |
 |---|---|
-| Output 3 (HiFi screens), Output 4 (HTML prototype), Output 5 (Basic Design) | **Luồng 1: không vẽ** (O1 xlsx là Basic Design). **Luồng 2: có** — CR-3 *màn đề xuất* cho màn NEW / UPD, bắt buộc đọc Design System baseline trước + hỏi CR-3 / CR-3b (`figma/cr-view.md`) |
+| Output 3 (HiFi screens), Output 4 (HTML prototype), Output 5 (Basic Design) | **Luồng 1: không vẽ** (O2 xlsx là Basic Design). **Luồng 2: có** — CR-3 *màn đề xuất* cho màn NEW / UPD, bắt buộc đọc Design System baseline trước + hỏi CR-3 / CR-3b (`figma/cr-view.md`) |
 | Bước 5.4 Output OQ (`open-questions.md`, `open_questions.xlsx`) | Câu hỏi treo nằm ở `06_OpenQuestions` (agent liệt kê ở báo cáo cuối). Không vẽ OQ view |
 | Câu preflight 0.x của BA | Đã có P0–P11 của kit này |
 | Gate B1/B2 chọn vẽ 1 hay nhiều flow | Vẫn áp dụng khi N flow > 10 — hỏi user bằng `AskUserQuestion` |
@@ -59,7 +59,7 @@
 | 3 | Output 1: lập Flow Candidate Matrix từ `01_Function` → Merge Log → mỗi flow giữ lại = **1 use case** (actor · bắt đầu · đường đi · ✓ kết thúc · non-happy → ✗ kết thúc) → in `SITEMAP COVERAGE … THIẾU: []` | THIẾU ≠ [] → không vẽ |
 | 4 | Vẽ Output 1 → recheck Tiêu chí 9 → 7 → 8 (script) | overlap = 0 |
 | 5 | **Gate A** (`AskUserQuestion`): Output 1 đúng chưa, vẽ tiếp Output 2? | User đồng ý |
-| 6 | Output 2: **mỗi site 1 Section riêng** (không gộp site người dùng + admin chung 1 section), trong section **site → use case (Section con `FL-xx · <tên>`, cùng tên lane Output 1) → màn**; bảng ④ Screen Index = mọi `SC-` trong scope; ⑦ = mọi message code O1 | Đếm: `số node màn = số SC trong scope` |
+| 6 | Output 2: **mỗi site 1 Section riêng** (không gộp site người dùng + admin chung 1 section), trong section **site → use case (Section con `FL-xx · <tên>`, cùng tên lane Output 1) → màn**; bảng ④ Screen Index = mọi `SC-` trong scope; ⑦ = mọi message code O2 | Đếm: `số node màn = số SC trong scope` |
 | 7 | Vẽ Output 2 → recheck 9 → 7 → 6 + recheck Tiêu chí 10 (mã trạng thái thô) trên cả 2 frame | overlap = 0, không node rỗng, Tiêu chí 10 = 0 |
 | 8 | Ghi `05_Figma/figma-links.md` | Link node từng frame |
 
@@ -73,13 +73,13 @@ File: <figma_output_url>
 | Output 2 — Screen flow | ... | ... | m màn · k message | overlap 0 |
 | Sơ đồ DB (ERD) | <tên> | https://www.figma.com/design/<KEY>/<NAME>?node-id=<a-b> | t bảng · r quan hệ | — |
 ```
-Cột đầu phải bắt đầu đúng `Output 1` / `Sơ đồ DB` — `render-overview-docx.py --figma-links` đọc theo chữ này để chèn link vào O6 mục 2.2 / chương 5. **Không vẽ sơ đồ API (code map).**
+Cột đầu phải bắt đầu đúng `Output 1` / `Sơ đồ DB` — `render-overview-docx.py --figma-links` đọc theo chữ này để chèn link vào O1 mục 2.2 / chương 5. **Không vẽ sơ đồ API (code map).**
 
 ---
 
-## 3b. Sơ đồ DB (ERD) trên Figma design — cho O6 (R4 · D5)
+## 3b. Sơ đồ DB (ERD) trên Figma design — cho O1 (R4 · D5)
 
-Chỉ làm khi Discovery Brief xác nhận **B5 = đồng ý đưa sơ đồ DB lên Figma** (cloud ngoài). Không đồng ý / không có Figma → bỏ mục này, O6 trỏ ảnh ERD trong `03_DB/`.
+Chỉ làm khi Discovery Brief xác nhận **B5 = đồng ý đưa sơ đồ DB lên Figma** (cloud ngoài). Không đồng ý / không có Figma → bỏ mục này, O1 trỏ ảnh ERD trong `04_DB/`.
 
 > **Vẽ vào đúng file Figma design người dùng đưa ở P8** (`figma.com/design/…`, cùng page với Output 1 / 2, đặt bên phải các khối đã có, không chồng lấn). **Không tạo file FigJam mới**, không dùng `generate_diagram` — tạo file mới bắt chọn team và tách tài liệu khỏi file dự án.
 

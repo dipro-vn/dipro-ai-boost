@@ -281,7 +281,7 @@ def load_baseline(bdir):
         if t and c:
             tables.add(t)
             cols.add("%s.%s" % (t, c))
-    ds = load_ds_sites(os.path.join(bdir, "04_DesignSystem"))
+    ds = load_ds_sites(os.path.join(bdir, "06_DesignSystem"))
     return {"ids": ids, "tables": tables, "cols": cols, "ds": ds, "has_ds": bool(ds),
             "links": build_links(data), "data": data}
 

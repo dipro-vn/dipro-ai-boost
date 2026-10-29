@@ -2,7 +2,7 @@
 
 > Always-loaded qua `CLAUDE.md`. Sửa policy thì chỉ sửa file này.
 >
-> **Companion rules** (đọc khi cần chi tiết): `.claude/rules/DATA-PRIVACY.md` (dữ liệu KH) · `.claude/rules/SECURITY.md` (file cấm đọc) · `.claude/rules/RELIABILITY.md` (không bịa) · `.claude/rules/POLICY.md` (tài sản, AI tool, sự cố). Các file rules copy từ kit `requirement-to-flow`; chỗ nào nói "BA / SPEC.md" thì hiểu là "System Analyst / tài liệu O1–O9 + CR".
+> **Companion rules** (đọc khi cần chi tiết): `.claude/rules/DATA-PRIVACY.md` (dữ liệu KH) · `.claude/rules/SECURITY.md` (file cấm đọc) · `.claude/rules/RELIABILITY.md` (không bịa) · `.claude/rules/POLICY.md` (tài sản, AI tool, sự cố). Các file rules copy từ kit `requirement-to-flow`; chỗ nào nói "BA / SPEC.md" thì hiểu là "System Analyst / tài liệu O1–O8 + CR".
 
 ---
 

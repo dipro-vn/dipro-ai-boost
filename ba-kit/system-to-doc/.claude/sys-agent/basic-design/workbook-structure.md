@@ -1,8 +1,8 @@
 # Ba Agent — Basic Design Workbook Structure (map thật của master workbook)
 
 > **SOURCE:** `ba-kit/requirement-to-flow/.claude/ba-agent/basic-design/workbook-structure.md` @ 447770e — copy self-contained cho kit `system-to-doc`. Khi master workbook cua cong ty doi, sua CA HAI noi.
-> **Đã tách khỏi bản gốc requirement-to-flow (D2, 27/10/2026):** bản của kit này thêm cột **`S` "API gọi"** ngay sau cột `R` (bảng item) và cột `S` "Nguồn" (bảng ERROR SCENARIOS), chữ chưa rõ ghi **"Cần xác nhận — Q-xxx"** (bản JP 「要確認 — Q-xxx」). Sheet `Sample` vẫn giữ nguyên (cột `S` chỉ thêm ở working sheet). Không sửa requirement-to-flow. Dựng tự động: `build-basic-design.py` (`../outputs/o1-screens.md` §4).
-> Khác biệt của kit này (AS-IS thay vì TO-BE, 1 workbook / website) nằm ở `../outputs/o1-screens.md`. Ở kit này **"Quality Gate O5" = gate V-BD** (`verify-basic-design.py --asis`).
+> **Đã tách khỏi bản gốc requirement-to-flow (D2, 27/10/2026):** bản của kit này thêm cột **`S` "API gọi"** ngay sau cột `R` (bảng item) và cột `S` "Nguồn" (bảng ERROR SCENARIOS), chữ chưa rõ ghi **"Cần xác nhận — Q-xxx"** (bản JP 「要確認 — Q-xxx」). Sheet `Sample` vẫn giữ nguyên (cột `S` chỉ thêm ở working sheet). Không sửa requirement-to-flow. Dựng tự động: `build-basic-design.py` (`../outputs/o2-screens.md` §4).
+> Khác biệt của kit này (AS-IS thay vì TO-BE, 1 workbook / website) nằm ở `../outputs/o2-screens.md`. Ở kit này **"Quality Gate O5" = gate V-BD** (`verify-basic-design.py --asis`).
 
 > **Nguồn:** đọc trực tiếp từ `sample/sample_basic_design.xlsx` ngày 23/09/2026 bằng `openpyxl`.
 > Mọi con số dòng/cột dưới đây là **thật**, không phải mô tả từ tài liệu kiến trúc. Khi master workbook của dự án khác file mẫu, BA **PHẢI đọc lại workbook thật** và cập nhật mapping trước khi ghi — KHÔNG được ghi theo trí nhớ file mẫu.
@@ -87,7 +87,7 @@ Quy ước: **ảnh UI nằm cột A–F bên trái, bảng item nằm cột H�
 | Chiều rộng ảnh tối đa cho phép | **840 px** (chừa lề 14 px) |
 | Chiều cao ảnh tối đa | **900 px** |
 
-> ⚠️ **Lỗi có thật trong sheet mẫu gốc:** 2 ảnh của `Login_Sample` đều là `1521 px` chèn vào vùng 854 px → **tràn ~670 px sang cột H–R, đè lên bảng item**. Gate check 13 bắt lỗi này. Quy tắc resize: ảnh ≤ 840×900 px, anchor cột `A` (`../outputs/o1-screens.md` §4 bước 6).
+> ⚠️ **Lỗi có thật trong sheet mẫu gốc:** 2 ảnh của `Login_Sample` đều là `1521 px` chèn vào vùng 854 px → **tràn ~670 px sang cột H–R, đè lên bảng item**. Gate check 13 bắt lỗi này. Quy tắc resize: ảnh ≤ 840×900 px, anchor cột `A` (`../outputs/o2-screens.md` §4 bước 6).
 
 ### 2.4 Bảng item (cột H–R)
 

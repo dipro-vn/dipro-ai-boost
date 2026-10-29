@@ -30,7 +30,7 @@ Tên folder: baseline `ver<N>_<DDMMYY>_<slug>` · CR `CR-<id>_<DDMMYY>_<slug>` (
 ```bash
 S=.claude/skills/system-analyst/scripts
 python3 $S/version-tool.py next --outputs outputs --slug baseline --create          # Luồng 1
-python3 $S/version-tool.py snapshot --ver outputs/ver1_011026_baseline [--files 02_API/API_Doc_X_ver1.xlsx …]
+python3 $S/version-tool.py snapshot --ver outputs/ver1_011026_baseline [--files 03_API/API_Doc_X_ver1.xlsx …]
 python3 $S/version-tool.py next --outputs outputs --cr-id CR-001 --slug them-coupon --create   # Luồng 2
 python3 $S/version-tool.py promote --outputs outputs --cr CR-001 --approved --coded --create   # baseline mới
 ```
@@ -52,14 +52,14 @@ python3 $S/version-tool.py promote --outputs outputs --cr CR-001 --approved --co
 ver1_011026_baseline/
 ├── README.md                         ← index: output nào, ở đâu, bao nhiêu, gate ra sao
 ├── run-log.md
-├── 01_Screens/BasicDesign_WEB-01_ver1.xlsx       O1 (1 file / website)
-├── 02_API/API_Doc_<sys>_ver1.xlsx                O2
-├── 03_DB/DB_Doc_<sys>_ver1.xlsx · ERD_<sys>_ver1.png   O3
-├── 04_DesignSystem/STATUS.md · project/           O4 tuỳ chọn (chuẩn chung với designer-kit; per-site: WEB-xx/STATUS.md · project/)
-├── 05_Figma/figma-links.md                       O5 (+ link ERD cho O6)
-├── 06_Overview/Overview_<sys>_ver1.docx          O6 (nghiệp vụ chính + bảng tổng)
+├── 01_Overview/Overview_<sys>_ver1.docx          O1 (nghiệp vụ chính + bảng tổng)
+├── 02_Screens/BasicDesign_WEB-01_ver1.xlsx       O2 (1 file / website)
+├── 03_API/API_Doc_<sys>_ver1.xlsx                O3
+├── 04_DB/DB_Doc_<sys>_ver1.xlsx · ERD_<sys>_ver1.png   O4
+├── 05_Figma/figma-links.md                       O5 (+ link ERD cho O1)
+├── 06_DesignSystem/STATUS.md · project/           O6 tuỳ chọn (chuẩn chung với designer-kit; per-site: WEB-xx/STATUS.md · project/)
 ├── 07_BugList/BugList_<sys>_ver1.xlsx            O7 (tuỳ chọn, 1 sheet)
-├── 09_DevSetup/DevSetup_<sys>_ver1.md            O9 hướng dẫn chạy local (dev, khi có source)
+├── 08_DevSetup/DevSetup_<sys>_ver1.md            O8 hướng dẫn chạy local (dev, khi có source)
 └── _internal/                                    ← của agent, không phải deliverable
     ├── inventory.xlsx        bộ nhớ máy đọc — Luồng 2 đọc file này
     ├── evidence/  recon/  gates/  narrative.json  business.json  index.json

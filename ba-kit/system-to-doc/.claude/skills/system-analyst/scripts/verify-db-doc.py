@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""GATE — O3 Database Documentation (doi chieu voi inventory).
+"""GATE — O4 Database Documentation (doi chieu voi inventory).
 
   python3 verify-db-doc.py <DB_Doc.xlsx> --inventory <_internal>/inventory.xlsx \\
       [--code-schema <_internal>/recon/db-code/REPO-01/code-schema.csv ...] \\
       [--erd-png <ERD.png>] [--out <_internal>/gates/v-db.md]
 
 Check 10 (gate schema, R1): moi bang + cot doc tu code (model / entity / migration — read-orm-schema.py)
-phai co trong 03_DB_Tables / 04_DB_Columns. Thieu -> FAIL (ver3: O3 bo sot ~60 migration TypeORM).
+phai co trong 03_DB_Tables / 04_DB_Columns. Thieu -> FAIL (ver3: O4 bo sot ~60 migration TypeORM).
 Repo co ORM / migration ma khong truyen --code-schema -> WARN.
 
 Chan: bang thieu/trung sheet, so cot lech 04_DB_Columns, quan he tro toi bang/cot khong ton tai
@@ -79,7 +79,7 @@ def main():
             colmap.setdefault(c["Table"], set()).add(c.get("Column", ""))
     evtype = {e.get("EV ID"): e.get("Type", "") for e in data["05_Evidence"]}
     wb = load_workbook(a.doc)
-    g = Gate("GATE O3 — Database Documentation")
+    g = Gate("GATE O4 — Database Documentation")
 
     # 10 gate schema: code -> inventory (doc lap voi doc xlsx, chay truoc)
     if a.code_schema:

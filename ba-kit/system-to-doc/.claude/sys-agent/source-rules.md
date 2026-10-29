@@ -16,7 +16,7 @@
 
 - Pha A xong hết mới bắt đầu Pha B. Reconcile (Bước 5) chỉ chạy khi **cả hai pha** đã nạp inventory.
 - Màn → API lấy từ đồ thị gọi `fe-api-calls.csv` (mỗi cạnh `static` / `inferred`), **không** từ import graph theo file (ver3 gán API-185 cho 11 màn, có màn admin sai).
-- DB: bảng / cột trong model, entity, migration là danh sách tối thiểu của O3 — gate V-DB check 10 FAIL nếu thiếu. Dump schema-only chỉ bổ sung (kiểu thật, index, comment).
+- DB: bảng / cột trong model, entity, migration là danh sách tối thiểu của O4 — gate V-DB check 10 FAIL nếu thiếu. Dump schema-only chỉ bổ sung (kiểu thật, index, comment).
 - Dự án **không giao source** → chế độ "chỉ website" (Pha B như cũ), ghi rõ trong Discovery Brief.
 
 ---

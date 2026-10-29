@@ -1,8 +1,8 @@
-# O2 — API Documentation (+ Batch)
+# O3 — API Documentation (+ Batch)
 
 > **Yêu cầu:** file xlsx dễ tìm kiếm · liệt kê **toàn bộ API theo group** có trong source · mỗi API mô tả **làm gì · method · request · response** · sheet tổng hợp có **link tới sheet API tương ứng** · có **BATCH** thì gồm luôn. **Không có sơ đồ API (code map)** (feedback 28/10/2026).
 >
-> Thành phẩm: `02_API/API_Doc_<sys>_ver<N>.xlsx`. Chỉ chạy khi có source (P5).
+> Thành phẩm: `03_API/API_Doc_<sys>_ver<N>.xlsx`. Chỉ chạy khi có source (P5).
 
 ---
 
@@ -29,8 +29,8 @@
 
 ```bash
 python3 $S/build-api-doc.py --inventory $I/inventory.xlsx --system <sys> --version ver<N> \
-    --out $V/02_API/API_Doc_<sys>_ver<N>.xlsx
-python3 $S/verify-api-doc.py $V/02_API/API_Doc_<sys>_ver<N>.xlsx --inventory $I/inventory.xlsx --out $I/gates/v-api.md
+    --out $V/03_API/API_Doc_<sys>_ver<N>.xlsx
+python3 $S/verify-api-doc.py $V/03_API/API_Doc_<sys>_ver<N>.xlsx --inventory $I/inventory.xlsx --out $I/gates/v-api.md
 ```
 
 Cấu trúc workbook:

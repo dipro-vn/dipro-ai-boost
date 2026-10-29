@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Gate V-DS — O4 Design System dung chuan design-system-format.md (= format artifact "Design System").
+"""Gate V-DS — O6 Design System dung chuan design-system-format.md (= format artifact "Design System").
 
-  python3 verify-design-system.py <ver>/04_DesignSystem \
+  python3 verify-design-system.py <ver>/06_DesignSystem \
           --draft <_internal>/recon/design/tokens-draft.json [--figma-used] [--approved-by "<ten nguoi duyet>"] \
           [--published-url https://claude.ai/artifact/<id> | --published-url WEB-01=<url> ...] [--out <_internal>/gates/v-ds.md]
 
 Tham so dau = thu muc CHUA STATUS.md + project/ (project/design-system.json, tokens.json, README.md, components/...)
-HOAC 04_DesignSystem layout per-site (WEB-01/{STATUS.md,project/}, WEB-02/...): chay checks 1-16 cho tung site,
+HOAC 06_DesignSystem layout per-site (WEB-01/{STATUS.md,project/}, WEB-02/...): chay checks 1-16 cho tung site,
 ma check "WEB-01.3", chong bia dung mau/font quan sat cua site do (draft perSite.<site>.observed).
 Check 0: layout khop dsLayout.mode cua draft (per-site <-> WEB-xx/, single/themes <-> 1 thu muc; tron 2 layout FAIL).
 Checks: 1 du file (STATUS.md + project/, Cover tran, khong con _Example) · 2 index design-system.json ·
@@ -197,7 +197,7 @@ def verify_one(a, ds_dir, g, draft, draft_err, site=None, published_url=None):
     bad = ["thieu project/%s" % f for f in req if not os.path.isfile(pj(f))]
     stat = read_status(os.path.join(ds_dir, "STATUS.md"))
     if stat is None:
-        bad.append("thieu 04_DesignSystem/STATUS.md (trang thai, link artifact, Thieu TBD — thay link.md)")
+        bad.append("thieu 06_DesignSystem/STATUS.md (trang thai, link artifact, Thieu TBD — thay link.md)")
     for f in ("README.md", "Cover.d.ts"):
         if os.path.exists(pj("components", "Cover", f)):
             bad.append("components/Cover/%s lam Cover thanh component thuong (giu thu muc tran)" % f)
@@ -825,8 +825,8 @@ def detect_layout(root):
 
 
 def check_layout(g, root, layout, sites, extra, draft):
-    """Check 0: bo cuc 04_DesignSystem khop dsLayout.mode trong draft."""
-    title = "Bo cuc 04_DesignSystem khop dsLayout.mode cua tokens-draft (1 thu muc hoac WEB-xx/ moi website)"
+    """Check 0: bo cuc 06_DesignSystem khop dsLayout.mode trong draft."""
+    title = "Bo cuc 06_DesignSystem khop dsLayout.mode cua tokens-draft (1 thu muc hoac WEB-xx/ moi website)"
     bad = []
     if layout == "mixed":
         bad.append("tron 2 layout: co project//STATUS.md o root VA thu muc %s (chon 1)" % ", ".join(sites))
@@ -856,7 +856,7 @@ def check_layout(g, root, layout, sites, extra, draft):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("ds_dir", help="thu muc DS (chua project/) hoac 04_DesignSystem/ layout per-site (WEB-xx/project/)")
+    ap.add_argument("ds_dir", help="thu muc DS (chua project/) hoac 06_DesignSystem/ layout per-site (WEB-xx/project/)")
     ap.add_argument("--draft", required=True)
     ap.add_argument("--figma-used", action="store_true")
     ap.add_argument("--published-url", action="append", default=[],

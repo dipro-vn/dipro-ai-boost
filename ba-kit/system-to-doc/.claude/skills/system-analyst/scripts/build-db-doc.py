@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""O3 — Database Documentation (xlsx) + ERD (png) tu inventory.
+"""O4 — Database Documentation (xlsx) + ERD (png) tu inventory.
 
   python3 build-db-doc.py --inventory <_internal>/inventory.xlsx --system <name> --version ver1 \\
-      --out <ver>/03_DB/DB_Doc_<sys>_ver1.xlsx [--erd-png <ver>/03_DB/ERD_<sys>_ver1.png]
+      --out <ver>/04_DB/DB_Doc_<sys>_ver1.xlsx [--erd-png <ver>/04_DB/ERD_<sys>_ver1.png]
 
 Nguon su that: 03_DB_Tables, 04_DB_Columns (+00_Meta db_mode, 01_Function, 05_Evidence).
 Sheet: 00_Overview · 01_Relationships · 02_ERD · T_<table> (moi bang 1 sheet).
 Quan he logic: dong trong 03_DB_Tables.Note dang `logical FK: a.col → b.id — inferred from EV-0102`.
-⚠ db_mode=NONE -> exit 1 (khong co DB, O3 khong sinh). O trong -> "Cần xác nhận" (S.NEED_CONFIRM) / — (khong ap dung).
+⚠ db_mode=NONE -> exit 1 (khong co DB, O4 khong sinh). O trong -> "Cần xác nhận" (S.NEED_CONFIRM) / — (khong ap dung).
 """
 import argparse
 import datetime
@@ -311,11 +311,11 @@ def main():
     meta = S.meta(data)
     mode = (meta.get("db_mode") or S.NEED_CONFIRM).strip().upper()
     if mode == "NONE":
-        print("db_mode=NONE: khong co DB — O3 khong sinh", file=sys.stderr)
+        print("db_mode=NONE: khong co DB — O4 khong sinh", file=sys.stderr)
         return 1
     tables, cols, rels, tnames = collect(data)
     if not tables:
-        print("03_DB_Tables rong — khong co gi de sinh O3", file=sys.stderr)
+        print("03_DB_Tables rong — khong co gi de sinh O4", file=sys.stderr)
         return 1
     fmap = func_map(data)
 

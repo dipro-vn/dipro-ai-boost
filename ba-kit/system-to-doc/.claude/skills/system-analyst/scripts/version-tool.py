@@ -3,7 +3,7 @@
 
   python3 version-tool.py next --outputs <project>/outputs --slug baseline [--date DDMMYY] [--create]
   python3 version-tool.py next --outputs <project>/outputs --cr-id CR-001 --slug them-coupon [--date DDMMYY] [--create]
-  python3 version-tool.py snapshot --ver <folder version> [--files 01_Screens/a.xlsx ...]
+  python3 version-tool.py snapshot --ver <folder version> [--files 02_Screens/a.xlsx ...]
   python3 version-tool.py promote --outputs <project>/outputs --cr CR-001 [--cr CR-002] --approved --coded \
           [--slug baseline] [--date DDMMYY] [--create]
   python3 version-tool.py latest-baseline --outputs <project>/outputs
@@ -23,7 +23,7 @@ next            -> JSON {n, folder, path, reuse, created} ; --create mkdir _inte
                    version-meta.json (folder co san: chi bo sung thu muc con thieu). exit 3 = baseline da khoa
 snapshot        -> JSON {dir, files} ; copy file (mac dinh: moi file tru _internal/history) vao history truoc khi ghi de
 promote         -> JSON {n, folder, path, previous_version, promoted_crs} — baseline moi
-latest-baseline -> JSON {folder, path, n, inventory, outputs:{O1..O9: bool}} ; exit 1 neu khong co baseline
+latest-baseline -> JSON {folder, path, n, inventory, outputs:{O1..O8: bool}} ; exit 1 neu khong co baseline
 list            -> bang version + CR mo tren baseline moi nhat (canh bao xung dot CR-vs-CR)
 context         -> JSON agent doc o DAU MOI LAN CHAY (user khong phai tu tim version):
                    latest (version moi nhat bat ky loai) · latest_baseline (+ inventory, outputs, locked, locked_by) ·
@@ -55,15 +55,15 @@ EXIT_LOCKED = 3
 
 # Duong dan output theo CONTRACT (glob tuong doi folder version)
 OUTPUT_GLOBS = {
-    "O1": ["01_Screens/BasicDesign_*.xlsx"],
-    "O2": ["02_API/API_Doc_*.xlsx"],
-    "O3": ["03_DB/DB_Doc_*.xlsx"],
-    "O4": ["04_DesignSystem/project/design-system.json",            # 1 DS (single / themes)
-           "04_DesignSystem/WEB-*/project/design-system.json"],     # 1 DS / website (per-site)
+    "O1": ["01_Overview/Overview_*.docx"],
+    "O2": ["02_Screens/BasicDesign_*.xlsx"],
+    "O3": ["03_API/API_Doc_*.xlsx"],
+    "O4": ["04_DB/DB_Doc_*.xlsx"],
     "O5": ["05_Figma/figma-links.md"],
-    "O6": ["06_Overview/Overview_*.docx"],
+    "O6": ["06_DesignSystem/project/design-system.json",            # 1 DS (single / themes)
+           "06_DesignSystem/WEB-*/project/design-system.json"],     # 1 DS / website (per-site)
     "O7": ["07_BugList/BugList_*.xlsx"],
-    "O9": ["09_DevSetup/DevSetup_*.md"],
+    "O8": ["08_DevSetup/DevSetup_*.md"],
 }
 
 
