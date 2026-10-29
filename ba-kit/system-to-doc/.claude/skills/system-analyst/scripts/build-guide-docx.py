@@ -193,10 +193,10 @@ def img_outputs(path):
     items = [
         ("README.md", "Mục lục: mọi output · số lượng · kết quả kiểm tra", GREY_BG, GREY),
         ("01_Overview/", "O1  Tài liệu tổng hợp — docx: nghiệp vụ chính + bảng tổng màn hình / API / DB", GREEN_BG, GREEN),
-        ("02_Screens/", "O2  Danh sách màn hình — xlsx, 1 file / website, cột \"API gọi\"", BLUE_BG, BLUE),
-        ("03_API/", "O3  API Documentation — xlsx", BLUE_BG, BLUE),
-        ("04_DB/", "O4  Database Documentation — xlsx + png ERD", BLUE_BG, BLUE),
-        ("05_Figma/", "O5  Link Figma: Flow tổng quan + Screen flow", ORANGE_BG, ORANGE),
+        ("02_API/", "O2  API Documentation — xlsx", BLUE_BG, BLUE),
+        ("03_DB/", "O3  Database Documentation — xlsx + png ERD", BLUE_BG, BLUE),
+        ("04_Figma/", "O4  Link Figma: Flow tổng quan + Screen flow", ORANGE_BG, ORANGE),
+        ("05_BasicDesign/", "O5  Danh sách màn hình — xlsx, 1 file / website, cột \"API gọi\"", BLUE_BG, BLUE),
         ("06_DesignSystem/", "O6  Design System (tuỳ chọn) — folder + link artifact claude.ai", ORANGE_BG, ORANGE),
         ("07_BugList/", "O7  Bug mức High trở lên ảnh hưởng thao tác — xlsx 1 sheet (nếu chọn)", RED_BG, RED),
         ("08_DevSetup/", "O8  Hướng dẫn chạy local cho dev — md (chỉ tên key cấu hình)", GREY_BG, GREY),
@@ -331,7 +331,7 @@ def img_cr_summary(path):
     ax.text(0.1, 7.35, "① Vì sao đây là Change Request", fontsize=11, weight="bold", color=RED)
     why = [["Tiêu chí", "Hệ thống hiện tại (baseline)", "Yêu cầu CR", "Kết luận"],
            ["C1 Chức năng mới", "Giỏ hàng SC-012 không có ô mã giảm giá", "Nhập mã → trừ tiền", "CR"],
-           ["C3 Đổi dữ liệu", "Chưa có bảng mã giảm giá (O4)", "Thêm bảng coupons", "CR"],
+           ["C3 Đổi dữ liệu", "Chưa có bảng mã giảm giá (O3)", "Thêm bảng coupons", "CR"],
            ["C4 Đổi màn đã có", "SC-015 banner khuyến mãi đang chạy", "Bỏ banner", "CR"]]
     _grid(ax, 0.1, 7.15, [2.3, 4.6, 3.2, 1.2], why, rh=0.38, size=8.5,
           fills={(r, 3): RED_BG for r in range(1, 4)})
@@ -653,10 +653,10 @@ def build(kit, samples, source_guide, shots):
     g.image(I("04_outputs.png"), "Các output trong 1 folder version", width_cm=13)
     g.table(["Output", "Loại", "Nơi lưu"], [
         ["O1 Tài liệu tổng hợp", "docx (nghiệp vụ chính + bảng tổng)", "01_Overview/Overview_….docx"],
-        ["O2 Danh sách màn hình", "xlsx (1 file / website)", "02_Screens/BasicDesign_WEB-01_ver<N>.xlsx"],
-        ["O3 API Documentation", "xlsx", "03_API/"],
-        ["O4 Database Documentation", "xlsx + png ERD", "04_DB/"],
-        ["O5 Figma flow", "link Figma", "05_Figma/figma-links.md"],
+        ["O2 API Documentation", "xlsx", "02_API/"],
+        ["O3 Database Documentation", "xlsx + png ERD", "03_DB/"],
+        ["O4 Figma flow", "link Figma", "04_Figma/figma-links.md"],
+        ["O5 Danh sách màn hình", "xlsx (1 file / website)", "05_BasicDesign/BasicDesign_WEB-01_ver<N>.xlsx"],
         ["O6 Design System (tuỳ chọn)", "link artifact claude.ai + folder", "06_DesignSystem/ (STATUS.md + project/)"],
         ["O7 Bug list (tuỳ chọn)", "xlsx 1 sheet", "07_BugList/BugList_….xlsx"],
         ["O8 Hướng dẫn chạy local", "md (dev)", "08_DevSetup/DevSetup_….md"],
@@ -667,27 +667,27 @@ def build(kit, samples, source_guide, shots):
 
     g.h3("O1 — Tài liệu tổng hợp (docx)")
     g.bullets(["Dùng để: đọc nhanh hệ thống làm gì, các luồng nghiệp vụ chính (bước đánh số), trạng thái đối tượng chính.",
-               "Màn hình, API, database chỉ có bảng tổng; danh sách chi tiết ở O2 / O3 / O4. Sơ đồ DB là link Figma.",
+               "Màn hình, API, database chỉ có bảng tổng; danh sách chi tiết ở O5 / O2 / O3. Sơ đồ DB là link Figma.",
                "Mở: 01_Overview/Overview_….docx bằng Word."])
     g.image(I("output_O6.png"), "O1 — tài liệu tổng hợp", width_cm=11)
-    g.h3("O2 — Danh sách màn hình (Basic Design xlsx)")
+    g.h3("O2 — API Documentation (xlsx)")
+    g.bullets(["Dùng để: tra mọi API / batch theo group — làm gì, method, request, response, màn nào gọi.",
+               "Mở: sheet 00_Index → bấm API ID để tới block chi tiết."])
+    g.image(I("output_O2.png"), "O2 — sheet 00_Index")
+    g.h3("O3 — Database Documentation (xlsx + ERD)")
+    g.bullets(["Dùng để: xem các bảng, quan hệ, từng cột (kiểu, format, giới hạn, mục đích).",
+               "Mở: sheet 00_Overview → 02_ERD (sơ đồ) → mỗi bảng 1 sheet T_…"])
+    g.image(I("output_O3.png"), "O3 — sheet 02_ERD")
+    g.h3("O4 — Figma flow")
+    g.bullets(["Dùng để: xem Flow tổng quan + Screen flow (màn nào dẫn tới màn nào, nhánh lỗi / edge).",
+               "Mở: link trong 04_Figma/figma-links.md."])
+    g.image(I("output_O5.png"), "O4 — Screen flow trên Figma")
+    g.h3("O5 — Danh sách màn hình (Basic Design xlsx)")
     g.bullets(["Dùng để: biết mỗi website có bao nhiêu màn, item từng màn, xử lý, lỗi hiển thị, liên kết giữa các màn; "
                "cột \"API gọi\" cho biết mỗi nút / lúc mở màn gọi chức năng phía máy chủ nào.",
                "AI đọc code trước (nút gọi xử lý gì, kiểm tra nhập liệu, thông báo lỗi), rồi mới mở website để đối chiếu.",
                "Mở: Excel, sheet Screen Index → mỗi màn 1 sheet SC-xxx; theo template Basic Design công ty."])
-    g.image(I("output_O1.png"), "O2 — sheet Screen Index")
-    g.h3("O3 — API Documentation (xlsx)")
-    g.bullets(["Dùng để: tra mọi API / batch theo group — làm gì, method, request, response, màn nào gọi.",
-               "Mở: sheet 00_Index → bấm API ID để tới block chi tiết."])
-    g.image(I("output_O2.png"), "O3 — sheet 00_Index")
-    g.h3("O4 — Database Documentation (xlsx + ERD)")
-    g.bullets(["Dùng để: xem các bảng, quan hệ, từng cột (kiểu, format, giới hạn, mục đích).",
-               "Mở: sheet 00_Overview → 02_ERD (sơ đồ) → mỗi bảng 1 sheet T_…"])
-    g.image(I("output_O3.png"), "O4 — sheet 02_ERD")
-    g.h3("O5 — Figma flow")
-    g.bullets(["Dùng để: xem Flow tổng quan + Screen flow (màn nào dẫn tới màn nào, nhánh lỗi / edge).",
-               "Mở: link trong 05_Figma/figma-links.md."])
-    g.image(I("output_O5.png"), "O5 — Screen flow trên Figma")
+    g.image(I("output_O1.png"), "O5 — sheet Screen Index")
     g.h3("O6 — Design System (tuỳ chọn, link artifact claude.ai)")
     g.bullets(["Dùng để: tra màu, chữ, spacing, component có preview của hệ thống cũ — dùng lại khi làm màn mới "
                "(cùng chuẩn với designer-kit).",

@@ -2,7 +2,7 @@
 # SOURCE: ba-kit/requirement-to-flow/.claude/skills/business-analyst/scripts/verify-basic-design.py @ 447770e
 # DA TACH KHOI BAN GOC requirement-to-flow (D2, 27/10/2026): kit nay them cot S "API gọi" + check 16-19.
 # Check 1-15 van la logic chung — sua check 1-15 thi sua CA HAI noi; check 16-19 chi o day.
-"""Quality Gate O5 — Basic Design master workbook (= gate V-BD cua kit system-to-doc).
+"""Quality Gate O4 — Basic Design master workbook (= gate V-BD cua kit system-to-doc).
 
 Chay 15 check tren master workbook (+ check 16-19 khi co --asis):
   16 item co mo ta -> cot R co EV-xxxx / code-ref REPO-xx:path#Lnn / "Cần xác nhận — Q-xxx"
@@ -668,7 +668,7 @@ def run(master_path, before_path, expect_screens, approved, rep, asis_mode=False
 def render(rep, master_path, ws_list):
     ok, fail, warn = rep.counts()
     lines = [
-        "# Quality Gate O5 — Basic Design",
+        "# Quality Gate O4 — Basic Design",
         "",
         f"- Workbook: `{master_path}`",
         f"- Working sheets: {len(ws_list)}"
@@ -689,7 +689,7 @@ def render(rep, master_path, ws_list):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Quality Gate O5 — Basic Design")
+    ap = argparse.ArgumentParser(description="Quality Gate O4 — Basic Design")
     ap.add_argument("master", help="duong dan master workbook (.xlsx)")
     ap.add_argument("--before", help="ban backup truoc khi ghi (de so diff)")
     ap.add_argument("--expect-screens", default="",

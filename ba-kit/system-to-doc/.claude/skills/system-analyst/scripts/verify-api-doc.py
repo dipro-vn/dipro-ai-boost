@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""GATE — O3 API Documentation (doi chieu voi inventory).
+"""GATE — O2 API Documentation (doi chieu voi inventory).
 
   python3 verify-api-doc.py <API_Doc.xlsx> --inventory <_internal>/inventory.xlsx \\
       [--out <_internal>/gates/v-api.md]
@@ -90,7 +90,7 @@ def main():
     fields = data["08_API_Fields"]
     evtype = {e.get("EV ID"): e.get("Type", "") for e in data["05_Evidence"]}
     wb = load_workbook(a.doc)
-    g = Gate("GATE O3 — API Documentation")
+    g = Gate("GATE O2 — API Documentation")
 
     # 1 sheet bat buoc
     g.check(1, "Co sheet 00_Index va Batch", [s for s in ("00_Index", "Batch") if s not in wb.sheetnames])

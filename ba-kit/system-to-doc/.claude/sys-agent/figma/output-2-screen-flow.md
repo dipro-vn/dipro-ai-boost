@@ -1,4 +1,4 @@
-> **SOURCE:** `ba-kit/requirement-to-flow/.claude/ba-agent/figma-outputs/output-2-screen-flow.md` @ a4cfc01 — copy self-contained cho kit system-to-doc. Đọc kèm `o5-figma.md` (bảng thay SPEC.md → inventory). Sửa quy tắc vẽ chung thì sửa CẢ HAI nơi. **Đã tách khỏi bản gốc (D1, 27/10/2026):** phân loại `To verify` của bản gốc ở kit này ghi là `To verify` (+ Open Question); chữ hiển thị "Cần xác nhận — Q-xxx".
+> **SOURCE:** `ba-kit/requirement-to-flow/.claude/ba-agent/figma-outputs/output-2-screen-flow.md` @ a4cfc01 — copy self-contained cho kit system-to-doc. Đọc kèm `o4-figma.md` (bảng thay SPEC.md → inventory). Sửa quy tắc vẽ chung thì sửa CẢ HAI nơi. **Đã tách khỏi bản gốc (D1, 27/10/2026):** phân loại `To verify` của bản gốc ở kit này ghi là `To verify` (+ Open Question); chữ hiển thị "Cần xác nhận — Q-xxx".
 
 > ## ⚠ KIT NÀY: bố cục Output 2 = **site → use case → section** (feedback 20/10/2026 — áp dụng cả `requirement-to-flow`)
 >

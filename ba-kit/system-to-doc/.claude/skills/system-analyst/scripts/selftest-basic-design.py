@@ -2,7 +2,7 @@
 # SOURCE: ba-kit/requirement-to-flow/.claude/skills/business-analyst/scripts/selftest-basic-design.py @ 447770e
 # DA TACH KHOI BAN GOC requirement-to-flow (D2, 27/10/2026): tu sinh fixture bang build-basic-design.py khi
 # khong truyen workbook + case check 16-19 (cot S "API gọi"). Case check 1-15 van dung chung.
-"""Self-test cho Quality Gate O5 — chung minh gate KHONG pass rong.
+"""Self-test cho Quality Gate O4 — chung minh gate KHONG pass rong.
 
 Cach dung:
     python3 selftest-basic-design.py                     # tu sinh fixture (inventory + recon + spec) -> --asis
@@ -252,7 +252,7 @@ def make_fixture(tmp):
                  "action_jp": "未入力で「ログイン」を押す", "action_vn": "Để trống rồi nhấn 「ログイン」",
                  "next": "Không gửi form, focus ô email", "source": "REPO-01:src/i18n/ja.json#L3"}])}}
     json.dump(spec, open(os.path.join(i, "spec.json"), "w", encoding="utf8"), ensure_ascii=False)
-    out = os.path.join(v, "02_Screens", "BasicDesign_WEB-01_ver1.xlsx")
+    out = os.path.join(v, "05_BasicDesign", "BasicDesign_WEB-01_ver1.xlsx")
     before = os.path.join(i, "bd_before_WEB-01.xlsx")
     p = subprocess.run([sys.executable, os.path.join(HERE, "build-basic-design.py"), "--inventory",
                         os.path.join(i, "inventory.xlsx"), "--site", "WEB-01", "--version", "ver1",
@@ -344,7 +344,7 @@ def code_checks(tmp):
         {"tag": "button", "type": "button", "label": "10/28"},
         {"tag": "button", "type": "button", "label": "10/29"}]}],
         open(os.path.join(i, "crawl", "pages.json"), "w", encoding="utf8"), ensure_ascii=False)
-    out = os.path.join(v, "02_Screens", "BasicDesign_WEB-01_ver1.xlsx")
+    out = os.path.join(v, "05_BasicDesign", "BasicDesign_WEB-01_ver1.xlsx")
     p = subprocess.run([sys.executable, os.path.join(HERE, "build-basic-design.py"), "--inventory",
                         os.path.join(i, "inventory.xlsx"), "--site", "WEB-01", "--version", "ver1",
                         "--fe-api-calls", os.path.join(code, "fe-api-calls.csv"), "--crawl", os.path.join(i, "crawl"),

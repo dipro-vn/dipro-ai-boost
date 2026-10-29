@@ -26,10 +26,10 @@
 | # | Output | Gate |
 |---|---|---|
 | O1 | docx tổng hợp — phạm vi · tổng quan · **nghiệp vụ chính** (hệ thống làm gì · luồng · trạng thái, từ `business.json`) · 1 bảng tổng màn hình / API / DB (+ link ERD Figma) · liên kết ngoài. Không danh sách output, luồng tổng quan, phụ lục | V3 |
-| O2 | Danh sách màn hình theo website (Basic Design xlsx, 1 file / site — `build-basic-design.py`, code trước rồi website, cột S "API gọi") | V-BD |
-| O3 | API Documentation xlsx (+ batch) — không có sơ đồ API (code map) | V-API |
-| O4 | Database Documentation xlsx + ERD | V-DB |
-| O5 | Figma Output 1 (**use case**: Actor → đường đi → kết thúc, non-happy hàng dưới · Technology Stack · Sitemap Site → Actor → Nhóm → Màn) + Output 2 (**site → use case → section**) · chưa rõ ghi "Cần xác nhận — Q-xxx", không mã trạng thái trên hình | recheck bbox · phủ SC |
+| O2 | API Documentation xlsx (+ batch) — không có sơ đồ API (code map) | V-API |
+| O3 | Database Documentation xlsx + ERD | V-DB |
+| O4 | Figma Output 1 (**use case**: Actor → đường đi → kết thúc, non-happy hàng dưới · Technology Stack · Sitemap Site → Actor → Nhóm → Màn) + Output 2 (**site → use case → section**) · chưa rõ ghi "Cần xác nhận — Q-xxx", không mã trạng thái trên hình | recheck bbox · phủ SC |
+| O5 | Danh sách màn hình theo website (Basic Design xlsx, 1 file / site — `build-basic-design.py`, code trước rồi website, cột S "API gọi") | V-BD |
 | O6 | **Tuỳ chọn** (không chạy thì bỏ qua, README ghi ⬜) — Design System — chuẩn chung với designer-kit (= format Artifact type "Design System" của claude.ai), **dựng trên Base Design System chuẩn Nhật** `.claude/base-design-system/` (giá trị hệ thống thắng; phần không quan sát được lấy base, nhãn `[base]`), publish khi user đồng ý. Hệ thống không có DS → CR-3 dùng base tạm | V-DS |
 | O7 | Bug list (tuỳ chọn) — **1 sheet `Bug List`**: bug mức High / Urgent ảnh hưởng thao tác người dùng, từ code và / hoặc crawl website | V8 |
 | O8 | Hướng dẫn chạy local + môi trường md (dev đọc) — chỉ tên key cấu hình (`build-devsetup.py`) | V-DEV |

@@ -1,8 +1,8 @@
-# O2 — Danh sách màn hình theo website (Basic Design)
+# O5 — Danh sách màn hình theo website (Basic Design)
 
-> **Câu hỏi O2 phải trả lời được:** mỗi website có **tổng bao nhiêu màn hình** · mỗi màn có **item gì** · item **xử lý thế nào, gọi API nào** · **lỗi** thì hiện gì · các màn **liên kết với nhau** thế nào.
+> **Câu hỏi O5 phải trả lời được:** mỗi website có **tổng bao nhiêu màn hình** · mỗi màn có **item gì** · item **xử lý thế nào, gọi API nào** · **lỗi** thì hiện gì · các màn **liên kết với nhau** thế nào.
 >
-> Định dạng: template công ty `templates/sample_basic_design.xlsx` + cột `S` "API gọi" (D2). **1 workbook / website**: `02_Screens/BasicDesign_<WEB-xx>_ver<N>.xlsx`, dựng bằng **`build-basic-design.py`** (không viết script tay mỗi lần).
+> Định dạng: template công ty `templates/sample_basic_design.xlsx` + cột `S` "API gọi" (D2). **1 workbook / website**: `05_BasicDesign/BasicDesign_<WEB-xx>_ver<N>.xlsx`, dựng bằng **`build-basic-design.py`** (không viết script tay mỗi lần).
 >
 > **BẮT BUỘC Read trước khi ghi:** `../basic-design/workbook-structure.md` (map cell: 5 sheet, metadata `A1:F6`, bảng item `H9:S…`, 8 nhóm nội dung, bảng ERROR SCENARIOS).
 
@@ -23,7 +23,7 @@
 | Item xử lý thế nào | Cột `P`/`Q` — trạng thái ban đầu, hành vi khi nhấn, validation · bằng chứng ở `R` |
 | Item gọi API nào | **Cột `S` "API gọi"** — từ `fe-api-calls.csv` (không dùng import graph / `table-refs.json`) |
 | Lỗi hiện gì | Bảng `ERROR SCENARIOS` dưới bảng item (cột `S` = nguồn) + sheet `Screen Error message` |
-| Màn liên kết thế nào | `B4`/`B6` (Cách access: "Từ SC-xxx") · `P`/`Q`: `→ SC-xxx` · Figma O5 |
+| Màn liên kết thế nào | `B4`/`B6` (Cách access: "Từ SC-xxx") · `P`/`Q`: `→ SC-xxx` · Figma O4 |
 
 ---
 
@@ -69,7 +69,7 @@ Viết `P`/`Q`:
 python3 $S/build-basic-design.py --inventory $I/inventory.xlsx --site WEB-01 --version ver<N> \
     --fe-api-calls $I/recon/code/REPO-01/fe-api-calls.csv --crawl $I/recon/crawl/WEB-01 \
     --spec $I/bd/WEB-01.json --q-start <next_q> \
-    --out $V/02_Screens/BasicDesign_WEB-01_ver<N>.xlsx --before $I/bd_before_WEB-01.xlsx
+    --out $V/05_BasicDesign/BasicDesign_WEB-01_ver<N>.xlsx --before $I/bd_before_WEB-01.xlsx
 #   [--repo REPO-01=<path>]  # gốc repo để tra handler; mặc định cột Path ở 11_Repo
 # stdout: {screens, items, api_cells, code_matched, confirm_cells, errors, next_q} — code_matched = số nút tra được
 #   từ code; confirm_cells = số ô "Cần xác nhận" (báo trước/sau). "Screenshot EV" nhiều EV → ghép từng EV với pages.json
@@ -80,7 +80,7 @@ python3 $S/build-basic-design.py --inventory $I/inventory.xlsx --site WEB-01 --v
 ## 4. Gate V-BD
 
 ```bash
-python3 $S/verify-basic-design.py "$V/02_Screens/BasicDesign_WEB-01_ver<N>.xlsx" \
+python3 $S/verify-basic-design.py "$V/05_BasicDesign/BasicDesign_WEB-01_ver<N>.xlsx" \
     --before "$I/bd_before_WEB-01.xlsx" --expect-screens "SC-001,SC-002,..." \
     --asis --out "$I/gates/v-bd-WEB-01.md"
 python3 $S/selftest-basic-design.py        # tự sinh fixture, không cần tham số

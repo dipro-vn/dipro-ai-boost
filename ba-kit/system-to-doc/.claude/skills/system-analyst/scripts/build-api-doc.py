@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""O3 — API Documentation (xlsx) tu inventory: API + webhook + BATCH/QUEUE.
+"""O2 — API Documentation (xlsx) tu inventory: API + webhook + BATCH/QUEUE.
 
   python3 build-api-doc.py --inventory <_internal>/inventory.xlsx --system <name> --version ver1 \\
-      --out <ver>/03_API/API_Doc_<sys>_ver1.xlsx
+      --out <ver>/02_API/API_Doc_<sys>_ver1.xlsx
 
 Nguon: 07_API, 08_API_Fields (+02_Screen ten man hinh, 11_Repo, 05_Evidence locator).
 Sheet: 00_Index (tong hop + link) · G_<group> (moi API 1 block: thong tin + Request + Response)
@@ -97,7 +97,7 @@ def main():
     data = S.load(a.inventory)
     apis = sorted([r for r in data["07_API"] if r.get("API ID")], key=api_key)
     if not apis:
-        print("07_API rong — khong co API/batch nao de sinh O3", file=sys.stderr)
+        print("07_API rong — khong co API/batch nao de sinh O2", file=sys.stderr)
         return 1
     fields = {}
     for f in data["08_API_Fields"]:

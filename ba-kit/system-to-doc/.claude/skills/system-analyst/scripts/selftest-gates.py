@@ -193,12 +193,12 @@ def build_outputs(p):
     wb.active.title = "Screen Index"
     for title in ("SC-001", "SC-002"):
         wb.create_sheet(title)["F6"] = "WORKING_SCREEN"
-    os.makedirs(os.path.join(v, "02_Screens"), exist_ok=True)
-    wb.save(os.path.join(v, "02_Screens", "BasicDesign_WEB-01_ver1.xlsx"))
-    for sub, name in (("03_API", "API_Doc_Fixture_ver1.xlsx"), ("04_DB", "DB_Doc_Fixture_ver1.xlsx")):
+    os.makedirs(os.path.join(v, "05_BasicDesign"), exist_ok=True)
+    wb.save(os.path.join(v, "05_BasicDesign", "BasicDesign_WEB-01_ver1.xlsx"))
+    for sub, name in (("02_API", "API_Doc_Fixture_ver1.xlsx"), ("03_DB", "DB_Doc_Fixture_ver1.xlsx")):
         os.makedirs(os.path.join(v, sub), exist_ok=True)
         Workbook().save(os.path.join(v, sub, name))
-    fake_png(os.path.join(v, "04_DB", "ERD_Fixture_ver1.png"))
+    fake_png(os.path.join(v, "03_DB", "ERD_Fixture_ver1.png"))
     os.makedirs(os.path.join(v, "06_DesignSystem", "project"), exist_ok=True)   # O6 = format artifact Design System
     json.dump({"v": 3, "layout": "files", "title": "Fixture"},
               open(os.path.join(v, "06_DesignSystem", "project", "design-system.json"), "w"))
@@ -206,8 +206,8 @@ def build_outputs(p):
         "# Design System — Fixture\n\n- Trạng thái: DRAFT\n- Artifact: https://claude.ai/artifact/FixtureDs01\n"
         "- Nguồn: website WEB-01\n\n## Thiếu (TBD)\n\n| D# | Token / component | Ghi chú |\n|---|---|---|\n"
         "| D1 | primary-hover | khong quan sat duoc |\n| D6 | Toast | khong quan sat duoc |\n")
-    os.makedirs(os.path.join(v, "05_Figma"), exist_ok=True)
-    open(os.path.join(v, "05_Figma", "figma-links.md"), "w").write(
+    os.makedirs(os.path.join(v, "04_Figma"), exist_ok=True)
+    open(os.path.join(v, "04_Figma", "figma-links.md"), "w").write(
         "| Output | Frame | Node URL |\n|---|---|---|\n"
         "| Output 1 — Flow tổng quan | Flow | https://www.figma.com/design/abcdef/F?node-id=1-2 |\n"
         "| Output 2 — Screen flow | Screens | https://www.figma.com/design/abcdef/F?node-id=1-3 |\n"
@@ -233,7 +233,7 @@ def render_overview(p):
     sh("build-version-index.py", p["ver"])
     return sh("render-overview-docx.py", "--inventory", p["inv"], "--narrative", p["nar"],
               "--business", p["biz"], "--index", p["index"],
-              "--figma-links", os.path.join(p["ver"], "05_Figma", "figma-links.md"),
+              "--figma-links", os.path.join(p["ver"], "04_Figma", "figma-links.md"),
               "--out", p["docx"])
 
 
@@ -596,8 +596,8 @@ def index_cases(tmp):
     idx = json.load(open(os.path.join(cr, "_internal", "index.json"), encoding="utf8"))
     e = {x["id"]: x for x in idx["outputs"]}
     st = json.load(open(rates)).get("status")
-    ok = (rc == 0 and list(e) == ["CR", "O5", "IN"] and e["CR"]["count"] == "1 hạng mục · 3 MD (đơn giá %s)" % st
-          and e["CR"]["status"] == "ok" and e["O5"]["status"] == "skip" and "không vẽ" in e["O5"]["status_text"]
+    ok = (rc == 0 and list(e) == ["CR", "O4", "IN"] and e["CR"]["count"] == "1 hạng mục · 3 MD (đơn giá %s)" % st
+          and e["CR"]["status"] == "ok" and e["O4"]["status"] == "skip" and "không vẽ" in e["O4"]["status_text"]
           and idx["baseline_ref"] == VER)
     out.append(("index", "CR: Impact xlsx (N hang muc · MD · don gia), Figma skip, khong co Summary.md",
                 ok, "%s %s" % (o.strip()[-80:], {k: (x["count"], x["status"]) for k, x in e.items()})))
@@ -605,9 +605,9 @@ def index_cases(tmp):
     sh("build-version-index.py", cr)
     e = {x["id"]: x for x in json.load(open(os.path.join(cr, "_internal", "index.json"), encoding="utf8"))["outputs"]}
     out.append(("index", "CR: co gate v-cr-figma -> dong Figma theo gate (FAIL)",
-                e["O5"]["gate"] == "FAIL" and e["CR"]["gate"] == "PASS", "O5=%s CR=%s" % (e["O5"]["gate"], e["CR"]["gate"])))
+                e["O4"]["gate"] == "FAIL" and e["CR"]["gate"] == "PASS", "O4=%s CR=%s" % (e["O4"]["gate"], e["CR"]["gate"])))
 
-    # O5: --skip luon duoc ton trong (ke ca da co figma-links.md); figma-links chua co link -> "chưa vẽ"
+    # O4: --skip luon duoc ton trong (ke ca da co figma-links.md); figma-links chua co link -> "chưa vẽ"
     d5 = os.path.join(tmp, "o5skip")
     shutil.copytree(os.path.join(tmp, "good"), d5)
     v5 = os.path.join(d5, VER)
@@ -615,14 +615,14 @@ def index_cases(tmp):
     def o5(*args):
         sh("build-version-index.py", v5, *args)
         return next(x for x in json.load(open(os.path.join(v5, "_internal", "index.json"), encoding="utf8"))["outputs"]
-                    if x["id"] == "O5")
-    e5 = o5("--skip", "O5=lam o buoc sau")
-    out.append(("index", "--skip O5 khi da co 05_Figma/figma-links.md -> O5 skip dung ly do",
+                    if x["id"] == "O4")
+    e5 = o5("--skip", "O4=lam o buoc sau")
+    out.append(("index", "--skip O4 khi da co 04_Figma/figma-links.md -> O4 skip dung ly do",
                 e5["status"] == "skip" and "lam o buoc sau" in e5["status_text"], str(e5.get("status_text"))))
-    open(os.path.join(v5, "05_Figma", "figma-links.md"), "w", encoding="utf8").write(
+    open(os.path.join(v5, "04_Figma", "figma-links.md"), "w", encoding="utf8").write(
         "# Figma\n\n| So do | Link |\n|---|---|\n| API map | (chua ve) |\n")
     e5 = o5()
-    out.append(("index", "figma-links.md chua co link figma.com -> O5 'chưa vẽ' (khong phai 'chưa chạy gate')",
+    out.append(("index", "figma-links.md chua co link figma.com -> O4 'chưa vẽ' (khong phai 'chưa chạy gate')",
                 e5["status"] == "skip" and "chưa vẽ" in e5["status_text"], str(e5.get("status_text"))))
     return out
 
@@ -954,11 +954,11 @@ def main():
     results += scan_cases(tmp)
     results += legacy_cases(tmp)
     results += preflight_cases(tmp)
-    # Khong co link Figma -> chuong 5 ghi chu "xem anh ERD trong 04_DB" -> V3 van PASS
+    # Khong co link Figma -> chuong 5 ghi chu "xem anh ERD trong 03_DB" -> V3 van PASS
     d = os.path.join(tmp, "nolink")
     shutil.copytree(os.path.join(tmp, "good"), d)
     pn = paths(d)
-    os.remove(os.path.join(pn["ver"], "05_Figma", "figma-links.md"))
+    os.remove(os.path.join(pn["ver"], "04_Figma", "figma-links.md"))
     render_overview(pn)
     from docx_read import Docx
     dx = Docx(pn["docx"])

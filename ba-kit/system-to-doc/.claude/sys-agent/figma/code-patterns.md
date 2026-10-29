@@ -1,4 +1,4 @@
-> **SOURCE:** `ba-kit/requirement-to-flow/.claude/ba-agent/figma-outputs/code-patterns.md` @ 06565d0 — copy self-contained cho kit system-to-doc. Đọc kèm `o5-figma.md` (bảng thay SPEC.md → inventory). Sửa quy tắc vẽ chung thì sửa CẢ HAI nơi.
+> **SOURCE:** `ba-kit/requirement-to-flow/.claude/ba-agent/figma-outputs/code-patterns.md` @ 06565d0 — copy self-contained cho kit system-to-doc. Đọc kèm `o4-figma.md` (bảng thay SPEC.md → inventory). Sửa quy tắc vẽ chung thì sửa CẢ HAI nơi.
 
 # Ba Agent — Figma Code Patterns
 

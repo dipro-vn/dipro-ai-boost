@@ -13,7 +13,7 @@
 | Mục đích | Cụ thể |
 |---|---|
 | **Gate script đọc vào** | V1/V2/V4 cần dữ liệu có cấu trúc. Bảng trong docx không có kiểu dữ liệu, không có ID ổn định → không đếm được |
-| **Output lấy nguồn ra** | O2 ← `02_Screen` · O3 ← `07_API` + `08_API_Fields` · O4 ← `03/04` · O1 ← mọi sheet · O7 ← `01/02` |
+| **Output lấy nguồn ra** | O5 ← `02_Screen` · O2 ← `07_API` + `08_API_Fields` · O3 ← `03/04` · O1 ← mọi sheet · O7 ← `01/02` |
 | **Bộ nhớ giữa các lần chạy** | Luồng 1 DELTA đọc để biết đã phủ tới đâu; **Luồng 2 đọc để tra baseline khi phân tích CR** |
 
 ---
@@ -24,13 +24,13 @@
 |---|---|---|---|
 | 1 | `00_Meta` | 1 file = 1 lần chạy | câu trả lời preflight |
 | 2 | `01_Function` | 1 dòng = 1 chức năng | |
-| 3 | `02_Screen` | 1 dòng = 1 màn hình | → O2 |
+| 3 | `02_Screen` | 1 dòng = 1 màn hình | → O5 |
 | 4 | `03_DB_Tables` | 1 dòng = 1 bảng | rỗng nếu `db_mode = NONE` |
 | 5 | `04_DB_Columns` | 1 dòng = 1 cột | như trên |
 | 6 | `05_Evidence` | 1 dòng = 1 bằng chứng | |
 | 7 | `06_OpenQuestions` | 1 dòng = 1 câu hỏi treo | |
-| 8 | `07_API` | 1 dòng = 1 API / batch / webhook / queue | → O3 |
-| 9 | `08_API_Fields` | 1 dòng = 1 field request/response | → O3 |
+| 8 | `07_API` | 1 dòng = 1 API / batch / webhook / queue | → O2 |
+| 9 | `08_API_Fields` | 1 dòng = 1 field request/response | → O2 |
 | 10 | `09_Integration` | 1 dòng = 1 liên kết bên thứ 3 | |
 | 11 | `10_Site` | 1 dòng = 1 website | |
 | 12 | `11_Repo` | 1 dòng = 1 repo source | |
@@ -111,7 +111,7 @@ Header luôn ở **row 1**. Data từ **row 2**. Không merge cell, không sheet
 | `Status` | `Confirmed` · `To verify` · `Inferred` | ✅ |
 | `Note` | | ⬜ |
 
-> Kit `requirement-to-flow` lấy danh sách màn từ `SPEC.md ## Screens`. Kit này **không có SPEC** — sheet này thay thế nó cho O2 (Basic Design) và O5 (Figma).
+> Kit `requirement-to-flow` lấy danh sách màn từ `SPEC.md ## Screens`. Kit này **không có SPEC** — sheet này thay thế nó cho O5 (Basic Design) và O4 (Figma).
 
 ---
 

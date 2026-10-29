@@ -53,12 +53,12 @@ def main():
         v1 = os.path.join(out, "ver1_011026_baseline")
 
         # --- snapshot truoc khi ghi de
-        doc = os.path.join(v1, "03_API", "API_Doc_T_ver1.xlsx")
+        doc = os.path.join(v1, "02_API", "API_Doc_T_ver1.xlsx")
         os.makedirs(os.path.dirname(doc))
         open(doc, "w").write("ban cu")
-        rc, j, _ = vt("snapshot", "--ver", v1, "--files", "03_API/API_Doc_T_ver1.xlsx")
+        rc, j, _ = vt("snapshot", "--ver", v1, "--files", "02_API/API_Doc_T_ver1.xlsx")
         open(doc, "w").write("ban moi")
-        kept = os.path.join(j.get("dir") or "", "03_API", "API_Doc_T_ver1.xlsx")
+        kept = os.path.join(j.get("dir") or "", "02_API", "API_Doc_T_ver1.xlsx")
         case("snapshot -> _internal/history/<YYYYMMDD-HHMM>/ giu ban cu, file moi ghi de tai cho",
              rc == 0 and j.get("files") == 1 and os.path.isfile(kept) and open(kept).read() == "ban cu"
              and open(doc).read() == "ban moi" and os.sep + os.path.join("_internal", "history") + os.sep in kept, j)

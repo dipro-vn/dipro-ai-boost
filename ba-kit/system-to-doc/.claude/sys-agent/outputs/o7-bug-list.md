@@ -16,7 +16,7 @@
 
 **Báo động giả của công cụ quét không phải bug:** `crawl-site.js` gắn `noise` = `read-only-block` / `csp-block` vào `console.json` / `network.json`. Không tạo bug từ các dòng đó — gate V8 từ chối.
 
-**Không ghi vào Bug list:** lỗi mức thấp hơn High · lỗi thuần kỹ thuật / bảo mật / dữ liệu không gắn được với thao tác nào của người dùng (ghi 1 dòng trong `run-log.md` để BA biết, không khai thác, không PoC) · hành vi lạ nhưng không biết spec (→ Open Question) · ô "Cần xác nhận" ở O2.
+**Không ghi vào Bug list:** lỗi mức thấp hơn High · lỗi thuần kỹ thuật / bảo mật / dữ liệu không gắn được với thao tác nào của người dùng (ghi 1 dòng trong `run-log.md` để BA biết, không khai thác, không PoC) · hành vi lạ nhưng không biết spec (→ Open Question) · ô "Cần xác nhận" ở O5.
 
 ## 2. Mức độ — chỉ High · Urgent
 

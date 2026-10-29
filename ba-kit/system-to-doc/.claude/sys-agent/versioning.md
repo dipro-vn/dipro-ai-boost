@@ -30,7 +30,7 @@ Tên folder: baseline `ver<N>_<DDMMYY>_<slug>` · CR `CR-<id>_<DDMMYY>_<slug>` (
 ```bash
 S=.claude/skills/system-analyst/scripts
 python3 $S/version-tool.py next --outputs outputs --slug baseline --create          # Luồng 1
-python3 $S/version-tool.py snapshot --ver outputs/ver1_011026_baseline [--files 03_API/API_Doc_X_ver1.xlsx …]
+python3 $S/version-tool.py snapshot --ver outputs/ver1_011026_baseline [--files 02_API/API_Doc_X_ver1.xlsx …]
 python3 $S/version-tool.py next --outputs outputs --cr-id CR-001 --slug them-coupon --create   # Luồng 2
 python3 $S/version-tool.py promote --outputs outputs --cr CR-001 --approved --coded --create   # baseline mới
 ```
@@ -53,10 +53,10 @@ ver1_011026_baseline/
 ├── README.md                         ← index: output nào, ở đâu, bao nhiêu, gate ra sao
 ├── run-log.md
 ├── 01_Overview/Overview_<sys>_ver1.docx          O1 (nghiệp vụ chính + bảng tổng)
-├── 02_Screens/BasicDesign_WEB-01_ver1.xlsx       O2 (1 file / website)
-├── 03_API/API_Doc_<sys>_ver1.xlsx                O3
-├── 04_DB/DB_Doc_<sys>_ver1.xlsx · ERD_<sys>_ver1.png   O4
-├── 05_Figma/figma-links.md                       O5 (+ link ERD cho O1)
+├── 02_API/API_Doc_<sys>_ver1.xlsx                O2
+├── 03_DB/DB_Doc_<sys>_ver1.xlsx · ERD_<sys>_ver1.png   O3
+├── 04_Figma/figma-links.md                       O4 (+ link ERD cho O1)
+├── 05_BasicDesign/BasicDesign_WEB-01_ver1.xlsx       O5 (1 file / website)
 ├── 06_DesignSystem/STATUS.md · project/           O6 tuỳ chọn (chuẩn chung với designer-kit; per-site: WEB-xx/STATUS.md · project/)
 ├── 07_BugList/BugList_<sys>_ver1.xlsx            O7 (tuỳ chọn, 1 sheet)
 ├── 08_DevSetup/DevSetup_<sys>_ver1.md            O8 hướng dẫn chạy local (dev, khi có source)
@@ -73,7 +73,7 @@ CR-001_151026_them-coupon/
 ├── run-log.md                     baseline: ver1_011026_baseline
 ├── input/                         CR nguyên văn (file copy / cr-request.md khi dán chat / link.md)
 ├── CR-001_Impact.xlsx             7 sheet: Summary (công số + số đối tượng) · Estimation (template 見積書) · Screen · API · Database · Figma · Q&A
-├── 05_Figma/figma-links.md        link view CR mới
+├── 04_Figma/figma-links.md        link view CR mới
 └── _internal/  cr.json · cr-figma.json · figma-js/ · cr-figma-nodes.json · gates/
 ```
 

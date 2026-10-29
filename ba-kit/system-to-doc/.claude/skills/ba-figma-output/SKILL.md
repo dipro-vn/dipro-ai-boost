@@ -10,7 +10,7 @@
 
 ---
 
-> **SOURCE:** `ba-kit/requirement-to-flow/.claude/skills/ba-figma-output/SKILL.md` @ a4cfc01 — copy self-contained cho kit system-to-doc. Kit này chỉ dùng §1–§5 (Output 1 + Output 2) và §7–§11; nguồn dữ liệu thay SPEC.md → xem `.claude/sys-agent/outputs/o5-figma.md`. Sửa quy tắc vẽ chung thì sửa CẢ HAI nơi. **Đã tách khỏi bản gốc (D1, 27/10/2026):** phân loại `To verify` của bản gốc ở kit này ghi là `To verify` (+ Open Question); chữ hiển thị "Cần xác nhận — Q-xxx".
+> **SOURCE:** `ba-kit/requirement-to-flow/.claude/skills/ba-figma-output/SKILL.md` @ a4cfc01 — copy self-contained cho kit system-to-doc. Kit này chỉ dùng §1–§5 (Output 1 + Output 2) và §7–§11; nguồn dữ liệu thay SPEC.md → xem `.claude/sys-agent/outputs/o4-figma.md`. Sửa quy tắc vẽ chung thì sửa CẢ HAI nơi. **Đã tách khỏi bản gốc (D1, 27/10/2026):** phân loại `To verify` của bản gốc ở kit này ghi là `To verify` (+ Open Question); chữ hiển thị "Cần xác nhận — Q-xxx".
 
 
 ## 0. Load ngay đầu

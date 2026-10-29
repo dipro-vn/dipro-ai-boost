@@ -114,7 +114,7 @@ Lượt 2b (2 câu):
 <!-- 5=P3 (AN TOÀN) → crawl_mode · 6=P4 forbidden_zones → crawl-site.js --forbid -->
 
 - Có bản thử nghiệm mà vẫn chọn bản thật → hỏi lại 1 lần: *"Bản thử nghiệm an toàn hơn. Bạn chắc muốn tôi mở bản đang dùng thật?"*
-- Câu 1 `[C]` → O2 = ⬜ (`không có website`), O6 chỉ chạy nếu có Figma. Chạy tiếp phần khác.
+- Câu 1 `[C]` → O5 = ⬜ (`không có website`), O6 chỉ chạy nếu có Figma. Chạy tiếp phần khác.
 
 | Câu 4 (P2b) | Hành vi |
 |---|---|
@@ -163,7 +163,7 @@ DELETE **không bao giờ** được cấp qua câu này — gặp nút xoá lu�
 ```
 <!-- 1=P5a source_repos + sheet 11_Repo (REPO-01…) · 2=P5b For Site (không đoán theo tên folder; chưa gán → hỏi lại) · 3=P6 db_mode: [A] DUMP · [B] READONLY_CONN · [C] MIGRATION · [D] NONE -->
 
-- Không có source → O3 = ⬜, chạy **chế độ chỉ website** (D9), ghi rõ trong Brief.
+- Không có source → O2 = ⬜, chạy **chế độ chỉ website** (D9), ghi rõ trong Brief.
 - Repo bị `scan-sensitive.py` báo HIGH → `system-analyst.md` §6.
 
 | Câu 3 | `db_mode` | Hành vi |
@@ -171,7 +171,7 @@ DELETE **không bao giờ** được cấp qua câu này — gặp nút xoá lu�
 | `[A]` | `DUMP` | `read-schema.py --dump`. File có dữ liệu → script exit 3 → yêu cầu file chỉ cấu trúc |
 | `[B]` | `READONLY_CONN` | Agent đưa lệnh `mysqldump --no-data` / `pg_dump --schema-only`; **người dùng tự chạy** (agent không giữ mật khẩu DB) → như `[A]` |
 | `[C]` | `MIGRATION` | Dựng bảng / cột từ code (`read-orm-schema.py`), evidence `code-ref` |
-| `[D]` | `NONE` | O4 = ⬜, O1 chương DB ghi `Database not available.` |
+| `[D]` | `NONE` | O3 = ⬜, O1 chương DB ghi `Database not available.` |
 
 ---
 
@@ -185,8 +185,8 @@ DELETE **không bao giờ** được cấp qua câu này — gặp nút xoá lu�
 3. Tôi vẽ luồng nghiệp vụ, luồng màn hình và sơ đồ dữ liệu ở file Figma nào?
    [A] Có file — dán link figma.com/design/… (trang sẽ vẽ)  [B] Chưa có link — tôi gửi sau  [C] Không vẽ Figma lần này
 ```
-<!-- 1=P7 figma_input_url (O6) · 2=P7b ds_publish (không trả lời → không publish) · 3=P8 figma_output_url (O5 + sơ đồ DB cho O1, R4) -->
-- Câu 3 `[B]` → làm các output khác trước, O5 + link sơ đồ O1 chờ link; cuối lượt nhắc lại 1 lần. Không tự bỏ.
+<!-- 1=P7 figma_input_url (O6) · 2=P7b ds_publish (không trả lời → không publish) · 3=P8 figma_output_url (O4 + sơ đồ DB cho O1, R4) -->
+- Câu 3 `[B]` → làm các output khác trước, O4 + link sơ đồ O1 chờ link; cuối lượt nhắc lại 1 lần. Không tự bỏ.
 - Link `/board/` (FigJam) → nói rõ kit vẽ mọi thứ (Output 1 / 2 và sơ đồ DB) trên **file Figma design**; xin link `figma.com/design/…`. Không tự tạo file mới.
 - Nhắc 1 câu: *"Figma và claude.ai là dịch vụ bên ngoài công ty — tôi chỉ đưa lên tên màn, luồng, chữ trên giao diện, logo; không đưa dữ liệu thật."* Việc đưa **sơ đồ database** lên Figma được hỏi riêng ở Brief (B5, D5).
 
@@ -209,7 +209,7 @@ DELETE **không bao giờ** được cấp qua câu này — gặp nút xoá lu�
 | Câu 3 (P11) | Hành vi |
 |---|---|
 | `[A]` | Chạy bình thường |
-| `[B]` | ⚠️ Báo: *"Ảnh chụp màn hình sẽ có dữ liệu thật. Nên dùng tài khoản / bản thử nghiệm."* Vẫn giữ `[B]` → hỏi **ai duyệt** (vai trò), ghi `access_approved_by`, **không** chèn ảnh vào output gửi ra ngoài (O2 dùng `NO IMAGE — text only`), không đưa ảnh lên Figma |
+| `[B]` | ⚠️ Báo: *"Ảnh chụp màn hình sẽ có dữ liệu thật. Nên dùng tài khoản / bản thử nghiệm."* Vẫn giữ `[B]` → hỏi **ai duyệt** (vai trò), ghi `access_approved_by`, **không** chèn ảnh vào output gửi ra ngoài (O5 dùng `NO IMAGE — text only`), không đưa ảnh lên Figma |
 | `[C]` | Như `[B]` |
 
 ---
@@ -271,9 +271,9 @@ Folder: outputs/ver1_<DDMMYY>_<slug>/
 → Đúng chưa? ("OK" để bắt đầu, hoặc sửa hạng mục sai)
 ```
 <!-- Agent: Brief là 1 lượt AskUserQuestion — câu 1 "Thông tin trên đúng chưa?" + tối đa 3 câu cho Quyết định lớn chưa có trong memory
-     (B1 DS 1/nhiều = dsLayout.mode, căn cứ = dsLayout.diffs · B2 O6 (tuỳ chọn) / O5 / O7 / O8 làm không · B3 repo legacy · B4 site/role · B5 D5 đưa sơ đồ DB lên Figma).
+     (B1 DS 1/nhiều = dsLayout.mode, căn cứ = dsLayout.diffs · B2 O6 (tuỳ chọn) / O4 / O7 / O8 làm không · B3 repo legacy · B4 site/role · B5 D5 đưa sơ đồ DB lên Figma).
      > 3 quyết định chưa có → lượt 2 cùng chủ đề "Quyết định lớn". Mỗi quyết định: preflight-memory.py set --code B<n> …
-     B5 = không → O1 ghi chú trỏ ảnh ERD trong 04_DB (o1-overview.md), không vẽ sơ đồ DB lên Figma.
+     B5 = không → O1 ghi chú trỏ ảnh ERD trong 03_DB (o1-overview.md), không vẽ sơ đồ DB lên Figma.
      Không giao source (D9) → dòng Source ghi "chế độ chỉ website — API / database chỉ suy từ màn hình và request quan sát được". -->
 
 ⛔ **Không quét website khi chưa có xác nhận.** Xác nhận xong mới `version-tool.py next --create`.
@@ -289,7 +289,7 @@ Màn 「<tên màn>」 có nút 「<nhãn>」 — bấm nút này có thể thay
   [B] Được bấm — đây là bản thử nghiệm có dữ liệu thử
   [C] Tôi tự thao tác và gửi ảnh chụp
 ```
-`[A]` → item vẫn vào O2, hành vi mô tả từ handler trong code (code-ref ở cột R); code cũng không rõ → "Cần xác nhận — Q-xxx" + Open Question.
+`[A]` → item vẫn vào O5, hành vi mô tả từ handler trong code (code-ref ở cột R); code cũng không rõ → "Cần xác nhận — Q-xxx" + Open Question.
 
 ## G10 — Tài liệu của khách khác hệ thống thật (≥ 3 điểm)
 ```
