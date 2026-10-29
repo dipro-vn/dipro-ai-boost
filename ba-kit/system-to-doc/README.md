@@ -84,14 +84,14 @@ Sau khi đọc code, AI in **bảng tổng hợp** kèm **các quyết định l
 
 | # | Output | File trong `outputs/ver<N>_.../` |
 |---|---|---|
-| **O1** | **Danh sách màn hình theo website** — tổng số màn, item từng màn, xử lý, **API mỗi nút gọi** (cột "API gọi"), lỗi hiển thị, liên kết giữa các màn (template Basic Design công ty; đọc code trước rồi mới mở website) | `01_Screens/BasicDesign_WEB-01_ver<N>.xlsx` (1 file / website) |
-| **O2** | **API Documentation** — mọi API theo group (+ batch): làm gì, method, request, response; sheet tổng hợp có link tới từng API | `02_API/API_Doc_….xlsx` |
-| **O3** | **Database Documentation** — tổng quan bảng, quan hệ, từng bảng: field · kiểu · format · giới hạn · maxlength · mục đích · ERD | `03_DB/DB_Doc_….xlsx` · `03_DB/ERD_….png` |
-| **O4** | *(tuỳ chọn — không chạy thì bỏ qua)* **Design System** hệ thống cũ (từ website / Figma + source) — **cùng chuẩn với `designer-kit`** và format artifact **Design System** của claude.ai: brand book, màu theo theme, thang chữ, spacing/radius/shadow/size, component có preview, logo/icon, cover; token đặt tên vai trò chuẩn, phần không quan sát được ghi TBD. Nhiều website: chỉ khác màu → 1 Design System mỗi site 1 theme; khác cả phong cách → mỗi website 1 Design System riêng. Đồng ý thì publish thành link private | `04_DesignSystem/` (`STATUS.md` + `project/`) |
+| **O1** | **Tài liệu tổng hợp** — hệ thống làm gì, **luồng nghiệp vụ chính** (bước đánh số), trạng thái đối tượng chính; màn hình / API / database chỉ 1 bảng tổng (sơ đồ database là link Figma) | `01_Overview/Overview_….docx` |
+| **O2** | **Danh sách màn hình theo website** — tổng số màn, item từng màn, xử lý, **API mỗi nút gọi** (cột "API gọi"), lỗi hiển thị, liên kết giữa các màn (template Basic Design công ty; đọc code trước rồi mới mở website) | `02_Screens/BasicDesign_WEB-01_ver<N>.xlsx` (1 file / website) |
+| **O3** | **API Documentation** — mọi API theo group (+ batch): làm gì, method, request, response; sheet tổng hợp có link tới từng API | `03_API/API_Doc_….xlsx` |
+| **O4** | **Database Documentation** — tổng quan bảng, quan hệ, từng bảng: field · kiểu · format · giới hạn · maxlength · mục đích · ERD | `04_DB/DB_Doc_….xlsx` · `04_DB/ERD_….png` |
 | **O5** | **Figma flow** — Output 1 Flow tổng quan + Output 2 Screen flow | link trong `05_Figma/figma-links.md` |
-| **O6** | **Tài liệu tổng hợp** — hệ thống làm gì, **luồng nghiệp vụ chính** (bước đánh số), trạng thái đối tượng chính; màn hình / API / database chỉ 1 bảng tổng (sơ đồ database là link Figma) | `06_Overview/Overview_….docx` |
+| **O6** | *(tuỳ chọn — không chạy thì bỏ qua)* **Design System** hệ thống cũ (từ website / Figma + source) — **cùng chuẩn với `designer-kit`** và format artifact **Design System** của claude.ai: brand book, màu theo theme, thang chữ, spacing/radius/shadow/size, component có preview, logo/icon, cover; token đặt tên vai trò chuẩn, phần không quan sát được ghi TBD. Nhiều website: chỉ khác màu → 1 Design System mỗi site 1 theme; khác cả phong cách → mỗi website 1 Design System riêng. Đồng ý thì publish thành link private | `06_DesignSystem/` (`STATUS.md` + `project/`) |
 | **O7** | **Bug list hiện trạng** — 1 sheet; đọc code và mở thử website; chỉ lỗi **làm người dùng thao tác không được hoặc sai**, mức **High / Urgent** *(nếu chọn)* | `07_BugList/BugList_….xlsx` |
-| **O9** | **Hướng dẫn chạy local** — cho dev mới: lệnh cài / chạy, database local, **tên** các key cấu hình (không có giá trị), môi trường, pipeline, lịch batch | `09_DevSetup/DevSetup_….md` |
+| **O8** | **Hướng dẫn chạy local** — cho dev mới: lệnh cài / chạy, database local, **tên** các key cấu hình (không có giá trị), môi trường, pipeline, lịch batch | `08_DevSetup/DevSetup_….md` |
 | — | **Mục lục version** — mọi output, số lượng, kết quả kiểm tra | `README.md` |
 
 Mọi dòng trong tài liệu gắn với bằng chứng (ảnh chụp, dòng code, schema). Không có bằng chứng → ghi "Cần xác nhận — Q-xxx" (bản tiếng Nhật 「要確認 — Q-xxx」), **không viết đại cho đẹp**. Danh sách điểm chưa chắc AI liệt kê ở cuối phiên chạy.

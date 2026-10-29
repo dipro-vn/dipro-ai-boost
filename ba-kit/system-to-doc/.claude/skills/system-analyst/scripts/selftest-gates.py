@@ -51,7 +51,7 @@ def paths(base):
             "biz": os.path.join(i, "business.json"),
             "index": os.path.join(i, "index.json"),
             "bug": os.path.join(v, "07_BugList", "BugList_Fixture_ver1.xlsx"),
-            "docx": os.path.join(v, "06_Overview", "Overview_Fixture_ver1.docx")}
+            "docx": os.path.join(v, "01_Overview", "Overview_Fixture_ver1.docx")}
 
 
 # ---------- fixture ----------
@@ -193,16 +193,16 @@ def build_outputs(p):
     wb.active.title = "Screen Index"
     for title in ("SC-001", "SC-002"):
         wb.create_sheet(title)["F6"] = "WORKING_SCREEN"
-    os.makedirs(os.path.join(v, "01_Screens"), exist_ok=True)
-    wb.save(os.path.join(v, "01_Screens", "BasicDesign_WEB-01_ver1.xlsx"))
-    for sub, name in (("02_API", "API_Doc_Fixture_ver1.xlsx"), ("03_DB", "DB_Doc_Fixture_ver1.xlsx")):
+    os.makedirs(os.path.join(v, "02_Screens"), exist_ok=True)
+    wb.save(os.path.join(v, "02_Screens", "BasicDesign_WEB-01_ver1.xlsx"))
+    for sub, name in (("03_API", "API_Doc_Fixture_ver1.xlsx"), ("04_DB", "DB_Doc_Fixture_ver1.xlsx")):
         os.makedirs(os.path.join(v, sub), exist_ok=True)
         Workbook().save(os.path.join(v, sub, name))
-    fake_png(os.path.join(v, "03_DB", "ERD_Fixture_ver1.png"))
-    os.makedirs(os.path.join(v, "04_DesignSystem", "project"), exist_ok=True)   # O4 = format artifact Design System
+    fake_png(os.path.join(v, "04_DB", "ERD_Fixture_ver1.png"))
+    os.makedirs(os.path.join(v, "06_DesignSystem", "project"), exist_ok=True)   # O6 = format artifact Design System
     json.dump({"v": 3, "layout": "files", "title": "Fixture"},
-              open(os.path.join(v, "04_DesignSystem", "project", "design-system.json"), "w"))
-    open(os.path.join(v, "04_DesignSystem", "STATUS.md"), "w", encoding="utf8").write(
+              open(os.path.join(v, "06_DesignSystem", "project", "design-system.json"), "w"))
+    open(os.path.join(v, "06_DesignSystem", "STATUS.md"), "w", encoding="utf8").write(
         "# Design System — Fixture\n\n- Trạng thái: DRAFT\n- Artifact: https://claude.ai/artifact/FixtureDs01\n"
         "- Nguồn: website WEB-01\n\n## Thiếu (TBD)\n\n| D# | Token / component | Ghi chú |\n|---|---|---|\n"
         "| D1 | primary-hover | khong quan sat duoc |\n| D6 | Toast | khong quan sat duoc |\n")
@@ -537,13 +537,13 @@ def run_gates(p):
 
 
 def index_cases(tmp):
-    """build-version-index: O4 moi site 1 bo (WEB-xx/project/) + thu muc CR (Impact xlsx, Figma CR, input/)."""
+    """build-version-index: O6 moi site 1 bo (WEB-xx/project/) + thu muc CR (Impact xlsx, Figma CR, input/)."""
     out = []
-    # O4 layout moi: 04_DesignSystem/WEB-01/ + WEB-02/
+    # O6 layout moi: 06_DesignSystem/WEB-01/ + WEB-02/
     d = os.path.join(tmp, "o4sites")
     shutil.copytree(os.path.join(tmp, "good"), d)
     v = os.path.join(d, VER)
-    ds = os.path.join(v, "04_DesignSystem")
+    ds = os.path.join(v, "06_DesignSystem")
     for site in ("WEB-01", "WEB-02"):
         shutil.copytree(os.path.join(ds, "project"), os.path.join(ds, site, "project"))
         txt = open(os.path.join(ds, "STATUS.md"), encoding="utf8").read()
@@ -555,10 +555,10 @@ def index_cases(tmp):
         "**3 checks · 2 PASS · 1 FAIL · 0 WARN**\n")
     sh("build-version-index.py", v)
     o4 = [e for e in json.load(open(os.path.join(v, "_internal", "index.json"), encoding="utf8"))["outputs"]
-          if e["id"] == "O4"]
+          if e["id"] == "O6"]
     got = {e.get("site"): (e.get("link", "")[-2:], e["status"]) for e in o4}
-    out.append(("index", "O4 layout WEB-xx/project/ -> 1 dong / site, link + gate rieng",
-                got == {"WEB-01": ("01", "warn"), "WEB-02": ("02", "fail")}, "O4=%s" % got))
+    out.append(("index", "O6 layout WEB-xx/project/ -> 1 dong / site, link + gate rieng",
+                got == {"WEB-01": ("01", "warn"), "WEB-02": ("02", "fail")}, "O6=%s" % got))
 
     # Folder CR layout moi chua co Impact xlsx -> khong duoc ghi la BASELINE
     cr0 = os.path.join(d, "CR-002_031026_coupon")
@@ -945,16 +945,16 @@ def main():
     for gate, (rc, fails) in run_gates(good).items():
         results.append(("baseline", "Fixture dung -> %s PASS" % gate, not fails,
                         "" if not fails else "FAIL o check %s" % fails))
-    # O4 trong index: link + trang thai + so TBD doc tu 04_DesignSystem/STATUS.md
-    o4 = next((e for e in json.load(open(good["index"], encoding="utf8"))["outputs"] if e["id"] == "O4"), {})
+    # O6 trong index: link + trang thai + so TBD doc tu 06_DesignSystem/STATUS.md
+    o4 = next((e for e in json.load(open(good["index"], encoding="utf8"))["outputs"] if e["id"] == "O6"), {})
     ok = o4.get("link") == "https://claude.ai/artifact/FixtureDs01" and "2 TBD · DRAFT" in str(o4.get("count"))
-    results.append(("index", "O4 doc link/trang thai/TBD tu STATUS.md", ok, "O4=%s" % {k: o4.get(k) for k in ("link", "count")}))
+    results.append(("index", "O6 doc link/trang thai/TBD tu STATUS.md", ok, "O6=%s" % {k: o4.get(k) for k in ("link", "count")}))
     results += index_cases(tmp)
     results += r1_cases(tmp)
     results += scan_cases(tmp)
     results += legacy_cases(tmp)
     results += preflight_cases(tmp)
-    # Khong co link Figma -> chuong 5 ghi chu "xem anh ERD trong 03_DB" -> V3 van PASS
+    # Khong co link Figma -> chuong 5 ghi chu "xem anh ERD trong 04_DB" -> V3 van PASS
     d = os.path.join(tmp, "nolink")
     shutil.copytree(os.path.join(tmp, "good"), d)
     pn = paths(d)

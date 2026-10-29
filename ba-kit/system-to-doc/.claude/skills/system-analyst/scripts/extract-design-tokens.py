@@ -4,8 +4,8 @@
   python3 extract-design-tokens.py --crawl <_internal>/recon/crawl \
           [--css-root REPO-01[@WEB-01]=/path/to/fe ...] --out <_internal>/recon/design \
           [--assets <_internal>/recon/design/assets] \
-          [--emit-root <ver>/04_DesignSystem --name "<Ten DS>" [--force-mode single|themes|per-site]]
-          (cu, 1 thu muc: --emit-tokens <ver>/04_DesignSystem/project/tokens.json [--emit-status [<path>]])
+          [--emit-root <ver>/06_DesignSystem --name "<Ten DS>" [--force-mode single|themes|per-site]]
+          (cu, 1 thu muc: --emit-tokens <ver>/06_DesignSystem/project/tokens.json [--emit-status [<path>]])
 
 dsLayout (tokens-draft.json + stdout): >=2 website -> so fingerprint tung cap (font chinh, thang chu, spacing,
         radius, nut/input cao-radius-padding, nav/header) -> mode single (1 site / giong ca mau) · themes (chi khac
@@ -1371,7 +1371,7 @@ def main():
     ap.add_argument("--css-root", action="append", default=[], help="REPO-01=/path hoac REPO-01@WEB-01=/path")
     ap.add_argument("--out", required=True)
     ap.add_argument("--assets", help="thu muc assets cua crawl (mac dinh <out>/assets)")
-    ap.add_argument("--emit-root", help="<ver>/04_DesignSystem: ghi starter theo dsLayout.mode (single/themes: "
+    ap.add_argument("--emit-root", help="<ver>/06_DesignSystem: ghi starter theo dsLayout.mode (single/themes: "
                                         "<root>/project + STATUS.md; per-site: <root>/<WEB-xx>/...)")
     ap.add_argument("--force-mode", choices=MODES, help="ghi de quyet dinh tu dong (user quyet); ghi forced:true")
     ap.add_argument("--emit-tokens", help="(cu) ghi tokens.json khoi dau vao duong dan nay (1 thu muc)")

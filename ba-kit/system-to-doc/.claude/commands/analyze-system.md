@@ -15,7 +15,7 @@ Bắt buộc, không rút gọn:
 3. In **Discovery Brief** (kèm Quyết định lớn), DỪNG chờ confirm → `version-tool.py next --outputs outputs --slug <slug> --create` — chưa có baseline → tạo ver1; baseline chưa khoá → trả về **chính ver đó** (`reuse:true`): ghi vào đó, **`version-tool.py snapshot --ver <ver> [--files …]` trước mỗi lần ghi đè**; exit 3 `locked` → báo user "ver<N> đã khoá vì đã có CR", CR nào đã duyệt + code xong (hỏi `AskUserQuestion`) → `version-tool.py promote --outputs outputs --cr CR-<id> --approved --coded --create` rồi ghi vào ver<N+1>; chưa có → chỉ đọc lại
 4. `scan-sensitive.py --path … --out <ver>/_internal/gates/sensitive.md` trên mọi repo / dump / file input — exit 3 → **cảnh báo + DỪNG**, hỏi cách khắc phục
 5. Recon **read-only** (trừ khi P3 cho phép khác) → inventory → gate V1 · V2
-6. Sinh O2 → O3 → O1 → O4 (tuỳ chọn, không chạy thì bỏ qua) → O7 → O5 → O9 (mỗi output qua gate của nó, `FAIL = 0`)
-7. Viết `business.json` → sinh O6 docx tổng hợp (nghiệp vụ chính + bảng tổng; link Figma ERD) → gate V3
+6. Sinh O3 → O4 → O2 → O6 (tuỳ chọn, không chạy thì bỏ qua) → O7 → O5 → O8 (mỗi output qua gate của nó, `FAIL = 0`)
+7. Viết `business.json` → sinh O1 docx tổng hợp (nghiệp vụ chính + bảng tổng; link Figma ERD) → gate V3
 8. Self-test · `detect-pii.js --scan` · `build-version-index.py` · run-log (ghi **Feedback đã xử lý** = các version trong `pending_feedback` đã làm theo)
 9. Báo cáo cuối theo §8 của agent: **đường dẫn folder version + bảng từng output (file · số lượng · gate) + output không chạy và lý do**

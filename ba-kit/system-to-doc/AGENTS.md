@@ -25,14 +25,14 @@
 
 | # | Output | Gate |
 |---|---|---|
-| O1 | Danh sách màn hình theo website (Basic Design xlsx, 1 file / site — `build-basic-design.py`, code trước rồi website, cột S "API gọi") | V-BD |
-| O2 | API Documentation xlsx (+ batch) — không có sơ đồ API (code map) | V-API |
-| O3 | Database Documentation xlsx + ERD | V-DB |
-| O4 | **Tuỳ chọn** (không chạy thì bỏ qua, README ghi ⬜) — Design System — chuẩn chung với designer-kit (= format Artifact type "Design System" của claude.ai), **dựng trên Base Design System chuẩn Nhật** `.claude/base-design-system/` (giá trị hệ thống thắng; phần không quan sát được lấy base, nhãn `[base]`), publish khi user đồng ý. Hệ thống không có DS → CR-3 dùng base tạm | V-DS |
+| O1 | docx tổng hợp — phạm vi · tổng quan · **nghiệp vụ chính** (hệ thống làm gì · luồng · trạng thái, từ `business.json`) · 1 bảng tổng màn hình / API / DB (+ link ERD Figma) · liên kết ngoài. Không danh sách output, luồng tổng quan, phụ lục | V3 |
+| O2 | Danh sách màn hình theo website (Basic Design xlsx, 1 file / site — `build-basic-design.py`, code trước rồi website, cột S "API gọi") | V-BD |
+| O3 | API Documentation xlsx (+ batch) — không có sơ đồ API (code map) | V-API |
+| O4 | Database Documentation xlsx + ERD | V-DB |
 | O5 | Figma Output 1 (**use case**: Actor → đường đi → kết thúc, non-happy hàng dưới · Technology Stack · Sitemap Site → Actor → Nhóm → Màn) + Output 2 (**site → use case → section**) · chưa rõ ghi "Cần xác nhận — Q-xxx", không mã trạng thái trên hình | recheck bbox · phủ SC |
-| O6 | docx tổng hợp — phạm vi · tổng quan · **nghiệp vụ chính** (hệ thống làm gì · luồng · trạng thái, từ `business.json`) · 1 bảng tổng màn hình / API / DB (+ link ERD Figma) · liên kết ngoài. Không danh sách output, luồng tổng quan, phụ lục | V3 |
+| O6 | **Tuỳ chọn** (không chạy thì bỏ qua, README ghi ⬜) — Design System — chuẩn chung với designer-kit (= format Artifact type "Design System" của claude.ai), **dựng trên Base Design System chuẩn Nhật** `.claude/base-design-system/` (giá trị hệ thống thắng; phần không quan sát được lấy base, nhãn `[base]`), publish khi user đồng ý. Hệ thống không có DS → CR-3 dùng base tạm | V-DS |
 | O7 | Bug list (tuỳ chọn) — **1 sheet `Bug List`**: bug mức High / Urgent ảnh hưởng thao tác người dùng, từ code và / hoặc crawl website | V8 |
-| O9 | Hướng dẫn chạy local + môi trường md (dev đọc) — chỉ tên key cấu hình (`build-devsetup.py`) | V-DEV |
+| O8 | Hướng dẫn chạy local + môi trường md (dev đọc) — chỉ tên key cấu hình (`build-devsetup.py`) | V-DEV |
 
 **Output Luồng 2** → `outputs/CR-<id>_<DDMMYY>_<slug>/` (trỏ baseline gốc, khoá baseline đó): `CR-<id>_Impact.xlsx` (7 sheet: `Summary` công số + số đối tượng thay đổi + link · `Estimation` = bản vi nội bộ của 見積書, 1 dòng / chức năng (`--estimate`) · `Screen` · `API` · `Database` · `Figma` · `Q&A` giải trình CR + câu hỏi KH) · Figma view CR mới (`sys-agent/figma/cr-view.md`): CR-1 Flow format Output 1 (**mỗi lane có NON-HAPPY**) · CR-2 Screen Flow format Output 2 (**màn / popup lỗi + Screen Index có Loại + ⑦ Error/Popup Index**) · CR Change Table thống kê · CR-3 màn đề xuất **format Output 3** (mockup trái · mô tả + ITEMS + ERROR SCENARIOS phải · NEW + UPD tô màu phần đổi + popup lỗi) bám Design System (badge NEW/UPD/DEL/IMPACT/AS-IS, chỉ phần liên quan). **> 1 site → mỗi site 1 Section riêng (CR-2 · CR-3 · Output 2 Luồng 1); trong section: site → flow nghiệp vụ → màn; section CR-3 nền `#9DA5AD`.** Gate V-CR-FIGMA check 11–14. **`CR-<id>_見積書.xlsx`** gửi KH (tiếng Nhật, 詳細見積書 + 前提条件・留意事項, theo `templates/template_mitsumori.xlsx`) sinh từ `_internal/estimate.json` — quy tắc `sys-agent/estimate-rules.md` + **văn phong cho khách `sys-agent/writing-style.md`** (gate V-EST E4 / E9 / E10), câu hỏi nghiệp vụ gửi khách sinh thành sheet 確認事項 / Câu hỏi nghiệp vụ, câu hỏi CR-4. Gate V-CR · V-EST · V-CR-FIGMA. Đơn giá: `.claude/config/function-rates.json` (見積書, theo chức năng) · `md-unit-rates.json` (impact nội bộ).
 
@@ -54,14 +54,14 @@
 │   ├── estimate-rules.md             Luồng 2: phân rã chức năng cho 見積書 (estimate.json, V-EST)
 │   ├── versioning.md                 ver1 ghi tại chỗ + history · CR-<id>_… · promote ver<N+1> · README, run-log
 │   ├── source-rules.md · evidence-ledger.md · inventory-spec.md
-│   ├── outputs/o1-screens.md … o9-devsetup.md
+│   ├── outputs/o1-overview.md … o8-devsetup.md
 │   ├── basic-design/workbook-structure.md      (copy từ requirement-to-flow)
 │   ├── design-system/                          chuẩn design system + template (copy từ designer-kit)
 │   └── figma/                                  (copy từ requirement-to-flow) + cr-view.md (view CR Luồng 2 — riêng kit này)
 ├── skills/
 │   ├── system-analyst/               SKILL.md + scripts/ (ensure-env · recon · render · gate · self-test)
 │   └── ba-figma-output/              (copy từ requirement-to-flow) quy tắc vẽ Figma
-├── base-design-system/                Base Design System chuẩn UI Nhật (DADS + tên chuẩn công ty) — O4 dựa vào, CR-3 dùng tạm khi hệ thống không có DS
+├── base-design-system/                Base Design System chuẩn UI Nhật (DADS + tên chuẩn công ty) — O6 dựa vào, CR-3 dùng tạm khi hệ thống không có DS
 ├── rules/                            DATA-PRIVACY · SECURITY · RELIABILITY · POLICY
 ├── hooks/detect-pii.js               H06 — chặn PII/credential trước khi ghi / đẩy lên Figma
 ├── config/pii-patterns.json
@@ -91,7 +91,7 @@ templates/                            sample_basic_design.xlsx · high-level-tem
 | Chiều | requirement → tài liệu (TO-BE) | hệ thống → tài liệu (AS-IS) + impact CR |
 | Chống sai | Source Register + R1–R8 | Evidence Ledger + RE1–RE4 |
 
-O4 theo **chuẩn design system chung** với `designer-kit` (= format Artifact type **Design System** của claude.ai) → `04_DesignSystem/` copy thẳng sang `designer-kit/.../design-system/` dùng được.
+O6 theo **chuẩn design system chung** với `designer-kit` (= format Artifact type **Design System** của claude.ai) → `06_DesignSystem/` copy thẳng sang `designer-kit/.../design-system/` dùng được.
 
 **Phần copy self-contained** (file `.md`/`.py` mang header `SOURCE: …`; hook/config/settings copy nguyên — sửa logic chung thì **sửa cả hai nơi**):
 

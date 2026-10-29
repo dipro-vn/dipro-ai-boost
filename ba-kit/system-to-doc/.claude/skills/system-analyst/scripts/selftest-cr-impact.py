@@ -90,15 +90,15 @@ def ds_project(p, primary):
 
 
 def write_ds_sites(b):
-    """Layout moi: 04_DesignSystem/WEB-xx/project/ — primary khac gia tri giua 2 site."""
-    ds = os.path.join(b, "04_DesignSystem")
+    """Layout moi: 06_DesignSystem/WEB-xx/project/ — primary khac gia tri giua 2 site."""
+    ds = os.path.join(b, "06_DesignSystem")
     shutil.rmtree(ds, ignore_errors=True)
     ds_project(os.path.join(ds, "WEB-01"), "#1a7f37")
     ds_project(os.path.join(ds, "WEB-02"), "#0969da")
 
 
 def write_ds_single(b):
-    ds = os.path.join(b, "04_DesignSystem")
+    ds = os.path.join(b, "06_DesignSystem")
     shutil.rmtree(ds, ignore_errors=True)
     ds_project(ds, "#1a7f37")
 
@@ -465,7 +465,7 @@ def main():
         record("Figma CR-1/CR-2 co chu cu (S.LEGACY_WORD) -> renderer tu choi",
                bool(rcf.unknown_text_errors({"flows": [{"nodes": [{"label": "Message: " + S.LEGACY_WORD}]}]})) and not rcf.unknown_text_errors({"flows": [lane()]}))
 
-        # Layout DS 1 bo (04_DesignSystem/project/)
+        # Layout DS 1 bo (06_DesignSystem/project/)
         write_ds_single(base)
         c = copy.deepcopy(c0)
         find(c, "IMP-008")["baseline_ref"] = "DS:primary;DS-component:Button;DS:body"
@@ -480,7 +480,7 @@ def main():
                "nhan %s" % results(out).get("8"))
 
         # Baseline khong co design system -> 16d chi WARN
-        shutil.rmtree(os.path.join(base, "04_DesignSystem"))
+        shutil.rmtree(os.path.join(base, "06_DesignSystem"))
         c = copy.deepcopy(c0)
         find(c, "IMP-008")["baseline_ref"] = "—"
         build(c)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""GATE V3 (+V4 nhat quan DB, +V6 khong o trong) — Overview docx (O6).
+"""GATE V3 (+V4 nhat quan DB, +V6 khong o trong) — Overview docx (O1).
 
-  python3 verify-overview.py <ver>/06_Overview/Overview_<sys>_ver<N>.docx \
+  python3 verify-overview.py <ver>/01_Overview/Overview_<sys>_ver<N>.docx \
       --inventory <_internal>/inventory.xlsx --business <_internal>/business.json [--out report.md]
 
 Chan: thieu / thua chuong (0-6, khong danh sach output, luong tong quan, phu luc) · con placeholder template ·
@@ -71,7 +71,7 @@ def main():
     biz = json.load(open(a.business, encoding="utf8"))
     cnt = OV.summary_counts(data)
     db_mode = meta.get("db_mode", "")
-    g = Gate("GATE V3 — Overview document (O6)")
+    g = Gate("GATE V3 — Overview document (O1)")
 
     heads = [h.strip() for h in d.headings()]
     miss = [c for c in OV.CHAPTERS + OV.BIZ_SECTIONS if c not in heads]

@@ -7,7 +7,7 @@
 
 Baseline Ref: SC-/F-/API-/EXT-/WEB- · table:orders · column:orders.status · DS:<token> · DS-component:<Comp>
 · DS:WEB-01:<token> / DS-component:WEB-01:<Comp> (chon site) · — ; nhieu ref cach nhau ';'.
-Design system baseline: 04_DesignSystem/project/ (1 bo) hoac 04_DesignSystem/WEB-xx/project/ (moi site 1 bo).
+Design system baseline: 06_DesignSystem/project/ (1 bo) hoac 06_DesignSystem/WEB-xx/project/ (moi site 1 bo).
 --rates mac dinh: <kit>/.claude/config/md-unit-rates.json. --template mac dinh templates/template_estimation.xlsx
 (he so cong doan cua Estimation doc tu _meta cua template). Cong thuc Excel duoc kiem bang TEXT (khong can
 Excel / LibreOffice tinh lai). Tom tat impact in ra stderr.
@@ -477,7 +477,7 @@ def main():
     if B["has_ds"]:
         g.check("16d", title, bad)
     else:
-        g.check("16d", title + " — baseline khong co 04_DesignSystem", bad, level="WARN")
+        g.check("16d", title + " — baseline khong co 06_DesignSystem", bad, level="WARN")
 
     # 17. Evidence
     bad = [tag(i) for i in IMP if not C.txt(i.get("evidence"))]
