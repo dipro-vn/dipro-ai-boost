@@ -738,6 +738,29 @@ def fill_screen(ws, sc, site_url, ver, date, author, spec, items, errors, img, t
     return bool(img)
 
 
+def auto_marks(items, page):
+    """Giai doan 2: ghep item (nhan) voi vi tri tren anh do crawl-site.js ghi (items[].box · tables[].boxes · linkBoxes)
+    -> so # dat o goc tren-trai cua phan tu. Khop dung nhan truoc, roi nhan chua nhau; moi vi tri dung 1 lan."""
+    cands = [(e.get("label") or "", e["box"]) for e in page.get("items") or [] if e.get("box")]
+    cands += [(t, b) for tb in page.get("tables") or [] for t, b in zip(tb.get("headers") or [], tb.get("boxes") or []) if b]
+    cands += [(l.get("text") or "", l["box"]) for l in page.get("linkBoxes") or [] if l.get("box")]
+    cands = [(loose(t), b) for t, b in cands if loose(t)]
+    used, marks = set(), []
+    for n, it in enumerate(items, start=1):
+        keys = [loose(x) for x in (it.get("label"), it.get("name_jp")) if x and loose(x)]
+        if not keys:
+            continue
+        hit = next((i for i, (t, _) in enumerate(cands) if i not in used and t in keys), None)
+        if hit is None:
+            hit = next((i for i, (t, _) in enumerate(cands) if i not in used and len(t) >= 2
+                        and any(len(k) >= 2 and (k in t or t in k) for k in keys)), None)
+        if hit is not None:
+            used.add(hit)
+            x, y, w, h = cands[hit][1]
+            marks.append({"n": n, "x": min(0.99, max(0.0, x + min(w, 0.02))), "y": min(0.99, max(0.0, y + h / 2))})
+    return marks
+
+
 def screen_image(sid, spec, items, page, crawl, root, idir):
     """spec "image" (anh da danh so) -> dung luon; Giai đoạn 2: item co "mark" + crawl/evidence/<EV>.png
     -> danh so theo cot # (annotate-ui-image.py). -> (duong dan | None, ly do khong co anh)."""
@@ -746,6 +769,8 @@ def screen_image(sid, spec, items, page, crawl, root, idir):
         return (f, "") if os.path.isfile(f) else (None, "ảnh khai báo không có file: %s" % spec["image"])
     marks = [{"n": n, "x": float(it["mark"][0]), "y": float(it["mark"][1])}
              for n, it in enumerate(items, start=1) if isinstance(it.get("mark"), (list, tuple)) and len(it["mark"]) == 2]
+    if page and not marks:
+        marks = auto_marks(items, page)
     shot = os.path.join(crawl, "evidence", "%s.png" % page["evId"]) if crawl and page and page.get("evId") else ""
     if not (marks and shot and os.path.isfile(shot)):
         return None, ""

@@ -111,7 +111,7 @@ Output nào không đủ điều kiện (thiếu input) → **không làm DoD fa
 | 1 | **Preflight Giai đoạn 2**: website (URL · môi trường) · tài khoản + quyền được dùng · mức thao tác (P3) · vùng cấm · dữ liệu thật (P11) · có làm Bug list (P9) — **4 câu an toàn luôn hỏi lại** → `ensure-env.py --flow 1 --browser` | 🟡 P1–P4 · P9 · P11 |
 | 2 | `version-tool.py snapshot --ver <ver>` → **AI Playwright**: `login-site.js` / `crawl-site.js` (Bước 4 Pha B, seed từ route FE của Giai đoạn 1) | 🟡 G9 · G10 khi phát sinh |
 | 3 | **Đối chiếu** inventory với màn hình thật: màn sống / chết, item thật, lỗi khi thao tác — chỉ bổ sung phần code không cho biết; khác với code → Open Question `CONFLICT` | 🔴 V1 · V2 (`--crawled`) |
-| 4 | Cập nhật **O5** (chụp màn hình, đánh số item trên ảnh, chèn vào từng sheet) · chạy lại O2 / O3 / O4 nếu đối chiếu đổi dữ liệu · sinh **O6** Design System (tuỳ chọn) · **O7** Bug list | 🔴 V-BD · V-DS · V8 |
+| 4 | Cập nhật **O5** (chụp màn hình, **bắt buộc đánh số** item trên ảnh — script tự ghép nhãn với vị trí do `crawl-site.js` ghi, gate V-BD check 13 FAIL nếu ảnh chưa đánh số — chèn vào từng sheet) · chạy lại O2 / O3 / O4 nếu đối chiếu đổi dữ liệu · sinh **O6** Design System (tuỳ chọn) · **O7** Bug list | 🔴 V-BD · V-DS · V8 |
 | 5 | Render lại **O1** (số liệu mới) → self-test · quét PII · README (bỏ `--skip` O6 / O7) · run-log → báo cáo cuối "Giai đoạn 2 đã chạy xong" | 🔴 V3 · V9 |
 
 🟡 = hỏi người (`AskUserQuestion`) · 🔴 = script chấm.

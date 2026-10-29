@@ -250,7 +250,15 @@ CASES = [
     ("xoa row Screen Index", 5, _drop_index_row),
     ("tro Message Code ma", 6, _ghost_code),
 ]
-CASE_ASIS = [("xoa EV o cot R item dau", 16, _strip_ev),
+def _unnumbered_image(wb):
+    ws = next((w for w in screen_sheets(wb) if w._images), None)
+    if not ws:
+        return "anh UI trong screen sheet"
+    ws["A9"] = "Ảnh website — ảnh chưa đánh số"
+
+
+CASE_ASIS = [("anh chen vao nhung chua danh so", 13, _unnumbered_image),
+             ("xoa EV o cot R item dau", 16, _strip_ev),
              ("xoa o 'API gọi' cua nut", 17, _blank_api),
              ("con chu cu trong mo ta (D1)", 18, _legacy_word),
              ("bo trong o required cua item", 19, _blank_cell),
@@ -575,6 +583,21 @@ def run_gate(path, before, screens, asis=False):
     return p.returncode, fails
 
 
+def automark_checks():
+    """Giai doan 2: crawl ghi box -> auto_marks ghep theo nhan (dung truoc, chua nhau sau), moi vi tri 1 lan."""
+    sp = importlib.util.spec_from_file_location("bdb2", os.path.join(HERE, "build-basic-design.py"))
+    m = importlib.util.module_from_spec(sp)
+    sp.loader.exec_module(m)
+    page = {"items": [{"label": "保存する", "box": [0.5, 0.8, 0.1, 0.05]}, {"label": "メールアドレス", "box": [0.2, 0.3, 0.4, 0.04]}],
+            "tables": [{"headers": ["氏名"], "boxes": [[0.1, 0.5, 0.1, 0.03]]}],
+            "linkBoxes": [{"text": "戻る", "box": [0.05, 0.9, 0.05, 0.03]}]}
+    items = [{"name_jp": "メールアドレス"}, {"name_jp": "氏名"}, {"name_jp": "保存"}, {"name_jp": "戻る"}, {"name_jp": "見えない項目"}]
+    mk = {x["n"]: (round(x["x"], 3), round(x["y"], 3)) for x in m.auto_marks(items, page)}
+    ok = sorted(mk) == [1, 2, 3, 4] and mk[1] == (0.22, 0.32) and 5 not in mk
+    print("%-34s %s" % ("auto-mark: nhan -> vi tri crawl", "OK" if ok else "THAT BAI %s" % mk))
+    return 0 if ok else 1
+
+
 def next_checks():
     """"next" = ー / trong -> khong co man dich (khong hoi); nhieu SC -> noi ten man."""
     sp = importlib.util.spec_from_file_location("bdb", os.path.join(HERE, "build-basic-design.py"))
@@ -601,7 +624,7 @@ def main():
         args.workbook, args.before, stat = make_fixture(fixture_dir)
         args.asis = True
         pre_bad = fixture_checks(args.workbook, stat) + code_checks(fixture_dir) + \
-            phase_checks(fixture_dir, args.workbook) + next_checks()
+            phase_checks(fixture_dir, args.workbook) + next_checks() + automark_checks()
     cases = CASES + (CASE_ASIS if args.asis else [])
 
     wb = openpyxl.load_workbook(args.workbook)

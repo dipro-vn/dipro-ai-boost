@@ -536,11 +536,11 @@ def run(master_path, before_path, expect_screens, approved, rep, asis_mode=False
         no_cap = [ws.title for ws in ws_list
                   if getattr(ws, "_images", [])
                   and "so do tren anh" not in _fold(str(ws["A9"].value or ""))]
-        if no_cap:
-            rep.add(13, "Anh UI vua vung A-F", "WARN",
+        if no_cap:   # yeu cau nguoi dung 29/10/2026: anh chen vao Basic Design BAT BUOC danh so -> FAIL
+            rep.add(13, "Anh UI vua vung A-F", "FAIL",
                     f"{n_img} anh vua khung, NHUNG {len(no_cap)} sheet thieu caption A9 "
                     f"'so do tren anh = # trong bang item' (anh chua duoc danh so?): "
-                    + "; ".join(no_cap[:6]) + ". Xem output-5-basic-design.md muc 1.1h.")
+                    + "; ".join(no_cap[:6]) + ". Chay giai doan 2 (crawl ghi vi tri -> tu danh so) hoac khai 'mark'.")
         else:
             rep.add(13, "Anh UI vua vung A-F", "PASS",
                     f"{n_img} anh, deu nam trong {IMG_MAX_W}x{IMG_MAX_H}px, co caption danh so "
