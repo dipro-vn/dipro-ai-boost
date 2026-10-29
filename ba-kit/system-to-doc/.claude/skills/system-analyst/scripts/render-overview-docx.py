@@ -3,7 +3,7 @@
 
   python3 render-overview-docx.py --inventory <_internal>/inventory.xlsx \
       --narrative <_internal>/narrative.json --business <_internal>/business.json \
-      --index <_internal>/index.json [--figma-links <ver>/05_Figma/figma-links.md] \
+      --index <_internal>/index.json [--figma-links <ver>/04_Figma/figma-links.md] \
       [--template templates/high-level-template.docx] --out <ver>/01_Overview/Overview_<sys>_ver<N>.docx
 
 Chay build-version-index.py TRUOC (sinh index.json) va SAU (cap nhat gate O1).
@@ -35,7 +35,7 @@ HEADER = "LABO / MAINTAIN PROJECT — SYSTEM OVERVIEW"
 FOOTER = "AI-generated analysis must be reviewed before use"
 DASH = "—"
 FIGMA_LINK = "Sơ đồ trên Figma:"
-NO_FIGMA = "Chưa có sơ đồ trên Figma — xem ảnh ERD trong thư mục 04_DB."
+NO_FIGMA = "Chưa có sơ đồ trên Figma — xem ảnh ERD trong thư mục 03_DB."
 FIGMA_RX = re.compile(r"https://(?:www\.)?figma\.com/(?:design|board|file)/[A-Za-z0-9]{6,}[^\s|)<>]*")
 # dong figma-links.md (cot dau, chu thuong) -> so do
 LINK_KEYS = (("flow", ("output 1",)), ("db", ("sơ đồ db", "erd")))
@@ -191,7 +191,7 @@ def main():
     ap.add_argument("--narrative", required=True)
     ap.add_argument("--business", required=True, help="business.json (chuong 2: nghiep vu chinh)")
     ap.add_argument("--index", required=True)
-    ap.add_argument("--figma-links", default=None, help="<ver>/05_Figma/figma-links.md (link Output 1 + ERD)")
+    ap.add_argument("--figma-links", default=None, help="<ver>/04_Figma/figma-links.md (link Output 1 + ERD)")
     ap.add_argument("--template", default=DEFAULT_TPL)
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
@@ -278,14 +278,14 @@ def main():
 
     # 3
     doc.add_heading(CHAPTERS[3], level=1)
-    doc.add_paragraph("Số màn hình theo site và loại. Danh sách chi tiết: O2 Basic Design.")
+    doc.add_paragraph("Số màn hình theo site và loại. Danh sách chi tiết: O5 Basic Design.")
     add_table(doc, ["Site", "Số màn hình"] + SCREEN_TYPES, cnt["sites"])
 
     # 4
     doc.add_heading(CHAPTERS[4], level=1)
     apis = data["07_API"]
     if apis:
-        doc.add_paragraph("Số API / batch theo loại và trạng thái bằng chứng. Danh sách chi tiết: O3 API doc.")
+        doc.add_paragraph("Số API / batch theo loại và trạng thái bằng chứng. Danh sách chi tiết: O2 API doc.")
         add_table(doc, API_HEAD, cnt["api"])
     else:
         doc.add_paragraph("Không phát hiện API/batch trong source code đã khảo sát.")
@@ -297,7 +297,7 @@ def main():
         doc.add_paragraph("Không được cấp dump/kết nối DB và không có migration/ORM để suy ra "
                           "(db_mode=NONE).")
     else:
-        doc.add_paragraph("Nguồn: %s. Danh sách bảng/cột đầy đủ: O4 DB doc." % db_mode)
+        doc.add_paragraph("Nguồn: %s. Danh sách bảng/cột đầy đủ: O3 DB doc." % db_mode)
         add_table(doc, ["Chỉ số DB", "Giá trị"], cnt["db"])
         add_figma(doc, links.get("db"), "sơ đồ DB (ERD)")
 

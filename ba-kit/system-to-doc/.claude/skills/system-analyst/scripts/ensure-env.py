@@ -9,7 +9,7 @@ Việc làm (idempotent — đã có thì bỏ qua):
                       thiếu → `python -m pip install --user …` (môi trường externally-managed → thử thêm --break-system-packages)
   · --browser         Playwright + Chromium cho login-site.js / crawl-site.js (Luồng 1 có website)
                       thiếu → `npm i -D playwright` + `npx playwright install chromium`
-  · --figma           Figma MCP (vẽ O5 / view CR). Chưa có server nào tên *figma* → `claude mcp add --transport http figma https://mcp.figma.com/mcp`
+  · --figma           Figma MCP (vẽ O4 / view CR). Chưa có server nào tên *figma* → `claude mcp add --transport http figma https://mcp.figma.com/mcp`
                       Server có nhưng chưa xác thực → trạng thái NEED_AUTH (phiên đã có tool mcp__*figma* gọi được thì bỏ qua): việc DUY NHẤT user phải làm là `/mcp` → figma → Authenticate
                       (OAuth phải do người bấm; vừa add mà /mcp chưa thấy → khởi động lại Claude Code)
 
@@ -139,7 +139,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--flow", type=int, choices=[1, 2], required=True)
     ap.add_argument("--browser", action="store_true", help="cần Playwright + Chromium (Luồng 1 có website)")
-    ap.add_argument("--figma", action="store_true", help="cần Figma MCP (O5 / view CR)")
+    ap.add_argument("--figma", action="store_true", help="cần Figma MCP (O4 / view CR)")
     ap.add_argument("--check-only", action="store_true", help="chỉ kiểm, không cài")
     ap.add_argument("--root", default=os.getcwd(), help="folder dự án (mặc định: thư mục hiện tại)")
     ap.add_argument("--out", help="ghi bảng kết quả ra file .md (VD <ver>/_internal/gates/env.md)")

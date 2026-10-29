@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Self-test cho O3 (API doc) + O4 (DB doc) + read-schema + O8 DevSetup (phan nghiep vu O1: selftest-gates V3) — chung minh gate KHONG pass rong.
+"""Self-test cho O2 (API doc) + O3 (DB doc) + read-schema + O8 DevSetup (phan nghiep vu O1: selftest-gates V3) — chung minh gate KHONG pass rong.
 
   python3 selftest-docs.py [--keep]
 

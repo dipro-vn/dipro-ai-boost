@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Sinh muc luc cua 1 thu muc version: <ver>/README.md + <ver>/_internal/index.json.
 
-  python3 build-version-index.py <ver folder> [--skip "O7=user khong yeu cau"] [--skip "O5=..."]
+  python3 build-version-index.py <ver folder> [--skip "O7=user khong yeu cau"] [--skip "O4=..."]
 
 Tu nhan dien output theo duong dan chuan (O1..O8, hoac output CR neu co CR-*_Impact.xlsx: so hang muc + tong
 MD + trang thai don gia, Figma CR (gate v-cr-figma), input/). O6 = 06_DesignSystem/project/ (1 bo) hoac
@@ -34,9 +34,9 @@ BD_SYSTEM_SHEETS = {"Common mesage", "Screen Error message", "Screen Index",
                     "Change History", "Sample"}
 ICON = {"ok": "✅", "warn": "⚠️", "fail": "❌", "skip": "⬜"}
 # tien to ten file gate -> output (thu tu quan trong: dai truoc)
-GATE_MAP = [("v-overview", "O1"), ("v-devsetup", "O8"), ("v-dev", "O8"), ("v-bd", "O2"), ("v-api", "O3"), ("v-db", "O4"),
-            ("v-ds", "O6"), ("v-figma", "O5"), ("v-cr-figma", "O5"), ("v-cr", "CR"), ("v-est", "EST"), ("v1", "INV"), ("v2", "INV"),
-            ("v3", "O1"), ("v4", "O1"), ("v5", "O1"), ("v6", "O1"), ("v7", "O2"), ("v8", "O7")]
+GATE_MAP = [("v-overview", "O1"), ("v-devsetup", "O8"), ("v-dev", "O8"), ("v-bd", "O5"), ("v-api", "O2"), ("v-db", "O3"),
+            ("v-ds", "O6"), ("v-figma", "O4"), ("v-cr-figma", "O4"), ("v-cr", "CR"), ("v-est", "EST"), ("v1", "INV"), ("v2", "INV"),
+            ("v3", "O1"), ("v4", "O1"), ("v5", "O1"), ("v6", "O1"), ("v7", "O5"), ("v8", "O7")]
 
 
 def rel(ver, p):
@@ -57,7 +57,7 @@ def sheet_rows(ws, key_col=1):
 
 
 def parse_gates(ver):
-    """{output_id: [(file, P, F, W)]} — output O2 co the kem site: 'O2:WEB-01'."""
+    """{output_id: [(file, P, F, W)]} — output O5 co the kem site: 'O5:WEB-01'."""
     out = {}
     for p in sorted(glob.glob(os.path.join(ver, "_internal", "gates", "*.md"))):
         stem = os.path.basename(p)[:-3].lower()
@@ -69,7 +69,7 @@ def parse_gates(ver):
             continue
         _, pa, fa, wa = (int(x) for x in hits[-1])
         m = re.search(r"web-\d{2,}", stem)
-        if target in ("O2", "O6") and m:
+        if target in ("O5", "O6") and m:
             target = target + ":" + m.group(0).upper()
         out.setdefault(target, []).append((os.path.basename(p), pa, fa, wa))
     return out
@@ -77,7 +77,7 @@ def parse_gates(ver):
 
 def gate_of(gates, key):
     items = gates.get(key, [])
-    if key.startswith(("O2:", "O6:")):
+    if key.startswith(("O5:", "O6:")):
         items = items + gates.get(key[:2], [])
     if not items:
         return DASH, "chua chay gate"
@@ -92,7 +92,7 @@ def gate_of(gates, key):
 def finish(e, gates, skips, auto_skip=None):
     """Gan gate + trang thai cho 1 entry."""
     oid = e["id"]
-    key = oid + ":" + e["site"] if oid in ("O2", "O6") and e.get("site") else oid
+    key = oid + ":" + e["site"] if oid in ("O5", "O6") and e.get("site") else oid
     e["gate"], e["gate_detail"] = gate_of(gates, key)
     reason = skips.get(oid) or skips.get(key.replace(":", "=")) or None
     if reason or (not e["exists"] and auto_skip):     # --skip luon thang, ke ca khi da co file
@@ -199,12 +199,44 @@ def baseline_outputs(ver, data, meta, sysname, n, gates, skips):
         [rel(ver, p) for p in ov] or ["01_Overview/Overview_%s_ver%s.docx" % (sysname, n)],
         "1 tài liệu", bool(ov), count_value=1 if ov else 0), gates, skips))
 
+    apis = (data or {}).get("07_API", [])
+    n_api = sum(1 for r in apis if r.get("Kind") == "API")
+    n_other = len(apis) - n_api
+    api_files = sorted(glob.glob(os.path.join(ver, "02_API", "API_Doc_*.xlsx")))
+    outs.append(finish(entry(
+        "O2", "API", "Danh sách API/batch",
+        [rel(ver, p) for p in api_files] or ["02_API/API_Doc_%s_ver%s.xlsx" % (sysname, n)],
+        ("%d API · %d batch/khác" % (n_api, n_other)) if data else S.NEED_CONFIRM,
+        bool(api_files), count_value=len(apis) if data else None), gates, skips))
+
+    tables = (data or {}).get("03_DB_Tables", [])
+    db_files = sorted(glob.glob(os.path.join(ver, "03_DB", "DB_Doc_*.xlsx")))
+    erd = sorted(glob.glob(os.path.join(ver, "03_DB", "ERD_*.png")))
+    outs.append(finish(entry(
+        "O3", "Database", "Danh sách bảng/cột/quan hệ + ERD",
+        [rel(ver, p) for p in db_files + erd] or ["03_DB/DB_Doc_%s_ver%s.xlsx" % (sysname, n)],
+        ("%d bảng · %d cột" % (len(tables), len((data or {}).get("04_DB_Columns", []))))
+        if data else S.NEED_CONFIRM,
+        bool(db_files), count_value=len(tables) if data else None), gates, skips,
+        auto_skip="không có DB (db_mode=NONE)" if meta.get("db_mode") == "NONE" else None))
+
+    fl = os.path.join(ver, "04_Figma", "figma-links.md")
+    urls = FIGMA_RX.findall(open(fl, encoding="utf8").read()) if os.path.isfile(fl) else []
+    fig_out = meta.get("figma_output_url", "")
+    # figma-links.md chi liet ke so do can ve (chua co link figma.com) -> O4 "chưa vẽ", khong phai "chưa chạy gate"
+    outs.append(finish(entry(
+        "O4", "Figma", "Link node Figma của màn hình/thành phần",
+        ["04_Figma/figma-links.md"], "%d link" % len(urls), bool(urls),
+        count_value=len(urls)), gates, skips,
+        auto_skip="không có Figma output" if fig_out in ("", S.NEED_CONFIRM, DASH, "NO") else
+        "chưa vẽ — figma-links.md chưa có link Figma" if os.path.isfile(fl) else None))
+
     sites = [r.get("Site ID", "") for r in (data or {}).get("10_Site", [])]
     screens_by_site = {}
     for r in (data or {}).get("02_Screen", []):
         screens_by_site[r.get("Site", "")] = screens_by_site.get(r.get("Site", ""), 0) + 1
     bd = {}
-    for p in sorted(glob.glob(os.path.join(ver, "02_Screens", "BasicDesign_*.xlsx"))):
+    for p in sorted(glob.glob(os.path.join(ver, "05_BasicDesign", "BasicDesign_*.xlsx"))):
         m = re.match(r"BasicDesign_(.+?)_ver\d+\.xlsx$", os.path.basename(p))
         bd[m.group(1) if m else os.path.basename(p)] = p
     for site in sites + [s for s in bd if s not in sites]:
@@ -217,41 +249,9 @@ def baseline_outputs(ver, data, meta, sysname, n, gates, skips):
         count = ("%d sheet màn hình" % cnt) if cnt is not None else \
             ("%d màn hình (inventory)" % screens_by_site.get(site, 0) if data else S.NEED_CONFIRM)
         outs.append(finish(entry(
-            "O2", "Basic Design %s" % site, "Thiết kế cơ bản từng màn hình của site %s" % site,
-            [rel(ver, p)] if p else ["02_Screens/BasicDesign_%s_ver%s.xlsx" % (site, n)],
+            "O5", "Basic Design %s" % site, "Thiết kế cơ bản từng màn hình của site %s" % site,
+            [rel(ver, p)] if p else ["05_BasicDesign/BasicDesign_%s_ver%s.xlsx" % (site, n)],
             count, bool(p), site=site, count_value=cnt), gates, skips))
-
-    apis = (data or {}).get("07_API", [])
-    n_api = sum(1 for r in apis if r.get("Kind") == "API")
-    n_other = len(apis) - n_api
-    api_files = sorted(glob.glob(os.path.join(ver, "03_API", "API_Doc_*.xlsx")))
-    outs.append(finish(entry(
-        "O3", "API", "Danh sách API/batch",
-        [rel(ver, p) for p in api_files] or ["03_API/API_Doc_%s_ver%s.xlsx" % (sysname, n)],
-        ("%d API · %d batch/khác" % (n_api, n_other)) if data else S.NEED_CONFIRM,
-        bool(api_files), count_value=len(apis) if data else None), gates, skips))
-
-    tables = (data or {}).get("03_DB_Tables", [])
-    db_files = sorted(glob.glob(os.path.join(ver, "04_DB", "DB_Doc_*.xlsx")))
-    erd = sorted(glob.glob(os.path.join(ver, "04_DB", "ERD_*.png")))
-    outs.append(finish(entry(
-        "O4", "Database", "Danh sách bảng/cột/quan hệ + ERD",
-        [rel(ver, p) for p in db_files + erd] or ["04_DB/DB_Doc_%s_ver%s.xlsx" % (sysname, n)],
-        ("%d bảng · %d cột" % (len(tables), len((data or {}).get("04_DB_Columns", []))))
-        if data else S.NEED_CONFIRM,
-        bool(db_files), count_value=len(tables) if data else None), gates, skips,
-        auto_skip="không có DB (db_mode=NONE)" if meta.get("db_mode") == "NONE" else None))
-
-    fl = os.path.join(ver, "05_Figma", "figma-links.md")
-    urls = FIGMA_RX.findall(open(fl, encoding="utf8").read()) if os.path.isfile(fl) else []
-    fig_out = meta.get("figma_output_url", "")
-    # figma-links.md chi liet ke so do can ve (chua co link figma.com) -> O5 "chưa vẽ", khong phai "chưa chạy gate"
-    outs.append(finish(entry(
-        "O5", "Figma", "Link node Figma của màn hình/thành phần",
-        ["05_Figma/figma-links.md"], "%d link" % len(urls), bool(urls),
-        count_value=len(urls)), gates, skips,
-        auto_skip="không có Figma output" if fig_out in ("", S.NEED_CONFIRM, DASH, "NO") else
-        "chưa vẽ — figma-links.md chưa có link Figma" if os.path.isfile(fl) else None))
 
     outs += ds_entries(ver, gates, skips)
 
@@ -344,12 +344,12 @@ def cr_outputs(ver, impact, gates, skips):
             pass
         outs.append(finish(entry("EST", "見積書", "Báo giá theo chức năng — tiếng Nhật gửi KH (詳細見積書 + 前提条件・留意事項); bản vi nội bộ nếu có",
                                  [rel(ver, m) for m in mits], cnt, bool(mits)), gates, skips))
-    fl = os.path.join(ver, "05_Figma", "figma-links.md")
+    fl = os.path.join(ver, "04_Figma", "figma-links.md")
     urls = FIGMA_RX.findall(open(fl, encoding="utf8").read()) if os.path.isfile(fl) else []
     # CR khong bat buoc ve: khong co figma-links + khong co gate v-cr-figma -> skip "không vẽ"
-    outs.append(finish(entry("O5", "Figma (CR)", "Màn/luồng thay đổi theo CR (badge NEW/UPD/DEL/IMPACT/AS-IS)",
-                             ["05_Figma/figma-links.md"], "%d link" % len(urls),
-                             bool(urls) or bool(gates.get("O5")), count_value=len(urls)),
+    outs.append(finish(entry("O4", "Figma (CR)", "Màn/luồng thay đổi theo CR (badge NEW/UPD/DEL/IMPACT/AS-IS)",
+                             ["04_Figma/figma-links.md"], "%d link" % len(urls),
+                             bool(urls) or bool(gates.get("O4")), count_value=len(urls)),
                        gates, skips, auto_skip="không vẽ"))
     inp = [p for p in glob.glob(os.path.join(ver, "input", "**", "*"), recursive=True)
            if os.path.isfile(p)]
@@ -367,7 +367,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("version_folder")
     ap.add_argument("--skip", action="append", default=[],
-                    help='"O7=ly do" (lap lai duoc; rieng 1 site: "O2=WEB-02=ly do" / "O6=WEB-02=ly do")')
+                    help='"O7=ly do" (lap lai duoc; rieng 1 site: "O5=WEB-02=ly do" / "O6=WEB-02=ly do")')
     a = ap.parse_args()
 
     ver = os.path.abspath(a.version_folder)
@@ -377,7 +377,7 @@ def main():
     skips = {}
     for s in a.skip:
         k, _, v = s.partition("=")
-        if k in ("O2", "O6") and re.match(r"^WEB-\d+=", v):
+        if k in ("O5", "O6") and re.match(r"^WEB-\d+=", v):
             site, _, v = v.partition("=")
             k = k + "=" + site
         skips[k.strip()] = v.strip() or "không yêu cầu"

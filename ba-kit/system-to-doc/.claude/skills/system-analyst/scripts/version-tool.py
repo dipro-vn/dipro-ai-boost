@@ -3,7 +3,7 @@
 
   python3 version-tool.py next --outputs <project>/outputs --slug baseline [--date DDMMYY] [--create]
   python3 version-tool.py next --outputs <project>/outputs --cr-id CR-001 --slug them-coupon [--date DDMMYY] [--create]
-  python3 version-tool.py snapshot --ver <folder version> [--files 02_Screens/a.xlsx ...]
+  python3 version-tool.py snapshot --ver <folder version> [--files 05_BasicDesign/a.xlsx ...]
   python3 version-tool.py promote --outputs <project>/outputs --cr CR-001 [--cr CR-002] --approved --coded \
           [--slug baseline] [--date DDMMYY] [--create]
   python3 version-tool.py latest-baseline --outputs <project>/outputs
@@ -56,10 +56,10 @@ EXIT_LOCKED = 3
 # Duong dan output theo CONTRACT (glob tuong doi folder version)
 OUTPUT_GLOBS = {
     "O1": ["01_Overview/Overview_*.docx"],
-    "O2": ["02_Screens/BasicDesign_*.xlsx"],
-    "O3": ["03_API/API_Doc_*.xlsx"],
-    "O4": ["04_DB/DB_Doc_*.xlsx"],
-    "O5": ["05_Figma/figma-links.md"],
+    "O2": ["02_API/API_Doc_*.xlsx"],
+    "O3": ["03_DB/DB_Doc_*.xlsx"],
+    "O4": ["04_Figma/figma-links.md"],
+    "O5": ["05_BasicDesign/BasicDesign_*.xlsx"],
     "O6": ["06_DesignSystem/project/design-system.json",            # 1 DS (single / themes)
            "06_DesignSystem/WEB-*/project/design-system.json"],     # 1 DS / website (per-site)
     "O7": ["07_BugList/BugList_*.xlsx"],

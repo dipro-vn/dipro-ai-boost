@@ -56,7 +56,7 @@ QUESTIONS = [
     ("P11", "Tài liệu & dữ liệu", None, True),       # an toan: co du lieu that cua nguoi dung
     # R10 — quyet dinh lon, hoi trong Discovery Brief sau Pha A
     ("B1", "Quyết định lớn", None, False),   # 1 hay nhieu Design System
-    ("B2", "Quyết định lớn", None, False),   # lam O6 / O5 / O7 khong
+    ("B2", "Quyết định lớn", None, False),   # lam O6 / O4 / O7 khong
     ("B3", "Quyết định lớn", None, False),   # repo legacy / khong dung toi
     ("B4", "Quyết định lớn", None, False),   # pham vi site / role
     ("B5", "Quyết định lớn", None, False),   # dong y dua so do DB / API len Figma (cloud ngoai) — D5

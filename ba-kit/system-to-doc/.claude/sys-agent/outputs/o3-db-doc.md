@@ -1,8 +1,8 @@
-# O4 — Database Documentation (+ ERD)
+# O3 — Database Documentation (+ ERD)
 
 > **Yêu cầu:** xlsx dễ tìm kiếm · **tổng quan** toàn bộ bảng · **mối liên hệ** giữa các bảng · mô tả từng bảng: **field · kiểu · format · giới hạn · maxlength · mục đích**.
 >
-> Thành phẩm: `04_DB/DB_Doc_<sys>_ver<N>.xlsx` + `04_DB/ERD_<sys>_ver<N>.png`. Chạy khi `db_mode` ≠ `NONE` (P6).
+> Thành phẩm: `03_DB/DB_Doc_<sys>_ver<N>.xlsx` + `03_DB/ERD_<sys>_ver<N>.png`. Chạy khi `db_mode` ≠ `NONE` (P6).
 
 ---
 
@@ -14,7 +14,7 @@
 | `READONLY_CONN` | user tự chạy lệnh agent đưa → được file schema-only → như `DUMP` | MySQL: `mysqldump --no-data --skip-comments=false -h <host> -u <user> -p <db> > inputs/db/schema.sql` · PostgreSQL: `pg_dump --schema-only -h <host> -U <user> <db> > inputs/db/schema.sql` |
 | `MIGRATION` | migration / ORM model trong source (Prisma · TypeORM · SQL migration) | `read-orm-schema.py <repo> --repo-id REPO-xx --out $I --ev-start …` → `recon/db-code/REPO-xx/{tables,columns,evidence,code-schema}.csv` (Evidence = `code-ref`). Sequelize / Knex / Django / Rails: chưa có parser → agent đọc migration, ghi tay, mỗi dòng `code-ref` |
 
-**Có source có ORM / migration thì LUÔN chạy `read-orm-schema.py`**, kể cả khi `db_mode = DUMP` (dump là nguồn phụ: kiểu thật, index, comment). Gate: `verify-db-doc.py … --code-schema $I/recon/db-code/REPO-xx/code-schema.csv` — check 10 FAIL khi bảng / cột trong code thiếu ở `03/04`. Carry O4 từ version cũ chỉ khi đã chạy lại `read-orm-schema.py` và check 10 PASS.
+**Có source có ORM / migration thì LUÔN chạy `read-orm-schema.py`**, kể cả khi `db_mode = DUMP` (dump là nguồn phụ: kiểu thật, index, comment). Gate: `verify-db-doc.py … --code-schema $I/recon/db-code/REPO-xx/code-schema.csv` — check 10 FAIL khi bảng / cột trong code thiếu ở `03/04`. Carry O3 từ version cũ chỉ khi đã chạy lại `read-orm-schema.py` và check 10 PASS.
 
 ⛔ **Dump có dữ liệu** (`INSERT`, `COPY … FROM stdin`) → `read-schema.py` exit 3 → **DỪNG**, xin dump schema-only. Không đọc tiếp file đó, không mở bằng tool khác.
 ⛔ Agent **không** giữ mật khẩu DB, **không** tự kết nối DB, **không** chạy câu SQL nào trên DB của khách.
@@ -38,8 +38,8 @@
 
 ```bash
 python3 $S/build-db-doc.py --inventory $I/inventory.xlsx --system <sys> --version ver<N> \
-    --out $V/04_DB/DB_Doc_<sys>_ver<N>.xlsx --erd-png $V/04_DB/ERD_<sys>_ver<N>.png
-python3 $S/verify-db-doc.py $V/04_DB/DB_Doc_<sys>_ver<N>.xlsx --inventory $I/inventory.xlsx --out $I/gates/v-db.md
+    --out $V/03_DB/DB_Doc_<sys>_ver<N>.xlsx --erd-png $V/03_DB/ERD_<sys>_ver<N>.png
+python3 $S/verify-db-doc.py $V/03_DB/DB_Doc_<sys>_ver<N>.xlsx --inventory $I/inventory.xlsx --out $I/gates/v-db.md
 ```
 
 | Sheet | Nội dung |
