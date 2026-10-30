@@ -1,12 +1,8 @@
-# inputs/db/ — database (chỉ cấu trúc)
+# inputs/db/ — không dùng nữa (feedback 30/10/2026)
 
-Bỏ **file schema-only** vào đây, ví dụ `schema.sql`.
+Tool **không yêu cầu** bạn cung cấp file database. DB doc (O3) sinh **duy nhất** từ source code (Prisma schema · TypeORM entity · SQL migration) qua `read-orm-schema.py`.
 
-| DB | Lệnh xuất (chỉ cấu trúc, không dữ liệu) |
-|---|---|
-| MySQL | `mysqldump --no-data -u <user> -p <db> > schema.sql` |
-| PostgreSQL | `pg_dump --schema-only <db> > schema.sql` |
+- Source có ORM / migration → O3 đầy đủ bảng · cột · quan hệ, Evidence `code-ref`.
+- Source không có → `db_mode = NONE`, O3 ⬜, O1 chương DB ghi `Database not available.`
 
-- ⚠️ File có dữ liệu (`INSERT INTO …`) → AI từ chối đọc và yêu cầu xuất lại chỉ cấu trúc.
-- AI **không bao giờ** kết nối trực tiếp DB của khách; bạn tự chạy lệnh xuất.
-- Không có file → source có migration / ORM model vẫn đủ để AI dựng tài liệu DB (độ tin cậy thấp hơn).
+Thư mục này giữ để tương thích ngược với các version cũ (ver1 từng xuất qua `read-schema.py`). Dự án mới: để trống.

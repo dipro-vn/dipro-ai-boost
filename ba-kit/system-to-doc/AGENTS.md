@@ -19,7 +19,7 @@
 
 **Preflight nhớ câu trả lời:** `outputs/_project/preflight-memory.json` (`preflight-memory.py`) — câu đã trả lời không hỏi lại (1 bảng xác nhận), 4 câu an toàn (thử nghiệm hay thật · tài khoản được phép · mức thao tác · dữ liệu thật) luôn hỏi lại gọn, câu khác cho "chạy v1 trước, bổ sung sau". Quy tắc hỏi duy nhất: `preflight-questions.md` §0. Sau khi đọc code → **Quyết định lớn** hỏi sớm trong Discovery Brief (số Design System nhờ `extract-design-tokens.py --code-only`, output nào làm, repo legacy, phạm vi, đưa sơ đồ DB lên Figma).
 
-**Input Luồng 1** (hỏi bằng `AskUserQuestion`, không đoán): Giai đoạn 1 — Source code (repo · FE/BE/Mobile · FE↔website) · DB (tuỳ chọn, schema-only) · Figma (tuỳ chọn: design hiện tại + link để vẽ flow) · web hay app. Giai đoạn 2 — Website (URL · tài khoản + quyền được dùng · READ/WRITE) + 4 câu an toàn (`preflight-questions.md` §0b).
+**Input Luồng 1** (hỏi bằng `AskUserQuestion`, không đoán): Giai đoạn 1 — Source code (repo · FE/BE/Mobile · FE↔website) · Figma (tuỳ chọn: design hiện tại + link để vẽ flow) · web hay app. Giai đoạn 2 — Website (URL · tài khoản + quyền được dùng · READ/WRITE) + 4 câu an toàn (`preflight-questions.md` §0b).
 
 **Output Luồng 1** → `outputs/ver<N>_<DDMMYY>_<slug>/` (khảo sát lần đầu = ver1, chạy lại ghi vào ver1; ver<N+1> chỉ khi CR đã duyệt + code xong — `sys-agent/versioning.md`):
 

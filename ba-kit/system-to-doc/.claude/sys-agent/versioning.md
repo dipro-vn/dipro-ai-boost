@@ -107,7 +107,7 @@ run_mode: FULL | DELTA
 |---|---|
 | Website | WEB-01 https://... (READ_ONLY, role admin/user) |
 | Source | REPO-01 ... · REPO-02 ... |
-| Database | DUMP inputs/db/schema.sql |
+| Database | MIGRATION (từ source REPO-02) |
 | Figma | input: — · output: <link> |
 | Budget crawl | 137/200 URL · 22 phút |
 

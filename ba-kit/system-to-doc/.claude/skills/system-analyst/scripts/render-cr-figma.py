@@ -645,7 +645,10 @@ function descPanel(it, x, y){
   p.setSharedPluginData(NS,"kind","desc"); p.setSharedPluginData(NS,"ref",it.ref);
   let yy = 20; const b = BADGE[it.badge];
   T(p, `${it.badge} · ${it.ref} · ${it.label}`, 24, yy, PW-48, 18, 700, b.s); yy += 30;
-  T(p, "Loại: " + it.stype + "   ·   Site: " + it.site + "   ·   Vào từ: " + (it.entry||"—") + (it.base ? "   ·   Màn AS-IS: " + it.base : ""), 24, yy, PW-48, 12, 500, "#57606A"); yy += 26;
+  T(p, "Loại: " + it.stype + "   ·   Site: " + it.site + "   ·   Vào từ: " + (it.entry||"—") + (it.base ? "   ·   Màn AS-IS: " + it.base : ""), 24, yy, PW-48, 12, 500, "#57606A"); yy += 20;
+  if (it.api_new || it.api_upd) {   // feedback: ghi so API moi / cap nhat trong phan thao tac
+    T(p, "Thao tác tới server: " + (it.api_new ? it.api_new + " API tạo mới" : "") + (it.api_new && it.api_upd ? " · " : "") + (it.api_upd ? it.api_upd + " API cập nhật" : ""), 24, yy, PW-48, 12, 600, "#0969DA"); yy += 22;
+  }
   const sec = (title, color) => { const t=T(p, title, 24, yy, PW-48, 13, 700, color||"#0969DA"); yy = t.y + t.height + 6; };
   const para = (s2) => { const t=T(p, s2, 24, yy, PW-48, 12, 400, "#1F2328"); yy = t.y + t.height + 12; };
   sec("■ Mục đích màn hình"); para(it.purpose);
@@ -660,8 +663,11 @@ function descPanel(it, x, y){
       rr.resize(PW-48, hm); ty2 += hm; });
     t.resize(PW-48, ty2); yy = t.y + ty2 + 18; return t; }
   sec("■ Bảng ITEMS (số ① trên mockup)");
-  table("ITEMS · " + it.ref, [["#",36],["Item",190],["Mô tả",290],["Action / Behavior",420],["Thay đổi",116]],
-        it.items.map(r=>({v:[CIRC[r.n]||r.n, r.title, r.desc, r.action, r.chg||it.badge], _chg:r.chg||(it.badge==="NEW"?"NEW":null)})), "#DAEEF3", "#FFFFFF", "#D0D7DE", "ITEM");
+  // feedback 30/10/2026: cot "Action / Behavior" -> "Thao tác / Ảnh hưởng". Co row.impact -> append bullet
+  // format giong cot Can cu Estimation: '· N API cập nhật\n· Mức ảnh hưởng: Nhỏ'. Khong co -> bo qua.
+  function actionImpact(r){ return r.impact ? (r.action + "\n\n" + r.impact) : r.action; }
+  table("ITEMS · " + it.ref, [["#",36],["Item",190],["Mô tả",290],["Thao tác / Ảnh hưởng",420],["Thay đổi",116]],
+        it.items.map(r=>({v:[CIRC[r.n]||r.n, r.title, r.desc, actionImpact(r), r.chg||it.badge], _chg:r.chg||(it.badge==="NEW"?"NEW":null)})), "#DAEEF3", "#FFFFFF", "#D0D7DE", "ITEM");
   sec("■ ERROR SCENARIOS — nếu lỗi thì hiển thị gì", "#CF222E");
   table("ERRORS · " + it.ref, [["#",36],["Trigger (nguyên nhân)",250],["Hiển thị",110],["Message + Action tiếp theo",656]],
         it.errors.map((r,k)=>({v:[String(k+1), r.trigger, r.display, r.msg]})), "#FFE3E3", "#FFFBFB", "#CF222E", "ERR");

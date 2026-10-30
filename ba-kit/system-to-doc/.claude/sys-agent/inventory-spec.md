@@ -55,7 +55,7 @@ Header luôn ở **row 1**. Data từ **row 2**. Không merge cell, không sheet
 | `forbidden_zones` | `/admin/batch/*; nút 削除` | P4 |
 | `source_repos` | `REPO-01=/src/web(FE→WEB-01);REPO-02=/src/api(BE)` | P5 |
 | `repo_commit` | `REPO-01=3f2a…;REPO-02=tree@9c1e…` (stdout `commit` của `scan-repo.py`; `+dirty:<hash>` = có thay đổi chưa commit) — lần sau `scan-repo.py --commit-only --prev-inventory` so để biết repo đổi chưa | Bước 4 Pha A |
-| `db_mode` | `DUMP` · `READONLY_CONN` · `MIGRATION` · `NONE` | P6 |
+| `db_mode` | `MIGRATION` (có ORM / migration) · `NONE` (không có) | **Tool tự quyết** từ kết quả `read-orm-schema.py` — user không khai (feedback 30/10/2026). `DUMP` / `READONLY_CONN` là enum cũ chỉ còn dùng khi inventory legacy carry từ ver1 — tool mới không set |
 | `figma_input_url` · `figma_output_url` | link hoặc `—` | P7 · P8 |
 | `bug_list` · `bug_recipient` · `bug_scan_scope` | `YES` · `Nội bộ review trước` · `Blackbox` | P9 |
 | `lang` · `audience` | `VN` · `Nội bộ` | P10 |
@@ -125,7 +125,7 @@ Header luôn ở **row 1**. Data từ **row 2**. Không merge cell, không sheet
 
 `Table` · `Column` · `Type` · `PK` · `FK` · `Nullable` · `Default` · `Max Length` · `Format` · `Constraint` · `Meaning` · `Used By` · `Evidence` · `Confidence`
 
-`Max Length` / `Format` / `Constraint` do `read-schema.py` suy từ kiểu (`varchar(255)` → 255 · `decimal(10,2)` → `10,2` · ENUM/UNIQUE/CHECK → Constraint).
+`Max Length` / `Format` / `Constraint` do `read-orm-schema.py` suy từ kiểu khai trong ORM / SQL migration (`varchar(255)` → 255 · `decimal(10,2)` → `10,2` · ENUM/UNIQUE/CHECK → Constraint).
 
 **Luật `Meaning`:** chỉ được `Confidence = High` khi **có code đọc/ghi cột đó** (`Evidence` phải chứa ≥ 1 EV loại `code-ref`). Tên cột đẹp **không** phải bằng chứng.
 

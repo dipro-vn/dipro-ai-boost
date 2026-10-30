@@ -78,7 +78,6 @@ AI hỏi (chọn đáp án hoặc gõ vào ô *Other*; mỗi lượt gom tối �
 |---|---|---|---|
 | 1 | **Phạm vi** | Tên hệ thống · khảo sát tới đâu · **website hay app** | |
 | 1 | **Source code** | Repo nào (AI tự liệt kê từ `inputs/repo/`) · FE/BE/Mobile · repo FE thuộc website nào | Repo đã bỏ vào `inputs/repo/` |
-| 1 | **Database** *(tuỳ chọn)* | Có file schema / quyền đọc DB / chỉ có migration / không có | File `.sql` chỉ cấu trúc trong `inputs/db/` |
 | 1 | **Figma** *(tuỳ chọn)* | Link design hiện tại · **link file để vẽ flow** | Link `figma.com/design/...` |
 | 2 | **Website** | Bao nhiêu site · URL · staging/production · tài khoản role nào · **ai cấp, có được phép dùng để quét không** · chỉ ĐỌC hay được CREATE/UPDATE · vùng cấm | URL, tài khoản **test** |
 | 2 | Khác | Có làm bug list không · website có dữ liệu thật không | |

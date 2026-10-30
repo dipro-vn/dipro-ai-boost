@@ -82,7 +82,7 @@ def annotate(src, dst, marks, expect=None, size=None):
         pts.append((m["n"], x, y))
     if errs:
         return errs, ""
-    d = size or max(28, round(W * 0.045))
+    d = size or max(18, round(W * 0.015))   # badge nho (feedback: AI_Source/base-design-system/sample.png) ~ 22px / 1440
     r = d / 2
     font = load_font(int(d * 0.62))
     layer = Image.new("RGBA", im.size, (0, 0, 0, 0))

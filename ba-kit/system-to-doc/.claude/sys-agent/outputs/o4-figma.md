@@ -59,7 +59,7 @@
 | 3 | Output 1: lập Flow Candidate Matrix từ `01_Function` → Merge Log → mỗi flow giữ lại = **1 use case** (actor · bắt đầu · đường đi · ✓ kết thúc · non-happy → ✗ kết thúc) → in `SITEMAP COVERAGE … THIẾU: []` | THIẾU ≠ [] → không vẽ |
 | 4 | Vẽ Output 1 → recheck Tiêu chí 9 → 7 → 8 (script) | overlap = 0 |
 | 5 | **Gate A** (`AskUserQuestion`): Output 1 đúng chưa, vẽ tiếp Output 2? | User đồng ý |
-| 6 | Output 2: **mỗi site 1 Section riêng** (không gộp site người dùng + admin chung 1 section), trong section **site → use case (Section con `FL-xx · <tên>`, cùng tên lane Output 1) → màn**; bảng ④ Screen Index = mọi `SC-` trong scope; ⑦ = mọi message code O5 | Đếm: `số node màn = số SC trong scope` |
+| 6 | Output 2: **mỗi site 1 Section riêng** (không gộp site người dùng + admin chung 1 section), trong section **site → use case (Section con `FL-xx · <tên>`, cùng tên lane Output 1) → màn**; bảng ④ Screen Index **chia Site → Role (Actor) → Màn** (cột: `# · Site · Role · Màn · Loại · Mô tả`; màn nhiều Role → nhóm `Chung` cuối Site; mỗi banner Site có `Tổng N màn` — feedback 29/10/2026, chi tiết `sys-agent/figma/output-2-screen-flow.md` §④); ⑦ = mọi message code O5 | Đếm: `số node màn = số SC trong scope` · Screen Index có đủ Role khác nhau của Site |
 | 7 | Vẽ Output 2 → recheck 9 → 7 → 6 + recheck Tiêu chí 10 (mã trạng thái thô) trên cả 2 frame | overlap = 0, không node rỗng, Tiêu chí 10 = 0 |
 | 8 | Ghi `04_Figma/figma-links.md` | Link node từng frame |
 

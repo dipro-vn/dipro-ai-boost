@@ -11,12 +11,12 @@
 
 | Pha | Nguồn | Lấy gì | Script |
 |---|---|---|---|
-| **A — Code** (luôn chạy khi có source) | 1. Cấu trúc repo · 2. DB: model / entity + **toàn bộ** migration (Prisma, TypeORM, SQL) · 3. API, auth, batch · 4. FE: route → page → hàm gọi API → endpoint · 5. Quyền: guard / decorator / so sánh role | Danh sách đủ (không phụ thuộc crawl vào được hay không), quan hệ màn → API → bảng → cột, code-ref tới dòng, commit hash | `read-orm-schema.py` · `read-schema.py` (dump, phụ) · `scan-repo.py` |
+| **A — Code** (luôn chạy khi có source) | 1. Cấu trúc repo · 2. DB: model / entity + **toàn bộ** migration (Prisma, TypeORM, SQL) · 3. API, auth, batch · 4. FE: route → page → hàm gọi API → endpoint · 5. Quyền: guard / decorator / so sánh role | Danh sách đủ (không phụ thuộc crawl vào được hay không), quan hệ màn → API → bảng → cột, code-ref tới dòng, commit hash | `read-orm-schema.py` (DB — nguồn DUY NHẤT, feedback 30/10/2026) · `scan-repo.py` |
 | **B — Website** (Playwright) | Màn đang chạy, seed từ route FE của Pha A | Chỉ cái code không cho biết: màn nào thật sự sống · role thấy gì · giao diện · lỗi khi thao tác | `login-site.js` · `crawl-site.js --seed-file` |
 
 - Pha A xong hết mới bắt đầu Pha B. Reconcile (Bước 5) chỉ chạy khi **cả hai pha** đã nạp inventory.
 - Màn → API lấy từ đồ thị gọi `fe-api-calls.csv` (mỗi cạnh `static` / `inferred`), **không** từ import graph theo file (ver3 gán API-185 cho 11 màn, có màn admin sai).
-- DB: bảng / cột trong model, entity, migration là danh sách tối thiểu của O3 — gate V-DB check 10 FAIL nếu thiếu. Dump schema-only chỉ bổ sung (kiểu thật, index, comment).
+- DB: bảng / cột trong model, entity, migration là **nguồn duy nhất** của O3 — gate V-DB check 10 FAIL nếu thiếu. User không cung cấp dump / kết nối DB (feedback 30/10/2026). Không có ORM / migration → `db_mode=NONE`, O3 ⬜.
 - Dự án **không giao source** → chế độ "chỉ website" (Pha B như cũ), ghi rõ trong Discovery Brief.
 
 ---

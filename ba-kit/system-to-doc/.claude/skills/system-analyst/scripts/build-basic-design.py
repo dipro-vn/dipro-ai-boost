@@ -696,8 +696,14 @@ def fill_screen(ws, sc, site_url, ver, date, author, spec, items, errors, img, t
     ws.column_dimensions["S"].width = 40
     for r in range(FIRST, ws.max_row + 1):   # bo so thu tu dien san cua template
         ws.cell(row=r, column=8).value = None
-    r = FIRST
+    r, cur_group = FIRST, None
     for n, it in enumerate(items, start=1):
+        g = str(it.get("group") or "").strip()      # feedback: gom item theo cum trong 1 sheet
+        if g and g != cur_group:
+            ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=19)
+            ws.cell(row=r, column=1, value="▸ " + g)
+            ST.row(ws, r, range(1, 20), "banner")
+            r += 1; cur_group = g
         vals = [n, it["name_jp"], it["name_vn"], it["type"], it["status"], it["required"], it["maxlength"],
                 it["default"], it["p"], it["q"], it.get("r") or NA, it.get("api") or NA]
         for c, v in zip(COLS, vals):
@@ -728,11 +734,15 @@ def fill_screen(ws, sc, site_url, ver, date, author, spec, items, errors, img, t
         im.width, im.height = int(im.width * k), int(im.height * k)
         ws.add_image(im, "A10")
         numbered = os.sep + "annotated" + os.sep in img or spec.get("image_numbered")
-        ws["A9"] = "Ảnh website %s — %s · %s · %s" % (
-            sc.get("Screenshot EV") or "", sid, title,
-            "số đỏ trên ảnh = # trong bảng item" if numbered else
-            "ảnh chưa đánh số%s — giai đoạn 2 thay bằng ảnh mới có đánh số" % (
-                (" (" + spec["image_note"] + ")") if spec.get("image_note") else ""))
+        fallback = spec.get("image_number_fallback")
+        if numbered and not fallback:
+            cap = "số đỏ trên ảnh = # trong bảng item"
+        elif numbered and fallback:
+            cap = "số đỏ trên ảnh (dọc cạnh trái) = # trong bảng item · TẠM — ảnh cũ không có vị trí, giai đoạn 2 sẽ đánh đúng vị trí"
+        else:
+            cap = "ảnh chưa đánh số%s — giai đoạn 2 thay bằng ảnh mới có đánh số" % (
+                (" (" + spec["image_note"] + ")") if spec.get("image_note") else "")
+        ws["A9"] = "Ảnh website %s — %s · %s · %s" % (sc.get("Screenshot EV") or "", sid, title, cap)
     else:
         ws["A9"] = PHASE1_IMG if phase == 1 else PHASE2_IMG
     return bool(img)
@@ -764,16 +774,26 @@ def auto_marks(items, page):
 def screen_image(sid, spec, items, page, crawl, root, idir):
     """spec "image" (anh da danh so) -> dung luon; Giai đoạn 2: item co "mark" + crawl/evidence/<EV>.png
     -> danh so theo cot # (annotate-ui-image.py). -> (duong dan | None, ly do khong co anh)."""
-    if spec.get("image"):
-        f = os.path.join(root, spec["image"])   # duong dan tinh tu thu muc version
-        return (f, "") if os.path.isfile(f) else (None, "ảnh khai báo không có file: %s" % spec["image"])
     marks = [{"n": n, "x": float(it["mark"][0]), "y": float(it["mark"][1])}
              for n, it in enumerate(items, start=1) if isinstance(it.get("mark"), (list, tuple)) and len(it["mark"]) == 2]
     if page and not marks:
         marks = auto_marks(items, page)
-    shot = os.path.join(crawl, "evidence", "%s.png" % page["evId"]) if crawl and page and page.get("evId") else ""
+    # feedback 29/10/2026: ảnh cũ không có vị trí (box) -> đánh số tạm dọc cạnh trái theo thứ tự item
+    if not marks and (spec.get("image") or (page and page.get("evId"))):
+        acts = [n for n, it in enumerate(items, start=1)
+                if str(it.get("type", "")).lower() not in ("label", "table")]
+        if acts:
+            marks = [{"n": n, "x": 0.015, "y": min(0.98, 0.02 + (i + 0.5) / len(acts) * 0.95)}
+                     for i, n in enumerate(acts)]
+            spec["image_number_fallback"] = True
+    if spec.get("image"):
+        shot = os.path.join(root, spec["image"])   # duong dan tinh tu thu muc version
+        if not os.path.isfile(shot):
+            return None, "ảnh khai báo không có file: %s" % spec["image"]
+    else:
+        shot = os.path.join(crawl, "evidence", "%s.png" % page["evId"]) if crawl and page and page.get("evId") else ""
     if not (marks and shot and os.path.isfile(shot)):
-        return None, ""
+        return (shot or None, "") if spec.get("image_numbered") else (None, "")
     import importlib.util
     try:
         sp = importlib.util.spec_from_file_location("annotate_ui", os.path.join(HERE, "annotate-ui-image.py"))
@@ -831,6 +851,9 @@ def main():
     console = read_json(os.path.join(crawl, "console.json"), [])
     spec = read_json(a.spec, {}).get("screens", {}) if a.spec else {}
     ast_fill = merge_ast(spec, read_json(a.ast_spec, {}).get("screens", {})) if a.ast_spec else {}
+    # feedback: spec cua man chinh co "merged_from": ["SC-xxx"] -> dồn item / loi SC con vào, bo SC con khoi list
+    merged_into = {child: main_sid for main_sid, s in spec.items() for child in s.get("merged_from") or []}
+    screens = [s for s in screens if s["Screen ID"] not in merged_into]
     root = os.path.dirname(os.path.dirname(os.path.abspath(a.out)))   # thu muc version
     q = Q(a.q_start, a.site)
 
@@ -862,8 +885,27 @@ def main():
         page = page_of(pages, sc.get("Screenshot EV"))
         mine = [e for e in edges if norm_route(e["Screen Route"]) == norm_route(sc.get("URL / Route"))]
         items = build_items(sc, sp, page, mine, q, code, ctx)
+        # gộp item/errors của SC con (merged_from); mỗi SC con thành 1 nhóm riêng trong sheet
+        for child_sid in sp.get("merged_from") or []:
+            child_sc = next((x for x in inv["02_Screen"] if x["Screen ID"] == child_sid), None)
+            if not child_sc:
+                continue
+            child_sp = spec.get(child_sid, {})
+            child_page = page_of(pages, child_sc.get("Screenshot EV"))
+            child_edges = [e for e in edges if norm_route(e["Screen Route"]) == norm_route(child_sc.get("URL / Route"))]
+            g_label = child_sp.get("title") or child_sc.get("Screen Name") or child_sid
+            for it in build_items(child_sc, child_sp, child_page, child_edges, q, code, ctx):
+                it.setdefault("group", "%s · %s" % (child_sid, g_label)); items.append(it)
+            for e in child_sp.get("errors") or []:
+                e = dict(e); e.setdefault("category_prefix", child_sid)
+                sp.setdefault("_merged_errors", []).append(e)
         abbr = re.sub(r"\W", "", sid)
         errs = []
+        # loi tu SC con
+        for e in sp.get("_merged_errors") or []:
+            if not str(e.get("code") or "").strip():
+                e["code"] = "E_%s_merged_%03d" % (abbr, len(errs) + 1)
+            errs.append(e)
         for k, e in enumerate([dict(x) for x in sp.get("errors") or []] +
                               web_errors(page, network, console, sc.get("Screenshot EV", "")), start=1):
             if not str(e.get("code") or "").strip():   # spec de "" = nho builder dat ma
