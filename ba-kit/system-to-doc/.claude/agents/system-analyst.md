@@ -154,8 +154,7 @@ python3 $S/scan-repo.py <repo> --repo-id REPO-01 --out $I --commit-only --prev-i
 python3 $S/read-orm-schema.py <repo-be> --repo-id REPO-02 --out $I --ev-start <next_ev>
 #     → recon/db-code/REPO-02/{tables.csv, columns.csv, evidence.csv, code-schema.csv, schema.json}
 #     stderr "LECH model <-> migration" → ghi Open Question (cột chỉ có ở 1 phía)
-# A2. DB dump schema-only (nguồn phụ, khi P6 có) — dump có dữ liệu → script từ chối, exit 3
-python3 $S/read-schema.py --dump inputs/db/<file>.sql --out $I --ev-start <next_ev>
+# A2. (DB chỉ đọc từ source code qua A1 — user KHÔNG cung cấp dump / kết nối. ORM/migration không có → db_mode=NONE, O3 ⬜. Feedback 30/10/2026)
 
 # A3. API + FE + quyền — repo BE TRƯỚC, repo FE sau (FE cần api-seed của BE để gán API ID)
 python3 $S/scan-repo.py <repo-be> --repo-id REPO-02 --out $I --ev-start <next_ev> --api-start 1 \
@@ -297,7 +296,6 @@ Wording + cách xử lý từng câu → `sys-agent/preflight-questions.md`.
 | **P3** | Quyền thao tác: chỉ ĐỌC / + CREATE·UPDATE trên staging / + prod / không quét | **Mặc định READ-ONLY** |
 | **P4** | Vùng cấm chạm | Hỏi trước khi crawl |
 | **P5** | Source: bao nhiêu repo, đường dẫn, FE/BE, **repo FE thuộc website nào** | Không có → O2 = ⬜, chạy tiếp |
-| **P6** | DB (tuỳ chọn): file schema-only / connection read-only / không có | Không có → O3 lấy từ ORM/migration nếu có, không thì ⬜ |
 | **P7** | Figma input (tuỳ chọn) — để bổ sung Design System | Không có → O6 chỉ từ website + source |
 | **P7b** | Publish O6 thành artifact Design System trên claude.ai? | Không trả lời → **không publish**, giữ file local |
 | **P8** | Figma output — link file để vẽ flow | Không có → O4 = ⬜ |
@@ -315,7 +313,7 @@ Wording + cách xử lý từng câu → `sys-agent/preflight-questions.md`.
 
 | Phát hiện | Ai phát hiện | Hành động |
 |---|---|---|
-| Repo/dump/input có secret, private key, `.env`, dump có dữ liệu thật | `scan-sensitive.py` exit 3 · `read-schema.py` exit 3 | ⛔ **DỪNG**. Báo: file nào, loại gì (không in giá trị). Hỏi **phân loại / cách khắc phục** (user gỡ file, cung cấp dump schema-only…). Không đọc file đó |
+| Repo/input có secret, private key, `.env` | `scan-sensitive.py` exit 3 | ⛔ **DỪNG**. Báo: file nào, loại gì (không in giá trị). Hỏi **phân loại / cách khắc phục** (user gỡ file). Không đọc file đó |
 | Website hiển thị dữ liệu thật của người dùng | Agent nhìn screenshot / P11 | ⛔ DỪNG crawl. Đề nghị tài khoản test / staging. Screenshot đã chụp → đánh dấu, không đưa vào output gửi ngoài |
 | PII/credential sắp ghi vào file hay đẩy lên Figma | Hook **H06** (tự động) | Tool call bị chặn → thay dữ liệu mẫu rồi ghi lại |
 | PII đã lọt vào output | `detect-pii.js --scan` | Chưa ra ngoài → tự mask + báo. **Đã lên Figma/commit** → DỪNG TOÀN BỘ, hỏi cách khắc phục |

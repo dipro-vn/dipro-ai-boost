@@ -76,11 +76,39 @@ Viết `P`/`Q`:
 
 ```json
 {"screens": {"SC-007": {"title": "予約編集", "purpose": "...", "access": "...", "logic": "...",
-  "items": [{"name_jp": "予約日", "name_vn": "Ngày đặt", "type": "Date", "status": "Enable", "required": "Yes",
+  "merged_from": ["SC-008"],
+  "items": [{"group": "Thông tin đặt chỗ", "name_jp": "予約日", "name_vn": "Ngày đặt", "type": "Date", "status": "Enable", "required": "Yes",
              "field": "reserveDate", "p": "...", "q": "...", "r": "REPO-01:src/...#L40", "mark": [0.4, 0.3]},
-            {"name_jp": "保存", "name_vn": "Lưu", "type": "Button", "label": "保存", "next": "SC-006", "p": "...", "q": "..."}],
+            {"group": "Thanh thao tác", "name_jp": "保存", "name_vn": "Lưu", "type": "Button", "label": "保存", "next": "SC-006", "p": "...", "q": "..."}],
   "errors": [{"item", "category", "display", "code", "msg_jp", "msg_vn", "action_jp", "action_vn", "next", "source"}]}}}
 ```
+
+- `"group"` (tuỳ chọn): nhãn cụm trong 1 sheet (vd `Form đăng ký` / `Bảng danh sách` / `Thanh thao tác` / `Popup xác nhận`). Item cùng `group` được đặt liền; builder chèn 1 dòng banner `▸ <nhóm>` trước nhóm. Mục đích: không trải phẳng từng ô/nút rời rạc (feedback 29/10/2026).
+- `"merged_from"` (tuỳ chọn): danh sách SC con (popup / dialog / state) được gộp vào màn chính này. Builder dồn item + errors của SC con vào sheet SC chính, mỗi SC con thành 1 `group` riêng; SC con bị loại khỏi Screen Index + không có sheet riêng. Dùng để giảm vụn khi tool đang chia màn hình quá nhỏ (feedback 29/10/2026).
+
+### Tiêu chí gom màn (feedback 30/10/2026 — mức "chặt")
+
+Khi agent viết `_internal/bd/<WEB>.json`, **tự quyết gom** theo 4 rule dưới. Mục đích: 1 sheet = 1 **tính năng người dùng cảm nhận được**, không phải 1 route; tài liệu đọc được, không vụn.
+
+| # | Tiêu chí | Gom vào | Ví dụ |
+|---|---|---|---|
+| **R1** | Màn **kết quả / thông báo** (「〜しました」「〜完了」「〜受付けました」「〜失敗しました」) — chỉ hiển thị message + nút quay về / đóng, không có logic / data mới | Màn trigger (form hoặc list đã gọi API) | `SC-062 パスワードを変更しました` ⊂ `SC-061 パスワードの再設定` · `SC-083 クレジットカード情報を削除しました` ⊂ `SC-082 クレジットカード情報の編集` |
+| **R2** | Màn **new ↔ edit** cùng component form (code dùng chung component, chỉ khác default value / `id` route) | Màn **list / "〜管理"** (nếu có) hoặc màn new | `SC-029 新規従業員登録` + `SC-030 従業員情報の編集` ⊂ `SC-028 従業員管理` |
+| **R3** | Màn **detail** xem data của list — chỉ đọc, không có action riêng ngoài nút Edit/Delete trỏ sang màn R2 | Màn list | `SC-034 施設詳細` ⊂ `SC-031 施設管理` |
+| **R4** | Màn **modal confirm** trước action (削除確認, 退場確認…) hoặc màn **loading / redirect trung gian** không có UI riêng | Màn trigger | Popup "本当に削除しますか？" ⊂ màn list có nút Xoá |
+
+**Loại trừ (giữ riêng, KHÔNG gom):**
+- Static page: `利用規約`, `プライバシーポリシー`, `特定商取引法に基づく表示`, `料金プラン` — pháp lý / marketing, user mở từ nhiều chỗ.
+- Màn generic dùng chung: `エラー`, `アクセス権限エラー`, `メンテナンス中`, `パスワードを忘れた場合` landing — 1 màn phục vụ nhiều flow.
+- Màn kết quả **serve nhiều trigger** (vd `仮登録を受付けました` dùng cho cả đăng ký cá nhân + đăng ký đoàn): giữ riêng, link ngược từ cả 2 trigger.
+- Màn có **logic riêng** (chọn, phân nhánh, tính toán): dù trông giống confirm (vd `退場者を選択` — chọn danh sách người) → giữ riêng.
+
+**Ngưỡng:** 1 parent không nên gom > 6 con. Vượt → tách thêm parent (vd `予約履歴` ⊃ `[詳細, キャンセル完了, 変更完了]` + flow `退場者選択` tách thành parent khác).
+
+**Đồng bộ bắt buộc khi gom:** cập nhật `_internal/expect-screens-<WEB>.txt` bỏ các SC đã merged (gate V-BD check 9 FAIL nếu không).
+- `"image_number_fallback"` (builder tự đặt): có ảnh nhưng không có `box` / `mark` → đánh số tạm dọc cạnh trái theo thứ tự item action; A9 ghi rõ là **TẠM**. Giai đoạn 2 đánh đúng vị trí.
+
+**Mẫu đánh số (bắt buộc tham khảo):** `.claude/base-design-system/sample.png` — chấm đỏ nhỏ (đường kính ~22px / ảnh 1440) đặt sát mép hoặc trong element; số trắng ở giữa. Nếu khác mẫu rõ rệt → sửa `annotate-ui-image.py` (biến `d = max(18, round(W * 0.015))`).
 
 ```bash
 # Giai đoạn 1 — bộ trích AST (mọi giá trị trong <> là tham số, không cố định theo máy / dự án)

@@ -59,7 +59,7 @@ LBL = {
            "total": "Tổng (chưa thuế)", "pd": "(người-ngày)", "pm": "(người-tháng)", "step1": "Chỉ Step 1",
            "step2": "Chỉ Step 2", "all": "Toàn bộ chức năng", "pattern": "Phương án",
            "ptable": "■ Tổng theo phương án (phương án thay thế chọn 1)", "pm_col": "người-tháng", "remarks": "■ Ghi chú",
-           "confirm": "【Tiền đề ước tính · cần xác nhận】", "impact": "Impact (nội bộ)", "basis": "Căn cứ 実装 (mã × số lượng)",
+           "confirm": "【Tiền đề ước tính · cần xác nhận】", "impact": "Impact (nội bộ)", "basis": "Căn cứ",
            "notes": ["※ Ước tính theo công số chuẩn cho từng loại chức năng (bảng công số {status} v{version} — PM / Tech Lead duyệt trước khi gửi khách hàng).",
                      "※ Các phương án cùng nhóm (VD ① phương án A / B) thay thế cho nhau, chỉ chọn 1 — tổng thực tế xem bảng 「Tổng theo phương án」.",
                      "※ Định nghĩa yêu cầu = Lập trình × {req} · Thiết kế UI / UX = Lập trình × {uil} (màn mới lớn) / × {ui} (còn lại) · Kiểm thử = Lập trình × {test} · Quản lý = (Định nghĩa yêu cầu … Kiểm thử) × {mgmt} · người-tháng = người-ngày / {pm}"],
@@ -228,7 +228,25 @@ def copy_sheet(src, dst):
     dst.sheet_view.showGridLines = src.sheet_view.showGridLines
 
 
-def write_sheet(ws, est, rates, rates_meta, tm, lang, internal=False):
+RISK_RANK = {"High": 3, "Medium": 2, "Low": 1}
+RISK_VI = {"High": "Lớn", "Medium": "Trung bình", "Low": "Nhỏ"}
+
+
+def basis_detail(x, imp_by_id, rate_code, qty, impl, rate_item):
+    """-> bullet nhieu dong (feedback 30/10/2026): '· N API mới\\n· Mức ảnh hưởng: Nhỏ'. Bo phan code × qty = MD (da co o cot MD rieng)."""
+    imps = [imp_by_id[i] for i in (x.get("impacts") or []) if i in imp_by_id]
+    bits = []
+    for axis, name in (("System", "API"), ("DB", "bảng/cột DB"), ("Screen", "màn"), ("ThirdParty", "liên kết ngoài"), ("Mockup", "mockup"), ("Business", "quy tắc")):
+        nw = sum(1 for i in imps if i["axis"] == axis and i.get("change_type") == "NEW")
+        up = sum(1 for i in imps if i["axis"] == axis and i.get("change_type") == "UPD")
+        if nw: bits.append("%d %s mới" % (nw, name))
+        if up: bits.append("%d %s cập nhật" % (up, name))
+    risk = max((RISK_RANK.get(i.get("risk"), 0) for i in imps), default=0)
+    if risk: bits.append("Mức ảnh hưởng: " + RISK_VI[{3: "High", 2: "Medium", 1: "Low"}[risk]])
+    return "\n".join("· " + b for b in bits) if bits else ""
+
+
+def write_sheet(ws, est, rates, rates_meta, tm, lang, internal=False, cr=None):
     """Ghi bang chi tiet vao ws (da chua noi dung template). -> vi tri {first, last, row_step1, row_all, row_month, col}."""
     from openpyxl.styles import Alignment
     from openpyxl.utils import column_index_from_string as CI, get_column_letter as CL
@@ -266,6 +284,7 @@ def write_sheet(ws, est, rates, rates_meta, tm, lang, internal=False):
             if ws.cell(row=r0, column=c0).value:
                 ws.cell(row=r0, column=c0, value=v)
     hdr = int(tm["row_header"])
+    imp_by_id = {i["id"]: i for i in (cr or {}).get("impacts") or []}
     extra = {"pattern": max(ci.values()) + 1}
     if internal:
         extra.update(impact=extra["pattern"] + 1, basis=extra["pattern"] + 2)
@@ -309,9 +328,9 @@ def write_sheet(ws, est, rates, rates_meta, tm, lang, internal=False):
             if internal:
                 ws.cell(row=r, column=extra["impact"], value=", ".join(x.get("impacts") or []) or None)
                 rate = rates[x["code"]]
-                b = "%s × %s = %s (%s)" % (x["code"], x.get("qty", 1), round(nums["impl"], 2), rate["item"])
+                b = basis_detail(x, imp_by_id, x["code"], x.get("qty", 1), nums["impl"], rate["item"])
                 if x.get("impl_override") is not None:
-                    b += " — override: " + t(x.get("override_note"), "vi")
+                    b = (b + "\n" if b else "") + "· override: " + t(x.get("override_note"), "vi")
                 ws.cell(row=r, column=extra["basis"], value=b)
                 for k in ("impact", "basis"):
                     ws.cell(row=r, column=extra[k]).alignment = Alignment(wrap_text=True, vertical="top")
@@ -423,12 +442,12 @@ def write_questions(wb, est, lang, font_name):
         ws.row_dimensions[3 + n].height = 70
 
 
-def build_workbook(est, rates, rates_meta, template, lang, internal=False):
-    """-> (workbook moi, vi tri). Dung cho build-estimate.py va gen ETA noi bo."""
+def build_workbook(est, rates, rates_meta, template, lang, internal=False, cr=None):
+    """-> (workbook moi, vi tri). Dung cho build-estimate.py va gen ETA noi bo. cr=cr.json (co 'impacts') de ghi basis detail."""
     wb, tm = load_template(template)
     del wb["_meta"]
     ws = wb[[s for s in wb.sheetnames if s != tm.get("notes_sheet")][0]]
-    pos = write_sheet(ws, est, rates, rates_meta, tm, lang, internal)
+    pos = write_sheet(ws, est, rates, rates_meta, tm, lang, internal, cr=cr)
     ws.title = LBL[lang]["sheet"]
     if tm.get("notes_sheet") in wb.sheetnames:
         write_premises(wb[tm["notes_sheet"]], est, lang)

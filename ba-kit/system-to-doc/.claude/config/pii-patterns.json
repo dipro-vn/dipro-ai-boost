@@ -103,7 +103,9 @@
     "user@domain.com",
     "test@gmail.com",
     "test@admin.com",
-    "AKIAIOSFODNN7EXAMPLE", "f1cf7cf0e21e0770002081f4e10ac7da"
+    "AKIAIOSFODNN7EXAMPLE",
+    "f1cf7cf0e21e0770002081f4e10ac7da",
+    "noreply@anthropic.com"
   ],
   "allowPathPatterns": [
     "\\.claude/config/pii-patterns\\.json$",

@@ -321,6 +321,21 @@ def _apply_style(ws, row, st, height=None):
     ws.row_dimensions[row].height = height if height is not None else h
 
 
+AXIS_NAME = {"System": "API", "DB": "bảng/cột DB", "Business": "quy tắc", "Screen": "màn", "ThirdParty": "liên kết ngoài", "Mockup": "mockup"}
+CHANGE_VI = {"NEW": "mới", "UPD": "cập nhật", "DEL": "xoá", "IMPACT": "chịu ảnh hưởng"}
+RISK_VI = {"High": "Lớn", "Medium": "Trung bình", "Low": "Nhỏ"}
+
+
+def _basis_line(imp, md, rate):
+    """1 dong IMP -> bullet 2 dong '· N <axis> <change>\\n· Mức ảnh hưởng: X' (feedback 30/10/2026: bo phan code × qty = MD)."""
+    q = C.qty_of(imp)
+    noun = AXIS_NAME.get(imp.get("axis"), str(imp.get("axis", "hạng mục")).lower())
+    verb = CHANGE_VI.get(imp.get("change_type"), str(imp.get("change_type", "")).lower())
+    risk = RISK_VI.get(imp.get("risk"), "Cần xác nhận")
+    qstr = C.fmt_md(q) if q != int(q) else str(int(q))
+    return "· %s %s %s\n· Mức ảnh hưởng: %s" % (qstr, noun, verb, risk)
+
+
 def build_estimation(ws, cr, rates, rates_meta, est):
     """Dien sheet Estimation (da copy tu template): section = cr_item, dong = hang muc, M = MD, K/L/N/O/P = cong thuc."""
     import datetime
@@ -382,8 +397,7 @@ def build_estimation(ws, cr, rates, rates_meta, est):
                     9: None, 10: bool(imp.get("option")), 13: md,
                     11: "=M%d*%s" % (r, rk), 12: "=M%d*%s" % (r, rl), 14: "=M%d*%s" % (r, rn),
                     15: "=SUM(K%d:N%d)*%s" % (r, r, ro), 16: "=SUM(K%d:O%d)" % (r, r),
-                    17: "%s × %s = %s MD (%s MD/%s)" % (imp["rate_code"], C.fmt_md(C.qty_of(imp)),
-                                                          C.fmt_md(md), C.fmt_md(float(rate["md"])), rate.get("unit"))}
+                    17: _basis_line(imp, md, rate)}
             for c, v in vals.items():
                 ws.cell(row=r, column=c, value=v)
             lines = max(est_lines(vals[6], 70), est_lines(vals[5], 34), est_lines(vals[7], 34))
@@ -479,7 +493,7 @@ def main():
         if err:
             print("estimate.json KHONG hop le:\n  " + "\n  ".join(err), file=sys.stderr)
             return 1
-        wb, p, tm = E.build_workbook(fe, frates, fmeta, a.mitsumori_template, "vi", internal=True)
+        wb, p, tm = E.build_workbook(fe, frates, fmeta, a.mitsumori_template, "vi", internal=True, cr=cr)
         del wb[E.LBL["vi"]["notes_sheet"]]  # tien de nam o 見積書 ban KH + sheet Q&A
         if E.LBL["vi"]["q_sheet"] in wb.sheetnames:
             del wb[E.LBL["vi"]["q_sheet"]]  # cau hoi da co o sheet Q&A

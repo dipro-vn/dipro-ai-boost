@@ -2,22 +2,22 @@
 
 > **Yêu cầu:** xlsx dễ tìm kiếm · **tổng quan** toàn bộ bảng · **mối liên hệ** giữa các bảng · mô tả từng bảng: **field · kiểu · format · giới hạn · maxlength · mục đích**.
 >
-> Thành phẩm: `03_DB/DB_Doc_<sys>_ver<N>.xlsx` + `03_DB/ERD_<sys>_ver<N>.png`. Chạy khi `db_mode` ≠ `NONE` (P6).
+> Thành phẩm: `03_DB/DB_Doc_<sys>_ver<N>.xlsx` + `03_DB/ERD_<sys>_ver<N>.png`. Chạy khi `db_mode` ≠ `NONE` (tool tự quyết dựa trên source code).
 
 ---
 
-## 1. Nguồn theo `db_mode`
+## 1. Nguồn — DUY NHẤT là source code (feedback 30/10/2026)
+
+Tool **không** hỏi user về DB, **không** nhận dump / kết nối. Mọi thông tin DB đọc từ source:
 
 | `db_mode` | Lấy schema từ | Lệnh |
 |---|---|---|
-| `DUMP` | file schema-only user đưa | `read-schema.py --dump inputs/db/schema.sql --out $I --ev-start …` |
-| `READONLY_CONN` | user tự chạy lệnh agent đưa → được file schema-only → như `DUMP` | MySQL: `mysqldump --no-data --skip-comments=false -h <host> -u <user> -p <db> > inputs/db/schema.sql` · PostgreSQL: `pg_dump --schema-only -h <host> -U <user> <db> > inputs/db/schema.sql` |
 | `MIGRATION` | migration / ORM model trong source (Prisma · TypeORM · SQL migration) | `read-orm-schema.py <repo> --repo-id REPO-xx --out $I --ev-start …` → `recon/db-code/REPO-xx/{tables,columns,evidence,code-schema}.csv` (Evidence = `code-ref`). Sequelize / Knex / Django / Rails: chưa có parser → agent đọc migration, ghi tay, mỗi dòng `code-ref` |
+| `NONE` | — | Source không có ORM / migration → `db_mode = NONE`, O3 = ⬜, O1 chương DB ghi `Database not available.` |
 
-**Có source có ORM / migration thì LUÔN chạy `read-orm-schema.py`**, kể cả khi `db_mode = DUMP` (dump là nguồn phụ: kiểu thật, index, comment). Gate: `verify-db-doc.py … --code-schema $I/recon/db-code/REPO-xx/code-schema.csv` — check 10 FAIL khi bảng / cột trong code thiếu ở `03/04`. Carry O3 từ version cũ chỉ khi đã chạy lại `read-orm-schema.py` và check 10 PASS.
+Gate: `verify-db-doc.py … --code-schema $I/recon/db-code/REPO-xx/code-schema.csv` — check 10 FAIL khi bảng / cột trong code thiếu ở `03/04`. Carry O3 từ version cũ chỉ khi đã chạy lại `read-orm-schema.py` và check 10 PASS.
 
-⛔ **Dump có dữ liệu** (`INSERT`, `COPY … FROM stdin`) → `read-schema.py` exit 3 → **DỪNG**, xin dump schema-only. Không đọc tiếp file đó, không mở bằng tool khác.
-⛔ Agent **không** giữ mật khẩu DB, **không** tự kết nối DB, **không** chạy câu SQL nào trên DB của khách.
+⛔ Agent **không** giữ mật khẩu DB, **không** tự kết nối DB, **không** chạy câu SQL nào trên DB của khách, **không** đọc dump file.
 
 ---
 

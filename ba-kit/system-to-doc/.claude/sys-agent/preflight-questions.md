@@ -159,30 +159,21 @@ DELETE **không bao giờ** được cấp qua câu này — gặp nút xoá lu�
 
 ---
 
-## Lượt 3 — Source code & database (P5a · P5b · P6) — Giai đoạn 1
+## Lượt 3 — Source code (P5a · P5b) — Giai đoạn 1
 
-> **Agent tự `Glob inputs/repo/*/` và `inputs/db/*.sql` trước khi hỏi.** Có folder / file → in danh sách để người dùng xác nhận thay vì bắt gõ lại đường dẫn.
+> **Agent tự `Glob inputs/repo/*/` trước khi hỏi.** Có folder / file → in danh sách để người dùng xác nhận thay vì bắt gõ lại đường dẫn.
 
 ```
 1. Tôi thấy các thư mục source sau trong inputs/repo/: <danh sách>. Đúng đủ chưa?
    [A] Đúng đủ  [B] Còn repo ở chỗ khác — ghi đường dẫn  [C] Không có source code  [D] Chưa có — chạy v1 trước, bổ sung sau
 2. (khi có phần giao diện) Thư mục giao diện nào là của website nào?
    → Other: "web-fe → trang người dùng; admin-fe → trang quản trị"     [Chưa có — chạy v1 trước, bổ sung sau]
-3. Có thông tin cấu trúc database không? (chỉ cấu trúc bảng, không có dữ liệu)
-   [A] Có file cấu trúc (.sql) — tôi thấy: <inputs/db/…>   [B] Có quyền đọc database — tôi tự xuất cấu trúc theo lệnh bạn đưa
-   [C] Không có, nhưng source code có định nghĩa bảng      [D] Không có gì   [E] Chưa có — chạy v1 trước, bổ sung sau
 ```
-<!-- 1=P5a source_repos + sheet 11_Repo (REPO-01…) · 2=P5b For Site (không đoán theo tên folder; chưa gán → hỏi lại) · 3=P6 db_mode: [A] DUMP · [B] READONLY_CONN · [C] MIGRATION · [D] NONE -->
+<!-- 1=P5a source_repos + sheet 11_Repo (REPO-01…) · 2=P5b For Site (không đoán theo tên folder; chưa gán → hỏi lại). Database KHÔNG hỏi — luôn đọc từ source code (ORM / migration); không có code DB → O3 = ⬜ -->
 
 - Không có source → O2 = ⬜, chạy **chế độ chỉ website** (D9), ghi rõ trong Brief.
 - Repo bị `scan-sensitive.py` báo HIGH → `system-analyst.md` §6.
-
-| Câu 3 | `db_mode` | Hành vi |
-|---|---|---|
-| `[A]` | `DUMP` | `read-schema.py --dump`. File có dữ liệu → script exit 3 → yêu cầu file chỉ cấu trúc |
-| `[B]` | `READONLY_CONN` | Agent đưa lệnh `mysqldump --no-data` / `pg_dump --schema-only`; **người dùng tự chạy** (agent không giữ mật khẩu DB) → như `[A]` |
-| `[C]` | `MIGRATION` | Dựng bảng / cột từ code (`read-orm-schema.py`), evidence `code-ref` |
-| `[D]` | `NONE` | O3 = ⬜, O1 chương DB ghi `Database not available.` |
+- **Database:** tool tự đọc từ source code (Prisma / TypeORM / SQL migration qua `read-orm-schema.py`); không có → `db_mode=NONE`, O3 = ⬜. Người dùng không cần cung cấp file dump / kết nối DB (feedback 30/10/2026).
 
 ---
 

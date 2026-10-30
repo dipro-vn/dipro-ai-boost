@@ -1,6 +1,6 @@
 # DATA PRIVACY — Dữ liệu bí mật & cá nhân của khách hàng (秘密情報・個人情報)
 
-> **Copy từ kit `requirement-to-flow`, áp dụng cho `system-to-doc`.** Rủi ro lớn nhất ở kit này: screenshot màn hình có dữ liệu thật · DB dump · `.env` trong repo · nội dung CR có tên/email người gửi. Lớp chặn bổ sung: `scan-sensitive.py`, `read-schema.py`, câu P11.
+> **Copy từ kit `requirement-to-flow`, áp dụng cho `system-to-doc`.** Rủi ro lớn nhất ở kit này: screenshot màn hình có dữ liệu thật · `.env` trong repo · nội dung CR có tên/email người gửi. (DB dump không còn là input — tool đọc DB từ source code, feedback 30/10/2026.) Lớp chặn bổ sung: `scan-sensitive.py`, câu P11.
 >
 > **Bản rút gọn cho BA kit.** Nguồn đầy đủ: `POLICIES.md` §3.6 (canonical, dùng chung mọi kit).
 > File này chỉ giữ phần **liên quan tới công việc BA**: input là tài liệu/họp/ảnh của khách, output là SPEC + Figma + prototype.

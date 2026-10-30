@@ -46,7 +46,7 @@
 
 | Lớp | Cơ chế | Khi nào | Bắt nhóm |
 |---|---|---|---|
-| **S1** | `scan-sensitive.py` (exit 3 = dừng) · `read-schema.py` từ chối dump có dữ liệu | **Trước khi đọc** repo / dump / file input / CR | ②③ + ① dạng hàng loạt |
+| **S1** | `scan-sensitive.py` (exit 3 = dừng — bắt dump / secret lọt vào repo / inputs) | **Trước khi đọc** repo / dump / file input / CR | ②③ + ① dạng hàng loạt |
 | **H06** | Hook `detect-pii.js` chặn ở `Write`/`Edit`/`Bash`/MCP Figma·Backlog·Slack·Drive | **Trước khi ghi / đẩy ra ngoài** | ①③④ |
 | **Scan** | `node .claude/hooks/detect-pii.js --scan <ver>` | Trước khi đóng version | ①③④ |
 | **Khai báo** | Câu P11 (nguồn có dữ liệu thật không) · P2b (tài khoản được phép không) | Preflight | ②⑤ — máy không nhận ra |
@@ -124,6 +124,6 @@ Nghĩa vụ báo **PM / người phụ trách** thuộc về user — agent ph�
 |---|---|---|
 | Rules | file này + `.claude/rules/*.md` | Ý định, ngoại lệ |
 | Hook H06 | `.claude/hooks/detect-pii.js` · `.claude/settings.json` · `.claude/config/pii-patterns.json` | Self-test: `node .claude/hooks/selftest-detect-pii.js`. Dự án đã có `settings.json` riêng → **merge** khối `hooks`, đừng ghi đè |
-| Script | `scan-sensitive.py` · `read-schema.py` · `crawl-site.js` (chặn ghi ở tầng network) | Gate máy |
+| Script | `scan-sensitive.py` · `crawl-site.js` (chặn ghi ở tầng network) | Gate máy |
 
 Hai file nói ngược nhau → áp dụng bên **nghiêm hơn** + báo user để sửa file.

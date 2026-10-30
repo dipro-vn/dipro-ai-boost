@@ -25,8 +25,7 @@ outputs/ver<N>_<DDMMYY>_<slug>/_internal/
 ├── recon/
 │   ├── crawl/<WEB-xx>/      output cua crawl-site.js
 │   ├── code/<REPO-xx>/      output cua scan-repo.py (fe-api-calls.csv · api-roles.csv · seed-urls.txt ...)
-│   ├── db-code/<REPO-xx>/   output cua read-orm-schema.py (schema tu model / entity / migration + code-schema.csv)
-│   └── db/                  output cua read-schema.py (dump schema-only, nguon phu)
+│   └── db-code/<REPO-xx>/   output cua read-orm-schema.py (nguon DB DUY NHAT — schema tu model / entity / migration + code-schema.csv)
 └── inventory.xlsx       ← sheet 05_Evidence tro toi evidence/
 ```
 

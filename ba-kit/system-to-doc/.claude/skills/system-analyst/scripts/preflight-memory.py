@@ -47,8 +47,7 @@ QUESTIONS = [
     ("P2b", "Website", "access_approved_by", True),   # an toan: tai khoan duoc phep quet tu dong
     ("P3", "Website", "crawl_mode", True),            # an toan: quyen thao tac
     ("P4", "Website", "forbidden_zones", False),
-    ("P5", "Source code & database", "source_repos", False),
-    ("P6", "Source code & database", "db_mode", False),
+    ("P5", "Source code", "source_repos", False),
     ("P7", "Figma", "figma_input_url", False),
     ("P7b", "Figma", "ds_publish", False),
     ("P8", "Figma", "figma_output_url", False),
