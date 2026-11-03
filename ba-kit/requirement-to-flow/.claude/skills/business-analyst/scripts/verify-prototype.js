@@ -262,6 +262,39 @@ const launch = async () => {
     }
   }
 
+  /* ---------- 4b. SPEC coverage (tuỳ chọn — chỉ chạy khi màn có items[]) ---------- */
+  if (meta.hasContract) {
+    const sp = await page.evaluate(() => {
+      const M = window.__PROTO__?.screens || window.__PROTO__ || window.__SPEC__;
+      const out = [];
+      for (const code of Object.keys(M)) {
+        const items = (M[code] && M[code].items) || [];
+        if (!items.length) continue;
+        window.go(code, { asPage: true });
+        const sec = document.getElementById('scr-' + code);
+        const dom = new Set();
+        if (sec) sec.querySelectorAll('[data-item]').forEach(e => dom.add(String(e.getAttribute('data-item'))));
+        const spec = items.map(it => String(it.no || it.id || '')).filter(Boolean);
+        const specSet = new Set(spec);
+        out.push({
+          code, total: spec.length,
+          missing: spec.filter(n => !dom.has(n)),
+          orphan: [...dom].filter(n => !specSet.has(n)),
+        });
+      }
+      return out;
+    });
+    for (const t of sp) {
+      add('SPEC', t.code, 'So items[] trong panel vs [data-item] trên DOM',
+        'Mọi item (' + t.total + ') có 1 widget tương ứng',
+        t.missing.length ? ('thiếu ' + t.missing.slice(0, 6).join(',')) : 'đủ',
+        t.missing.length ? 'FAIL' : 'PASS');
+      if (t.orphan.length)
+        add('SPEC', t.code, 'Widget có data-item không khớp items[]',
+          'Không có DOM thừa', 'thừa ' + t.orphan.slice(0, 6).join(','), 'WARN');
+    }
+  }
+
   /* ---------- 5. RESPONSIVE ---------- */
   for (const w of [1440, 1024, 375]) {
     await page.setViewportSize({ width: w, height: 900 });

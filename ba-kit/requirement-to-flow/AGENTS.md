@@ -46,7 +46,7 @@ Chữ khách đọc trong kit này (OQ, output CR, Figma cho khách) theo đủ 
 | 1 | Figma Frame — **Flow Tổng Quan** (Business Logic + Tech Table + Sitemap) | Node trên Figma page user cung cấp |
 | 2 | Figma Frame — **Screen Flow** (Master Map + N groups nối bằng **arrow thật** + **Error-Screen Strip** + badge `⚠N` trên mỗi screen + **Combined Overview** + bảng Screen Index + **⑦ Error/Popup Index**) | Node Figma |
 | 3 | Figma Frame — **Screens + Items** (mockup + bảng ITEMS + ERROR SCENARIOS) — mockup dựng bằng Base Design System `.claude/base-design-system/` (Rule S6) | Node Figma |
-| 4 | **HTML Prototype** (standalone, mở bằng `open index.html`) | `<output-folder>/prototype/index.html` |
+| 4 | **HTML Prototype** (standalone, mở bằng `open index.html` — chuẩn template `.claude/ba-agent/figma-outputs/sample_html.md`: xem được như website · bấm được · items đánh số có mô tả panel bên phải) | `<output-folder>/prototype/index.html` |
 | 5 | **Basic Design** — ghi spec vào master Excel của công ty ⬜ **ON-DEMAND** | master workbook do user chỉ định |
 | OQ | **Open Questions** — register `.md` + `open_questions.xlsx` (+ Figma OQ view khi ≤ 20 câu) 🔶 **CONDITIONAL** | `<output-folder>/open-questions/` |
 | US | **Danh sách User Story** — register `.md` + `user_stories.xlsx` (**Epic → User Story**, không Level 1-2-3, **không vẽ Figma**) ⬜ **ON-DEMAND** | `<output-folder>/user-stories/` |

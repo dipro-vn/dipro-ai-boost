@@ -43,6 +43,16 @@ window.__PROTO__ = {
       errs:  [                          // đúng thứ tự bảng Non-Happy trong SPEC
         ["E-001", "Validation", "Bỏ trống ID", "Inline error", "Vui lòng nhập ID pháp nhân"]
         //  id      nhóm          trigger        hiển thị        message
+      ],
+      // ---- TUỲ CHỌN — bật Panel Spec bên phải (xem output-4-html.md §"Panel Spec") ----
+      items: [                          // đúng thứ tự `## Screen Details` trong SPEC
+        { no: "1", ja: "ID pháp nhân", kind: "Input", req: "○",
+          len: "文字列 20", init: "", ex: "ABC-001",
+          valid: "20 ký tự, chữ+số", err: ["E-001"],
+          cond: "", trig: "blur" }
+      ],
+      opens: [                          // câu hỏi còn mở cho màn này (OQ Register)
+        { no: "OQ-003", text: "Có hỗ trợ đăng nhập bằng email không?", ask: "Khách" }
       ]
     }
   }
@@ -52,6 +62,10 @@ window.go = function (code, opts) { /* chuyển tới màn `code`; opts.asPage =
 window.fireErr = function (code, i) { /* bắn error thứ i của màn `code` */ };
 ```
 
+`items` / `opens` **tuỳ chọn** — không có thì gate SPEC bỏ qua, không FAIL. Có thì gate kiểm từng item khớp DOM qua `data-item`.
+
+> **Tham khảo mô hình "spec viewer" của system-to-doc CR HTML** (`build-cr-prototype.py` + `verify-cr-prototype.js`): cùng ý tưởng — ảnh thật bên trái (ở đó là PNG Figma), panel bên phải với Items / Lỗi / Nghiệp vụ, Playwright gate kiểm số màn + render. Kit này giữ Output 4 là **interactive prototype** (UI thật từ SPEC, Rule P1–P8); SPEC panel chỉ thêm panel đọc, không thay thế prototype. Khi dự án cần viewer-only (ảnh Figma + panel, không bấm navigation), xem script system-to-doc.
+
 **Quy ước DOM đi kèm:**
 
 | Thứ | Quy ước | Dùng để |
@@ -59,6 +73,7 @@ window.fireErr = function (code, i) { /* bắn error thứ i của màn `code` *
 | Container màn | `<section class="scr" id="scr-<CODE>">` | định vị màn |
 | Màn đang mở | thêm class `.on` | kiểm "chỉ 1 màn hiển thị" |
 | Phần tử điều hướng | `data-go="<CODE>"` | click thật + dựng đồ thị |
+| Widget có số item (tuỳ chọn) | `data-item="<no>"` | map item panel ↔ widget DOM — bật khi dùng Panel Spec |
 | Menu chính | `<nav class="appnav"><a data-go="…">` | điểm vào khi BFS |
 | Overlay | `.scrim` hoặc `[role=dialog]` | nhận diện modal |
 | Toast | `.toast` | nhận diện toast |
@@ -100,6 +115,7 @@ Máy đã có Chrome/Edge thì script tự dùng, không cần tải browser.
 | `P2` | Màn `unk: true` phải hiện placeholder `⚠ UNKNOWN BEHAVIOR — chờ BRSE confirm` | FAIL = 0 |
 | `RESP` | Không cuộn ngang ở 1440 · 1024 · 375 px | FAIL = 0 |
 | `RUNTIME` | 0 lỗi JS · 0 `console.error` · 0 request ra ngoài | FAIL = 0 |
+| `SPEC` (nếu bật items) | Mỗi `items[].no` của màn có 1 widget `[data-item="<no>"]` trong `#scr-<CODE>` | FAIL = 0 · DOM thừa (có `data-item` nhưng không trong items) → WARN |
 
 ---
 

@@ -3,6 +3,8 @@
 ## Output 4 — HTML Prototype (Local)
 
 > Dựng prototype chạy được trên browser để stakeholder confirm UI trước khi Designer vẽ Figma HiFi.
+>
+> **BẮT BUỘC — Read trước khi sinh HTML:** [`sample_html.md`](./sample_html.md) — bảng phân tích 7 chiều (cấu trúc / action / style / thiết kế view / items đánh số / panel mô tả / toggle), DOM skeleton, CSS tokens cốt lõi, overlay số + panel pattern. HTML sinh ra phải khớp 10 điểm ở §6 "Thước đo được như website" của sample_html — xem được như website, bấm được, mô tả đủ, items đánh số, mỗi số có mô tả tương ứng ở panel.
 
 **Tạo file:** `<output-folder>/prototype/index.html`
 
@@ -25,6 +27,9 @@
 - **Timers** — nếu feature có countdown/timer, implement đúng
 - **Prototype Contract** — expose `window.__PROTO__` + `window.go()` + `window.fireErr()`
   để chạy được Quality Gate (`output-4-verify.md`). Thiếu → không approve được
+- **Panel Spec bên phải** (TUỲ CHỌN) — khi stakeholder cần tra item/validation cạnh UI;
+  thêm `items[]`/`opens[]` vào contract + `data-item` trên widget. Chi tiết: section
+  "Panel Spec bên phải" bên dưới. Không bật → gate SPEC bỏ qua, không ảnh hưởng
 
 ---
 
@@ -197,6 +202,75 @@ thanh Dev, hoặc bấm vào dòng trong panel Spec). Mỗi `Hiển thị` ra đ
 tiền, trạng thái ra badge) — bảng rỗng thì stakeholder không hình dung được. Nhưng PHẢI ghi
 rõ **"dữ liệu hiển thị là dữ liệu giả, chỉ để xem bố cục"** trong `## BA Deliverables`,
 tránh bị hiểu là số liệu nghiệp vụ thật.
+
+---
+
+### Panel Spec bên phải (TUỲ CHỌN — bật khi stakeholder muốn tra cứu item/validation cạnh UI)
+
+Mượn ý tưởng từ `画面設計書` của ES-Station: layout 2 cột — **trái** là UI thật (bấm thử như Rule P1–P8), **phải** là panel data đọc từ `__PROTO__.items[]`. Click item ↔ highlight widget 2 chiều. KHÔNG thay thế prototype tương tác — chỉ bổ sung.
+
+**Bật khi:** stakeholder cần vừa bấm vừa đọc item/validation (giống Confluence page). **Bỏ qua khi:** feature nhỏ < 5 màn, hoặc stakeholder chỉ cần feel navigation.
+
+**Shape thêm vào contract** (xem đầy đủ `output-4-verify.md`):
+
+```js
+window.__PROTO__.screens["CF_AUTH_001"].items = [
+  { no, ja, kind, req, len, init, ex, valid, err:[E-ids], cond, trig }
+];
+window.__PROTO__.screens["CF_AUTH_001"].opens = [
+  { no:"OQ-003", text, ask }  // tham chiếu OQ Register
+];
+```
+
+**DOM convention bắt buộc khi bật panel:** mỗi widget sinh theo Rule P7 phải có `data-item="<no>"` khớp `items[].no`.
+
+```html
+<section class="scr on" id="scr-CF_AUTH_001">
+  <!-- bên trái: UI thật -->
+  <div class="scr-ui">
+    <label>ID pháp nhân</label>
+    <input data-item="1" maxlength="20" required>
+    <!-- … -->
+  </div>
+  <!-- bên phải: panel items + opens -->
+  <aside class="scr-spec">
+    <nav class="spec-tabs">
+      <button data-tab="items" class="on">Items</button>
+      <button data-tab="errs">Non-Happy</button>
+      <button data-tab="opens">OPEN</button>
+    </nav>
+    <!-- JS đọc __PROTO__.screens[code].items[] + errs + opens để render -->
+  </aside>
+</section>
+```
+
+**Highlight 2 chiều** (gộp vào JS prototype, không cần file ngoài):
+
+```js
+// click item → highlight widget
+document.querySelectorAll('.scr-spec [data-no]').forEach(e => e.onclick = () => {
+  const sec = e.closest('.scr'); if (!sec) return;
+  sec.querySelectorAll('[data-item].on').forEach(x => x.classList.remove('on'));
+  const w = sec.querySelector('[data-item="' + e.dataset.no + '"]');
+  if (w) { w.classList.add('on'); w.scrollIntoView({ block: 'nearest' }); }
+});
+// click widget → highlight item
+document.querySelectorAll('[data-item]').forEach(e => e.onclick = ev => {
+  if (ev.target.closest('button,a,select,input,textarea')) return;  // không nuốt click thật
+  // … tương tự chiều ngược
+});
+```
+
+**Panel bắt buộc hiển thị tối thiểu:** No · 項目名 · Kind · 必須 · Len · Ex · Validation · Err code · OPEN tag.
+
+**Gate:** `verify-prototype.js` thêm nhóm `SPEC` — mỗi `items[].no` phải có `[data-item]` khớp trong `#scr-<CODE>`. Thiếu → FAIL. DOM có `data-item` không khớp items → WARN. Màn không khai `items[]` → bỏ qua nhóm này, không FAIL.
+
+**Giới hạn — không copy mù từ ES-Station:**
+
+- ❌ KHÔNG chụp screenshot thật như `kd_capture.py` — requirement-to-flow chạy trước code, chưa có app chạy để chụp
+- ❌ KHÔNG switch ja/vi — 1 file 1 ngôn ngữ; multi-ngôn ngữ thì sinh file riêng
+- ❌ KHÔNG tab "Message List toàn hệ thống" — mỗi run là 1 feature, không phải toàn system
+- ❌ KHÔNG "自動 diff DOM vs spec" — DOM sinh từ SPEC, so với SPEC là tautology
 
 ---
 
