@@ -52,6 +52,9 @@
 | 5 | Phân tích 6 trục (§4) → ghi `<ver>/_internal/cr.json` → `build-cr-impact.py` → `CR-<id>_Impact.xlsx` (7 sheet) | 🔴 **V-CR** |
 | 5b | **見積書 cho KH** (`sys-agent/estimate-rules.md` + **văn phong `sys-agent/writing-style.md`**; câu hỏi nghiệp vụ gửi khách → `estimate.json → questions`, kit sinh sheet 確認事項 / Câu hỏi nghiệp vụ): phân rã chức năng → `_internal/estimate.json` (dòng = màn × thao tác, song ngữ ja / vi, phương án thay thế = dòng riêng + `combos`) → `build-estimate.py` → `CR-<id>_見積書.xlsx` (tiếng Nhật thuần) · build lại Impact với `--estimate` (sheet Estimation = bản vi nội bộ cùng nguồn) | 🟡 **CR-4** · 🔴 **V-EST** |
 | 6 | Figma view CR (§5 + `figma/cr-view.md`; **> 1 site → mỗi site 1 Section riêng, site → flow → màn, CR-3 nền `#9DA5AD`**): CR-1 Flow (Output 1, **có NON-HAPPY mỗi lane**) · CR-2 Screen Flow (Output 2, **có màn / popup lỗi, Screen Index có Loại, ⑦ Error/Popup Index**) · CR Change Table (thống kê) · CR-3 màn đề xuất (**format Output 3: mockup trái + mô tả / ITEMS / ERROR SCENARIOS phải; NEW + UPD tô màu phần đổi + popup lỗi**; đọc Design System trước) | 🟡 **CR-2 · CR-3 · CR-3b** · 🔴 **V-CR-FIGMA** |
+| 6c | **HỎI NGAY** sau khi `verify-cr-figma.py` PASS — `AskUserQuestion` **CR-5** (xem block CR-5 dưới): hỏi có build HTML viewer đính kèm không, **ghi rõ mục đích** để user quyết. **Không tự chạy** export + build khi chưa có trả lời. User chọn `[B]` → skip 6a + 6b, ghi run-log, sang bước 7 | 🟡 **CR-5** |
+| 6a | **Export ảnh CR-3 → `_internal/screens/`** (chỉ chạy khi CR-5 = `[A]`) — agent loop: `for ref in cr-figma.json.screens.items where badge ∈ (NEW, UPD): nodeId = cr-figma-nodes.json.nodes[ref,kind='mockup'].id; png = get_screenshot(fileKey=<CR fileKey>, nodeId=nodeId, maxDimension=1600, contentsOnly=false); save base64 → $V/_internal/screens/<ref>.png`. Thiếu `cr-figma-nodes.json` hoặc không có node `kind='mockup'` → agent dừng, báo "Figma CR-3 chưa dựng mockup xong". `get_screenshot` throttle 1s/call. **Lưu ý mockup frame**: khi dựng CR-3 phải đặt frame height = full page content extent (`clipsContent=true`) → screenshot capture đủ items; frame ngắn hơn content → items off-fold sẽ bị filter khỏi overlay. Lưu `original_width/original_height` từ response vào `cr-figma-nodes.json.nodes[].origW/origH` (dùng cho overlay, không dùng PNG dims vì PNG có thể downsample) | — |
+| 6b | **Build HTML viewer** (chỉ chạy khi 6a xong) — (1) `python3 $S/build-cr-prototype.py --cr-json $V/_internal/cr.json --screens-dir $V/_internal/screens --out $V/CR-<id>_screens.html --figma-url <base-figma-url> --verify` — 1 file standalone (sample format ES-Station screen-design-doc): **dropdown chọn màn** optgroup theo site + badge count mục, ảnh Figma trái + **pin số overlay** absolute theo `item.ax/ay/w/h` (Figma coord space), panel phải (Items · Lỗi · Nghiệp vụ) click 2 chiều với pin, Prev/Next phím mũi tên, chip "Lỗi (N)" nổi đỏ khi N>0, link mở màn gốc trên Figma. `--verify` → auto-chạy `verify-cr-prototype.js` (Playwright gate: 20 tests · STATIC/NAV/RUNTIME) FAIL → exit 1. Script tự filter items `ay+h > origH * 1.02` (off-fold → pin ẩn, card panel vẫn giữ). (2) **BẮT BUỘC** `node .claude/hooks/detect-pii.js --scan $V/CR-<id>_screens.html` — CR HTML là output gửi khách, policy `rules/POLICY.md §8` + `rules/DATA-PRIVACY.md §5`; FAIL → fix rồi rebuild, **không** gửi khi scan FAIL. **Gate CR HTML**: verify-cr-prototype.js (có với --verify) + detect-pii.js (bắt buộc). CR HTML là bản xem offline bổ sung Figma + xlsx, không phải deliverable gate-locked | 🔴 **V-CR-HTML · H06-scan** |
 | 7 | `detect-pii.js --scan <ver>` · `build-version-index.py <ver>` · run-log · report | 🔴 H06 |
 
 ### CR-0 — xác nhận bản khảo sát dùng để đối chiếu (AskUserQuestion)
@@ -76,6 +79,24 @@ Yêu cầu này đã phân tích lần trước: <ngày> → tôi làm tiếp t�
    [A] PM  [B] Tech Lead  [C] Chưa ai duyệt
 ```
 <!-- 1 = Step 1 / Step 2 · 2 = combos · 3 = function-rates.json DRAFT → V-EST WARN, ghi tên VAI TRÒ vào run-log. Người dùng bỏ qua → dùng đề xuất, ghi rõ trong run-log -->
+
+### CR-5 — HTML viewer đính kèm màn đề xuất (AskUserQuestion, hỏi NGAY sau bước 6 Figma PASS)
+```
+Figma CR-3 đã dựng <N> màn mockup. Bạn có cần build thêm 1 file HTML đính kèm không?
+
+HTML viewer là file duy nhất, mở bằng trình duyệt — gồm:
+   • Ảnh thật của từng màn (chụp từ Figma, nhúng sẵn — không cần tài khoản Figma để xem)
+   • Dropdown chọn màn + Prev/Next · 1 màn tại 1 lúc
+   • Panel bên phải: danh sách Item, Lỗi, Mô tả nghiệp vụ (mục đích, happy case)
+   • Link "Mở trên Figma" từng màn (cho ai có tài khoản)
+
+Dùng khi: khách Nhật không có tài khoản Figma / cần gửi review offline qua email, Drive.
+Không cần khi: khách tự xem được Figma + xlsx đủ.
+
+   [A] Có — build HTML (sẽ chụp <N> ảnh từ Figma + nhúng; tốn ~<N> giây get_screenshot)
+   [B] Không — chỉ Figma + xlsx là đủ
+```
+<!-- Thay <N> bằng số màn NEW/UPD thật. [A] → tự chạy 6a (export PNG) + 6b (build HTML + PII scan) liên tiếp, không hỏi thêm. [B] → skip, ghi 1 dòng run-log 'HTML đính kèm: user chọn không'. User bỏ qua / không trả lời → dùng [B]. Figma chưa dựng xong (V-CR-FIGMA FAIL) → KHÔNG hỏi CR-5. -->
 
 ### CR-1 — làm rõ (chỉ khi cần; quy tắc gom câu theo chủ đề, tối đa 4 câu / lượt — `preflight-questions.md` §0)
 Hỏi đúng chỗ thiếu, theo điều người dùng thấy và làm, có lựa chọn rõ "A hay B?" — ví dụ: *"Mã giảm giá nhập ở màn 「注文確認」 hay ở giỏ hàng?"*, không *"IMP-003 gắn SC-014 hay SC-009?"*. Người dùng không trả lời được → câu hỏi `CQ-xxx` trong `cr.json`, dòng impact liên quan `Xung đột = To verify` (chữ trong xlsx: "Cần xác nhận — CQ-xxx" ở cột Câu hỏi), **không** tự chọn đáp án.
