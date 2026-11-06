@@ -1,5 +1,18 @@
 > **SOURCE:** `ba-kit/requirement-to-flow/.claude/ba-agent/figma-outputs/output-1-flow.md` @ a8509b9 — copy self-contained cho kit system-to-doc. Đọc kèm `o4-figma.md` (bảng thay SPEC.md → inventory). Sửa quy tắc vẽ chung thì sửa CẢ HAI nơi.
 
+> **⚠️ UPDATE 2026-11-06 — Output 1 giờ gồm 2 FRAME cạnh nhau:**
+>
+> | Frame | Nội dung |
+> |---|---|
+> | **① Function Flow (FF)** — spec dưới đây | Use case theo module FL-xx của hệ thống (hoặc theo tài liệu cũ nếu Maintain) |
+> | **② Business Flow Journey (BF)** — spec ở skill riêng | Swimlane multi-actor, luồng end-to-end mà khách / stakeholder thấy |
+>
+> **BẮT BUỘC load skill `ba-flow-journey` trước khi vẽ Output 1.** Xem `.claude/skills/ba-flow-journey/SKILL.md` — skill chứa: phân biệt BF vs FF · data model chung · palette · Figma + HTML render · self-feedback.
+>
+> Đặc thù System Analyst: khi làm `/analyze-system` cho hệ thống đã có, BF **vẫn nên vẽ** vì stakeholder cần thấy luồng nghiệp vụ end-to-end — không chỉ FL module kỹ thuật. Khi làm `/change-request`, BF/FF vẽ chỉ cho phần scope CR (NEW/UPD/DEL badge) như `flow-2-change-request.md`.
+>
+> Phần còn lại của file này chỉ nói về **frame ① Function Flow (FF)**.
+
 > ## ⚠ Output 1 dạng USE CASE (feedback 20/10/2026 — áp dụng cả `requirement-to-flow`)
 >
 > Phần dưới mục này **thắng** mọi chỗ mâu thuẫn ở phần copy phía sau (Phần A 5 cột, Sitemap 4 level có "Hành động").
