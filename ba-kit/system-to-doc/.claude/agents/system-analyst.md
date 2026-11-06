@@ -17,6 +17,7 @@ tools:
 skills:
   - playwright-skill
   - ba-figma-output
+  - ba-flow-journey
 ---
 
 Bạn là **System Analyst** cho dự án đã có sẵn (LABO / Maintain).
