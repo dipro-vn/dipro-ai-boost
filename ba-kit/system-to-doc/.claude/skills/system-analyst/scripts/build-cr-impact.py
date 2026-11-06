@@ -327,13 +327,20 @@ RISK_VI = {"High": "Lớn", "Medium": "Trung bình", "Low": "Nhỏ"}
 
 
 def _basis_line(imp, md, rate):
-    """1 dong IMP -> bullet 2 dong '· N <axis> <change>\\n· Mức ảnh hưởng: X' (feedback 30/10/2026: bo phan code × qty = MD)."""
+    """Căn cứ (feedback 06/11/2026): **chỉ liệt kê số màn hình/popup hoặc số API gọi**. Không mã code.
+    Axis khác (DB/Mockup/ThirdParty/Business) → chỉ ghi 'Mức ảnh hưởng' (chi tiết ở sheet Screen/API/Database/Figma riêng)."""
     q = C.qty_of(imp)
-    noun = AXIS_NAME.get(imp.get("axis"), str(imp.get("axis", "hạng mục")).lower())
+    axis = imp.get("axis")
     verb = CHANGE_VI.get(imp.get("change_type"), str(imp.get("change_type", "")).lower())
     risk = RISK_VI.get(imp.get("risk"), "Cần xác nhận")
     qstr = C.fmt_md(q) if q != int(q) else str(int(q))
-    return "· %s %s %s\n· Mức ảnh hưởng: %s" % (qstr, noun, verb, risk)
+    lines = []
+    if axis in ("Screen", "Popup"):
+        lines.append("· %s màn hình/popup %s" % (qstr, verb))
+    elif axis == "System":
+        lines.append("· %s API gọi %s" % (qstr, verb))
+    lines.append("· Mức ảnh hưởng: %s" % risk)
+    return "\n".join(lines)
 
 
 def build_estimation(ws, cr, rates, rates_meta, est):

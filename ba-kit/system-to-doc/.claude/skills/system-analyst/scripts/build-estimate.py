@@ -42,7 +42,7 @@ def main():
     if a.lang == "ja" and a.internal:
         print("--internal chi dung voi --lang vi (ban KH khong co cot noi bo)", file=sys.stderr)
         return 1
-    wb, pos, tm = E.build_workbook(est, rates, meta, a.template, a.lang, a.internal)
+    wb, pos, tm = E.build_workbook(est, rates, meta, a.template, a.lang, a.internal, cr=cr)
     os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
     wb.save(a.out)
     tot = E.plan_totals(est, rates, tm)

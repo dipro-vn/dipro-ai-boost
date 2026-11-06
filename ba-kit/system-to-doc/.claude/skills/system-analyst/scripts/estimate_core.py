@@ -233,14 +233,28 @@ RISK_VI = {"High": "Lớn", "Medium": "Trung bình", "Low": "Nhỏ"}
 
 
 def basis_detail(x, imp_by_id, rate_code, qty, impl, rate_item):
-    """-> bullet nhieu dong (feedback 30/10/2026): '· N API mới\\n· Mức ảnh hưởng: Nhỏ'. Bo phan code × qty = MD (da co o cot MD rieng)."""
+    """Căn cứ (feedback 06/11/2026): **chỉ liệt kê số màn hình/popup + số API gọi**; không mã code.
+    Bỏ DB/Mockup/ThirdParty/Business khỏi Căn cứ (đã có sheet Screen/API/Database/Figma riêng).
+    Bullet: '· N màn hình/popup (M mới · K cập nhật)\\n· X API gọi (...)\\n· Mức ảnh hưởng: ...'"""
     imps = [imp_by_id[i] for i in (x.get("impacts") or []) if i in imp_by_id]
     bits = []
-    for axis, name in (("System", "API"), ("DB", "bảng/cột DB"), ("Screen", "màn"), ("ThirdParty", "liên kết ngoài"), ("Mockup", "mockup"), ("Business", "quy tắc")):
-        nw = sum(1 for i in imps if i["axis"] == axis and i.get("change_type") == "NEW")
-        up = sum(1 for i in imps if i["axis"] == axis and i.get("change_type") == "UPD")
-        if nw: bits.append("%d %s mới" % (nw, name))
-        if up: bits.append("%d %s cập nhật" % (up, name))
+    # 1) Màn hình + Popup gộp chung
+    sc_new = sum(1 for i in imps if i.get("axis") in ("Screen", "Popup") and i.get("change_type") == "NEW")
+    sc_upd = sum(1 for i in imps if i.get("axis") in ("Screen", "Popup") and i.get("change_type") == "UPD")
+    if sc_new or sc_upd:
+        parts = []
+        if sc_new: parts.append("%d mới" % sc_new)
+        if sc_upd: parts.append("%d cập nhật" % sc_upd)
+        bits.append("%d màn hình/popup (%s)" % (sc_new + sc_upd, " · ".join(parts)))
+    # 2) API gọi (axis = System)
+    api_new = sum(1 for i in imps if i.get("axis") == "System" and i.get("change_type") == "NEW")
+    api_upd = sum(1 for i in imps if i.get("axis") == "System" and i.get("change_type") == "UPD")
+    if api_new or api_upd:
+        parts = []
+        if api_new: parts.append("%d mới" % api_new)
+        if api_upd: parts.append("%d cập nhật" % api_upd)
+        bits.append("%d API gọi (%s)" % (api_new + api_upd, " · ".join(parts)))
+    # 3) Mức ảnh hưởng (tổng hợp mọi axis)
     risk = max((RISK_RANK.get(i.get("risk"), 0) for i in imps), default=0)
     if risk: bits.append("Mức ảnh hưởng: " + RISK_VI[{3: "High", 2: "Medium", 1: "Low"}[risk]])
     return "\n".join("· " + b for b in bits) if bits else ""
