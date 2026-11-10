@@ -1,6 +1,26 @@
-# Ba Agent — Output 1: Flow Tổng Quan
+# Ba Agent — Output 1: Flow Tổng Quan (BF + FF)
 
-## Output 1 — Flow Tổng Quan (Use case + Technology Table + Sitemap)
+> **⚠️ UPDATE 2026-11-06 — Output 1 giờ gồm 2 FRAME cạnh nhau:**
+>
+> | Frame | Nội dung |
+> |---|---|
+> | **① Function Flow (FF)** — spec dưới đây | Use case theo module FL-xx của hệ thống |
+> | **② Business Flow Journey (BF)** — spec ở skill riêng | Swimlane multi-actor, luồng end-to-end mà khách thấy |
+>
+> **BẮT BUỘC load skill `ba-flow-journey` trước khi vẽ Output 1.** Skill định nghĩa:
+> - Phân biệt BF vs FF
+> - Data model chung cho cả Figma + HTML
+> - Palette màu chung (BF color + Actor color)
+> - Figma render + HTML render pattern
+> - Checklist self-feedback cho cả 2 frame
+>
+> Xem: `.claude/skills/ba-flow-journey/SKILL.md`
+>
+> Phần còn lại của file này chỉ nói về **frame ①  Function Flow (FF)** (giữ nguyên spec cũ).
+
+---
+
+## Output 1 · Frame ① — Function Flow (FF) — Use case + Technology Table + Sitemap
 
 > **Không phải screen flow.** Đây là bức tranh **use case**: mỗi flow = 1 use case — Actor nào → đi những bước nào → kết thúc ở đâu (happy) · lỗi / nhánh khác kết thúc ở đâu (non-happy). **Không đưa công nghệ / function / API vào luồng** — công nghệ chỉ nằm ở bảng Technology bên phải (feedback 20/10/2026).
 

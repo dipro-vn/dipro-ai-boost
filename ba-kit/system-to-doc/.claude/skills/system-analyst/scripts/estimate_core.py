@@ -233,14 +233,28 @@ RISK_VI = {"High": "Lớn", "Medium": "Trung bình", "Low": "Nhỏ"}
 
 
 def basis_detail(x, imp_by_id, rate_code, qty, impl, rate_item):
-    """-> bullet nhieu dong (feedback 30/10/2026): '· N API mới\\n· Mức ảnh hưởng: Nhỏ'. Bo phan code × qty = MD (da co o cot MD rieng)."""
+    """Căn cứ (feedback 06/11/2026): **chỉ liệt kê số màn hình/popup + số API gọi**; không mã code.
+    Bỏ DB/Mockup/ThirdParty/Business khỏi Căn cứ (đã có sheet Screen/API/Database/Figma riêng).
+    Bullet: '· N màn hình/popup (M mới · K cập nhật)\\n· X API gọi (...)\\n· Mức ảnh hưởng: ...'"""
     imps = [imp_by_id[i] for i in (x.get("impacts") or []) if i in imp_by_id]
     bits = []
-    for axis, name in (("System", "API"), ("DB", "bảng/cột DB"), ("Screen", "màn"), ("ThirdParty", "liên kết ngoài"), ("Mockup", "mockup"), ("Business", "quy tắc")):
-        nw = sum(1 for i in imps if i["axis"] == axis and i.get("change_type") == "NEW")
-        up = sum(1 for i in imps if i["axis"] == axis and i.get("change_type") == "UPD")
-        if nw: bits.append("%d %s mới" % (nw, name))
-        if up: bits.append("%d %s cập nhật" % (up, name))
+    # 1) Màn hình + Popup gộp chung
+    sc_new = sum(1 for i in imps if i.get("axis") in ("Screen", "Popup") and i.get("change_type") == "NEW")
+    sc_upd = sum(1 for i in imps if i.get("axis") in ("Screen", "Popup") and i.get("change_type") == "UPD")
+    if sc_new or sc_upd:
+        parts = []
+        if sc_new: parts.append("%d mới" % sc_new)
+        if sc_upd: parts.append("%d cập nhật" % sc_upd)
+        bits.append("%d màn hình/popup (%s)" % (sc_new + sc_upd, " · ".join(parts)))
+    # 2) API gọi (axis = System)
+    api_new = sum(1 for i in imps if i.get("axis") == "System" and i.get("change_type") == "NEW")
+    api_upd = sum(1 for i in imps if i.get("axis") == "System" and i.get("change_type") == "UPD")
+    if api_new or api_upd:
+        parts = []
+        if api_new: parts.append("%d mới" % api_new)
+        if api_upd: parts.append("%d cập nhật" % api_upd)
+        bits.append("%d API gọi (%s)" % (api_new + api_upd, " · ".join(parts)))
+    # 3) Mức ảnh hưởng (tổng hợp mọi axis)
     risk = max((RISK_RANK.get(i.get("risk"), 0) for i in imps), default=0)
     if risk: bits.append("Mức ảnh hưởng: " + RISK_VI[{3: "High", 2: "Medium", 1: "Low"}[risk]])
     return "\n".join("· " + b for b in bits) if bits else ""
@@ -287,7 +301,7 @@ def write_sheet(ws, est, rates, rates_meta, tm, lang, internal=False, cr=None):
     imp_by_id = {i["id"]: i for i in (cr or {}).get("impacts") or []}
     extra = {"pattern": max(ci.values()) + 1}
     if internal:
-        extra.update(impact=extra["pattern"] + 1, basis=extra["pattern"] + 2)
+        extra.update(basis=extra["pattern"] + 1)
     for k, c in extra.items():
         h = ws.cell(row=hdr + 1, column=c, value=Lb["pattern"] if k == "pattern" else Lb[k])
         src = ws.cell(row=hdr + 1, column=ci["sub"])
@@ -326,14 +340,12 @@ def write_sheet(ws, est, rates, rates_meta, tm, lang, internal=False, cr=None):
                 ws.cell(row=r, column=ci[k], value=v)
             ws.cell(row=r, column=extra["pattern"], value=pats.get(x.get("pattern")) or None)
             if internal:
-                ws.cell(row=r, column=extra["impact"], value=", ".join(x.get("impacts") or []) or None)
                 rate = rates[x["code"]]
                 b = basis_detail(x, imp_by_id, x["code"], x.get("qty", 1), nums["impl"], rate["item"])
                 if x.get("impl_override") is not None:
                     b = (b + "\n" if b else "") + "· override: " + t(x.get("override_note"), "vi")
                 ws.cell(row=r, column=extra["basis"], value=b)
-                for k in ("impact", "basis"):
-                    ws.cell(row=r, column=extra[k]).alignment = Alignment(wrap_text=True, vertical="top")
+                ws.cell(row=r, column=extra["basis"]).alignment = Alignment(wrap_text=True, vertical="top")
             ws.cell(row=r, column=extra["pattern"]).alignment = Alignment(horizontal="center", vertical="top", wrap_text=True)
             lines = max(len(content) // 46 + content.count("\n") + 1, 2)
             ws.row_dimensions[r].height = min(15 * lines + 6, 400)
@@ -575,7 +587,7 @@ def verify(wb, sheet, est, rates, rates_meta, tm, lang, cr=None):
             b.append("dong %d STEP=%r" % (it["row"], it.get("step")))
     res.append(("E2", "Moi dong co 流用可否 · ◉/◯ · STEP hop le", b, False))
     res.append(("E3", "Cong thuc tong phu dung dai dong hang muc (Step1 · Step2 · toan bo · 人月)", check_ranges(layout, items, totals), False))
-    internal = any(str(c.value or "") == LBL["vi"]["impact"] for c in ws[layout["row"] + 1]) if lang == "vi" else False
+    internal = any(str(c.value or "") == LBL["vi"]["basis"] for c in ws[layout["row"] + 1]) if lang == "vi" else False
     res.append(("E4", "Ngon ngu / ma noi bo: ban %s%s" % (lang, " noi bo — bo qua" if internal else ""),
                 [] if internal else check_language(wb, lang), False))
     if est is None:

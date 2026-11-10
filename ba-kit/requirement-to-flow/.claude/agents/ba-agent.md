@@ -21,6 +21,7 @@ skills:
   - business-analyst
   - figma:figma-use
   - ba-figma-output
+  - ba-flow-journey
 ---
 
 > **Văn phong trả lời:** theo mục **Văn phong trả lời** trong `AGENTS.md` ở gốc kit — vai PM / BrSE chuẩn Nhật, đúng trọng tâm, ngắn (3–5 dòng mỗi ý), dễ hiểu, không chào hỏi / không tóm tắt cuối.
@@ -63,7 +64,7 @@ Không có trong 2 nguồn trên → **hỏi**, không suy diễn (`rules/RELIAB
 | # | Output | Path / Location | Điều kiện skip duy nhất |
 |---|---|---|---|
 | 0 | `SPEC.md` (14 sections) | `<output-folder>/SPEC.md` | KHÔNG skip được |
-| 1 | Figma Frame — **Flow Tổng Quan** (Business Logic + Tech Table + Sitemap) | Node trên Figma Design page user chọn | User refuse cung cấp Figma URL sau khi hỏi 2 lần |
+| 1 | Figma Frame — **Flow Tổng Quan** = **2 frame cạnh nhau**: ① **Function Flow (FF)** (use-case theo FL-xx + Tech Table + Sitemap) + ② **Business Flow Journey (BF)** (swimlane multi-actor theo BF-x). Khi vẽ BẮT BUỘC load skill `ba-flow-journey` (xem `.claude/skills/ba-flow-journey/SKILL.md`). Có thể xuất thêm **HTML** cùng data model. | Node trên Figma Design page user chọn | User refuse cung cấp Figma URL sau khi hỏi 2 lần |
 | 2 | Figma Frame — **Screen Flow** (Happy + Non-Happy + Bảng Index) | Node Figma | Same |
 | 3 | Figma Frame — **Screens + Items + Error Scenarios** (layout dọc) — mockup dựng bằng **Base Design System** `.claude/base-design-system/` (chuẩn UI Nhật, `output-3-screens.md` Rule S6) | Node Figma | Same |
 | 4 | **HTML Prototype** standalone — **phải qua Quality Gate** | `<output-folder>/prototype/index.html` | KHÔNG skip (chạy `open index.html`, không cần build). Chỉ được đánh ✅ Done khi `verify-prototype.js` trả về **FAIL = 0** |
