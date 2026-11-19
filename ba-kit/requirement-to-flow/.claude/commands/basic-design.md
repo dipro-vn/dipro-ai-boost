@@ -16,6 +16,11 @@ Bắt buộc theo đúng thứ tự, không được rút gọn:
 4. **§4 Bước 0** — backup master vào `versions/v<N>_<DDMMYYYY>/basic_design_before.xlsx` **trước khi ghi**
 5. **§4 hoặc §5** — Create New hoặc Change Spec
 6. **§6 Quality Gate O5** — chạy `verify-basic-design.py`, `FAIL = 0` mới được đi tiếp
+6b. **Basic Design Review loop** (bắt buộc sau Quality Gate PASS):
+    - Gọi sub-agent `basic-design-reviewer` (`.claude/agents/basic-design-reviewer.md`) qua Agent tool, truyền: `workbook_path`, `spec_path`, `versions_dir`, `round=1`
+    - **`overall=PASS`** → sang bước 7
+    - **`overall=FIX`** → đọc `versions_dir/basic-design-review-round1.md` → sửa spec JSON theo fix instructions → re-run `build-basic-design.py` → re-run `verify-basic-design.py` PASS → gọi lại sub-agent `round=2`
+    - **Round 2 vẫn `FIX`** → gắn cờ `manual-review-needed` vào `versions_dir/run-log.md` (danh sách issue còn lại + lý do), báo user, **không loop vòng 3**
 7. **§7** — dừng ở `WAITING FOR BRSE APPROVAL`
 8. **§8** — in Runtime response contract 9 field
 
