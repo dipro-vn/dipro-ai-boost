@@ -73,6 +73,7 @@ Viết `P`/`Q`:
 | 3 | Chạy `build-basic-design.py` (lệnh dưới) với `--spec` (LLM) **và** `--ast-spec` (AST): dữ kiện AST lấp chỗ trống của spec LLM (required / maxlength / màn chuyển tới / API còn trống hoặc "Cần xác nhận") và thêm thông báo lỗi LLM bỏ sót; không thêm dòng item (spec LLM có thể đã gộp). Chỉ có AST (không viết spec LLM) → `--spec <ast json>` là đủ mức B. Script copy template, tạo 1 sheet / màn, `Screen Index`, `Screen Error message`, `Change History` (dòng `CHG-` tiếp theo), gỡ freeze, ghi bản gốc `--before` cho gate | exit 0 |
 | 4 | Dán `bd/questions-<WEB-xx>.csv` vào `06_OpenQuestions` (Q-ID cấp từ `--q-start`, chain `next_q`) | Mọi `Cần xác nhận — Q-xxx` có Q thật |
 | 5 | Gate V-BD | `FAIL = 0` |
+| 5b | **Basic Design Review loop** (`agents/basic-design-reviewer.md`, bắt buộc sau V-BD PASS): gọi sub-agent qua Agent tool → truyền `workbook_path`, `inventory_path`, `internal_dir`, `site_id`, `fe_screen_files` (nếu có), `fe_api_calls` (nếu có), `fe_repo_path` (nếu có), `round=1`. `overall=PASS` → báo xong. `overall=FIX` → đọc `_internal/basic-design-review-round1.md` → sửa `_internal/bd/<WEB-xx>.json` theo fix instructions → re-run `build-basic-design.py` → re-run `verify-basic-design.py` PASS → gọi lại sub-agent `round=2`. Round 2 vẫn FIX → gắn cờ `manual-review-needed` trong run-log (danh sách issue + lý do), **không loop vòng 3** | `overall=PASS` hoặc `manual-review-needed` |
 
 ```json
 {"screens": {"SC-007": {"title": "予約編集", "purpose": "...", "access": "...", "logic": "...",
