@@ -24,8 +24,8 @@
 
 | Giai đoạn | Lệnh | Hỏi | Không hỏi |
 |---|---|---|---|
-| **Giai đoạn 1** — đọc source code | `preflight-memory.py missing --phase 1` | Lượt 1 (tên · phạm vi · **web hay app**) · Lượt 3 (source code · DB) · Lượt 4 (Figma) · P10 (ngôn ngữ) · Quyết định lớn | Website, tài khoản, **4 câu an toàn**, Bug list — chưa mở website nên chưa cần |
-| **Giai đoạn 2** — AI Playwright (sau điểm dừng) | `preflight-memory.py missing --phase 2` | Lượt 2 (website · môi trường · tài khoản · mức thao tác · vùng cấm) · P9 (Bug list) · P11 (dữ liệu thật) — **4 câu an toàn luôn hỏi lại** | Câu Giai đoạn 1 đã có (chỉ in lại trong bảng xác nhận nếu đổi) |
+| **Giai đoạn 1** — đọc source code | `preflight-memory.py missing --phase 1` | Lượt 1 (tên · phạm vi · **web hay app**) · Lượt 3 (source code · DB) · P10 (ngôn ngữ) · Quyết định lớn | Website, tài khoản, **4 câu an toàn**, Bug list, **Figma** — chưa touch dịch vụ ngoài nên chưa cần (feedback 25/11/2026) |
+| **Giai đoạn 2** — AI Playwright (sau điểm dừng) | `preflight-memory.py missing --phase 2` | Lượt 2 (website · môi trường · tài khoản · mức thao tác · vùng cấm) · **Lượt 4 (Figma)** · P9 (Bug list) · P11 (dữ liệu thật) — **4 câu an toàn luôn hỏi lại** | Câu Giai đoạn 1 đã có (chỉ in lại trong bảng xác nhận nếu đổi) |
 
 App (P0d = app) → không có Giai đoạn 2; không hỏi Lượt 2.
 
@@ -177,7 +177,7 @@ DELETE **không bao giờ** được cấp qua câu này — gặp nút xoá lu�
 
 ---
 
-## Lượt 4 — Figma (P7 · P7b · P8) — Giai đoạn 1
+## Lượt 4 — Figma (P7 · P7b · P8) — Giai đoạn 2 (feedback 25/11/2026: dời từ G1 xuống G2 vì Figma là dịch vụ cloud, G1 giữ offline)
 
 ```
 1. Có file Figma thiết kế của hệ thống hiện tại không? (dùng để bổ sung bộ quy chuẩn giao diện)

@@ -157,11 +157,9 @@ CR_AXIS_SHEETS = [("Screen", ["Screen"]), ("API", ["System"]), ("Database", ["DB
 CR_SHEETS = [CR_SHEET_SUMMARY, CR_SHEET_ESTIMATION] + [s for s, _ in CR_AXIS_SHEETS] + [CR_SHEET_QA]
 CR_ESTIMATION_ONLY_AXES = ["Business", "ThirdParty"]
 ESTIMATION_TEMPLATE_PATH = "templates/template_estimation.xlsx"
-CR_IMPACT_COLS = [  # header hien thi cho khach -> tieng Viet co dau
-    "No", "Impact ID", "Trục", "Loại", "Baseline Ref", "Hạng mục",
-    "Nội dung thay đổi", "Vì sao phải sửa", "Ảnh hưởng tới hiện tại",
-    "Xung đột", "Chi tiết xung đột", "Rủi ro", "Mã đơn giá", "Số lượng",
-    "MD", "Ghi chú MD", "Evidence", "Câu hỏi",
+CR_IMPACT_COLS = [  # header hien thi cho khach -> tieng Viet co dau (feedback 20/11/2026: bo cot noi bo khoi ban gui khach)
+    "No", "Impact ID", "Trục", "Loại", "Hạng mục",
+    "Nội dung thay đổi", "Ảnh hưởng tới hiện tại",
 ]
 CR_IMPACT_ID = r"^IMP-\d{3,}$"
 CR_QUESTION_ID = r"^CQ-\d{3,}$"

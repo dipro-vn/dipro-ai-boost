@@ -27,17 +27,16 @@ KIT = os.path.abspath(os.path.join(HERE, "..", "..", "..", ".."))
 
 
 def read_axis_sheet(ws):
+    # Feedback 20/11/2026: bo cot MD/Mã đơn giá/Số lượng/Câu hỏi/... khoi sheet axis -> khong con dong Tong MD
     hdr = [C.txt(c.value) for c in ws[1]]
-    rows, total = [], None
+    rows = []
     for i, r in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
         d = {h: r[k] if k < len(r) else None for k, h in enumerate(hdr) if h}
         iid = C.txt(d.get("Impact ID"))
-        if iid == C.L_TOTAL_MD:
-            total = d.get("MD")
-        elif re.match(S.CR_IMPACT_ID, iid):
+        if re.match(S.CR_IMPACT_ID, iid):
             d["__row__"] = i
             rows.append(d)
-    return hdr, rows, total
+    return hdr, rows, None
 
 
 def read_xlsx(path):
@@ -68,7 +67,17 @@ def read_xlsx(path):
                       "total": {col: ws["%s%d" % (col, tot)].value for col in "KLMNOP"} if tot else {},
                       "month": {col: ws["%s%d" % (col, tot + 1)].value for col in "KLMNOP"} if tot else {}}
     if S.CR_SHEET_QA in wb.sheetnames:
-        out["qa"] = {C.txt(r[0]) for r in wb[S.CR_SHEET_QA].iter_rows(values_only=True) if r and r[0]}
+        # Feedback 20/11/2026: section 1 "Vi sao day la CR" gop vao 1 o duy nhat (gach dau dong) ->
+        # gom toan bo text o moi cell cua Q&A (khong chi cot A) de verifier tim duoc CR-xxx.y.
+        texts = set()
+        for r in wb[S.CR_SHEET_QA].iter_rows(values_only=True):
+            for v in r or ():
+                if v:
+                    s = str(v)
+                    texts.add(s)
+                    for tok in s.replace(",", " ").replace("·", " ").split():
+                        texts.add(tok.strip("[]()• "))
+        out["qa"] = texts
     return out
 
 
@@ -305,47 +314,17 @@ def main():
             if not r:
                 continue
             loc = "%s!%s" % (name, r["__row__"])
-            for col, f in (("Trục", "axis"), ("Loại", "change_type"), ("Mã đơn giá", "rate_code")):
+            # Feedback 20/11/2026: chi con 3 cot kiem tra (Truc/Loai) sau khi bo cot noi bo khoi ban khach
+            for col, f in (("Trục", "axis"), ("Loại", "change_type")):
                 if C.txt(r.get(col)) != C.txt(imp.get(f)):
                     bad.append("%s %s=%s != cr.json %s" % (loc, col, r.get(col), imp.get(f)))
-            if num(r.get("Số lượng")) != num(imp.get("qty")):
-                bad.append("%s Số lượng=%s != qty %s" % (loc, r.get("Số lượng"), imp.get("qty")))
-            want = C.md_of(imp, rates)
-            if want is not None and num(r.get("MD")) != want:
-                bad.append("%s %s MD=%s != %s x %s = %s" % (loc, tag(imp), r.get("MD"),
-                           C.fmt_md(rates[imp["rate_code"]].get("md")), imp.get("qty"), C.fmt_md(want)))
-        sub = round(sum(C.md_of(i, rates) or 0.0 for i in want_imp), 2)
-        if num(xtotal) != sub:
-            bad.append("%s: dong Tong MD=%s != %s" % (name, xtotal, C.fmt_md(sub)))
     m, row_tot, col_tot, grand = C.md_matrix(IMP, rates)
     g.check(11, "Sheet Screen/API/Database/Figma khop cr.json; MD = don gia x so luong; dong Tong MD dung", bad)
 
-    # 12. Summary: cong so + so doi tuong + link Estimation
+    # 12. Summary (feedback 20/11/2026): bo section "1. Cong so thay doi" (chi tiet o Estimation);
+    # chi kiem bang so doi tuong + link sheet.
     bad = []
     est = X["est"] or {}
-    if FE:
-        want_impl = round(sum(E.row_numbers(x, FR, FTM)["impl"] for x in FE["rows"]), 2)
-        if num(summary_value(summ, C.L_IMPL)) != want_impl:
-            bad.append("%s=%s != tong 実装 estimate.json %s" % (C.L_IMPL, summary_value(summ, C.L_IMPL), want_impl))
-        lay = E.find_layout(FWB[S.CR_SHEET_ESTIMATION])
-        sub = FX["col"]["sub"] if FX else "?"
-        for label, row in ((C.L_TOTAL_PD, FX["row_all"] if FX else 0), (C.L_TOTAL_PM, (FX["row_all"] + 1) if FX else 0),
-                           ("Step 1 (人日)", FX["row_step1"] if FX else 0), ("Step 2 (人日)", (FX["row_step1"] + 1) if FX else 0)):
-            f = C.txt(summary_value(summ, label)).replace(" ", "")
-            if f != "='%s'!%s%d" % (S.CR_SHEET_ESTIMATION, sub, row):
-                bad.append("%s phai la ='%s'!%s%d (dang: %r)" % (label, S.CR_SHEET_ESTIMATION, sub, row, f))
-    else:
-        if num(summary_value(summ, C.L_IMPL)) != grand:
-            bad.append("%s=%s != tong MD %s" % (C.L_IMPL, summary_value(summ, C.L_IMPL), C.fmt_md(grand)))
-        mn, ex = C.plan_md(IMP, rates)
-        if num(summary_value(summ, C.L_MIN_PLAN)) != mn or num(summary_value(summ, C.L_EXT_PLAN)) != ex:
-            bad.append("最小改修案 / 拡張案 = %s / %s != %s / %s (theo co option)" % (
-                summary_value(summ, C.L_MIN_PLAN), summary_value(summ, C.L_EXT_PLAN), mn, ex))
-        for label, key in ((C.L_TOTAL_PD, 0), (C.L_TOTAL_PM, 1)):
-            f = C.txt(summary_value(summ, label)).replace(" ", "")
-            want_row = (est.get("total_row") or 0) + key
-            if f != "='%s'!P%d" % (S.CR_SHEET_ESTIMATION, want_row):
-                bad.append("%s phai la cong thuc ='%s'!P%d (dang: %r)" % (label, S.CR_SHEET_ESTIMATION, want_row, f))
     objs = summary_objects(summ)
     want_objs = [(o, [d[t] for t in S.CR_CHANGE_TYPE] + [d["total"], d["md"]])
                  for o, d in C.object_stats(IMP, rates)]

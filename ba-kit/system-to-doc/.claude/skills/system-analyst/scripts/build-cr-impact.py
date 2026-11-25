@@ -49,11 +49,22 @@ CRIT_SHORT = {
 SRC_VI = {"FILE": "File", "CHAT": "Chat", "LINK": "Link"}
 RISK_VI = {"High": "Cao (High)", "Medium": "Trung bình (Medium)", "Low": "Thấp (Low)"}
 WIDTH_SUM = [26, 30, 36, 13, 30, 14, 14]      # cot A..G sheet Summary / Q&A
-WIDTH_IMPACT = {"No": 5, "Impact ID": 10, "Trục": 11, "Loại": 8, "Baseline Ref": 20,
-                "Hạng mục": 24, "Nội dung thay đổi": 36, "Vì sao phải sửa": 36,
-                "Ảnh hưởng tới hiện tại": 34, "Xung đột": 9, "Chi tiết xung đột": 26,
-                "Rủi ro": 9, "Mã đơn giá": 13, "Số lượng": 8, "MD": 7, "Ghi chú MD": 36,
-                "Evidence": 30, "Câu hỏi": 12}
+WIDTH_IMPACT = {"No": 5, "Impact ID": 10, "Trục": 11, "Loại": 8,
+                "Hạng mục": 32, "Nội dung thay đổi": 52,
+                "Ảnh hưởng tới hiện tại": 42}
+
+
+def _to_bullets(text):
+    """Tach chuoi dai thanh gach dau dong '· <item>' theo cau / dau cham."""
+    s = (text or "").strip()
+    if not s:
+        return "—"
+    # Tach theo dau cham cau + xuong dong. Giu nguyen moi cau.
+    import re
+    parts = [p.strip() for p in re.split(r"(?:\n+|(?<=[\.。])\s+)", s) if p.strip()]
+    if not parts:
+        return s
+    return "\n".join("· " + p.rstrip(".。") for p in parts)
 WARN_RED = "FFC00000"
 
 
@@ -137,34 +148,10 @@ def build_summary(ws, cr, rates_meta, rates, est):
                  ("Mức ảnh hưởng chung", RISK_VI.get(meta["overall_risk"], meta["overall_risk"]))):
         sh.put([(1, k), (2, v)], merge_to={2: 7}, bold=(1,))
 
-    sh.gap()
-    sh.put([(1, "1. Công số thay đổi")], "banner", merge_to=full)
-    grand = round(sum(C.md_of(i, rates) or 0.0 for i in cr["impacts"]), 2)
-    mn, ex = C.plan_md(cr["impacts"], rates)
+    # Feedback 20/11/2026: bo section "1. Cong so thay doi" khoi Summary (chi tiet o sheet Estimation);
+    # chi giu Link Estimation + ghi chu rates.
     sub = est.get("col_sub", "P")
-    fe = est.get("fn")  # che do --estimate: Estimation = 見積書 theo chuc nang (estimate.json)
-    if fe:
-        sh.put([(1, C.L_IMPL), (2, fe["impl"]), (3, "MD · %d dòng chức năng (function-rates %s) — đối chiếu theo impact: %s MD · %d hạng mục"
-                                                   % (fe["rows"], fe["status"], C.fmt_md(grand), len(cr["impacts"])))],
-               merge_to={3: 7}, bold=(1, 2), center=(2,))
-    else:
-        sh.put([(1, C.L_IMPL), (2, grand), (3, "MD · %d hạng mục" % len(cr["impacts"]))],
-               merge_to={3: 7}, bold=(1, 2), center=(2,))
-    r = sh.put([(1, C.L_TOTAL_PD), (2, "='%s'!%s%d" % (S.CR_SHEET_ESTIMATION, sub, est["row_total"])),
-                (3, "人日 — theo hệ số của template %s" % ("見積書" if fe else "Estimation"))], merge_to={3: 7}, bold=(1, 2), center=(2,))
-    ws.cell(row=r, column=2).number_format = "0.00"
-    r = sh.put([(1, C.L_TOTAL_PM), (2, "='%s'!%s%d" % (S.CR_SHEET_ESTIMATION, sub, est["row_month"])),
-                (3, "人月 = 人日 / %s" % C.fmt_md(est["md_per_month"]))], merge_to={3: 7}, bold=(1, 2), center=(2,))
-    ws.cell(row=r, column=2).number_format = "0.00"
-    if fe:
-        for k, lab in ((0, "Step 1 (人日)"), (1, "Step 2 (人日)")):
-            r = sh.put([(1, lab), (2, "='%s'!%s%d" % (S.CR_SHEET_ESTIMATION, sub, fe["row_step1"] + k)),
-                        (3, "Phương án thay thế (chọn 1) xem bảng tổng theo phương án cuối sheet Estimation")],
-                       merge_to={3: 7}, center=(2,))
-            ws.cell(row=r, column=2).number_format = "0.00"
-    else:
-        sh.put([(1, C.L_MIN_PLAN), (2, mn), (3, "MD")], merge_to={3: 7}, center=(2,))
-        sh.put([(1, C.L_EXT_PLAN), (2, ex), (3, "MD")], merge_to={3: 7}, center=(2,))
+    fe = est.get("fn")
     r = sh.put([(1, C.L_LINK_EST)], merge_to=full)
     link(ws.cell(row=r, column=1), S.CR_SHEET_ESTIMATION, "B%d" % est["row_header"])
     sh.put([(1, C.L_RATES), (2, "%s v%s — %s" % (status or "?", rates_meta.get("version", "?"),
@@ -175,7 +162,7 @@ def build_summary(ws, cr, rates_meta, rates, est):
                merge_to={2: 7}, color=WARN_RED)
 
     sh.gap()
-    sh.put([(1, "2. Số đối tượng thay đổi")], "banner", merge_to=full)
+    sh.put([(1, "1. Số đối tượng thay đổi")], "banner", merge_to=full)
     sh.put([(1, C.L_OBJ_HDR)] + [(i + 2, t) for i, t in enumerate(S.CR_CHANGE_TYPE)] +
            [(6, C.L_TOTAL), (7, "実装 MD")], "header")
     for o, d in C.object_stats(cr["impacts"], rates):
@@ -184,7 +171,7 @@ def build_summary(ws, cr, rates_meta, rates, est):
                center=tuple(range(2, 8)), bold=(1, 2, 3, 4, 5, 6, 7) if o == C.L_TOTAL else (1,))
 
     sh.gap()
-    sh.put([(1, "3. Sheet chi tiết")], "banner", merge_to=full)
+    sh.put([(1, "2. Sheet chi tiết")], "banner", merge_to=full)
     for name, axes in S.CR_AXIS_SHEETS:
         n = sum(1 for i in cr["impacts"] if i["axis"] in axes)
         r = sh.put([(1, "→ " + name), (2, "%d hạng mục — trục %s" % (
@@ -206,27 +193,39 @@ def build_qa(ws, cr, rates_meta, rates):
     sh.put([(1, "%s — Hỏi đáp với khách hàng" % meta["cr_id"])], "title", merge_to=full)
     sh.put([(1, "Mức ảnh hưởng chung"), (2, RISK_VI.get(meta["overall_risk"], meta["overall_risk"]))],
            merge_to={2: 6}, bold=(1,))
-    sh.put([(1, "Đề xuất"), (2, meta["recommendation"])], merge_to={2: 6}, bold=(1,))
+    # Feedback 20/11/2026: De xuat ghi theo gach dau dong
+    rec = C.txt(meta.get("recommendation"))
+    rec_bullets = _to_bullets(rec)
+    sh.put([(1, "Đề xuất"), (2, rec_bullets)], merge_to={2: 6}, bold=(1,))
 
     sh.gap()
+    # Feedback 20/11/2026: Section 1 chi 1 o duy nhat, gach dau dong
     sh.put([(1, "1. Vì sao đây là Change Request")], "banner", merge_to=full)
-    sh.put([(1, "Hạng mục"), (2, "Yêu cầu"), (3, "Hệ thống hiện tại (baseline)"),
-            (4, "Tiêu chí"), (5, "Giải trình")], "header", merge_to={5: 6})
+    lines = []
     for j in cr["justification"]:
-        crit = "\n".join("%s · %s" % (c, CRIT_SHORT.get(c, S.CR_CRITERIA.get(c, ""))) for c in j["criteria"])
+        req = C.txt(j.get("request"))
         why = C.txt(j.get("why"))
+        bref = C.txt(j.get("baseline_ref"))
+        bquote = C.txt(j.get("baseline_quote"))
+        item = C.txt(j.get("item"))
+        bullet = "• [%s] %s" % (item, req) if item else "• " + req
+        if why:
+            bullet += "\n    → Vì: " + why
+        if bref:
+            bullet += "\n    → Baseline %s: “%s”" % (bref, bquote) if bquote else "\n    → Baseline: %s" % bref
         if C.txt(j.get("not_feedback")):
-            why += "\nKhông phải lỗi: " + C.txt(j["not_feedback"])
-        sh.put([(1, j.get("item")), (2, j.get("request")),
-                (3, "%s: “%s”" % (j.get("baseline_ref"), C.txt(j.get("baseline_quote")))),
-                (4, crit), (5, why)], merge_to={5: 6}, bold=(1,))
+            bullet += "\n    → Không phải lỗi: " + C.txt(j["not_feedback"])
+        lines.append(bullet)
+    sh.put([(1, "\n\n".join(lines) if lines else "—")], merge_to=full)
 
     sh.gap()
+    # Feedback 20/11/2026: Bo cot "Vi sao can" → thay bang "De xuat cau tra loi"
     sh.put([(1, "2. Câu hỏi cần khách hàng trả lời")], "banner", merge_to=full)
-    sh.put([(1, "Mã"), (2, "Câu hỏi"), (3, "Vì sao cần"), (4, "Trục"), (5, "Người trả lời"),
+    sh.put([(1, "Mã"), (2, "Câu hỏi"), (3, "Đề xuất câu trả lời"), (4, "Trục"), (5, "Người trả lời"),
             (6, "Trạng thái")], "header")
     for q in cr["questions"] or [{"id": "—", "question": "Không có câu hỏi"}]:
-        sh.put([(1, q.get("id")), (2, q.get("question")), (3, q.get("why")), (4, q.get("axis")),
+        proposal = C.txt(q.get("proposal")) or C.txt(q.get("why")) or "—"
+        sh.put([(1, q.get("id")), (2, q.get("question")), (3, proposal), (4, q.get("axis")),
                 (5, q.get("owner")), (6, q.get("status"))], bold=(1,), center=(4, 6))
 
     sh.gap()
@@ -258,26 +257,15 @@ def build_impact(ws, impacts, rates, empty_note=""):
         BD.header(ws.cell(row=1, column=i, value=h))
         ws.column_dimensions[get_column_letter(i)].width = WIDTH_IMPACT.get(h, 14)
     ws.row_dimensions[1].height = 30
-    center = {"No", "Impact ID", "Trục", "Loại", "Xung đột", "Rủi ro", "Mã đơn giá", "Số lượng", "MD"}
+    center = {"No", "Impact ID", "Trục", "Loại"}
     total = 0.0
     for n, imp in enumerate(impacts, start=1):
-        r = rates[imp["rate_code"]]
         md = C.md_of(imp, rates)
         total += md
-        q = C.qty_of(imp)
-        note = "%s (%s MD/%s × %s)" % (r.get("item"), C.fmt_md(float(r["md"])), r.get("unit"), C.fmt_md(q))
-        if imp.get("option") is True:
-            note = "拡張案 · " + note
-        if C.txt(imp.get("md_note")):
-            note += "; " + C.txt(imp["md_note"])
         vals = {"No": n, "Impact ID": imp["id"], "Trục": imp["axis"], "Loại": imp["change_type"],
-                "Baseline Ref": C.txt(imp.get("baseline_ref")) or "—", "Hạng mục": imp.get("item"),
-                "Nội dung thay đổi": imp.get("change"), "Vì sao phải sửa": imp.get("why_change"),
-                "Ảnh hưởng tới hiện tại": imp.get("impact_on_current"), "Xung đột": imp["conflict"],
-                "Chi tiết xung đột": C.txt(imp.get("conflict_detail")) or "—", "Rủi ro": imp["risk"],
-                "Mã đơn giá": imp["rate_code"], "Số lượng": q if q != int(q) else int(q), "MD": md,
-                "Ghi chú MD": note, "Evidence": imp.get("evidence"),
-                "Câu hỏi": C.txt(imp.get("question")) or "—"}
+                "Hạng mục": imp.get("item"),
+                "Nội dung thay đổi": imp.get("change"),
+                "Ảnh hưởng tới hiện tại": imp.get("impact_on_current")}
         lines = 1
         for i, h in enumerate(cols, start=1):
             c = ws.cell(row=n + 1, column=i, value=vals[h])
@@ -289,11 +277,6 @@ def build_impact(ws, impacts, rates, empty_note=""):
         c = ws.cell(row=2, column=2, value=empty_note or "Không có hạng mục")
         BD.data(c, size=10)
         last = 2
-    tr = last + 1
-    for i, h in enumerate(cols, start=1):
-        BD.banner(ws.cell(row=tr, column=i))
-    ws.cell(row=tr, column=cols.index("Impact ID") + 1, value=C.L_TOTAL_MD)
-    ws.cell(row=tr, column=cols.index("MD") + 1, value=round(total, 2))
     ws.auto_filter.ref = "A1:%s%d" % (get_column_letter(len(cols)), last)
     ws.page_setup.orientation = "landscape"
     ws.sheet_properties.pageSetUpPr.fitToPage = True

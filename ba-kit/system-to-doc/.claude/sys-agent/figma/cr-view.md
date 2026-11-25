@@ -127,16 +127,20 @@ python3 $S/verify-cr-figma.py --nodes $V/_internal/cr-figma-nodes.json --cr-json
 ```
 V-CR-FIGMA (**15 check**): 1 tên/badge · 2 node → impact thật · 3 màn / luồng bị chạm đều vẽ · 4 AS-IS chỉ hàng xóm 1 bước / lane FL baseline · 5 Change Table = thống kê khớp cr.json · 6 trùng (WARN) · 7 mũi tên thật · 8 legend + không node thiếu badge · 9 không chồng node cũ · 10 CR-3 bám DS · **11 CR-1 mỗi lane có NON-HAPPY · 12 CR-2 mỗi group có màn / popup lỗi, Screen Index có Loại + TỔNG, ⑦ đủ · 13 CR-3 mỗi màn có mô tả + ITEMS + ERROR SCENARIOS, màn UPD tô màu phần đổi, đủ màn NEW + UPD · 14 mỗi site 1 section (CR-2 · CR-3); CR-2 và CR-3 = site → flow / use case → Section con → màn; CR-3 nền #9DA5AD** · **15 mỗi mockup có `crkit:src` trỏ designer frame hoặc `build_mode=token` + `no_designer_reason` không rỗng (feedback 19/11/2026)**. `FAIL = 0` mới được báo xong. Sau gate: `get_screenshot` ≥ 3 màn CR-3 (1 NEW · 1 UPD · 1 popup) — che panel phải, nhìn mockup có hiểu màn gì không (Rule S5 Output 3).
 
-## 7. Mockup review loop (sub-agent, bắt buộc sau V-CR-FIGMA PASS)
+## 7. Mockup review loop (sub-agent, **LUÔN LUÔN kích hoạt khi mockup đã render xong**)
 
-Sau khi V-CR-FIGMA `FAIL = 0`, `system-analyst` **PHẢI** gọi sub-agent `mockup-reviewer` (`.claude/agents/mockup-reviewer.md`) để so sánh mỗi mockup CR-3 với website đang chạy + Design System baseline. Lý do: V-CR-FIGMA chỉ kiểm cấu trúc + token; nó không phát hiện mockup xấu / lệch UI thật (feedback 19/11/2026 — mockup tự dựng từ token bị user phản ánh "xấu + khác website").
+> **Feedback 20/11/2026:** đổi từ "sau V-CR-FIGMA PASS" → **luôn luôn gọi `mockup-reviewer` ngay sau khi mockup CR-3 render xong trên Figma**, không chờ V-CR-FIGMA PASS. V-CR-FIGMA FAIL thường là do mockup token-build lệch UI thật — chính là thứ reviewer cần phát hiện. Chờ PASS mới gọi reviewer = bẫy chicken-and-egg (gate FAIL vì mockup lệch, nhưng reviewer bị block vì gate FAIL).
+
+Ngay sau khi 04-screens-*.js chạy xong + 99-readback.js xuất ra `cr-figma-nodes.json`, `system-analyst` **PHẢI** gọi sub-agent `mockup-reviewer` (`.claude/agents/mockup-reviewer.md`) **trước khi** chạy `verify-cr-figma.py` (hoặc song song). Reviewer so sánh mỗi mockup CR-3 với website đang chạy + Design System baseline. Lý do: V-CR-FIGMA chỉ kiểm cấu trúc + token; nó không phát hiện mockup xấu / lệch UI thật (feedback 19/11/2026 — mockup tự dựng từ token bị user phản ánh "xấu + khác website").
+
+**Không có ngoại lệ:** V-CR-FIGMA FAIL / WARN / PASS đều phải kích reviewer. Reviewer không phụ thuộc vào kết quả gate.
 
 **Workflow 2 vòng:**
 
 | Vòng | Việc | Agent |
 |---|---|---|
-| 1 | `mockup-reviewer` chấm 10 màn × 5 tiêu chí (shell / component / màu-typography / nội dung / annotation CR) → `_internal/mockup-review.md` + `mockup-review.json` | mockup-reviewer |
-| 1.5 | Nếu `overall=PASS` → sang bước 6c (CR-5 HTML viewer). Nếu `overall=FIX` → system-analyst đọc feedback → sửa `cr-figma.json` + rerun `render-cr-figma.py` cho các màn FIX → chạy lại `use_figma` → readback → `verify-cr-figma.py` PASS → review vòng 2 | system-analyst |
+| 1 | `mockup-reviewer` chấm N màn × 5 tiêu chí (shell / component / màu-typography / nội dung / annotation CR) → `_internal/mockup-review.md` + `mockup-review.json`. **Chạy ngay sau readback, không chờ V-CR-FIGMA.** | mockup-reviewer |
+| 1.5 | Reviewer `overall=FIX` **hoặc** V-CR-FIGMA FAIL → system-analyst **tìm designer frame thật** (`get_metadata` trên các page `FINAL UI Admin` · `FINAL UI User` · `UI ADMIN/SUPER ADMIN（デザイナー用）` · `UI Usersite（デザイナー用）`) → clone (`getNodeByIdAsync(srcId).clone()`) → sửa cr-figma.json thêm `src` nodeId → chạy lại render + use_figma + readback + verify + review vòng 2 | system-analyst |
 | 2 | Review lại — chỉ chấm các màn vòng 1 fail | mockup-reviewer |
 | 2.5 | Vẫn `FIX` → gắn cờ `manual-review-needed` trong run-log (danh sách màn + lý do còn fail), báo user để xử lý tay. **Không review vòng 3** (tránh loop vô hạn) | system-analyst |
 

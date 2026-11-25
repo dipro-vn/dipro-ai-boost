@@ -23,7 +23,7 @@
 | Baseline | `version-tool.py context --outputs outputs --flow 2 [--cr-id]` → `latest_baseline` (luôn bản **mới nhất**) | ⛔ DỪNG — đề nghị chạy Luồng 1 (ít nhất phần site/repo liên quan CR) |
 | `_internal/inventory.xlsx` của baseline | file tồn tại, gate V2 của baseline PASS | ⛔ DỪNG — baseline hỏng thì impact sai |
 | Bảng đơn giá MD | `.claude/config/md-unit-rates.json` | Vẫn chạy; `status ≠ APPROVED` → Summary ghi rõ **"Ước lượng sơ bộ — chưa được PM/Tech Lead duyệt"** |
-| Template estimation | `templates/template_estimation.xlsx` (bóc từ 見積書 công ty bằng `extract-estimation-template.py`) | ⛔ build từ chối — bóc template trước (§4.5) |
+| ~~Template estimation~~ | (feedback 25/11/2026: bỏ 見積書 → template `template_mitsumori.xlsx` và `template_estimation.xlsx` không còn bắt buộc; giữ trong `templates/` như legacy) | — |
 | Nội dung CR | §1 | Hỏi user |
 
 ---
@@ -49,8 +49,8 @@
 | 2 | **Phân loại + giải trình** từng item (§3) | — |
 | 3 | Item mơ hồ → hỏi | 🟡 **CR-1** |
 | 4 | `version-tool.py next --outputs outputs --cr-id CR-<id> --slug <slug> --create` | — |
-| 5 | Phân tích 6 trục (§4) → ghi `<ver>/_internal/cr.json` → `build-cr-impact.py` → `CR-<id>_Impact.xlsx` (7 sheet) | 🔴 **V-CR** |
-| 5b | **見積書 cho KH** (`sys-agent/estimate-rules.md` + **văn phong `sys-agent/writing-style.md`**; câu hỏi nghiệp vụ gửi khách → `estimate.json → questions`, kit sinh sheet 確認事項 / Câu hỏi nghiệp vụ): phân rã chức năng → `_internal/estimate.json` (dòng = màn × thao tác, song ngữ ja / vi, phương án thay thế = dòng riêng + `combos`) → `build-estimate.py` → `CR-<id>_見積書.xlsx` (tiếng Nhật thuần) · build lại Impact với `--estimate` (sheet Estimation = bản vi nội bộ cùng nguồn) | 🟡 **CR-4** · 🔴 **V-EST** |
+| 5 | Phân tích 6 trục (§4) → ghi `<ver>/_internal/cr.json` → `build-cr-impact.py` → `CR-<id>_Impact.xlsx` (7 sheet). Sheet Estimation dùng `md-unit-rates.json` nội bộ, **không sinh 見積書 nữa** (feedback 25/11/2026 — kit không còn gửi output tiếng Nhật ra KH, chỉ dùng Impact.xlsx + Figma + HTML viewer) | 🔴 **V-CR** |
+| ~~5b~~ | ~~見積書~~ **BỎ** (feedback 25/11/2026). Script `build-estimate.py` + `verify-estimate.py` + `templates/template_mitsumori.xlsx` giữ trong kit (deprecated, không gọi) để rollback nếu cần | — |
 | 6 | Figma view CR (§5 + `figma/cr-view.md`; **> 1 site → mỗi site 1 Section riêng, site → flow → màn, CR-3 nền `#9DA5AD`**): CR-1 Flow (Output 1, **có NON-HAPPY mỗi lane**) · CR-2 Screen Flow (Output 2, **có màn / popup lỗi, Screen Index có Loại, ⑦ Error/Popup Index**) · CR Change Table (thống kê) · CR-3 màn đề xuất (**format Output 3: mockup trái + mô tả / ITEMS / ERROR SCENARIOS phải; NEW + UPD tô màu phần đổi + popup lỗi**; đọc Design System trước) | 🟡 **CR-2 · CR-3 · CR-3b** · 🔴 **V-CR-FIGMA** |
 | 6c | **HỎI NGAY** sau khi `verify-cr-figma.py` PASS — `AskUserQuestion` **CR-5** (xem block CR-5 dưới): hỏi có build HTML viewer đính kèm không, **ghi rõ mục đích** để user quyết. **Không tự chạy** export + build khi chưa có trả lời. User chọn `[B]` → skip 6a + 6b, ghi run-log, sang bước 7 | 🟡 **CR-5** |
 | 6a | **Export ảnh CR-3 → `_internal/screens/`** (chỉ chạy khi CR-5 = `[A]`) — agent loop: `for ref in cr-figma.json.screens.items where badge ∈ (NEW, UPD): nodeId = cr-figma-nodes.json.nodes[ref,kind='mockup'].id; png = get_screenshot(fileKey=<CR fileKey>, nodeId=nodeId, maxDimension=1600, contentsOnly=false); save base64 → $V/_internal/screens/<ref>.png`. Thiếu `cr-figma-nodes.json` hoặc không có node `kind='mockup'` → agent dừng, báo "Figma CR-3 chưa dựng mockup xong". `get_screenshot` throttle 1s/call. **Lưu ý mockup frame**: khi dựng CR-3 phải đặt frame height = full page content extent (`clipsContent=true`) → screenshot capture đủ items; frame ngắn hơn content → items off-fold sẽ bị filter khỏi overlay. Lưu `original_width/original_height` từ response vào `cr-figma-nodes.json.nodes[].origW/origH` (dùng cho overlay, không dùng PNG dims vì PNG có thể downsample) | — |
@@ -69,16 +69,7 @@ Yêu cầu này đã phân tích lần trước: <ngày> → tôi làm tiếp t�
 ```
 <!-- [A] tiếp tục · [B] Luồng 1 DELTA trước · [C] chỉ định baseline -->
 
-### CR-4 — báo giá (AskUserQuestion, 1 lượt 3 câu, trước bước 5b)
-```
-1. Báo giá chia 2 giai đoạn thế nào?
-   [A] Giai đoạn 1 = phần bắt buộc, giai đoạn 2 = phần mở rộng / tuỳ chọn  (đề xuất)  [B] Gộp 1 giai đoạn  (Other: chia khác)
-2. Đưa những phương án nào vào báo giá?
-   [A] Mọi phương án khách nêu + 1 phương án đơn giản hơn nếu có  (đề xuất)  [B] Chỉ phương án khách nêu
-3. Bảng đơn giá theo chức năng do ai duyệt? (chưa duyệt thì báo giá ghi "ước lượng sơ bộ")
-   [A] PM  [B] Tech Lead  [C] Chưa ai duyệt
-```
-<!-- 1 = Step 1 / Step 2 · 2 = combos · 3 = function-rates.json DRAFT → V-EST WARN, ghi tên VAI TRÒ vào run-log. Người dùng bỏ qua → dùng đề xuất, ghi rõ trong run-log -->
+### ~~CR-4 — báo giá~~ (feedback 25/11/2026: BỎ cùng với 見積書.xlsx. Không hỏi CR-4 nữa.)
 
 ### CR-5 — HTML viewer đính kèm màn đề xuất (AskUserQuestion, hỏi NGAY sau bước 6 Figma PASS)
 ```
