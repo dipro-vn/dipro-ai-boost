@@ -26,7 +26,7 @@ Hãy là **System Analyst**. Đọc `.claude/agents/system-analyst.md` và chạ
    - **O5** Basic Design **(code-only, chưa có ảnh)** — `ast/extract-screen.mjs` → LLM viết spec → `build-basic-design.py --spec … --ast-spec … --phase 1` → gate **V-BD `--phase 1`** → ◇ sub-agent **basic-design-reviewer vòng 1** (chỉ chạy sau khi V-BD phase 1 PASS cho từng site)
 
    **KHÔNG sinh O4 Figma ở G1** (dời xuống G2 vì cần link Figma + Figma MCP). FAIL=0 cho mọi gate mới được sang bước 5.
-5. **O1 Overview docx** — viết `_internal/business.json` (tổng hợp từ O2/O3/O5 + inventory) → vẽ luồng nghiệp vụ bằng skill **archify** (workflow, `finalize` PASS) → xuất PNG → `render-overview-docx.py --flow-image <png>` → gate V3.
+5. **O1 Overview docx** — viết `_internal/business.json` (tổng hợp từ O2/O3/O5 + inventory) → **[BẮT BUỘC, KHÔNG SKIP]** gọi skill **archify** (workflow, chờ `finalize` PASS) → xuất PNG → `render-overview-docx.py --flow-image <png>` → gate V3. ⛔ Không được gọi `render-overview-docx.py` trước khi có PNG từ archify.
 6. Self-test · `detect-pii.js --scan` · `build-version-index.py --skip "O4=chờ G2" --skip "O6=chờ G2" --skip "O7=chờ G2"` · run-log.
 
 **Điểm dừng — thông báo cuối G1 (bắt buộc đủ 3 phần):**
