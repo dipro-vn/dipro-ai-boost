@@ -60,6 +60,7 @@
 │   └── figma/                                  (copy từ requirement-to-flow) + cr-view.md (view CR Luồng 2 — riêng kit này)
 ├── skills/
 │   ├── system-analyst/               SKILL.md + scripts/ (ensure-env · recon · render · gate · self-test) + scripts/ast/ (bộ trích AST, package.json riêng)
+│   ├── basic-design/                 **SKILL.md** — load BẮT BUỘC khi tạo O5 Basic Design xlsx: quy tắc tên sheet, B1/B4, gom màn R1–R4, P/Q theo 12 type, đánh số badge ảnh, SELF-CHECK
 │   └── ba-figma-output/              (copy từ requirement-to-flow) quy tắc vẽ Figma
 ├── base-design-system/                Base Design System chuẩn UI Nhật (DADS + tên chuẩn công ty) — O6 dựa vào, CR-3 dùng tạm khi hệ thống không có DS
 ├── rules/                            DATA-PRIVACY · SECURITY · RELIABILITY · POLICY
