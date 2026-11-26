@@ -19,14 +19,13 @@ Hãy là **System Analyst**. Đọc `.claude/agents/system-analyst.md` và chạ
 1. **Preflight G1** (`preflight-questions.md` §0 · §0b, `preflight-memory.py missing --phase 1`): tên / phạm vi · **web hay app** · source code · DB · ngôn ngữ. **KHÔNG hỏi Figma, không hỏi tài khoản website, không hỏi 4 câu an toàn** — thuộc G2 (feedback 25/11/2026).
 2. `scan-sensitive.py` (exit 3 → **cảnh báo + DỪNG**) → đọc code (Pha A) → `extract-design-tokens.py --code-only` → **Discovery Brief** + Quyết định lớn (B1–B5), DỪNG chờ confirm → `version-tool.py next --outputs outputs --slug <slug> --create`.
 3. **Inventory** từ code → gate V1 · V2.
-4. **Multi-output parallel** — sinh **3 output cùng lúc** (chạy các tool call cùng lượt, không chờ nhau), vì không phụ thuộc nhau sau khi Pha A đã xong:
+4. **Multi-output parallel** — sinh **2 output cùng lúc** (chạy các tool call cùng lượt, không chờ nhau), vì không phụ thuộc nhau sau khi Pha A đã xong:
    - **O2** API Documentation → gate V-API
    - **O3** DB Documentation + ERD → gate V-DB
-   - **O8** DevSetup → gate V-DEV
 
-   **KHÔNG sinh O5 Basic Design ở G1** (dời xuống G2 — O5 cần ảnh Playwright thật + đánh số; sinh G1 không có ảnh là file nửa chừng không dùng được). **KHÔNG sinh O4 Figma ở G1** (dời xuống G2 vì cần link Figma + Figma MCP). FAIL=0 cho mọi gate mới được sang bước 5.
-5. **O1 Overview docx** — viết `_internal/business.json` (tổng hợp từ O2/O3/O5 + inventory) → **[BẮT BUỘC, KHÔNG SKIP]** gọi skill **archify** (workflow, chờ `finalize` PASS) → xuất PNG → `render-overview-docx.py --flow-image <png>` → gate V3. ⛔ Không được gọi `render-overview-docx.py` trước khi có PNG từ archify.
-6. Self-test · `detect-pii.js --scan` · `build-version-index.py --skip "O4=chờ G2" --skip "O5=chờ G2" --skip "O6=chờ G2" --skip "O7=chờ G2"` · run-log.
+   **KHÔNG sinh O5/O8 ở G1** (dời xuống G2). **KHÔNG sinh O4 Figma ở G1** (dời xuống G2 vì cần link Figma + Figma MCP). FAIL=0 cho mọi gate mới được sang bước 5.
+5. **O1 Overview docx** — viết `_internal/business.json` (tổng hợp từ O2/O3 + inventory) → **[BẮT BUỘC, KHÔNG SKIP]** gọi skill **archify** (workflow, chờ `finalize` PASS) → xuất PNG → `render-overview-docx.py --flow-image <png>` → gate V3. ⛔ Không được gọi `render-overview-docx.py` trước khi có PNG từ archify.
+6. Self-test · `detect-pii.js --scan` · `build-version-index.py --skip "O4=chờ G2" --skip "O5=chờ G2" --skip "O6=chờ G2" --skip "O7=chờ G2" --skip "O8=chờ G2"` · run-log.
 
 **Điểm dừng — thông báo cuối G1 (bắt buộc đủ 3 phần):**
 
@@ -69,6 +68,7 @@ Hãy là **System Analyst**. Đọc `.claude/agents/system-analyst.md` và chạ
     - **O5 Basic Design — tạo hoàn chỉnh từ đầu**: **[BẮT BUỘC]** Read `skills/basic-design/SKILL.md` trước khi bắt đầu. Thông báo rõ: *"Bắt đầu tạo O5 Basic Design — gồm 4 việc: (1) trích AST từ code FE, (2) build file xlsx với tên màn đọc được + nội dung P/Q đầy đủ theo type, (3) chụp ảnh Playwright từng màn, (4) đánh số item trên ảnh (badge đỏ, không che nội dung) + chèn vào file"*. Quy trình: `ast/extract-screen.mjs` → `build-bd-skeleton.py` → LLM viết spec (title màn KHÔNG dùng SC-xxx · P/Q theo type từ `workbook-structure.md §2.8b` · 6 dòng Step 1 · errors) → `build-basic-design.py --skeleton … --spec …` → `annotate-ui-image.py` đánh số badge (vị trí từ `pages.json box`, badge đỏ góc trên-phải không che text/icon chính) → `build-basic-design.py --crawl` chèn ảnh đã đánh số → **SELF-CHECK** (`skills/basic-design/SKILL.md §7` — FAIL → sửa spec + rebuild → PASS) → gate **V-BD** (31 check) → ◇ sub-agent **basic-design-reviewer vòng 1** (FIX → sửa spec + rebuild → vòng 2; vẫn FIX → `manual-review-needed`)
     - **O6 Design System** — `extract-design-tokens.py --crawl --emit-root` → gate V-DS (tuỳ chọn)
     - **O7 Bug list** — `build-bug-list.py` → gate V8 (chỉ chạy khi P9 = có)
+    - **O8 DevSetup** — `build-devsetup.py` → gate V-DEV
 
     FAIL=0 cho mọi gate mới được sang bước 12. Cập nhật O2 / O3 nếu reconcile đổi dữ liệu (CONFLICT).
 12. **O4 Figma view** (sequential, SAU khi 3 output trên xong vì cần O5/O2/O3) — chọn vẽ (Lượt 4 câu 3 = [A]) → đọc Design System vừa sinh ở O6 → **[PRE-DRAW — BẮT BUỘC, KHÔNG SKIP]**: (1) Read skill `ba-flow-journey` · (2) Read skill `ba-figma-output §1–§5` · (3) Read `examples/final_output_1.png` + `final_output_2.png` · (4) Read `sys-agent/figma/output-1-flow.md` + `output-2-screen-flow.md` · (5) in **NODE PLAN** — phải có: ELLIPSE (Start) · rect Screen · LINE/CONNECTOR · rect Decision · rect dashed NG · rect Terminal ⛔ KHÔNG dùng text frame thuần ⛔ Output 2 ≠ Sitemap (Sitemap = Phần C của Output 1; Output 2 = Screen Flow Merged Branch với Groups + Start/Decision/NG/Terminal + 4 bảng bên phải) → vẽ Output 1 (FF frame Phần A+B+C + BF frame cạnh nhau) + Output 2 qua `use_figma` → readback → gate V-O4 (Tiêu chí 7/9/10/11/12) → ◇ sub-agent **`o4-figma-reviewer` vòng 1** (13 check; FIX → parent sửa use_figma → vòng 2; vòng 2 vẫn FIX → `manual-review-needed` trong run-log, không loop vòng 3).
