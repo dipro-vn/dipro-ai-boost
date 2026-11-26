@@ -19,15 +19,14 @@ Hãy là **System Analyst**. Đọc `.claude/agents/system-analyst.md` và chạ
 1. **Preflight G1** (`preflight-questions.md` §0 · §0b, `preflight-memory.py missing --phase 1`): tên / phạm vi · **web hay app** · source code · DB · ngôn ngữ. **KHÔNG hỏi Figma, không hỏi tài khoản website, không hỏi 4 câu an toàn** — thuộc G2 (feedback 25/11/2026).
 2. `scan-sensitive.py` (exit 3 → **cảnh báo + DỪNG**) → đọc code (Pha A) → `extract-design-tokens.py --code-only` → **Discovery Brief** + Quyết định lớn (B1–B5), DỪNG chờ confirm → `version-tool.py next --outputs outputs --slug <slug> --create`.
 3. **Inventory** từ code → gate V1 · V2.
-4. **Multi-output parallel** — sinh **4 output cùng lúc** (chạy các tool call cùng lượt, không chờ nhau), vì không phụ thuộc nhau sau khi Pha A đã xong:
+4. **Multi-output parallel** — sinh **3 output cùng lúc** (chạy các tool call cùng lượt, không chờ nhau), vì không phụ thuộc nhau sau khi Pha A đã xong:
    - **O2** API Documentation → gate V-API
    - **O3** DB Documentation + ERD → gate V-DB
    - **O8** DevSetup → gate V-DEV
-   - **O5** Basic Design **(code-only, chưa có ảnh)** — `ast/extract-screen.mjs` → LLM viết spec → `build-basic-design.py --spec … --ast-spec … --phase 1` → gate **V-BD `--phase 1`** → ◇ sub-agent **basic-design-reviewer vòng 1** (chỉ chạy sau khi V-BD phase 1 PASS cho từng site)
 
-   **KHÔNG sinh O4 Figma ở G1** (dời xuống G2 vì cần link Figma + Figma MCP). FAIL=0 cho mọi gate mới được sang bước 5.
+   **KHÔNG sinh O5 Basic Design ở G1** (dời xuống G2 — O5 cần ảnh Playwright thật + đánh số; sinh G1 không có ảnh là file nửa chừng không dùng được). **KHÔNG sinh O4 Figma ở G1** (dời xuống G2 vì cần link Figma + Figma MCP). FAIL=0 cho mọi gate mới được sang bước 5.
 5. **O1 Overview docx** — viết `_internal/business.json` (tổng hợp từ O2/O3/O5 + inventory) → **[BẮT BUỘC, KHÔNG SKIP]** gọi skill **archify** (workflow, chờ `finalize` PASS) → xuất PNG → `render-overview-docx.py --flow-image <png>` → gate V3. ⛔ Không được gọi `render-overview-docx.py` trước khi có PNG từ archify.
-6. Self-test · `detect-pii.js --scan` · `build-version-index.py --skip "O4=chờ G2" --skip "O6=chờ G2" --skip "O7=chờ G2"` · run-log.
+6. Self-test · `detect-pii.js --scan` · `build-version-index.py --skip "O4=chờ G2" --skip "O5=chờ G2" --skip "O6=chờ G2" --skip "O7=chờ G2"` · run-log.
 
 **Điểm dừng — thông báo cuối G1 (bắt buộc đủ 3 phần):**
 
@@ -36,7 +35,7 @@ Hãy là **System Analyst**. Đọc `.claude/agents/system-analyst.md` và chạ
    ```
    ✅ Giai đoạn 1 đã chạy xong — các output có thể xem ngay:
       • O1 Overview.docx — tổng quan hệ thống + luồng nghiệp vụ
-      • O2 API Doc · O3 DB Doc + ERD · O5 Basic Design (code-only, chưa ảnh) · O8 DevSetup
+      • O2 API Doc · O3 DB Doc + ERD · O8 DevSetup
       Thư mục: outputs/<ver>/
 
    🧡 Giai đoạn 2 sẽ truy cập **Figma + website** (dịch vụ ngoài công ty) nên chạy LÂU HƠN RẤT NHIỀU so với G1:
@@ -66,10 +65,10 @@ Hãy là **System Analyst**. Đọc `.claude/agents/system-analyst.md` và chạ
    - → `ensure-env.py --flow 1 --browser` + `ensure-env.py --flow 1 --figma` (nếu Lượt 4 có link)
 9. `version-tool.py snapshot --ver <ver>` → `login-site.js` / `crawl-site.js` (seed từ route FE của G1; đăng nhập lỗi → nhờ đăng nhập tay `--manual`).
 10. Đối chiếu inventory với màn hình thật — chỉ bổ sung phần code không cho biết; khác code → Open Question → gate V1 · V2 (`--crawled`).
-11. **Multi-output parallel** sau crawl — chạy 3 output cùng lúc (không chờ):
-    - **O5 chèn ảnh + đánh số** (`build-basic-design.py` + screenshots từ crawl) → gate V-BD → ◇ sub-agent **basic-design-reviewer vòng 2**
-    - **O6 Design System** — `extract-design-tokens.py --crawl --emit-root` → gate V-DS (tuỳ chọn, chạy khi B2 = có hoặc Lượt 4 có Figma input)
-    - **O7 Bug list** — `build-bug-list.py` → gate V8 (**chỉ chạy khi P9 = có; hỏi trước lần nữa nếu lúc preflight user chọn pending**)
+11. **Multi-output parallel** sau crawl — chạy **O5 · O6 · O7** cùng lúc (không chờ):
+    - **O5 Basic Design — tạo hoàn chỉnh từ đầu**: thông báo rõ trước khi chạy: *"Bắt đầu tạo O5 Basic Design — gồm 4 việc: (1) trích AST từ code FE, (2) build file xlsx với tên màn đọc được + nội dung P/Q đầy đủ theo type, (3) chụp ảnh Playwright từng màn, (4) đánh số item trên ảnh (badge đỏ, không che nội dung) + chèn vào file"*. Quy trình: `ast/extract-screen.mjs` → `build-bd-skeleton.py` → LLM viết spec (title màn · P/Q theo type từ `workbook-structure.md §2.8b` · 6 dòng Step 1) → `build-basic-design.py --skeleton … --spec …` → `annotate-ui-image.py` đánh số badge (vị trí từ `pages.json box`, badge đỏ sát mép item không che nội dung) → `build-basic-design.py --crawl` chèn ảnh đã đánh số → gate **V-BD** (31 check) → ◇ sub-agent **basic-design-reviewer vòng 1** (FIX → sửa spec + rebuild → vòng 2; vẫn FIX → `manual-review-needed`)
+    - **O6 Design System** — `extract-design-tokens.py --crawl --emit-root` → gate V-DS (tuỳ chọn)
+    - **O7 Bug list** — `build-bug-list.py` → gate V8 (chỉ chạy khi P9 = có)
 
     FAIL=0 cho mọi gate mới được sang bước 12. Cập nhật O2 / O3 nếu reconcile đổi dữ liệu (CONFLICT).
 12. **O4 Figma view** (sequential, SAU khi 3 output trên xong vì cần O5/O2/O3) — chọn vẽ (Lượt 4 câu 3 = [A]) → đọc Design System vừa sinh ở O6 → **[PRE-DRAW — BẮT BUỘC, KHÔNG SKIP]**: (1) Read skill `ba-flow-journey` · (2) Read skill `ba-figma-output §1–§5` · (3) Read `examples/final_output_1.png` + `final_output_2.png` · (4) Read `sys-agent/figma/output-1-flow.md` + `output-2-screen-flow.md` · (5) in **NODE PLAN** — phải có: ELLIPSE (Start) · rect Screen · LINE/CONNECTOR · rect Decision · rect dashed NG · rect Terminal ⛔ KHÔNG dùng text frame thuần ⛔ Output 2 ≠ Sitemap (Sitemap = Phần C của Output 1; Output 2 = Screen Flow Merged Branch với Groups + Start/Decision/NG/Terminal + 4 bảng bên phải) → vẽ Output 1 (FF frame Phần A+B+C + BF frame cạnh nhau) + Output 2 qua `use_figma` → readback → gate V-O4 (Tiêu chí 7/9/10/11/12) → ◇ sub-agent **`o4-figma-reviewer` vòng 1** (13 check; FIX → parent sửa use_figma → vòng 2; vòng 2 vẫn FIX → `manual-review-needed` trong run-log, không loop vòng 3).

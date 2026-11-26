@@ -234,6 +234,324 @@ Nếu screen có > 11 item → **copy format của 1 row chuẩn xuống**, khô
 
 ---
 
+### 2.8b Ví dụ P/Q theo từng type — bắt buộc tham khảo trước khi điền
+
+> Mỗi type có trọng tâm mô tả khác nhau. Điền không đúng trọng tâm → gate check 23 FAIL (tên hàm/API trong P/Q) hoặc nội dung không đủ ý nghĩa cho QC.
+
+#### Button / Hyperlink — trọng tâm: hành vi khi nhấn + điều kiện enable
+
+```
+P (記述 JP):
+・「保存」ボタン — 入力内容を施設情報として保存する
+・活性条件：必須項目（施設名・住所）がすべて入力済みの場合のみ活性
+・押下時の挙動：
+  1. バリデーション通過 → POST /api/facilities → 「施設管理」画面に遷移 (SC-031)
+  2. バリデーションエラー → エラーメッセージを表示、画面遷移なし → E_FAC_001
+  3. APIエラー（5xx）→ トースト「保存に失敗しました」→ E_FAC_S_001
+
+Q (Description VN):
+・Button「保存」— lưu thông tin cơ sở
+・Điều kiện active: chỉ active khi tất cả trường bắt buộc (tên cơ sở, địa chỉ) đã nhập
+・Hành vi khi nhấn:
+  1. Validation pass → POST /api/facilities → chuyển màn「施設管理」(SC-031)
+  2. Validation lỗi → hiển thị lỗi, không chuyển màn → E_FAC_001
+  3. API lỗi (5xx) → toast「保存に失敗しました」→ E_FAC_S_001
+```
+
+**Quy tắc riêng Button/Hyperlink:**
+- Luôn ghi điều kiện active / disable (nếu có)
+- Mọi nhánh phải đến đích rõ ràng: màn 「tên màn」(SC-xxx) hoặc Message Code
+- Cột `S` = tên API được gọi (không ghi vào P/Q)
+
+---
+
+#### Textbox / Textarea / Password / Email / Number — trọng tâm: placeholder + validation từng rule
+
+```
+P (記述 JP):
+・施設名を入力するテキストボックス
+・プレースホルダー：「施設名を入力してください」
+・全角・半角文字を入力可能
+・最大文字数：100文字（超過時は入力不可）
+・バリデーション：
+  1. 未入力の場合 → E_FAC_002
+  2. 100文字を超える場合 → 入力不可（UIで制御）
+  3. 使用不可文字（<, >, "）が含まれる場合 → E_FAC_003
+
+Q (Description VN):
+・Textbox nhập tên cơ sở
+・Placeholder:「施設名を入力してください」
+・Cho phép nhập full-width và half-width
+・Maxlength: 100 ký tự (chặn nhập khi vượt)
+・Validation:
+  1. Chưa nhập → E_FAC_002
+  2. Vượt 100 ký tự → không cho nhập thêm (kiểm soát ở UI)
+  3. Có ký tự không hợp lệ (<, >, ") → E_FAC_003
+```
+
+---
+
+#### Dropdown / Select — trọng tâm: nguồn dữ liệu + option mặc định + hành vi khi chọn
+
+```
+P (記述 JP):
+・テナントの施設を選択するドロップダウン
+・初期表示：「施設を選択してください」（プレースホルダー、未選択状態）
+・選択肢：ログイン中のテナントに属する施設一覧（APIで取得）
+・選択時：選択した施設IDをフォームにセット、「料金プラン」欄をリセット
+・必須項目：未選択のまま送信した場合 → E_FAC_004
+
+Q (Description VN):
+・Dropdown chọn cơ sở của tenant
+・Ban đầu hiển thị:「施設を選択してください」(placeholder, chưa chọn)
+・Danh sách option: các cơ sở thuộc tenant đang đăng nhập (lấy từ API)
+・Khi chọn: set facility ID vào form, reset trường「料金プラン」
+・Bắt buộc chọn: submit khi chưa chọn → E_FAC_004
+```
+
+**Quy tắc riêng Dropdown:**
+- Phải ghi rõ nguồn dữ liệu (API, hardcode, hay từ màn trước)
+- Ghi rõ option mặc định: placeholder hay option đầu tiên
+- Nếu chọn trigger reload dữ liệu khác → ghi rõ field nào bị reset/reload
+
+---
+
+#### Checkbox — trọng tâm: trạng thái mặc định + hành vi khi check/uncheck
+
+```
+P (記述 JP):
+・利用規約への同意チェックボックス
+・初期表示：未チェック
+・チェック時：「同意して続ける」ボタンが活性化
+・未チェックのまま「同意して続ける」を押下した場合 → E_REG_005
+
+Q (Description VN):
+・Checkbox đồng ý điều khoản sử dụng
+・Ban đầu: chưa check
+・Khi check: button「同意して続ける」chuyển sang active
+・Nhấn「同意して続ける」khi chưa check → E_REG_005
+```
+
+**Quy tắc riêng Checkbox (nhiều lựa chọn):**
+```
+P:
+・通知を受け取る項目を選択するチェックボックス群
+・選択肢：「メール通知」「SMS通知」「プッシュ通知」
+・初期表示：「メール通知」のみチェック済み
+・複数選択可能、0件選択も可
+```
+
+---
+
+#### Radio — trọng tâm: danh sách option + option mặc định + ràng buộc chọn
+
+```
+P (記述 JP):
+・支払い方法を選択するラジオボタン
+・選択肢：「クレジットカード」「銀行振込」「コンビニ払い」
+・初期表示：「クレジットカード」が選択済み
+・選択変更時：対応する入力フォームが表示/非表示に切り替わる
+・必須：未選択では送信不可（UIで制御、エラーメッセージなし）
+
+Q (Description VN):
+・Radio button chọn phương thức thanh toán
+・Các lựa chọn:「クレジットカード」「銀行振込」「コンビニ払い」
+・Ban đầu:「クレジットカード」được chọn
+・Khi đổi lựa chọn: form nhập tương ứng hiển thị/ẩn
+・Bắt buộc chọn: không submit được khi chưa chọn (kiểm soát ở UI, không có error message)
+```
+
+---
+
+#### Table — trọng tâm: cột hiển thị + sort + phân trang + trạng thái 0 item
+
+```
+P (記述 JP):
+・予約一覧を表示するテーブル
+・表示列：No · 氏名 · 予約日時 · ステータス · 操作
+・ソート：予約日時 降順（デフォルト）、列ヘッダークリックで昇順/降順切替
+・ページネーション：1ページ20件、ページ番号とPrev/Nextボタンを表示
+・0件の場合：「予約がありません」を表示、テーブル非表示
+・操作列：「詳細」ボタン（全ステータス）、「キャンセル」ボタン（ステータス=確定済みのみ活性）
+
+Q (Description VN):
+・Bảng hiển thị danh sách đặt chỗ
+・Các cột: No · Họ tên · Thời gian đặt · Trạng thái · Thao tác
+・Sort: Thời gian đặt giảm dần (mặc định); click header để đổi chiều
+・Phân trang: 20 item/trang, hiển thị số trang và nút Prev/Next
+・0 item: hiển thị「予約がありません」, ẩn bảng
+・Cột thao tác:「詳細」(mọi status),「キャンセル」(chỉ active khi status = 確定済み)
+```
+
+**Quy tắc riêng Table:**
+- Liệt kê tên từng cột theo thứ tự từ trái sang phải
+- Ghi rõ sort column mặc định và chiều sort
+- Ghi rõ số item/trang
+- Bắt buộc ghi trạng thái 0 item (empty state)
+- Nếu có action column: ghi điều kiện enable/disable từng nút
+
+---
+
+#### Label / Text hiển thị — trọng tâm: nguồn dữ liệu + format
+
+```
+P (記述 JP):
+・ログイン中のユーザー氏名を表示するラベル
+・初期表示：プロフィール情報から取得（GET /api/me のレスポンス `fullName`）
+・表示形式：姓 + 半角スペース + 名
+・データなし（APIエラー）：「—」を表示
+
+Q (Description VN):
+・Label hiển thị họ tên người dùng đang đăng nhập
+・Ban đầu: lấy từ thông tin profile (GET /api/me, field `fullName`)
+・Định dạng: Họ + dấu cách + Tên
+・Không có dữ liệu (API lỗi): hiển thị「—」
+```
+
+---
+
+#### Tab — trọng tâm: danh sách tab + tab active mặc định + nội dung mỗi tab
+
+```
+P (記述 JP):
+・画面内のコンテンツを切り替えるタブコンポーネント
+・タブ一覧：「基本情報」「料金設定」「スタッフ管理」
+・初期表示：「基本情報」タブがアクティブ
+・タブ切替時：URLパラメータ `?tab=` を更新（ブラウザバックで前タブに戻れる）
+・各タブの内容：
+  - 「基本情報」：施設名・住所・電話番号の入力フォーム
+  - 「料金設定」：フリーパス・回数券の料金設定 (SC-029)
+  - 「スタッフ管理」：スタッフ一覧・追加・削除 (SC-030)
+
+Q (Description VN):
+・Component tab chuyển đổi nội dung trong màn
+・Danh sách tab:「基本情報」「料金設定」「スタッフ管理」
+・Ban đầu: tab「基本情報」active
+・Khi chuyển tab: cập nhật URL param `?tab=` (back browser quay về tab trước)
+・Nội dung từng tab:
+  - 「基本情報」: form nhập tên, địa chỉ, SĐT cơ sở
+  - 「料金設定」: cài đặt giá vé tháng và vé lượt (SC-029)
+  - 「スタッフ管理」: danh sách, thêm, xoá staff (SC-030)
+```
+
+**Quy tắc riêng Tab:**
+- Nếu nội dung tab là màn riêng (SC-xxx) → ghi `(SC-xxx)` sau tên tab
+- Ghi rõ tab active mặc định
+- Ghi state persistence (URL param / sessionStorage / không giữ)
+
+---
+
+#### DatePicker — trọng tâm: format ngày + range hợp lệ + giá trị mặc định
+
+```
+P (記述 JP):
+・予約日を選択する日付ピッカー
+・表示形式：YYYY/MM/DD
+・選択可能範囲：本日以降（過去日は選択不可）
+・初期表示：空欄（未選択）
+・バリデーション：
+  1. 未選択のまま送信 → E_BK_003
+  2. 選択可能範囲外の日付（APIで検証）→ E_BK_004
+
+Q (Description VN):
+・DatePicker chọn ngày đặt chỗ
+・Định dạng: YYYY/MM/DD
+・Phạm vi chọn được: từ hôm nay trở đi (không chọn được ngày quá khứ)
+・Ban đầu: trống (chưa chọn)
+・Validation:
+  1. Chưa chọn khi submit → E_BK_003
+  2. Ngày ngoài phạm vi (kiểm tra phía API) → E_BK_004
+```
+
+---
+
+#### Image / File upload — trọng tâm: loại file + dung lượng + preview
+
+```
+P (記述 JP):
+・施設のサムネイル画像をアップロードするファイル入力
+・対応形式：JPG, PNG, WebP
+・最大ファイルサイズ：5MB
+・初期表示：アップロード済み画像がある場合はプレビュー表示、なければ「画像を選択」ボタン
+・アップロード時：選択直後にプレビューを更新（サーバー送信は「保存」ボタン押下時）
+・バリデーション：
+  1. 対応形式以外のファイル → E_FAC_010
+  2. 5MBを超えるファイル → E_FAC_011
+
+Q (Description VN):
+・Input upload ảnh thumbnail cho cơ sở
+・Định dạng hỗ trợ: JPG, PNG, WebP
+・Dung lượng tối đa: 5MB
+・Ban đầu: hiển thị preview ảnh đã upload (nếu có), nếu chưa có → hiển thị button「画像を選択」
+・Khi upload: cập nhật preview ngay sau khi chọn (gửi server khi nhấn「保存」)
+・Validation:
+  1. File không đúng định dạng → E_FAC_010
+  2. File vượt 5MB → E_FAC_011
+```
+
+---
+
+#### Pagination — trọng tâm: hành vi khi chuyển trang
+
+```
+P (記述 JP):
+・テーブルのページを切り替えるページネーションコンポーネント
+・表示：現在ページ番号・総ページ数・Prev/Nextボタン・最初/最後ページボタン
+・1ページあたり：20件
+・Prev：1ページ目では非活性
+・Next：最終ページでは非活性
+・ページ切替時：テーブルデータを再取得（スクロールトップへ）
+
+Q (Description VN):
+・Component phân trang cho bảng
+・Hiển thị: số trang hiện tại · tổng số trang · nút Prev/Next · nút trang đầu/cuối
+・Mỗi trang: 20 item
+・Prev: disabled ở trang 1
+・Next: disabled ở trang cuối
+・Khi chuyển trang: tải lại dữ liệu bảng (scroll về đầu trang)
+```
+
+---
+
+#### SearchBox — trọng tâm: trigger tìm kiếm + debounce + empty state
+
+```
+P (記述 JP):
+・施設名で絞り込む検索ボックス
+・プレースホルダー：「施設名で検索」
+・入力後300ms（debounce）でテーブルを自動絞り込み（Enterキー不要）
+・検索結果0件：「該当する施設がありません」を表示
+・クリアボタン（×）：入力をクリアし全件表示に戻る
+
+Q (Description VN):
+・Ô tìm kiếm lọc theo tên cơ sở
+・Placeholder:「施設名で検索」
+・Tự động lọc bảng sau 300ms kể từ lần nhập cuối (debounce, không cần Enter)
+・Kết quả 0 item:「該当する施設がありません」
+・Nút xoá (×): xoá nội dung, hiển thị lại toàn bộ
+```
+
+---
+
+**Bảng tóm tắt trọng tâm theo type:**
+
+| Type | Bắt buộc có trong P/Q | Thường bỏ sót |
+|---|---|---|
+| Button / Hyperlink | Điều kiện active · hành vi mọi nhánh · đích (màn/toast/error) | Nhánh API lỗi (5xx) |
+| Textbox / Textarea | Placeholder · maxlength enforcement · mọi validation rule | Nhánh ký tự không hợp lệ |
+| Dropdown | Nguồn dữ liệu · option mặc định · hành vi khi chọn | Trường hợp API load danh sách lỗi |
+| Checkbox | Trạng thái mặc định · hành vi check/uncheck | Điều kiện enable nút sau checkbox |
+| Radio | Danh sách option · mặc định · hành vi đổi chọn | State persistence khi quay lại |
+| Table | Tên cột theo thứ tự · sort mặc định · pagination · 0 item | Điều kiện enable từng action nút |
+| Label | Nguồn data (API field) · format · fallback khi không có data | Fallback / loading state |
+| Tab | Danh sách tab · tab mặc định · nội dung mỗi tab · state | URL sync |
+| DatePicker | Format · phạm vi chọn · mặc định · validation | Range check phía API |
+| Image/File | Định dạng · dung lượng · preview · khi nào gửi server | Validation trùng lặp file |
+| Pagination | Items/trang · disable Prev/Next · hành vi chuyển trang | Scroll-to-top |
+| SearchBox | Trigger (debounce/Enter) · 0 result · clear | Debounce timing |
+
+---
+
 ### 2.8 Style chuẩn — định nghĩa TƯỜNG MINH, không copy hàng xóm
 
 > ⛔ **Tuyệt đối không lấy style bằng cách copy từ row liền trước.** Khi master workbook sạch (chưa có row dữ liệu nào), cách đó rơi về copy từ **header** — data row thành chữ trắng nền xanh, hoặc mất hết đường kẻ. Đây là lỗi đã xảy ra thật.
