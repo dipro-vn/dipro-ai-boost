@@ -208,13 +208,15 @@ python3 $S/annotate-ui-image.py <ảnh gốc> <ảnh output> \
 
 ## §7 SELF-CHECK sau khi build — bắt buộc trước khi báo xong
 
-Chạy sau mỗi lần `build-basic-design.py` hoàn thành, **trước khi báo user**:
+Chạy sau mỗi lần `build-basic-design.py` hoàn thành, **trước khi chạy V-BD và trước khi báo user**.
+
+Mỗi lỗi kèm **hướng dẫn sửa + link section trong SKILL.md** để agent biết đọc gì ngay:
 
 ```python
-# Chạy script kiểm tra nhanh
-python3 - <<'EOF'
+python3 - <<'PYEOF'
 import openpyxl, re, sys
 
+SKILL = "skills/basic-design/SKILL.md"
 wb = openpyxl.load_workbook(sys.argv[1], data_only=True)
 errors = []
 
@@ -223,55 +225,113 @@ for name in wb.sheetnames:
     if ws["F6"].value != "WORKING_SCREEN":
         continue
 
-    # CHECK 1: Tên sheet không là SC-xxx
+    # CHECK 1 — Tên sheet không là SC-xxx
     if re.match(r'^SC-\d+$', name):
-        errors.append(f"[CHECK 24] Sheet '{name}': tên là SC-xxx, phải là tên màn đọc được")
+        errors.append(
+            f"[CHECK-24 | {SKILL} §2] Sheet '{name}': tên tab là SC-xxx.\n"
+            f"  → Sửa: đổi tên tab thành tên màn đọc được (ví dụ: ログイン, 施設管理).\n"
+            f"  → Nguồn tên: spec.screens[sid].title → inventory 02_Screen → <h1> AST."
+        )
 
-    # CHECK 2: B1 không là SC-xxx hoặc rỗng
-    b1 = str(ws["B1"].value or "")
+    # CHECK 2 — B1 phải là tên màn đọc được
+    b1 = str(ws["B1"].value or "").strip()
     if not b1 or re.match(r'^SC-\d+$', b1):
-        errors.append(f"[CHECK 24] Sheet '{name}': B1='{b1}' không phải tên màn đọc được")
+        errors.append(
+            f"[CHECK-24 | {SKILL} §2] Sheet '{name}': B1='{b1}' không phải tên màn.\n"
+            f"  → Sửa: điền spec.screens[sid].title vào B1 (cùng giá trị với tên tab)."
+        )
 
-    # CHECK 3: B4 có nội dung thật (không chỉ là SC-xxx hoặc rỗng)
-    b4 = str(ws["B4"].value or "")
-    if not b4 or re.match(r'^SC-\d+', b4.strip()):
-        errors.append(f"[CHECK B4] Sheet '{name}': B4 không có mục đích thật")
+    # CHECK 3 — B4 phải có mục đích nghiệp vụ thật
+    b4 = str(ws["B4"].value or "").strip()
+    if not b4 or re.match(r'^SC-\d+', b4):
+        errors.append(
+            f"[CHECK-B4 | {SKILL} §3] Sheet '{name}': B4='{b4[:40]}' không có mục đích thật.\n"
+            f"  → Sửa: điền ■目的 (1-2 câu: màn làm gì, phục vụ ai) + ■アクセス方法 vào B4.\n"
+            f"  → Ví dụ: 「施設の基本情報を登録・編集し、料金プランを管理する」"
+        )
 
-    # CHECK 4: Bảng item không rỗng
+    # CHECK 4 — B5 phải có 6 dòng Step 1
+    b5 = str(ws["B5"].value or "")
+    step1_headers = ["初期表示", "権限", "データ範囲", "状態保持", "loading", "URL"]
+    missing = [h for h in step1_headers if h not in b5]
+    if missing:
+        errors.append(
+            f"[CHECK-32 | {SKILL} §3] Sheet '{name}': B5 thiếu dòng Step 1: {missing}.\n"
+            f"  → Sửa: điền đủ 6 ■ section. Chưa rõ → 要確認 — Q-xxx (hợp lệ)."
+        )
+
+    # CHECK 5 — Bảng item không được rỗng
     items = [r for r in ws.iter_rows(min_row=9, min_col=8, max_col=9, values_only=True)
              if r[1] is not None]
     if not items:
-        errors.append(f"[CHECK ITEM] Sheet '{name}': bảng item rỗng (0 dòng)")
+        errors.append(
+            f"[CHECK-ITEM | {SKILL} §1] Sheet '{name}': bảng item rỗng (0 dòng).\n"
+            f"  → Nguyên nhân thường gặp: AST extraction chưa chạy hoặc spec JSON thiếu items[].\n"
+            f"  → Sửa: kiểm tra _internal/ast/WEB-xx.json và _internal/bd/spec-WEB-xx.json."
+        )
 
-    # CHECK 5: Không ô trống ở cột P/Q (mục 9-19)
+    # CHECK 6 — Cột P/Q không được trống
+    empty_pq = []
     for row in ws.iter_rows(min_row=9, min_col=8, max_col=17, values_only=True):
         if row[1] is None:
             continue
         p, q = str(row[8] or "").strip(), str(row[9] or "").strip()
+        k = str(row[3] or "").strip()   # col K = type
         if not p or not q:
-            errors.append(f"[CHECK 19] Sheet '{name}': item '{row[1]}' có P hoặc Q trống")
+            empty_pq.append(f"'{row[1]}' (type={k})")
+    if empty_pq:
+        errors.append(
+            f"[CHECK-19 | {SKILL} §5] Sheet '{name}': {len(empty_pq)} item có P hoặc Q trống:\n"
+            f"  {', '.join(empty_pq[:5])}{'...' if len(empty_pq)>5 else ''}\n"
+            f"  → Sửa: điền P/Q theo type. Chưa rõ → 要確認 — Q-xxx.\n"
+            f"  → Xem ví dụ từng type tại {SKILL} §5 + workbook-structure.md §2.8b."
+        )
+
+    # CHECK 7 — Button/Hyperlink phải có cột S (API gọi)
+    for row in ws.iter_rows(min_row=9, min_col=8, max_col=20, values_only=True):
+        if row[1] is None:
+            continue
+        k = str(row[3] or "").strip()
+        s = str(row[11] if len(row) > 11 else "") .strip()
+        if k in ("Button", "Hyperlink") and not s:
+            errors.append(
+                f"[CHECK-17 | {SKILL} §5] Sheet '{name}': item '{row[1]}' (Button/Hyperlink) thiếu cột S.\n"
+                f"  → Sửa: điền API gọi vào cột S. Không gọi → 'Không gọi API — chuyển trang'."
+            )
 
 if errors:
-    print(f"SELF-CHECK FAIL — {len(errors)} lỗi:")
-    for e in errors[:20]:
-        print(f"  {e}")
+    print(f"\nSELF-CHECK FAIL — {len(errors)} lỗi:\n")
+    for e in errors[:15]:
+        print(f"  {e}\n")
+    if len(errors) > 15:
+        print(f"  ... và {len(errors)-15} lỗi khác")
     sys.exit(1)
 else:
-    print(f"SELF-CHECK PASS — {len(wb.sheetnames)} sheets OK")
-EOF
-python3 /tmp/self_check_bd.py <path_to_xlsx>
+    ws_count = sum(1 for n in wb.sheetnames if wb[n]["F6"].value == "WORKING_SCREEN")
+    print(f"SELF-CHECK PASS — {ws_count} working sheets OK")
+PYEOF
 ```
 
-**Nếu SELF-CHECK FAIL:** sửa spec JSON → rebuild → chạy lại SELF-CHECK. Không được báo xong khi SELF-CHECK còn lỗi.
+**Thực thi:** `python3 <script trên> <path_to_xlsx>`
+
+**Nếu SELF-CHECK FAIL:**
+1. Đọc error message → link SKILL.md section được chỉ dẫn
+2. Sửa `_internal/bd/spec-WEB-xx.json` theo hướng dẫn
+3. Rebuild: `build-basic-design.py --skeleton … --spec …`
+4. Chạy lại SELF-CHECK → PASS mới sang V-BD
+
+**⛔ Không được chạy V-BD khi SELF-CHECK còn FAIL** — tránh tốn thời gian 31 check khi lỗi cơ bản chưa sửa.
 
 **In kết quả bắt buộc:**
 ```
-SELF-CHECK PASS — N sheets · M items · K ảnh đánh số
+SELF-CHECK PASS — N working sheets OK
 ```
 hoặc:
 ```
-SELF-CHECK FAIL — X lỗi (CHECK 24: N sheet, CHECK ITEM: M sheet, ...)
-→ Đang sửa...
+SELF-CHECK FAIL — X lỗi:
+  [CHECK-24 | skills/basic-design/SKILL.md §2] Sheet 'SC-001': tên tab là SC-xxx.
+  → Sửa: đổi tên tab thành tên màn đọc được...
+→ Đang sửa spec JSON và rebuild...
 ```
 
 ---
