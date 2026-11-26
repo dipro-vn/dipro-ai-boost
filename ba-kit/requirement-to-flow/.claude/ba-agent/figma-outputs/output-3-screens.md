@@ -468,3 +468,37 @@ BUTTONS:
 - FE Dev đọc bảng này biết đúng route + condition
 - QC đọc bảng này viết test case cho từng transition
 - TL Design verify không có action nào bị orphan (button không dẫn đi đâu mà không có lý do rõ ràng)
+
+---
+
+## Mockup review loop (sub-agent, **LUÔN LUÔN kích hoạt khi mockup đã render xong**)
+
+> **Feedback 20/11/2026:** đổi từ "sau Quality Gate O3 PASS" → **luôn luôn gọi `mockup-reviewer` ngay sau khi mockup Output 3 render xong trên Figma**, không chờ Quality Gate PASS. Gate FAIL thường là do mockup lệch UI thật — chính là thứ reviewer cần phát hiện. Chờ PASS mới gọi reviewer = bẫy chicken-and-egg.
+
+Ngay sau khi vẽ xong N mockup rows trên Figma + readback (danh sách node đã vẽ), `ba-agent` **PHẢI** gọi sub-agent `mockup-reviewer` (`.claude/agents/mockup-reviewer.md`) **trước khi** chạy Quality Gate O3 (hoặc song song). Reviewer so sánh mỗi mockup với HiFi designer gốc + Design System baseline + website đang chạy (nếu có).
+
+**Không có ngoại lệ:** gate O3 FAIL / WARN / PASS đều phải kích reviewer. Reviewer không phụ thuộc vào kết quả gate.
+
+**Workflow 2 vòng:**
+
+| Vòng | Việc | Agent |
+|---|---|---|
+| 1 | `mockup-reviewer` chấm N màn × 5 tiêu chí (shell / component / màu-typography / nội dung / annotation CR) → `_internal/mockup-review.md` + `mockup-review.json`. **Chạy ngay sau readback, không chờ Quality Gate.** | mockup-reviewer |
+| 1.5 | Reviewer `overall=FIX` **hoặc** Quality Gate FAIL → ba-agent **tìm HiFi frame thật của designer** (`get_metadata` trên các page thiết kế: `FINAL UI Admin` · `FINAL UI User` · `UI ADMIN/SUPER ADMIN（デザイナー用）` · `UI Usersite（デザイナー用）` hoặc tương đương) → clone (`getNodeByIdAsync(srcId).clone()`) → sửa Output 3 script thêm `src` nodeId → chạy lại render + use_figma + readback + Quality Gate + review vòng 2 | ba-agent |
+| 2 | Review lại — chỉ chấm các màn vòng 1 fail | mockup-reviewer |
+| 2.5 | Vẫn `FIX` → gắn cờ `manual-review-needed` trong snapshot log (danh sách màn + lý do còn fail), báo user để xử lý tay. **Không review vòng 3** (tránh loop vô hạn) | ba-agent |
+
+**Input cho mockup-reviewer** (truyền qua Agent tool):
+```
+output_folder: versions/v<N>_<DDMMYY>_<slug>/
+baseline_folder: versions/v<baseline>/
+figma_file_key: <key>
+figma_nodes: _internal/figma-nodes.json
+spec: SPEC.md
+auth_cred: .auth/credentials.local.env   # chỉ truyền đường dẫn, không đọc nội dung
+```
+
+**Ràng buộc:**
+- Review dùng **tài khoản TEST đã xác nhận** (P2b). Thiếu URL cho ref → ghi vào `fixes`, không bịa.
+- Vòng 2 tối đa 1 lần — fail tiếp phải có người review tay.
+- Report `mockup-review.md` đính kèm snapshot log dưới mục **Mockup review**.
