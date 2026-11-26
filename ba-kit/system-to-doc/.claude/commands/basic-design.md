@@ -7,7 +7,7 @@ Hãy là **System Analyst** (agent `basic-design`, nhỏ hơn `system-analyst`).
 
 Đối tượng: `$ARGUMENTS` (dự kiến `<URL hoặc repo> <danh sách màn>` hoặc rỗng — hỏi lại).
 
-**KHÔNG nạp:** skill `ba-figma-output` (55KB) · `ba-flow-journey` (16KB) · `flow-2-change-request.md` · figma MCP. Chỉ nạp: `sys-agent/outputs/o5-basic-design.md` + `sys-agent/basic-design/workbook-structure.md` + `sys-agent/preflight-questions.md`.
+**KHÔNG nạp:** skill `ba-figma-output` (55KB) · `ba-flow-journey` (16KB) · `flow-2-change-request.md` · figma MCP. **BẮT BUỘC nạp:** `skills/basic-design/SKILL.md` (trước bước 4) + `sys-agent/outputs/o5-basic-design.md` + `sys-agent/basic-design/workbook-structure.md` + `sys-agent/preflight-questions.md`.
 
 ---
 
@@ -24,7 +24,7 @@ Hãy là **System Analyst** (agent `basic-design`, nhỏ hơn `system-analyst`).
 
 3. **Nạp inventory baseline** mới nhất của site này (`_internal/inventory.xlsx` từ `outputs/<baseline>/`). Thiếu → DỪNG.
 
-4. **Sinh skeleton** (feedback 22/11/2026 P1-4):
+4. **[BẮT BUỘC]** Read `skills/basic-design/SKILL.md` — guard tên sheet, B1/B4, P/Q theo type, badge ảnh, SELF-CHECK. **Sinh skeleton** (feedback 22/11/2026 P1-4):
    ```
    build-bd-skeleton.py --ast-spec … --crawl recon/crawl/<WEB-xx>/ \
                         --fe-api-calls … --inventory … \
@@ -35,7 +35,7 @@ Hãy là **System Analyst** (agent `basic-design`, nhỏ hơn `system-analyst`).
 
 6. **Build workbook** — `build-basic-design.py --skeleton … --spec … --phase 2` (nếu có crawl) hoặc `--phase 1` (code-only).
 
-7. **Gate V-BD** — 24 check cũ + 7 check mới P2 chất lượng (feedback 22/11/2026 lỗi #1-#9). FAIL → fix spec hoặc skeleton → rerun bước 6.
+7. **SELF-CHECK** (`skills/basic-design/SKILL.md §7` — 7 check, error kèm link section để sửa) → PASS → **Gate V-BD** (31 check). FAIL ở SELF-CHECK → sửa spec + rebuild trước, không chạy V-BD khi SELF-CHECK còn lỗi.
 
 8. **Sub-agent `basic-design-reviewer`** chạy 1 vòng (hoặc 2 nếu vòng 1 FIX).
 
