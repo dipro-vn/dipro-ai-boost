@@ -5,13 +5,11 @@
 !.auth/credentials.example.env
 
 # Du lieu khach hang user bo vao — KHONG commit (giu lai README + .gitkeep de folder ton tai)
+# inputs/db/ da bo (feedback 26/11/2026) — DB doc sinh tu source code qua read-orm-schema.py
 inputs/repo/*
-inputs/db/*
 inputs/cr/*
 !inputs/repo/.gitkeep
 !inputs/repo/README.md
-!inputs/db/.gitkeep
-!inputs/db/README.md
 !inputs/cr/.gitkeep
 !inputs/cr/README.md
 

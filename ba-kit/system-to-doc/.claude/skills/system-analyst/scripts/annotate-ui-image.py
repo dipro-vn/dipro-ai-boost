@@ -10,7 +10,10 @@ Dung:
   python3 annotate-ui-image.py <anh_goc.png> <anh_ra.png> --marks-json marks.json
 
 --marks      "<so>:<x>,<y>;..."  x,y = TAM badge. 0..1 = ti le theo anh, >1 = pixel
---marks-json {"marks":[{"n":1,"x":0.5,"y":0.18}, ...]}
+--marks-json {"marks":[{"n":1,"x":0.5,"y":0.18,"box":[x0,y0,x1,y1]?}, ...]}
+             box? = toa do goc trai-tren va goc phai-duoi cua item box (0..1 hoac pixel);
+             co box -> badge dat NGOAI goc trai-tren cua box, tranh de chu dau label
+             (Feedback 22/11/2026 loi #2); khong co box -> dat tai (x,y) nhu cu.
 --expect N   so item cua sheet; lech -> exit 1 (khong ghi file)
 --size PX    duong kinh badge (mac dinh = 4.5% chieu rong anh, toi thieu 28)
 
@@ -77,6 +80,19 @@ def annotate(src, dst, marks, expect=None, size=None):
     for m in marks:
         x = m["x"] * W if 0 <= m["x"] <= 1 else m["x"]
         y = m["y"] * H if 0 <= m["y"] <= 1 else m["y"]
+        # Feedback 22/11/2026 lỗi #2: có box -> dời badge ra NGOÀI góc trái-trên của box,
+        # tránh đè chữ đầu label. box = [x0,y0,x1,y1] (0..1 hoặc pixel).
+        box = m.get("box")
+        if box and len(box) == 4:
+            x0 = box[0] * W if 0 <= box[0] <= 1 else box[0]
+            y0 = box[1] * H if 0 <= box[1] <= 1 else box[1]
+            gap = max(6, round(W * 0.004))
+            # ưu tiên: đặt badge ở bên trái box; nếu gần mép trái → đặt phía trên box
+            d_tmp = size or max(18, round(W * 0.015))
+            if x0 - d_tmp - gap >= 2:
+                x, y = x0 - d_tmp / 2 - gap, y0 + d_tmp / 2  # bên trái, canh hàng với đầu box
+            else:
+                x, y = x0 + d_tmp / 2, max(y0 - d_tmp / 2 - gap, d_tmp / 2 + 2)  # phía trên
         if not (0 <= x <= W and 0 <= y <= H):
             errs.append(f"so {m['n']}: toa do ({x:.0f},{y:.0f}) ngoai anh {W}x{H}")
         pts.append((m["n"], x, y))

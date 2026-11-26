@@ -758,6 +758,152 @@ def run(master_path, before_path, expect_screens, approved, rep, asis_mode=False
                 ("; ".join(miss24[:8]) + ". Them 'title' cho man trong spec (ten ngan, khach doc duoc).")
                 if miss24 else f"{len(ws_list)} ten sheet / Screen Name doc duoc")
 
+    # Feedback 22/11/2026 — 7 gate chat luong P2 (loi #1..#9 thuoc bang lot 24/24 PASS cu).
+    import re as _re_v
+    # 25: B4 khong lap 「■目的」 / 「■アクセス方法」 (loi #1)
+    bad25 = []
+    for ws in ws_list:
+        b4 = cell(ws, "B4") or ""
+        if b4.count("■目的") > 1 or b4.count("■アクセス方法") > 1:
+            bad25.append(f"{ws.title}!B4 header lap")
+    rep.add(25, "B4 khong lap header muc (loi #1)", "FAIL" if bad25 else "PASS",
+            "; ".join(bad25[:8]) if bad25 else f"{len(ws_list)} sheet B4 OK")
+
+    # 26: khong co rac template (CHG cu, sheet Sample, 「【User】」 sai site) (loi #3, #4)
+    bad26 = []
+    if "Sample" in wb.sheetnames:
+        bad26.append("sheet 'Sample' van ton tai trong ban export")
+    if "Common mesage" in wb.sheetnames:
+        bad26.append("sheet 'Common mesage' chua rename -> 'Common message'")
+    for sn in ("Common message", "Common mesage", "Screen Error message"):
+        if sn in wb.sheetnames:
+            a1 = cell(wb[sn], "A1") or ""
+            # Neu site admin ma A1 van ghi 「【User】」, hoac nguoc lai
+            site_hint = (cell(idx_ws, "B2") or "").lower() if idx_ws else ""
+            if "【User】" in a1 and "admin" in site_hint:
+                bad26.append(f"{sn}!A1 ghi 「【User】」 cho site admin")
+            if "【User —" in a1 or "【Admin —" in a1:
+                bad26.append(f"{sn}!A1 thieu ngoac dong 」")
+    if "Change History" in wb.sheetnames:
+        ch = wb["Change History"]
+        # CHG tu template thuong co tag "AS-IS baseline" rong hoac ngay rat cu
+        for r_ch in range(6, min(ch.max_row + 1, 12)):
+            author = ch.cell(row=r_ch, column=3).value or ""
+            action = ch.cell(row=r_ch, column=4).value or ""
+            if action and "CREATE_SCREEN" not in str(action) and "AS-IS" not in (ch.cell(row=r_ch, column=9).value or ""):
+                bad26.append(f"Change History row {r_ch} co ve la rac template: author={author!r} action={action!r}")
+                break
+    rep.add(26, "Khong co rac template (loi #3, #4)", "FAIL" if bad26 else "PASS",
+            "; ".join(bad26[:6]) if bad26 else "Khong co rac template")
+
+    # 27: badge khong chong text box (loi #2) — kiem tra hinh thuc:
+    # chi warn vi kiem thuc te can OCR; bat buoc cac badge mark co field 'box' khi save marks-json
+    # (annotate-ui-image.py da ho tro box). Hien tai skip hard-check, dua ra WARN neu khong co bang chung
+    rep.add(27, "Badge khong chong text box (loi #2)", "WARN",
+            "Can OCR de kiem thuc te. annotate-ui-image.py --marks-json co field 'box' thi badge duoc dat ngoai box.")
+
+    # 28: co 要確認 — Q-xxx trong sheet man thi phai co sheet 「確認事項」 voi Q do (loi #5)
+    _qpat_v = _re_v.compile(r"Q-\d{3,}")
+    qs_sheet = wb["確認事項"] if "確認事項" in wb.sheetnames else None
+    qs_ids = set()
+    if qs_sheet:
+        for r_v in range(3, qs_sheet.max_row + 1):
+            qid = qs_sheet.cell(row=r_v, column=1).value
+            if qid:
+                qs_ids.add(str(qid).strip())
+    missing_q = []
+    for ws in ws_list:
+        for row in ws.iter_rows():
+            for c_v in row:
+                v = c_v.value
+                if isinstance(v, str) and "要確認" in v:
+                    for qid in _qpat_v.findall(v):
+                        if qid not in qs_ids:
+                            missing_q.append(f"{ws.title}!{c_v.coordinate} = {qid}")
+    if not qs_sheet and missing_q:
+        rep.add(28, "Sheet 確認事項 ton tai + co Q (loi #5)", "FAIL",
+                f"Co {len(missing_q)} o 要確認 nhung thieu sheet 確認事項. VD: {missing_q[:3]}")
+    elif missing_q:
+        rep.add(28, "Sheet 確認事項 co du Q (loi #5)", "FAIL",
+                f"{len(missing_q)} Q thieu trong sheet 確認事項: {missing_q[:5]}")
+    else:
+        rep.add(28, "Sheet 確認事項 co du Q (loi #5)", "PASS",
+                f"{len(qs_ids)} Q khop; moi o 要確認 co dong tuong ung")
+
+    # 29: ngon ngu sai cot (loi #7) — cot I/K/L/M/N/O/P la JP, cot J/Q la VN
+    # chi phat hien chu VN co dau trong cot JP, va chu kanji/hiragana trong cot VN thuan
+    bad29 = []
+    _vn_tones = _re_v.compile(r"[àáảãạâầấẩẫậăằắẳẵặèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]", _re_v.IGNORECASE)
+    _jp_chars = _re_v.compile(r"[぀-ヿ㐀-鿿]")
+    for ws in ws_list:
+        hdr_row = 8 if cell(ws, "I8") else 9
+        for r_v in range(hdr_row + 1, min(ws.max_row + 1, hdr_row + 40)):
+            for col_i_jp in ("I", "K", "L", "M", "N", "O", "P"):   # JP
+                v = cell(ws, f"{col_i_jp}{r_v}") or ""
+                if v and _vn_tones.search(v) and not _jp_chars.search(v):
+                    bad29.append(f"{ws.title}!{col_i_jp}{r_v} co dau VN trong cot JP: {v[:40]!r}")
+            for col_i_vn in ("J", "Q"):   # VN
+                v = cell(ws, f"{col_i_vn}{r_v}") or ""
+                if v and _jp_chars.search(v) and not _vn_tones.search(v):
+                    # cho phep tu Nhat trong 「」 (ten UI goc), nhung khong cho dong thuan Nhat
+                    if not v.strip().startswith("「") and len(v) > 10:
+                        bad29.append(f"{ws.title}!{col_i_vn}{r_v} ngon ngu Nhat thuan trong cot VN: {v[:40]!r}")
+            if len(bad29) >= 20:
+                break
+    rep.add(29, "Ngon ngu khop cot JP/VN (loi #7)", "FAIL" if bad29 else "PASS",
+            "; ".join(bad29[:6]) if bad29 else "Ngon ngu cot JP/VN khop quy dinh")
+
+    # 30: enum 種類 / 必須 (loi #8) — reject gia tri ngoai enum
+    TYPE_ENUM_V = {"Label", "Textbox", "Textarea", "Dropdown", "Checkbox", "Radio",
+                   "Button", "Link", "Hyperlink", "Image", "Table", "Tab", "DatePicker",
+                   "File", "Toggle", "Chip", "Pagination", "Icon", "SearchBox"}
+    REQUIRED_ENUM_V = {"○", "ー", "—", "Yes", "No", "", None}
+    bad30 = []
+    for ws in ws_list:
+        hdr_row = 8 if cell(ws, "I8") else 9
+        for r_v in range(hdr_row + 1, ws.max_row + 1):
+            t = cell(ws, f"K{r_v}")
+            m = cell(ws, f"M{r_v}")
+            if t and t.strip() and t.strip() not in TYPE_ENUM_V:
+                bad30.append(f"{ws.title}!K{r_v} '种类'={t!r} ngoai enum")
+            if m and m.strip() and m.strip() not in REQUIRED_ENUM_V:
+                bad30.append(f"{ws.title}!M{r_v} '必須'={m!r} viet van dai, nen chuyen sang cot P")
+            if len(bad30) >= 15:
+                break
+    rep.add(30, "Enum 種類 / 必須 (loi #8)", "FAIL" if bad30 else "PASS",
+            "; ".join(bad30[:6]) if bad30 else "Gia tri 種類/必須 trong enum")
+
+    # 31: cau lap qua N lan trong cung cot (loi #6, #7 dang khac) — vd cot S "API gọi" lap "Khong goi API"
+    THRESH = 10
+    bad31 = []
+    for ws in ws_list:
+        for col in ("P", "Q", "R", "S"):
+            hdr_row = 8 if cell(ws, "I8") else 9
+            vals = []
+            for r_v in range(hdr_row + 1, ws.max_row + 1):
+                v = cell(ws, f"{col}{r_v}")
+                if v and v.strip():
+                    vals.append(v.strip()[:80])
+            from collections import Counter as _Ct
+            for text, n in _Ct(vals).most_common(3):
+                if n > THRESH:
+                    bad31.append(f"{ws.title}!{col} lap {n} lan: {text[:50]!r}")
+                    break
+    rep.add(31, f"Khong co cau lap > {THRESH} lan trong 1 cot (loi #6)", "FAIL" if bad31 else "PASS",
+            "; ".join(bad31[:5]) if bad31 else "Khong co cau lap bat thuong")
+
+    # 32: khoi Step 1 共通 bat buoc 6 dong (feedback 22/11/2026 P1-5)
+    STEP1_KEYS = ["初期表示", "権限", "データ範囲", "状態保持", "loading", "URL"]
+    bad32 = []
+    for ws in ws_list:
+        # Step 1 共通 nam o B5 (ngay duoi B4 purpose/access)
+        b5 = (cell(ws, "B5") or "")
+        missing = [k for k in STEP1_KEYS if k not in b5]
+        if missing:
+            bad32.append(f"{ws.title}!B5 thieu: {missing}")
+    rep.add(32, "Khoi Step 1 共通 du 6 dong (P1-5)", "FAIL" if bad32 else "PASS",
+            "; ".join(bad32[:5]) if bad32 else f"{len(ws_list)} sheet du 6 dong 画面共通")
+
     return wb, ws_list
 
 

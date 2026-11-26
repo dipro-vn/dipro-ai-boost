@@ -42,12 +42,13 @@ my-project/
 | Bạn có | Bỏ vào đâu |
 |---|---|
 | Source code | `inputs/repo/<tên-repo>/` (không có `.env`, key, `node_modules/`) |
-| File DB | `inputs/db/schema.sql` — `mysqldump --no-data` / `pg_dump --schema-only` |
 | Tài khoản test website | `.auth/credentials.local.env` (xem bên dưới) |
 | Yêu cầu thay đổi | `inputs/cr/` |
 | Website · Figma | Chỉ cần URL — AI hỏi khi chạy |
 
-Nội dung `inputs/repo|db|cr/` và `.auth/` đã `.gitignore` — không bị commit.
+> **DB không phải input** (feedback 30/10/2026): O3 DB doc sinh từ source code (ORM / migration) qua `read-orm-schema.py`. Không còn folder `inputs/db/`.
+
+Nội dung `inputs/repo|cr/` và `.auth/` đã `.gitignore` — không bị commit.
 
 ---
 

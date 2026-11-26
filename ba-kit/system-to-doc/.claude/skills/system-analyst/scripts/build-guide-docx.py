@@ -578,7 +578,6 @@ def build(kit, samples, source_guide, shots):
     g.p("Kit đã có sẵn các folder để bỏ file vào (mỗi folder có README.md hướng dẫn riêng):")
     g.table(["Folder", "Bỏ gì vào"],
             [["inputs/repo/", "Source code hệ thống — mỗi repo 1 folder con (web-fe/, api/, batch/…). Không bỏ .env, key, node_modules."],
-             ["inputs/db/", "File schema.sql CHỈ cấu trúc (mysqldump --no-data / pg_dump --schema-only)."],
              ["inputs/cr/", "File yêu cầu thay đổi của khách (.docx .pdf .xlsx .md, ảnh) — dùng ở Luồng 2."],
              [".auth/credentials.local.env", "Tài khoản test website: copy từ .auth/credentials.example.env rồi điền (xem Bước 3)."]])
     g.note("Folder inputs/ và .auth/ đã được .gitignore — file bạn bỏ vào không bị commit. "
@@ -621,8 +620,8 @@ def build(kit, samples, source_guide, shots):
     g.table(["Nhóm", "AI hỏi", "Bạn chuẩn bị"], [
         ["Phạm vi", "Tên hệ thống, khảo sát tới đâu, phần mềm là website hay app", ""],
         ["Source code", "Repo nào (AI tự liệt kê từ inputs/repo/), FE hay BE, repo FE thuộc website nào", "Repo đã bỏ vào inputs/repo/"],
-        ["Database (tuỳ chọn)", "File schema / chỉ có migration / không có",
-         "File .sql chỉ cấu trúc trong inputs/db/ (mysqldump --no-data / pg_dump --schema-only)"],
+        ["Database", "AI tự đọc ORM / migration từ source code — không còn input file",
+         "(không cần — feedback 30/10/2026)"],
         ["Figma (tuỳ chọn)", "Link design hiện tại; link file để AI vẽ flow; có publish Design System không",
          "Link figma.com/design/..."],
         ["Khác", "Ngôn ngữ tài liệu, ai đọc", ""],

@@ -62,6 +62,7 @@ import inv_schema as S  # noqa: E402
 try:
     import openpyxl
     from openpyxl.worksheet.hyperlink import Hyperlink
+    from openpyxl.styles import Font
     import bd_styles as ST
 except ImportError:
     print("Thieu openpyxl. Chay: pip install openpyxl", file=sys.stderr)
@@ -674,8 +675,9 @@ def style_row(ws, r, cols=COLS):
         ST.data(ws.cell(row=r, column=c), center=c in (8, 11, 12, 13, 14))
 
 
-def fill_screen(ws, sc, site_url, ver, date, author, spec, items, errors, img, title, phase):
-    """img = duong dan anh da danh so (hoac None). -> True khi co chen anh."""
+def fill_screen(ws, sc, site_url, ver, date, author, spec, items, errors, img, title, phase, has_code_source=True):
+    """img = duong dan anh da danh so (hoac None). -> True khi co chen anh.
+    has_code_source=False -> an cot S "API gọi" (feedback 22/11/2026 lỗi #6)."""
     sid = sc["Screen ID"]
     route = sc.get("URL / Route", "")
     for ref, val in (("B1", title), ("D1", site_url.rstrip("/") + route),
@@ -684,16 +686,40 @@ def fill_screen(ws, sc, site_url, ver, date, author, spec, items, errors, img, t
                      ("F5", "%s — AS-IS baseline" % ver), ("F6", "WORKING_SCREEN")):
         ws[ref] = val   # E4/F4 "Status" bo (feedback: khong dung trang thai DRAFT)
     entry = sc.get("Entry From") or "—"
+    # Feedback 22/11/2026 lỗi #1: strip leading "■目的" / "■アクセス方法" nếu spec đã có header (tránh lặp)
+    def _strip_hdr(text, *hdrs):
+        s = (text or "").lstrip()
+        for h in hdrs:
+            if s.startswith(h):
+                s = s[len(h):].lstrip("\n ").lstrip()
+        return s
+    purpose = _strip_hdr(spec.get("purpose"), "■目的", "目的") or "%s (%s)" % (title, sc.get("Type") or "—")
+    access = _strip_hdr(spec.get("access"), "■アクセス方法", "アクセス方法") or (route if entry == "—" else "%s → %s" % (entry, route))
     ws["B4"] = "■目的\n%s\n\n■アクセス方法\n%s\n\n■トレーサビリティ / Traceability\n%s · %s" % (
-        spec.get("purpose") or "%s (%s)" % (title, sc.get("Type") or "—"),
-        spec.get("access") or (route if entry == "—" else "%s → %s" % (entry, route)),
-        sid, sc.get("Function IDs") or "—")
-    ws["B5"] = spec.get("logic") or NA
-    ws["B6"] = spec.get("access") or ("Mở trực tiếp: %s" % route if entry == "—" else "Từ %s" % entry)
+        purpose, access, sid, sc.get("Function IDs") or "—")
+    # Feedback 22/11/2026 P1-5: B5 = Logic chung + 6 dòng Step 1 共通
+    logic = spec.get("logic") or NA
+    step1 = spec.get("common_step1") or {}
+    step1_block = "\n\n".join([
+        "■初期表示・データ取得\n%s" % (step1.get("initial_display") or "要確認 — Q-xxx"),
+        "■権限\n%s" % (step1.get("permission") or "要確認 — Q-xxx"),
+        "■データ範囲\n%s" % (step1.get("data_scope") or "要確認 — Q-xxx"),
+        "■状態保持\n%s" % (step1.get("state_keep") or "要確認 — Q-xxx"),
+        "■loading / 0件 / エラー\n%s" % (step1.get("loading_zero_error") or "要確認 — Q-xxx"),
+        "■URL tham số sai\n%s" % (step1.get("url_invalid") or "要確認 — Q-xxx"),
+    ])
+    ws["B5"] = "%s\n\n%s" % (logic, step1_block) if logic != NA else step1_block
+    ws["B6"] = _strip_hdr(spec.get("access"), "■アクセス方法", "アクセス方法") or ("Mở trực tiếp: %s" % route if entry == "—" else "Từ %s" % entry)
     ws["A8"] = None   # banner template
-    ws.cell(row=HDR, column=19, value="API gọi")
-    ST.header(ws.cell(row=HDR, column=19))
-    ws.column_dimensions["S"].width = 40
+    # Feedback 22/11/2026 lỗi #6: ẩn cột S "API gọi" khi không có code source (website-only mode)
+    # Cột S chỉ ý nghĩa khi đọc được code; không source → lặp "Không gọi API" vô nghĩa.
+    if has_code_source:
+        ws.cell(row=HDR, column=19, value="API gọi")
+        ST.header(ws.cell(row=HDR, column=19))
+        ws.column_dimensions["S"].width = 40
+    else:
+        ws.column_dimensions["S"].hidden = True
+        ws["B7"] = (ws["B7"].value or "") + "\n■Logic chung: không gọi API — chế độ website-only, không có source code."
     for r in range(FIRST, ws.max_row + 1):   # bo so thu tu dien san cua template
         ws.cell(row=r, column=8).value = None
     r, cur_group = FIRST, None
@@ -862,6 +888,26 @@ def main():
         os.makedirs(os.path.dirname(os.path.abspath(a.before)), exist_ok=True)
         shutil.copy(a.template, a.before)
     wb = openpyxl.load_workbook(a.template)
+    # Feedback 22/11/2026 lỗi #4: xoá rác Change History cũ (CHG-0001..0005 từ template) + rename sheet "Common mesage"
+    if "Change History" in wb.sheetnames:
+        ch = wb["Change History"]
+        r = 6
+        while ch.cell(row=r, column=1).value:
+            for col in range(1, 17):
+                ch.cell(row=r, column=col).value = None
+            r += 1
+    if "Common mesage" in wb.sheetnames:
+        wb["Common mesage"].title = "Common message"
+    # Feedback 22/11/2026 lỗi #3: A1 Common message + Screen Error message theo site
+    # (admin / user) thay vì cứng 「【User】」
+    site_kind = (site.get("Kind") or site.get("Type") or "").lower()
+    site_label = "【Admin】" if "admin" in site_kind else "【User】"
+    for sname in ("Common message", "Screen Error message"):
+        if sname in wb.sheetnames:
+            a1 = wb[sname]["A1"].value or ""
+            if "【User】" in a1 or "【Admin】" in a1:
+                import re as _re
+                wb[sname]["A1"] = _re.sub(r"【(User|Admin)】", site_label, a1)
     es = wb["Screen Error message"]
     for rng in [m for m in es.merged_cells.ranges if m.min_row > 3]:
         es.unmerge_cells(str(rng))
@@ -925,8 +971,10 @@ def main():
         img, why = screen_image(sid, sp, items, page, crawl, root, idir)
         ws = wb.copy_worksheet(wb["Sample"])
         ws.title = titles[sid]
+        # Feedback 22/11/2026 lỗi #6: ẩn cột S khi không có code source (edges rỗng = không có fe-api-calls.csv)
+        has_code_source = bool(edges) or bool(code)
         has_img = fill_screen(ws, sc, site.get("URL", ""), a.version, date, a.author, sp, items, errs, img,
-                              titles[sid], phase)
+                              titles[sid], phase, has_code_source=has_code_source)
         for cat in sorted({e["category"] for e in errs}):
             es.merge_cells(start_row=er, start_column=1, end_row=er, end_column=10)
             es.cell(row=er, column=1, value="%s — %s %s" % (cat, sid, titles[sid]))
@@ -969,7 +1017,96 @@ def main():
                            "—", "—", "build-basic-design.py"], start=1):
         ch.cell(row=r, column=c, value=v)
     ST.row(ch, r, range(1, 17), "data")
-    wb.move_sheet("Sample", offset=len(wb.sheetnames))   # working sheet truoc, Sample cuoi
+    # Feedback 22/11/2026 lỗi #4: xoá hẳn sheet "Sample" khỏi bản export (không phải move cuối)
+    if "Sample" in wb.sheetnames:
+        del wb["Sample"]
+    # Feedback 22/11/2026 lỗi #9: tách meta agent (Master Version / Flow ID / Runtime Rule) khỏi Screen Index.
+    # Lưu meta sang _internal/screen-index-meta.json; Screen Index chỉ giữ No · tên · URL · link sheet.
+    import json as _json
+    meta_rows = []
+    for r_idx in range(2, idx.max_row + 1):
+        meta = {col: idx.cell(row=r_idx, column=c).value
+                for c, col in [(5, "master_version"), (6, "flow_id"), (7, "runtime_rule")] if idx.cell(row=r_idx, column=c).value}
+        if meta:
+            meta["screen_id"] = idx.cell(row=r_idx, column=1).value
+            meta_rows.append(meta)
+        for c in (5, 6, 7):
+            idx.cell(row=r_idx, column=c).value = None
+    if meta_rows:
+        meta_path = os.path.join(os.path.dirname(os.path.abspath(a.out)), "_internal", "screen-index-meta.json")
+        os.makedirs(os.path.dirname(meta_path), exist_ok=True)
+        with open(meta_path, "w", encoding="utf8") as f:
+            _json.dump({"site": a.site, "version": a.version, "rows": meta_rows}, f, ensure_ascii=False, indent=2)
+    # Feedback 22/11/2026 lỗi #5: thêm sheet 「確認事項」 với hyperlink Q về ô đang trỏ.
+    # Scan mọi screen sheet, tìm ô có pattern "Q-xxx" / "要確認 — Q-xxx" → build map Q-id → (sheet, cell).
+    import re as _re_q
+    from openpyxl.utils import get_column_letter as _col
+    q_map = {}  # Q-id → [(sheet_title, cell_ref, text), ...]
+    _qpat = _re_q.compile(r"Q-\d{3,}")
+    for ws_q in wb.worksheets:
+        if ws_q.title in ("Change History", "Screen Index", "Common message",
+                          "Common mesage", "Screen Error message", "確認事項"):
+            continue
+        for row_q in ws_q.iter_rows():
+            for cell_q in row_q:
+                v = cell_q.value
+                if isinstance(v, str):
+                    for qid in _qpat.findall(v):
+                        q_map.setdefault(qid, []).append((ws_q.title, cell_q.coordinate, v[:80]))
+    if q_map or q.rows:
+        if "確認事項" in wb.sheetnames:
+            del wb["確認事項"]
+        qs = wb.create_sheet("確認事項")
+        qs["A1"] = "確認事項 / Danh sách câu hỏi"
+        ST.title(qs["A1"])
+        qs.merge_cells("A1:G1")
+        hdr_row = ["Mã Q", "Loại", "Câu hỏi", "Nơi hỏi (click)", "Lý do", "Người trả lời", "Trạng thái"]
+        for c_i, h in enumerate(hdr_row, start=1):
+            qs.cell(row=2, column=c_i, value=h)
+            ST.header(qs.cell(row=2, column=c_i))
+        qs.column_dimensions["A"].width = 12
+        qs.column_dimensions["B"].width = 10
+        qs.column_dimensions["C"].width = 55
+        qs.column_dimensions["D"].width = 28
+        qs.column_dimensions["E"].width = 40
+        qs.column_dimensions["F"].width = 14
+        qs.column_dimensions["G"].width = 12
+        r_qs = 3
+        # Ưu tiên rows từ q.rows (có mô tả đầy đủ); bổ sung Q scan được nhưng không có trong q.rows
+        q_in_rows = {row[0] for row in q.rows}
+        for row in q.rows:
+            qid = row[0]
+            places = q_map.get(qid, [])
+            place_cell = places[0] if places else None
+            qs.cell(row=r_qs, column=1, value=qid)
+            qs.cell(row=r_qs, column=2, value=row[1])
+            qs.cell(row=r_qs, column=3, value=row[2])
+            if place_cell:
+                link_cell = qs.cell(row=r_qs, column=4,
+                                    value="%s!%s" % (place_cell[0], place_cell[1]))
+                link_cell.hyperlink = "#'%s'!%s" % (place_cell[0], place_cell[1])
+                link_cell.font = Font(name="Arial", size=11, color="FF1F4E78", underline="single")
+            else:
+                qs.cell(row=r_qs, column=4, value="—")
+            qs.cell(row=r_qs, column=5, value=row[3])
+            qs.cell(row=r_qs, column=6, value=row[5])
+            qs.cell(row=r_qs, column=7, value=row[6])
+            for c_i in range(1, 8):
+                ST.data(qs.cell(row=r_qs, column=c_i))
+            r_qs += 1
+        # Q scan được mà không có trong q.rows (edge: text hard-code)
+        for qid, places in q_map.items():
+            if qid in q_in_rows or not places:
+                continue
+            qs.cell(row=r_qs, column=1, value=qid)
+            qs.cell(row=r_qs, column=3, value="(không có mô tả — xem ô gốc)")
+            link_cell = qs.cell(row=r_qs, column=4,
+                                value="%s!%s" % (places[0][0], places[0][1]))
+            link_cell.hyperlink = "#'%s'!%s" % (places[0][0], places[0][1])
+            link_cell.font = Font(name="Arial", size=11, color="FF1F4E78", underline="single")
+            for c_i in range(1, 8):
+                ST.data(qs.cell(row=r_qs, column=c_i))
+            r_qs += 1
     for w in wb.worksheets:
         w.freeze_panes = None   # R13: kit khong freeze panel (template co san o Screen Index / Change History)
     wb.save(a.out)

@@ -17,6 +17,28 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 
 FONT = "Arial"
 
+# Feedback 22/11/2026 lỗi #8: enum chuẩn cho cột 種類 (Type) + 必須 (Required).
+# Builder reject giá trị ngoài enum, gate V-BD (check mới) kiểm tra.
+TYPE_ENUM = {
+    "Label", "Textbox", "Textarea", "Dropdown", "Checkbox", "Radio",
+    "Button", "Link", "Hyperlink", "Image", "Table", "Tab", "DatePicker",
+    "File", "Toggle", "Chip", "Pagination", "Icon", "SearchBox",
+}
+REQUIRED_ENUM = {"○", "ー", "—", ""}
+
+
+def normalize_type(v):
+    """Chuan hoa 'type': ngoai TYPE_ENUM -> None (builder se ghi WARN)."""
+    s = (v or "").strip()
+    return s if s in TYPE_ENUM else None
+
+
+def normalize_required(v):
+    """Chuan hoa 'required': chi nhan ○ (bat buoc) / ー hoac — (tuy chon) / '' (trong).
+    Giá trị văn dài như '任意（未入力で全件表示）' -> None (builder ghi WARN)."""
+    s = (v or "").strip()
+    return s if s in REQUIRED_ENUM else None
+
 # --- mau ---
 HEADER_FILL = "FFDAEEF3"   # xanh nhat — header bang du lieu
 TITLE_FILL = "FF1F4E78"    # xanh dam — hang title cua Screen Index

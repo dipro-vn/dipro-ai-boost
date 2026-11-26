@@ -250,7 +250,7 @@ python3 $S/extract-design-tokens.py --code-only --css-root REPO-01@WEB-01=<fe-1>
 | Mức thao tác | Chỉ xem | bạn trả lời / mặc định |
 | Vùng không đụng | … | bạn trả lời |
 | Source code | web-fe (giao diện trang người dùng) · api (máy chủ) | đọc từ thư mục |
-| Database | File cấu trúc inputs/db/schema.sql + định nghĩa bảng trong code | bạn trả lời |
+| Database | Đọc từ ORM / migration trong source code (không còn input file) | tự đọc code |
 | Figma | Thiết kế: — · Vẽ sơ đồ: <link> | bạn trả lời |
 | Danh sách lỗi | Có — nội bộ xem trước | bạn trả lời |
 | Ngôn ngữ · người đọc | Tiếng Việt · nội bộ | mặc định |

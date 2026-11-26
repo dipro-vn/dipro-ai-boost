@@ -8,6 +8,38 @@
 
 ---
 
+## 0. Workflow mới sau feedback 22/11/2026 P1-4 + P1-5
+
+```
+Pha A (G1) hoặc Pha B (G2): ensure crawl + AST đã có
+   ↓
+1. Máy sinh skeleton — KHÔNG tốn token LLM
+   build-bd-skeleton.py --ast-spec <ast.json> --crawl <recon/crawl/WEB-xx> \
+                         --fe-api-calls <csv> --inventory <inv.xlsx> \
+                         --site WEB-01 --out _internal/bd/skeleton-WEB-01.json
+   → chứa 100% dữ liệu máy biết: item name, type, status, maxlength,
+     box (cho annotate), ev, api, code_ref
+   ↓
+2. LLM chỉ điền phần nghiệp vụ — ngắn gọn (feedback 22/11/2026 giảm 70% output token)
+   → _internal/bd/spec-WEB-01.json (chỉ có diffs so với skeleton):
+     • purpose / access (ngắn)
+     • items[i].p / items[i].q / items[i].group
+     • common_step1: 6 dòng cấp màn (feedback 22/11/2026 P1-5, § 3b)
+     • errors[].impact / fix
+     • question_proposals
+   ↓
+3. Builder merge skeleton + spec → workbook
+   build-basic-design.py --skeleton _internal/bd/skeleton-WEB-01.json \
+                          --spec _internal/bd/spec-WEB-01.json ...
+   (backward-compat: --spec + --ast-spec vẫn hoạt động nếu không có --skeleton)
+   ↓
+4. V-BD gate (24 check cũ + 7 check mới P2 chất lượng: feedback 22/11/2026 lỗi #1-#9)
+```
+
+**Lợi ích:** output token LLM giảm ~70% (spec chỉ vài KB thay vì 75KB), file đạt chuẩn BD Nhật nhờ 6 dòng cấp màn bắt buộc.
+
+---
+
 ## 1. Nguồn — code trước, website sau (R3 · D2)
 
 | Thứ tự | Nguồn | Lấy gì |
@@ -26,6 +58,25 @@
 | Item gọi API nào | **Cột `S` "API gọi"** — từ `fe-api-calls.csv` (không dùng import graph / `table-refs.json`) |
 | Lỗi hiện gì | Bảng `ERROR SCENARIOS` dưới bảng item (cột `S` = nguồn) + sheet `Screen Error message` |
 | Màn liên kết thế nào | `B4`/`B6` (Cách access) · `P`/`Q`: "Bấm → chuyển sang màn 「<tên màn>」" (spec `next`) · Figma O4 |
+
+---
+
+## 1b. Khối 「Step 1：画面共通」 — bắt buộc mỗi sheet màn (feedback 22/11/2026 P1-5)
+
+Mỗi sheet màn phải có khối **Step 1：画面共通** ở `B5` (dưới mục đích / access), **6 dòng cấp màn** theo chuẩn BD Nhật. Không quan sát được → ghi `要確認 — Q-xxx` + câu hỏi nghiệp vụ vào sheet 確認事項 (không bỏ trống).
+
+| Dòng | Ý | Ví dụ điền |
+|---|---|---|
+| 1 | **初期表示・データ取得** (Hiển thị ban đầu + API đọc) | 「GET /api/events tải danh sách, sort theo ngày giảm dần, 20 item/trang」 |
+| 2 | **権限** (Phân quyền role) | 「admin · staff xem; viewer chỉ đọc, ẩn nút 「新規作成」」 |
+| 3 | **データ範囲** (Phạm vi dữ liệu) | 「Mỗi staff chỉ thấy event do tenant mình tạo」 |
+| 4 | **状態保持** (Giữ state khi quay lại) | 「Tab · bộ lọc · trang hiện tại giữ trong sessionStorage, sống 30 phút」 |
+| 5 | **loading / 0件 / エラー** | 「Loading = skeleton 3 row · 0 件 = 「該当なし」 + nút tạo mới · 5xx = toast 「取得失敗」」 |
+| 6 | **URL tham số sai** | 「`?page=abc` → fallback page=1, không báo lỗi (observed Q-008)」 |
+
+**Builder sinh khối:** `build-basic-design.py` đọc `spec.screens[sid].common_step1` → sinh section trước bảng item. Thiếu 1 trong 6 dòng → V-BD check 32 FAIL (feedback 22/11/2026).
+
+**V-BD check 32** (`verify-basic-design.py`): mỗi sheet màn phải có **6 dòng** trong khối Step 1；thiếu → FAIL + chỉ tên dòng thiếu. Giá trị `要確認 — Q-xxx` được chấp nhận (có Q trong sheet 確認事項).
 
 ---
 

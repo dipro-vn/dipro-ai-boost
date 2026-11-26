@@ -7,6 +7,10 @@ Hãy là **System Analyst**. Đọc `.claude/agents/system-analyst.md` và chạ
 
 Đối tượng / gợi ý ban đầu của user: $ARGUMENTS
 
+**Flag `--light`** (feedback 22/11/2026 P1-4): scope ≤5 màn → bỏ các bước thủ tục nặng: không snapshot history · không build README chi tiết · dùng skeleton + spec ngắn (feedback 22/11/2026 P1-4) · vẫn chạy O1-O8 đầy đủ. Dùng khi dự án nhỏ hoặc sửa lại 1 góc nhỏ.
+
+**Nếu chỉ cần sửa BD thôi** (không touch output khác): dùng `/basic-design` (feedback 22/11/2026 P1-6) thay vì `/analyze-system` — nhanh hơn, ít token hơn.
+
 ---
 
 **Giai đoạn 1 — chỉ đọc source code (offline, nhanh):**

@@ -9,17 +9,32 @@
 
 ---
 
-## 1. Sheet inventory (5 sheet)
+## 1. Sheet inventory (6 sheet)
 
 | # | Sheet | Vai trò | Mutation rule |
 |---|---|---|---|
-| 1 | `Common mesage` | Catalog message dùng chung cho nhiều màn | **Append-only** + update đúng row. Reuse trước khi tạo mới |
+| 1 | `Common message` | Catalog message dùng chung cho nhiều màn (feedback 22/11/2026 lỗi #4: sửa chính tả `mesage` → `message`) | **Append-only** + update đúng row. Reuse trước khi tạo mới |
 | 2 | `Screen Error message` | Catalog error theo từng màn | **Append** theo block Screen ID + update đúng row |
-| 3 | `Sample` | **Template chuẩn** cho 1 Screen Basic Design | ⛔ **IMMUTABLE** — chỉ duplicate. Không điền, không đổi tên, không xóa |
-| 4 | `Screen Index` | Bảng tra Screen ID → tên màn / tên sheet (Screen ID có hyperlink tới sheet) | Append 1 row / 1 working sheet mới. Kit này **bỏ cột `Status`** (§5) |
-| 5 | `Change History` | Log mọi thay đổi | **Append-only**. Không sửa, không xóa row cũ |
+| 3 | `Sample` | **Template chuẩn** cho 1 Screen Basic Design — **chỉ tồn tại trong template `sample_basic_design.xlsx`** | ⛔ **IMMUTABLE** · builder tự xoá khỏi bản export (feedback 22/11/2026 lỗi #4) |
+| 4 | `Screen Index` | Bảng tra Screen ID → tên màn / tên sheet (Screen ID có hyperlink). Bỏ cột `Status` (§5) · bỏ Master Version/Flow ID/Runtime Rule → `_internal/screen-index-meta.json` (feedback 22/11/2026 lỗi #9) | Append 1 row / 1 working sheet mới |
+| 5 | `Change History` | Log mọi thay đổi | **Append-only** · builder clean CHG cũ của template trước khi append (feedback 22/11/2026 lỗi #4) |
+| 6 | **`確認事項`** (sinh tự động) | Danh sách câu hỏi Q-xxx + hyperlink về ô 要確認 trong sheet màn (feedback 22/11/2026 lỗi #5) | Builder tự sinh ở cuối — xoá & viết lại mỗi lần build |
 
-> ⚠️ **Khác với tài liệu kiến trúc v3.0:** file thật **không có** sheet `Error message` riêng và **không có sheet hidden nào**. Chỉ có `Common mesage` (typo có chủ ý — giữ nguyên) và `Screen Error message`. Nếu tài liệu và workbook mâu thuẫn → **workbook thắng**.
+> ⚠️ **Khác với tài liệu kiến trúc v3.0:** file thật trước đây không có sheet `確認事項` + typo `Common mesage` — nay đã sửa: builder rename `Common mesage` → `Common message` khi build (feedback 22/11/2026 lỗi #4), sinh sheet `確認事項` mới ở cuối. Nếu tài liệu và workbook mâu thuẫn → **workbook thắng**.
+
+### 1.1 Sheet 「確認事項」 — schema (feedback 22/11/2026 lỗi #5)
+
+| Cột | Header | Nội dung |
+|---|---|---|
+| `A` | Mã Q | `Q-001` ... |
+| `B` | Loại | QUESTION_TYPE (từ `inv_schema.py`) |
+| `C` | Câu hỏi | Nội dung Q (từ `q.ask(item, reason)`) |
+| `D` | Nơi hỏi (click) | Hyperlink về ô `<sheet>!<cell>` nơi ghi 要確認 — Q-xxx |
+| `E` | Lý do | Vì sao cần hỏi (reason của `q.ask()`) |
+| `F` | Người trả lời | Vai trò (BrSE / PM / khách) |
+| `G` | Trạng thái | Open / Answered |
+
+**Nguyên tắc:** mọi ô 要確認 — Q-xxx trong sheet màn PHẢI có 1 dòng Q tương ứng trong sheet 確認事項 (có hyperlink). V-BD check mới (lỗi #5) kiểm điều này.
 
 ---
 
@@ -35,8 +50,8 @@
 | | | `D2` | `[CREATED DATE]` |
 | `A3` | `更新者` | `B3` | `[UPDATED BY]` |
 | | | `D3` | `[UPDATED DATE]` |
-| `A4` | `概要` | `B4:D4` (merged) | `■目的` / `■アクセス方法` — block 2 mục |
-| `A5` | `Logic chung` | `B5:D5` (merged) | `[GENERAL LOGIC]` |
+| `A4` | `概要` | `B4:D4` (merged) | `■目的` / `■アクセス方法` — block 2 mục. Builder dedup header nếu spec đã có (feedback 22/11/2026 lỗi #1) |
+| `A5` | `Logic chung + Step 1 共通` | `B5:D5` (merged) | `[GENERAL LOGIC]` + **6 dòng cấp màn**: `■初期表示・データ取得` · `■権限` · `■データ範囲` · `■状態保持` · `■loading / 0件 / エラー` · `■URL tham số sai` (feedback 22/11/2026 P1-5). Thiếu 1 dòng → V-BD check 32 FAIL |
 | `A6` | `Cách access` | `B6:D6` (merged) | `[ACCESS METHOD]` |
 
 **Cột metadata phải (E/F) — BẮT BUỘC điền `F1`, `F2`, `F3`, `F5`, `F6`** (`E4`/`F4` để trống ở kit này):
@@ -95,14 +110,25 @@ Quy ước: **ảnh UI nằm cột A–F bên trái, bảng item nằm cột H�
 
 **Header ở `Sample` = row 8. Ở `Login_Sample` = row 9** (lệch 1 dòng vì Login_Sample có spacer row 8 cao 6.0pt).
 
+**Feedback 22/11/2026 lỗi #7 — quy định ngôn ngữ theo cột:**
+
+| Cột | Ngôn ngữ | Lý do |
+|---|---|---|
+| `I` `K` `L` `M` `N` `O` `P` | **JP thuần** | Khách Nhật đọc: tên item, type, status, required, maxlength, default, mô tả nghiệp vụ |
+| `J` `Q` | **VN thuần** | Team Việt tham chiếu |
+| `R` `S` | **VN** (chú thích nội bộ) | Comment, API gọi — team đọc |
+| `H` | số | — |
+
+Builder reject giá trị trộn (VN trong cột JP: 「Cần xác nhận」 trong cột `R` phải là 「要確認」 ở cột `P`; cột `R` ghi VN phải có cặp tương ứng cột `P` JP). V-BD check mới kiểm (feedback 22/11/2026 lỗi #7).
+
 | Cột | Header | Ghi chú điền |
 |---|---|---|
 | `H` | `#` | Số thứ tự |
 | `I` | `項目名 Item name（JP)` | Tên item tiếng Nhật |
 | `J` | `項目名 Item name（VN)` | Tên item tiếng Việt |
-| `K` | `種類 (type)` | `Label` · `Textbox` · `Button` · `Hyperlink` · `Icon` · `Dropdown` · `Checkbox` … |
+| `K` | `種類 (type)` | **Enum** (`bd_styles.TYPE_ENUM`): `Label` · `Textbox` · `Textarea` · `Dropdown` · `Checkbox` · `Radio` · `Button` · `Hyperlink` · `Icon` · `DatePicker` · `File` · `Toggle` · `Chip` · `Pagination` · `SearchBox` · `Image` · `Table` · `Tab`. Ngoài enum → V-BD FAIL (feedback 22/11/2026 lỗi #8) |
 | `L` | `ステータス (status)` | `Enable` · `Disable` · `ー` |
-| `M` | `必須 (required)` | `Yes` · `ー` |
+| `M` | `必須 (required)` | **Enum** (`bd_styles.REQUIRED_ENUM`): `○` (bắt buộc) · `ー` hoặc `—` (tuỳ chọn) · trống. Viết văn dài 「任意（未入力で全件表示）」 → V-BD FAIL, chuyển sang cột `P` (feedback 22/11/2026 lỗi #8) |
 | `N` | `最大限 (maxlength)` | số, khoảng (`8〜20`), hoặc `ー` |
 | `O` | `初期値 (default)` | giá trị mặc định hoặc `ー` |
 | `P` | `記述（日本語）` | Mô tả + validation + hành vi, bullet `・`, sub-list đánh số |
