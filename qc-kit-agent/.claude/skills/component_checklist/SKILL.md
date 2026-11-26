@@ -9,9 +9,9 @@ description: Checklist component-level behaviors — áp dụng sau testing_dime
 
 Skill này **không dùng độc lập** — dùng kết hợp với `rbt_manual_testing`, áp dụng **sau** `testing_dimensions`.
 
-**Khi nào áp dụng:** Component Type đã được `/plan-tcs` gắn sẵn cho từng component trong `plan-tcs.md` (Textbox/Dropdown/Checkbox/Radio/Table/Dialog/Button/File Upload/...). `/gen-tcs` **tra thẳng** theo Component Type đó vào Section tương ứng bên dưới — **không** đoán qua keyword AC text, không hỏi user xác nhận A/B/C (khác với việc gắn Component Type, vốn đã chốt ở `/plan-tcs` và user đã confirm plan ở bước đó rồi).
+**Khi nào áp dụng:** Component Type được `/gen-tcs` xác định cho từng component ở bước dựng cấu trúc (Section 3 của `rbt_manual_testing`: Textbox/Dropdown/Checkbox/Radio/Table/Dialog/Button/File Upload/...). `/gen-tcs` **tra thẳng** theo Component Type đó vào Section tương ứng bên dưới — **không** đoán qua keyword AC text, không hỏi user xác nhận A/B/C.
 
-| Component Type (từ `plan-tcs.md`) | Section áp dụng |
+| Component Type (xác định ở Section 3) | Section áp dụng |
 |-----------------|----------------|
 | Textbox/Input, Dropdown/Select, Checkbox, Radio, Button (Add/Update/Delete/Export/Import/Download/Upload) | **Section A — Form Components** |
 | Dialog/Popup, Breadcrumb, Pager, Tooltip, Hyperlink/Link, Progress bar | **Section B — Layout Components** |

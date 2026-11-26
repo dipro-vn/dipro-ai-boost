@@ -1,0 +1,11 @@
+{
+  "name": "ui-compare-scripts",
+  "private": true,
+  "type": "module",
+  "description": "Script đo DOM, so số liệu và pixelmatch cho /ui-compare. Cài một lần: npm install && npx playwright install chromium",
+  "dependencies": {
+    "playwright": "^1.50.0",
+    "pixelmatch": "^7.1.0",
+    "pngjs": "^7.0.0"
+  }
+}

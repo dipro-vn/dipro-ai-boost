@@ -33,15 +33,15 @@ Trước khi tìm lỗ hổng, rút ra từ spec (không bịa thêm) một mô 
 |---|---|
 | **Thực thể & định danh** | Đối tượng dữ liệu chính, khoá định danh của từng loại (id/url/tên file...), quan hệ giữa chúng |
 | **Vòng đời / State** | Mỗi thực thể có những trạng thái nào, ai/cái gì chuyển, có đường đi ngược không. State của UI (filter, sort, selection) được giữ/mất khi nào |
-| **Actor × Action** | Dựng **ma trận** Action × Actor (chỉ khi có phân quyền hoặc điều kiện theo trạng thái; thêm chiều sở hữu nếu có: order của mình / của người khác). Mỗi ô là một trong 3 giá trị: **✅** có căn cứ trong spec · **❌** suy ra được (spec chỉ gán quyền đó cho actor khác) · **?** spec im lặng và không suy ra chắc. Phải rà **từng ô**, không chỉ liệt kê quyền được phép |
+| **Actor × Action** | Dựng **ma trận** Action × Actor (chỉ khi có phân quyền hoặc điều kiện theo trạng thái; thêm chiều sở hữu nếu có: order của mình / của người khác). Mỗi ô là một trong 3 giá trị: **✅** có căn cứ trong spec · **❌** không được làm (suy ra chắc chắn vì spec chỉ gán quyền đó cho actor khác) · **?** spec im lặng và không suy ra chắc. Phải rà **từng ô**, không chỉ liệt kê quyền được phép |
 | **Luồng dữ liệu** | Dữ liệu đến từ đâu, đi đâu **bên trong module**. Phụ thuộc ngoài (module/hệ thống/thiết bị) ghi ở Summary › Dependencies, không lặp lại ở đây |
 | **Giả định môi trường ngầm** | Spec đang ngầm giả định điều gì về dữ liệu bên ngoài, mạng, thiết bị, thời gian |
 
-Mô hình phải gọn (chỉ rút những gì cần cho việc tìm lỗ hổng) và là thứ **con người xác nhận ở checkpoint đầu tiên**. Hiểu sai ở đây rẻ hơn hiểu sai ở 40 câu hỏi sau đó.
+Mô hình phải gọn (chỉ rút những gì cần cho việc tìm lỗ hổng) và là thứ **con người đọc đầu tiên trong `analysis.md`** để bắt hiểu sai (không có checkpoint dừng). Hiểu sai ở đây kéo theo sai toàn bộ Q&A phía sau.
 
 ### Một thông tin chỉ ghi ở một nơi
 
-Summary và System Model được người dùng đọc cùng lúc ở checkpoint; cùng một ý ghi hai lần chỉ tăng thời gian đọc. Phân vai:
+Summary và System Model được người dùng đọc cùng lúc trong `analysis.md`; cùng một ý ghi hai lần chỉ tăng thời gian đọc. Phân vai:
 
 | Phần | Chỉ chứa | Không chứa |
 |---|---|---|
@@ -101,8 +101,8 @@ Viết thế này:
 | L3 | **Phạm vi thao tác hàng loạt** | Chọn đối tượng cha thì áp dụng cho con nào? Kết hợp với filter/điều kiện thì áp dụng cho tập nào? Chọn rỗng, chọn tất cả, chọn số lượng rất lớn thì sao? |
 | L4 | **Lỗi từng phần & gián đoạn** | Bước 2 trong luồng 3 bước fail thì bước 1 xử lý thế nào? Cancel giữa chừng? Mất kết nối, app xuống background, bị kill, hết pin, hết dung lượng? Dữ liệu dở dang dọn thế nào? Kết quả báo cho user ra sao? |
 | L5 | **Môi trường tác động** | Dữ liệu bên ngoài thay đổi khi user đang thao tác (bị ghi đè/xoá bởi nguồn khác)? Nhiều thiết bị/phiên cùng thao tác? Đồng hồ/múi giờ/format thời gian? Quy mô dữ liệu lớn? Quyền OS bị thu hồi giữa chừng? |
-| L6 | **Phân quyền & điều kiện kết hợp** | Ma trận role × action × trạng thái đã đủ chưa? Rà từng ô **?** trong ma trận Actor × Action: ô nào có rủi ro Medium trở lên (tiền/dữ liệu/bảo mật/trạng thái đơn) thì đưa qua Question Gate thành câu hỏi (VD "Operator và Driver có được hủy order không?"). Ô ❌ suy ra được thì không hỏi, nhưng phải giữ trong ma trận để `/plan-tcs` và `/gen-tcs` phủ TC. Quyền thay đổi giữa lúc đang thao tác thì sao? |
-| L7 | **Phụ thuộc xuyên module** | Module/màn khác sửa dữ liệu mà màn này đọc (xoá, đổi tên, đổi thứ tự) thì màn này phản ứng thế nào? Rule toàn cục nào chi phối? |
+| L6 | **Phân quyền & điều kiện kết hợp** | Ma trận role × action × trạng thái đã đủ chưa? Rà từng ô **?** trong ma trận Actor × Action: ô nào có rủi ro Medium trở lên (tiền/dữ liệu/bảo mật/trạng thái đơn) thì đưa qua Question Gate thành câu hỏi (VD "Operator và Driver có được hủy order không?"). Ô ❌ (không được làm, đã suy ra chắc) thì không hỏi, nhưng phải giữ trong ma trận để `/gen-tcs` phủ TC. Quyền thay đổi giữa lúc đang thao tác thì sao? |
+| L7 | **Phụ thuộc xuyên module** | **Chiều vào:** module/màn khác sửa dữ liệu mà màn này đọc (xoá, đổi tên, đổi thứ tự) thì màn này phản ứng thế nào? Rule toàn cục nào chi phối? **Chiều ra:** với mỗi dữ liệu module này tạo/sửa/xoá — dữ liệu đi đến đâu (hiển thị ở site/màn khác, số đếm, tìm kiếm, thông báo, log/export, cache), cái gì ở nơi khác đang phụ thuộc vào nó, nếu nó đổi hoặc biến mất thì nơi đó ra sao? Spec không nhắc nơi nhận mà dữ liệu rõ ràng có thể đi tới đó → câu hỏi Q&A, không tự thêm vào Dependencies |
 | L8 | **Spec tự mâu thuẫn & luồng thiếu** | Hai mục spec nói khác nhau về cùng hành vi? Message/state được định nghĩa nhưng không luồng nào gọi tới? Điểm vào có mà điểm ra không (ngõ cụt)? Trạng thái empty/error/loading có mô tả chưa? |
 
 > Lens L1-L5 là nơi các câu hỏi giá trị cao nhất thường nằm — chúng thường **không có chữ nào trong spec**, vì spec chỉ mô tả luồng thành công. Dành thời gian nhiều nhất cho nhóm này.
@@ -247,9 +247,9 @@ Nhóm các câu theo chủ đề (không theo thứ tự đọc spec) để ngư
 - AC từ tài liệu phụ thuộc có thể ảnh hưởng scope của tài liệu chính
 - Ghi rõ rule nào đến từ tài liệu nào
 
-### Dependencies trong Summary (hiển thị ở checkpoint, trước Impact Analysis)
+### Dependencies trong Summary (đứng trước Impact Analysis)
 
-Người dùng xác nhận Summary **trước khi** Impact Analysis được sinh, nên dòng Dependencies phải đủ để họ kiểm tra agent hiểu dependency đúng chưa — không chỉ liệt kê tên.
+Impact Analysis được sinh dựa trên Dependencies, nên dòng Dependencies phải đủ để người đọc kiểm tra agent hiểu dependency đúng chưa — không chỉ liệt kê tên.
 
 - Mỗi module một dòng tiêu đề kèm **mức ảnh hưởng**:
   - **trực tiếp** — module kia dùng chung dữ liệu/quy tắc/luồng với module này và thay đổi ở đây tác động thẳng
@@ -261,11 +261,11 @@ Người dùng xác nhận Summary **trước khi** Impact Analysis được sin
 
 ### Impact Analysis (chỉ khi module có dependency **có căn cứ**)
 
-Mục đích: chỉ ra **hành vi đang chạy của module khác có thể vỡ** vì thay đổi của module này, để bước sau (`/plan-tcs`) biết cần regression ở đâu. Đây là **danh sách điểm cần regression, không phải test scenario** — không viết scenario hay TC ở bước này.
+Mục đích: chỉ ra **hành vi đang chạy của module khác có thể vỡ** vì thay đổi của module này, để bước sau (`/gen-tcs`) biết cần regression ở đâu. Đây là **danh sách điểm cần regression, không phải test scenario** — không viết scenario hay TC ở bước này.
 
 **Căn cứ để ghi một dependency** (cần ít nhất một):
 - Spec của module này nhắc rõ module/hệ thống khác hoặc dữ liệu dùng chung
-- `testing/[module]/analysis.md` của module khác đã có và module này chạm vào điểm mà nó mô tả
+- `testing/[module]/[module]-analysis-vN.md` (version mới nhất) của module khác đã có và module này chạm vào điểm mà nó mô tả
 - Design cho thấy màn hình/thành phần dùng chung
 
 Không có căn cứ → **không liệt kê** (không đoán mò). Module không có dependency nào → **bỏ hẳn mục Impact Analysis**, không để mục trống.

@@ -202,7 +202,9 @@ def unique_sheet_name(wb, name):
 
 
 def is_test_cases_file(input_path):
-    return input_path.stem.strip().lower() == "test-cases"
+    # `[module]-testcases-vN.md` (quy ước hiện hành) và tên cũ `test-cases.md`, `test-cases_v2.md`, `test-cases-v3.md`
+    stem = input_path.stem.strip().lower()
+    return re.fullmatch(r"(.+-testcases-v\d+|test-cases([_-]v\d+)?)", stem) is not None
 
 
 def guess_module_name(content, input_path):

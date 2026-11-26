@@ -103,10 +103,12 @@ claude
 
     ```bash
     cd my-project
-    cp -r /path/to/dipro-ai-kit/qc-kit-agent/.claude .
+    # Project đã có sẵn file nào thì gộp nội dung, không chạy lệnh copy đè lên
+    KIT=/path/to/dipro-ai-kit/qc-kit-agent
+    cp -r "$KIT/.claude" "$KIT/template" "$KIT/CLAUDE.md" "$KIT/.mcp.json" .
 
-    # Cài Python dependencies (cho /export-xlsx)
-    pip install openpyxl xlwt
+    # Cài Python dependencies (cho /export-xlsx, /update-tcs)
+    pip3 install openpyxl
 
     claude
     /analyze-req docs/features/login/SPEC.md
