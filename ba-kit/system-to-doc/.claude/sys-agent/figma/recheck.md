@@ -27,6 +27,8 @@ For each frame in [Output 1, Output 2, Output 3]:
 | 9 | **Node nằm trong biên frame** (BẮT BUỘC, chạy TRƯỚC tiêu chí 7) | Mọi node lá trong `[0,W]×[0,H]`, đủ **4 phía** | Script ở **Tiêu chí 9**. ⚠️ Node văng ra ngoài vẫn làm tiêu chí 6/7/8 PASS giả — overlap=0 vì chúng xa nhau |
 | 8 | **Phủ đủ chức năng nguồn (FR Coverage)** (BẮT BUỘC khi nguồn đánh số được) | `set(FR nguồn) − set(FR trong artifact) = ∅` | Script ở **Tiêu chí 8** bên dưới. Đây là tiêu chí DUY NHẤT đối chiếu ngược về tài liệu nguồn — 7 tiêu chí kia chỉ kiểm thứ đã vẽ |
 | 10 | **Không mã trạng thái thô trên Output 1 / 2** (20/10/2026 · D1) | Số text node chứa mã trạng thái = 0 | `frame.findAll(n => n.type==="TEXT" && /\b(to verify|inferred)\b/i.test(n.characters)).length` — điều chưa rõ viết "Cần xác nhận — Q-xxx" / "chưa quan sát" |
+| 11 | **Flow diagram node type — Output 1 Phần A** (BẮT BUỘC) | Phần A phải có: ≥1 ELLIPSE (Start ▶) · ≥1 LINE/CONNECTOR (arrow) · ≥1 rect stroke ORANGE (Decision ◇ — optional nếu flow không rẽ nhánh, ghi rõ) · FAIL nếu tất cả node là TEXT frame thuần | Script ở **Tiêu chí 11** bên dưới |
+| 12 | **Output 2 không phải Sitemap** (BẮT BUỘC, chạy TRƯỚC mọi tiêu chí khác cho Output 2) | Output 2 = Screen Flow Merged Branch (Groups + Start + Terminal). FAIL nếu `textRatio > 0.6 AND ellipseCount = 0` (= Sitemap dạng bảng, không phải flow diagram) | Script ở **Tiêu chí 12** bên dưới |
 
 ---
 
