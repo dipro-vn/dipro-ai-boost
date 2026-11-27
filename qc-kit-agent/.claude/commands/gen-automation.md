@@ -1,18 +1,22 @@
 ---
-description: Sinh & chạy Playwright automation script từ test-cases.md có sẵn, dùng Playwright MCP để recon DOM thật. Auto-heal lỗi phía script (tối đa 2 vòng), assertion fail được báo là nghi bug. Bắt buộc phải có test-cases.md trước khi chạy.
+description: Sinh & chạy Playwright automation script từ file test case (`[module]-testcases-vN.md`) có sẵn, dùng Playwright MCP để recon DOM thật. Auto-heal lỗi phía script (tối đa 2 vòng), assertion fail được báo là nghi bug. Bắt buộc phải có test-cases.md trước khi chạy.
 skills:
   - automation_engineer
 ---
 
 Thực hiện đầy đủ **Section 1–6** từ skill `automation_engineer`.
 
-## Bước 0 — Kiểm tra `test-cases.md` (bắt buộc)
+## Bước 0 — Kiểm tra file test case (bắt buộc)
 
-Kiểm tra `testing/[module]/test-cases.md` có tồn tại không:
+Lấy file TC mới nhất: `python3 -I .claude/scripts/module_files.py latest testing/[module] testcases` (tên theo "Quy ước file và version" trong skill `rbt_manual_testing`: `[module]-testcases-vN.md`; tên cũ `test-cases.md` tính là v1). Nêu version đang dùng trong tóm tắt. Mọi chỗ dưới đây viết `test-cases.md` là tên gọi tắt của file này.
+
+Chạy thêm `module_files.py latest testing/[module] testcases xlsx`: nếu xlsx có version **lớn hơn** md thì in cảnh báo một dòng `xlsx đang chạy là vX nhưng md mới nhất chỉ là vY, md có thể đã cũ` rồi vẫn dùng md (hoặc dừng nếu user muốn đồng bộ md trước bằng /update-tcs).
+
+Không lấy được file nào nghĩa là module chưa có test case:
 
 **Không có** → dừng lại, thông báo:
 
-> ⚠️ Module này chưa có `test-cases.md`. Chạy `/gen-tcs` trước để sinh test case, sau đó quay lại `/gen-automation`.
+> ⚠️ Module này chưa có file test case. Chạy `/gen-tcs` trước để sinh test case, sau đó quay lại `/gen-automation`.
 
 **Có** → tiếp tục Bước 1.
 
@@ -42,8 +46,8 @@ Thực hiện **Section 5**: chạy `npx playwright test`; TC fail được phâ
 
 ## Bước 6 — Report
 
-Thực hiện **Section 6**: cập nhật `automation/task.md`, sinh `testing/[module]/automation-report.md` (PASS / Nghi bug / Không chạy được, ID `BUG-<TC ID>`), tóm tắt trong chat.
+Thực hiện **Section 6**: cập nhật `automation/task.md`, sinh `testing/[module]/[module]-automation-report-vN.md` (N = version của file TC đang chạy; lấy đường dẫn bằng `module_files.py path testing/[module] automation-report N`; chạy lại cùng N thì ghi đè, TC lên version mới thì giữ report cũ) (PASS / Nghi bug / Không chạy được, ID `BUG-<TC ID>`), tóm tắt trong chat.
 
 ## Output
 
-`automation/` project (mới hoặc mở rộng), Page Object + Test classes, `testing/[module]/automation-report.md`, `automation/task.md`.
+`automation/` project (mới hoặc mở rộng), Page Object + Test classes, `testing/[module]/[module]-automation-report-vN.md`, `automation/task.md`.

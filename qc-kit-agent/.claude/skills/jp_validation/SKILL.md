@@ -9,13 +9,13 @@ description: Bộ validate chuẩn cho hệ thống Nhật — lớp ký tự (�
 
 Skill này **không dùng độc lập** — `/gen-tcs` đọc khi `Locale = JP`, áp **lớp bổ sung** lên TC của field nhập liệu (Textbox, Textarea, Password, field số/ngày/tiền) cùng với `component_checklist` (Section A) và Bảng Field-Level Validation.
 
-**Khi nào áp dụng:** `Locale: JP` trong `CLAUDE.md`, hoặc `Locale: JP` trong Summary của `analysis.md` (user xác nhận ở checkpoint Summary). **Luôn áp**, không cần spec nhắc tới 全角/半角.
+**Khi nào áp dụng:** `Locale: JP` trong `CLAUDE.md`, hoặc `Locale: JP` trong Summary của `analysis.md` (user sửa trực tiếp trong `analysis.md` nếu sai). **Luôn áp**, không cần spec nhắc tới 全角/半角.
 
 **Quy trình cho mỗi field:**
 1. Xác định **loại field** (氏名, フリガナ, 電話番号, ID, password...).
 2. Xác định **lớp ký tự được phép**:
    - Spec/AC có ghi → dùng đúng theo spec.
-   - Spec im lặng → dùng **bảng mặc định theo loại field** bên dưới, TC gắn tag `[ASSUMED]`. Không hỏi Q&A, QC rà ở bước review TC.
+   - Spec im lặng → dùng **bảng mặc định theo loại field** bên dưới, tag `[ASSUMED]` ở đầu ô Expected Results. Không hỏi Q&A, QC rà ở bước review TC.
 3. Sinh TC theo **Bộ khung TC cho mỗi field** bên dưới. Áp Pattern 4 (EP + BVA) của `rbt_manual_testing` cho độ dài.
 4. **Message lỗi**: lấy đúng text trong spec. Spec chưa có text → ghi `Hiển thị error msg` kèm `(text theo spec)`, không bịa nội dung message.
 
@@ -91,7 +91,7 @@ Mỗi field **TC riêng** (không gộp giữa các field). Trong một field, g
 
 ## Ví dụ chuẩn: Login ID (8-32 ký tự, 半角英数字 và `-` `_` `@`)
 
-Mẫu tham khảo từ QC Login (`ONSEN`), đã sửa các lỗi: Test Scenario khớp Expected, Test Data là chuỗi thật, chuỗi test ký tự đủ dài để thỏa min length, độ dài gộp theo kết quả.
+Mẫu chuẩn: Test Scenario khớp Expected, Test Data là chuỗi thật, chuỗi test đủ dài để thỏa min length, các độ dài cho cùng kết quả được gộp thành một dòng.
 
 | Function Name | Test Scenario | Steps | Test Data | Expected Results |
 |---|---|---|---|---|

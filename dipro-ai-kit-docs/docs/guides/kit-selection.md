@@ -20,7 +20,7 @@ graph TD
     C --> C1["→ /new-feature / /bug-fix"]
     D --> D1["→ Mô tả task → workflow"]
     E --> E1["→ Mở Figma Plugin"]
-    F --> F1["→ /analyze-req → /plan-tcs → /gen-tcs"]
+    F --> F1["→ /analyze-req → /gen-tcs → /review-tcs"]
 ```
 
 ---
@@ -55,7 +55,7 @@ Task: /init-kit
 
 ```
 BA   → project-ai-kit → /create-spec
-QC   → qc-kit-agent   → /analyze-req → /plan-tcs → /gen-tcs
+QC   → qc-kit-agent   → /analyze-req → /gen-tcs
 TL   → project-ai-kit → /create-design
 Des  → project-ai-kit → /create-ui-design
 ```
@@ -78,7 +78,7 @@ Mob dev → mobile-ai-kit → workflows/new-feature.md
 ### Giai đoạn 5: Testing (Phase 7)
 
 ```
-QC manual  → qc-kit-agent  → /test/generate_test_execution_checklist
+QC manual  → qc-kit-agent  → /review-tcs → /export-xlsx
 QC auto    → qc-kit-agent  → /gen-automation
 ```
 

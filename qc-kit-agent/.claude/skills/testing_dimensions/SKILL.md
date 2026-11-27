@@ -1,5 +1,5 @@
 ---
-name: Testing Dimensions
+name: testing_dimensions
 description: Checklist testing theo platform — dùng kết hợp với rbt_manual_testing. AI xác định platform rồi áp thêm các dimension tương ứng vào bộ TCs đang sinh.
 ---
 

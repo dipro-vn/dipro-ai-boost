@@ -1,19 +1,19 @@
 ---
-name: Automation Engineer
-description: Skill sinh & chạy Playwright automation script từ test-cases.md có sẵn — dùng Playwright MCP để recon DOM thật, sinh Page Object + Test, chạy test với vòng lặp tự sửa lỗi (auto-heal). Dùng sau khi module đã có testing/[module]/test-cases.md từ pipeline rbt_manual_testing.
+name: automation_engineer
+description: Skill sinh & chạy Playwright automation script từ file test case (`[module]-testcases-vN.md`) có sẵn — dùng Playwright MCP để recon DOM thật, sinh Page Object + Test, chạy test với vòng lặp tự sửa lỗi (auto-heal). Dùng sau khi module đã có testing/[module]/[module]-testcases-vN.md từ pipeline rbt_manual_testing.
 ---
 
 # Automation Engineer
 
 ## Description
 
-Skill hỗ trợ agent chuyển **manual test case đã có sẵn** (`testing/[module]/test-cases.md`, sinh ra từ pipeline `rbt_manual_testing`) thành **Playwright automation script chạy thật** — dùng Playwright MCP để khảo sát UI thật, lấy locator chính xác, sinh Page Object Model + test, chạy test và tự sửa lỗi khi FAIL.
+Skill hỗ trợ agent chuyển **manual test case đã có sẵn** (`testing/[module]/[module]-testcases-vN.md`, sinh ra từ pipeline `rbt_manual_testing`) thành **Playwright automation script chạy thật** — dùng Playwright MCP để khảo sát UI thật, lấy locator chính xác, sinh Page Object Model + test, chạy test và tự sửa lỗi khi FAIL.
 
 Được tổ chức thành **6 sections**, tương ứng các bước thực thi của command `/gen-automation`.
 
 **Pipeline:**
 ```
-testing/[module]/test-cases.md (đã có, từ /gen-tcs) → /gen-automation
+testing/[module]/[module]-testcases-vN.md (đã có, từ /gen-tcs) → /gen-automation
 ```
 
 **Nguyên tắc cốt lõi:**
@@ -27,7 +27,7 @@ testing/[module]/test-cases.md (đã có, từ /gen-tcs) → /gen-automation
 ## When to Use
 
 Sử dụng skill này khi:
-- Module đã có `testing/[module]/test-cases.md` và cần sinh automation script.
+- Module đã có `testing/[module]/[module]-testcases-vN.md` và cần sinh automation script.
 - Cần chạy lại / mở rộng automation cho module đã automate 1 phần.
 
 **KHÔNG** sử dụng skill này khi:
@@ -39,7 +39,7 @@ Sử dụng skill này khi:
 
 # Section 1: Setup & Scaffold
 
-**Input:** `testing/[module]/test-cases.md` (bắt buộc), `testing/[module]/plan-tcs.md` (nên có), `CLAUDE.md` (tùy).
+**Input:** `testing/[module]/[module]-testcases-vN.md` (bắt buộc), `CLAUDE.md` (tùy).
 
 1. Kiểm tra `automation/package.json` đã tồn tại chưa.
 
@@ -165,7 +165,7 @@ Sử dụng skill này khi:
 
 # Section 2: Chọn phạm vi TC
 
-1. Đọc `testing/[module]/test-cases.md`, liệt kê toàn bộ TC (ID, Test Scenario, Traceability ID).
+1. Đọc `testing/[module]/[module]-testcases-vN.md`, liệt kê toàn bộ TC (ID, Test Scenario, Traceability ID).
 2. Đọc mục `## High Risk & E2E` ở cuối `test-cases.md` (nếu có): Bảng 1 (nhóm TC high risk) và Bảng 2 (luồng E2E cần work trước).
 3. Đề xuất phạm vi cho user chọn — **luôn hỏi, đây là checkpoint bắt buộc duy nhất trước khi tự động chạy hết các bước sau:**
 
@@ -254,7 +254,7 @@ Sử dụng skill này khi:
      });
    });
    ```
-3. Mỗi test PHẢI mang **TC ID** (cột `ID`, VD `HRD-004`) trong tên test và có comment liên kết cả hai ID gốc từ `test-cases.md`, dạng `// TC: HRD-004 | Trace: AC-03, Q-HRD-003`. TC ID dùng để map kết quả về `automation-report.md` và `BUG-<TC ID>`; Traceability ID chỉ để trace nguồn (nhiều TC dùng chung một AC).
+3. Mỗi test PHẢI mang **TC ID** (cột `ID`, VD `HRD-004`) trong tên test và có comment liên kết cả hai ID gốc từ `test-cases.md`, dạng `// TC: HRD-004 | Trace: AC-03, Q-HRD-003`. TC ID dùng để map kết quả về report `automation-report-vN` và `BUG-<TC ID>`; Traceability ID chỉ để trace nguồn (nhiều TC dùng chung một AC).
 4. Test data unique dùng `utils/test-data.ts`; credentials đọc từ `process.env`, không hardcode. Convention đặt tên biến credential: `<MODULE_NAME_UPPERCASE>_USERNAME` / `<MODULE_NAME_UPPERCASE>_PASSWORD` (module name viết hoa, ký tự không phải chữ/số thay bằng `_`) — thêm vào `.env` (và document dạng placeholder có comment trong `.env.example`) ngay lần đầu module cần đến.
 5. Mỗi test độc lập — không phụ thuộc thứ tự chạy hay state của test khác.
 
@@ -314,7 +314,7 @@ Sử dụng skill này khi:
    ## Files Created/Modified
    ```
 
-3. Sinh `testing/[module]/automation-report.md` — file QC đọc:
+3. Sinh `testing/[module]/[module]-automation-report-vN.md` (N = version file TC đang chạy, xem "Quy ước file và version" trong skill `rbt_manual_testing`) — file QC đọc:
    ```markdown
    # Automation Report — [module]
 
@@ -337,7 +337,7 @@ Sử dụng skill này khi:
    - **Evidence**: đường dẫn tới screenshot/trace trong `automation/test-results/`, không copy.
    - Cần report chi tiết thành ticket → chạy `/gen-bug-report`.
 
-4. Báo cáo trong chat: tóm tắt 3 nhóm + đường dẫn `automation-report.md` + danh sách file đã tạo/sửa. Không lặp lại toàn bộ bảng.
+4. Báo cáo trong chat: tóm tắt 3 nhóm + đường dẫn report `automation-report-vN` + danh sách file đã tạo/sửa. Không lặp lại toàn bộ bảng.
 
 ---
 
@@ -346,5 +346,5 @@ Sử dụng skill này khi:
 - `automation/` project (scaffold nếu lần đầu, hoặc mở rộng nếu đã có).
 - Page Object classes — locator verified từ DOM thật.
 - Test classes — chạy lại được bằng `npx playwright test`.
-- `testing/[module]/automation-report.md` — PASS / Nghi bug / Không chạy được.
+- `testing/[module]/[module]-automation-report-vN.md` — PASS / Nghi bug / Không chạy được.
 - `automation/task.md` — log nội bộ của agent.

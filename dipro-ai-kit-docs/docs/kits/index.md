@@ -65,7 +65,7 @@ qc-kit-agent     → QC sessions (sinh TC riêng biệt)
 | fe-kit | 5 | 5 | tilth |
 | mobile-ai-kit | N/A | 6 workflows | codegraph |
 | brse-ai-kit | N/A | Plugin UI | Figma API |
-| qc-kit-agent | N/A | 7 | Playwright |
+| qc-kit-agent | N/A | 8 | Playwright, Figma |
 | pm-ai-kit | 1 | 1 (`/performance-report`) | Backlog MCP |
 
 ### Tech stack mỗi kit

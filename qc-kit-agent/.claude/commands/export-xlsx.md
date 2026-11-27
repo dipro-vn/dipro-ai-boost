@@ -1,5 +1,5 @@
 ---
-description: Export markdown artifact ra file .xlsx. test-cases.md dùng template thật (Web/App, giữ dropdown); các artifact khác (analysis.md, plan-tcs.md...) mỗi ## section thành 1 sheet, table format chuẩn, <br> thành newline thật. Dùng sau khi review xong artifact.
+description: Export markdown artifact ra file .xlsx. file test case (`[module]-testcases-vN.md`) dùng template thật (Web/App, giữ dropdown); các artifact khác (`[module]-analysis-vN.md`...) mỗi ## section thành 1 sheet, table format chuẩn, <br> thành newline thật. Dùng sau khi review xong artifact.
 ---
 
 Export file `.md` ra `.xlsx` ready import Google Sheets.
@@ -10,46 +10,49 @@ Export file `.md` ra `.xlsx` ready import Google Sheets.
 /export-xlsx <đường dẫn file .md> [web|app]
 ```
 
-Tham số `web`/`app` **chỉ cần khi export `test-cases.md`** (để chọn đúng template).
-Các artifact khác (`analysis.md`, `plan-tcs.md`...) không cần và không dùng tham số này.
+Tham số `web`/`app` **chỉ cần khi export file test case** (`[module]-testcases-vN.md`, để chọn đúng template).
+Các artifact khác (`[module]-analysis-vN.md`...) không cần và không dùng tham số này.
+
+Không nêu đường dẫn file mà chỉ nêu module (VD `/export-xlsx login`) → lấy file test case mới nhất: `python3 -I .claude/scripts/module_files.py latest testing/[module] testcases`. Nêu version đang xuất trong báo cáo. File `.xlsx` ra có **cùng tên** với `.md`, chỉ đổi đuôi (`[module]-testcases-vN.xlsx`).
 
 Ví dụ:
 ```
-/export-xlsx testing/login/test-cases.md web
-/export-xlsx testing/login/test-cases.md app
-/export-xlsx testing/login/analysis.md
+/export-xlsx testing/login/login-testcases-v1.md web
+/export-xlsx testing/login/login-testcases-v2.md app
+/export-xlsx testing/login/login-analysis-v2.md
 ```
 
 ## Thực thi
 
 1. Xác định đường dẫn file `.md` từ input của user (tuyệt đối hoặc tương đối từ root project)
 2. Kiểm tra file tồn tại
-3. **Nếu file là `test-cases.md` và user chưa chỉ định `web`/`app` trong prompt** → hỏi user: "Xuất theo template Web hay App?" trước khi chạy script. Không đoán.
-4. Chạy script:
+3. **Nếu file là file test case (`[module]-testcases-vN.md`, hoặc tên cũ `test-cases.md`) và user chưa chỉ định `web`/`app` trong prompt** → hỏi user: "Xuất theo template Web hay App?" trước khi chạy script. Không đoán.
+4. **File `.xlsx` đích đã tồn tại?** Đích là cùng tên với file `.md`, chỉ đổi đuôi. Nếu đã có file đó (VD `/update-tcs` vừa tạo từ xlsx đang chạy, có thể chứa kết quả test) → **dừng, không chạy script**, hỏi user bằng `AskUserQuestion`: ghi đè / dừng. Không có lựa chọn của user → dừng. Chỉ ghi đè khi user đồng ý rõ ràng.
+5. Chạy script:
 
 ```bash
 # Tự động tìm python3 có openpyxl (ưu tiên venv local, sau đó system)
 PYTHON=$(python3 -c "import openpyxl, sys; print(sys.executable)" 2>/dev/null || python3 -c "import sys; print(sys.executable)")
 
-# test-cases.md
+# file test case
 $PYTHON .claude/scripts/md_to_xlsx.py <file_path> <web|app>
 
 # artifact khác
 $PYTHON .claude/scripts/md_to_xlsx.py <file_path>
 ```
 
-5. Báo kết quả: đường dẫn file `.xlsx` vừa tạo (cùng thư mục với file `.md` input)
+6. Báo kết quả: đường dẫn file `.xlsx` vừa tạo (cùng thư mục với file `.md` input)
 
 ## Output format
 
-### `test-cases.md` (dùng template thật `template/*_Testcase_ForWeb|ForApp_V3.0.xlsx`)
+### File test case (`[module]-testcases-vN.md`; dùng template thật `template/*_Testcase_ForWeb|ForApp_V3.0.xlsx`)
 
 - Load nguyên workbook template (Web hoặc App) làm base — giữ nguyên `Test view point`, dropdown/data validation có sẵn
 - Mỗi `##` section **có bảng TC** (cột `ID` + `Test Scenario`) → 1 sheet riêng, clone từ sheet `Screen name` gốc (giữ nguyên dropdown), tên sheet lấy theo heading (bỏ số thứ tự đầu, cắt tối đa 31 ký tự). Chỉ có **1 sheet `Screen name_evidence` dùng chung** cho cả workbook, đặt sau sheet TC cuối cùng (không nhân bản theo từng sheet TC)
 - TC data map vào đúng cột theo **tên header** (không theo thứ tự cột)
 - Section **không phải bảng TC** (VD `Test Data Reference`, ghi chú...) → vẫn xuất thành sheet (kiểu generic, giống artifact khác) nhưng **chèn sau tất cả sheet TC** (trước `High Risk & E2E` và sheet evidence) — không đưa vào `Summary`
 - Section **`## High Risk & E2E`** (Bảng 1 nhóm TC high risk, Bảng 2 test E2E) → **một sheet `High Risk & E2E`** đứng ngay trước sheet `Screen name_evidence` (sheet evidence là sheet cuối workbook), hai bảng ngăn cách bằng dòng nhãn đậm; không freeze panes. Dấu `**` trong ô được bỏ (Excel không render markdown)
-- Phần mở đầu của `test-cases.md` (tiêu đề `# Test Cases: ...` và ghi chú, không có bảng) **không** được đưa vào xlsx; script in thông báo khi bỏ qua
+- Phần mở đầu của file test case (tiêu đề `# Test Cases: ...` và ghi chú, không có bảng) **không** được đưa vào xlsx; script in thông báo khi bỏ qua
 - Bảng TC không còn cột `Risk Level` và `Priority`; template cần bỏ hai cột này. Script khớp cột theo tên header nên chỉ cần template và md thống nhất tên cột; cột trong md không có trong template bị bỏ qua và báo
 - `Summary!C4, C5, ...`: tự điền tên từng sheet TC theo đúng thứ tự — formula "TCs plan" có sẵn trong template (`COUNTA`/`INDIRECT` theo tên sheet) tự đếm lại, kể cả khi QC sửa TC thủ công sau này. Hyperlink quick-nav ở `C4` (nếu có) được cập nhật trỏ đúng sheet mới
 - Template chỉ dựng sẵn dropdown (Result) và công thức "No." tới dòng 97; khi 1 sheet có nhiều TC hơn, script **tự kéo dài** range dropdown và công thức "No." tới hết TC của sheet đó. `Summary` hỗ trợ tối đa 14 sheet TC (dòng 4–17) — vượt quá sẽ được báo trong output nhưng không tự mở rộng

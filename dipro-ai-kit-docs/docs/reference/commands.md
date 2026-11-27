@@ -92,12 +92,13 @@ Mobile kit dùng **workflows** thay vì slash commands — trigger bằng mô t�
 
 | Command | Input | Output |
 |---------|-------|--------|
-| `/analyze-req [path]` | Spec/Figma/Docs | `analysis.md` |
-| `/plan-tcs` | `analysis.md` | `plan-tcs.md` |
-| `/gen-tcs` | `plan-tcs.md` | `test-cases.md` |
-| `/review-tcs` | `test-cases.md` | `review_report.md` |
-| `/export-xlsx <path> web\|app` | `test-cases.md` | `.xlsx` |
-| `/gen-automation` | `test-cases.md` | Playwright scripts |
+| `/analyze-req [path]` | Spec/Figma/Docs | `[module]-analysis-vN.md` |
+| `/gen-tcs [module]` | `[module]-analysis-vN.md` (hoặc spec, chế độ Quick) | `[module]-testcases-vN.md` |
+| `/review-tcs [module]` | `[module]-testcases-vN.md` | `[module]-review-vN.md`, `[module]-review-detail-vN.md` |
+| `/export-xlsx <path\|module> web\|app` | `[module]-testcases-vN.md` | `.xlsx` |
+| `/update-tcs` | File TC `.xlsx`/`.md` và spec mới | File TC version mới kèm Changelog |
+| `/ui-compare` | Link web và link Figma | `[module]-uicompare-vN.md` |
+| `/gen-automation [module]` | `[module]-testcases-vN.md` | Playwright scripts, `[module]-automation-report-vN.md` |
 | `/gen-bug-report` | Mô tả lỗi | Bug report |
 
 ---

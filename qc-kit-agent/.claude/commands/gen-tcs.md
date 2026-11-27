@@ -1,5 +1,5 @@
 ---
-description: Sinh Test Case chi tiết (bao gồm Test Scenario) từ plan-tcs.md + analysis.md. Nếu module chưa có cả 2 file này, hỏi user chọn Full Mode (chain /analyze-req → /plan-tcs → gen) hoặc Quick Mode (sinh nhanh trực tiếp từ spec). Thiếu 1 trong 2 file thì tự chạy bước còn thiếu (chỉ dừng ở checkpoint Summary + System Model của analyze-req; plan chạy không dừng).
+description: Sinh Test Case chi tiết (bao gồm Test Scenario) từ analysis.md; tự dựng cấu trúc Screen/Component bên trong, không cần plan. Nếu module chưa có analysis.md, hỏi user chọn Full Mode (chạy /analyze-req rồi gen) hoặc Quick Mode (sinh nhanh trực tiếp từ spec).
 skills:
   - rbt_manual_testing
   - testing_dimensions
@@ -9,46 +9,65 @@ skills:
 
 Thực hiện **Section 4: Test Case Generation** từ skill `rbt_manual_testing`.
 
-## Bước 0 — Kiểm tra `analysis.md` và `plan-tcs.md`
+## Bước 0 — Kiểm tra `analysis.md` và dựng cấu trúc
 
-Kiểm tra `testing/[module]/analysis.md` và `testing/[module]/plan-tcs.md` có tồn tại không:
+Tên file theo "Quy ước file và version" (skill `rbt_manual_testing`; tên module = tên thư mục). Chạy `python3 -I .claude/scripts/module_files.py latest testing/[module] analysis` để lấy analysis mới nhất (`[module]-analysis-vN.md`, hoặc tên cũ `analysis.md` tính là v1). Mọi chỗ dưới đây viết `analysis.md` là tên gọi tắt của file này.
 
-**Thiếu cả 2** → **không tự chạy**. Dùng `AskUserQuestion` hỏi user chọn chế độ (Full đặt đầu, ghi `(Recommended)`):
+**File TC đích** (`testing/[module]/[module]-testcases-vN.md`):
+- Có analysis vN → đích là `testcases-vN` (cùng N với analysis).
+- Không có analysis (Quick) → đích là testcases mới nhất của module (`module_files.py latest testing/[module] testcases`), chưa có thì `testcases-v1`.
+- Đích đã tồn tại → chỉ sinh lại hoặc sinh tiếp (giữ Function Name theo bảng hiện có), **không tạo version mới**. Spec đã đổi thì dùng `/update-tcs`, không dùng `/gen-tcs`.
+- **Đích là bản Quick** (dòng đầu file là `> Mode: Quick`) mà lần này chạy Full (có analysis) → **dừng và hỏi** bằng `AskUserQuestion` trước khi ghi. Nêu rõ: file hiện tại là bản Quick, có bao nhiêu TC, Traceability `REQ-xx` sẽ đổi sang `AC-xx`, ghi đè không khôi phục được. Lựa chọn:
+  1. `Ghi đè, chia Screen theo analysis (Recommended)`: dựng cấu trúc Screen theo analysis như Full thường.
+  2. `Ghi đè, giữ cấu trúc Screen cũ`: giữ nguyên số sheet và tên sheet của bản Quick; chỉ đổi Traceability sang `AC-xx` và bổ sung TC theo analysis vào sheet phù hợp.
+  3. `Dừng, không ghi`: không tạo hay sửa file nào.
+  User chọn **Other** (gõ tự do): đọc nội dung; nói rõ ghi đè và cấu trúc nào (VD "ghi đè nhưng không đổi cấu trúc screen" = lựa chọn 2) thì làm theo; không rõ là ghi đè hay không, hoặc không rõ cấu trúc nào → hỏi lại một lần; vẫn không rõ → dừng, không ghi.
+  Ở cả hai lựa chọn ghi đè: **giữ nguyên ID và Function Name** của TC cũ, TC bổ sung đánh số tiếp theo ID lớn nhất. Dòng `Mode: Quick` và các dòng `**Nguồn:**`, `**Platform:**`, `**Yêu cầu (REQ):**` bị bỏ khỏi file mới.
+- Khi sinh TC mà phải bổ sung vào analysis (VD thêm ASM-xx, AC mới cho lỗ hổng spec chưa nêu): **sửa tại chỗ** file analysis hiện tại và thêm một dòng `History` dạng `- vN ([ngày]): /gen-tcs — [tóm tắt]` (N = số version của file, không dùng nhãn lẻ như `v1.1`). Không tạo version analysis mới.
 
-- Câu hỏi: `Module chưa có analysis.md/plan-tcs.md, bạn muốn gen-tcs ở chế độ nào?`
-- **Full mode** — chạy full luồng từ phân tích requirement đến gen TC (`/analyze-req` → `/plan-tcs` → sinh TC). Ưu: có Q&A chỉ ra điểm spec chưa cover, Traceability về AC, độ phủ chặt, ít TC đoán mò. Nhược: lâu hơn, token nhiều hơn, có checkpoint dừng để confirm Summary + System Model.
+Nếu module còn file `plan-tcs.md` (không dùng nữa), **bỏ qua, không đọc**.
+
+**Chưa có `analysis.md`** → **không tự chạy**. Dùng `AskUserQuestion` hỏi user chọn chế độ (Full đặt đầu, ghi `(Recommended)`):
+
+- Câu hỏi: `Module chưa có analysis.md, bạn muốn gen-tcs ở chế độ nào?`
+- **Full mode** — phân tích requirement rồi gen TC (`/analyze-req` → sinh TC). Ưu: có Q&A chỉ ra điểm spec chưa cover, Traceability về AC, độ phủ chặt, ít TC đoán mò. Nhược: lâu hơn, token nhiều hơn; Summary, Q&A và Acceptance Criteria nằm ở đầu `analysis.md`; System Model nằm trong phần tham chiếu phía dưới để user đối chiếu khi cần.
 - **Quick mode** — sinh nhanh TC trực tiếp từ spec. Ưu: nhanh, ít token, bộ TC gọn, hợp module nhỏ hoặc bản nháp. Nhược: không có Q&A nên điểm spec mơ hồ không bị phát hiện, Expected suy luận gắn `[ASSUMED]`, Traceability dùng REQ-xx thay AC-xx.
 
-Chọn **Full** → tiếp tục theo luồng "Thiếu 1 trong 2" bên dưới (chạy tuần tự `/analyze-req` → `/plan-tcs` → Bước 1). Chọn **Quick** → làm theo mục **Quick Mode** (bên dưới phần "Sinh Test Case chi tiết"), bỏ qua Bước 0 còn lại và Bước 1.
+Chọn **Full** → thực hiện **Section 2: Requirement Analysis** (skill `rbt_manual_testing`), không dừng hỏi; `analysis.md` được lưu rồi tiếp tục luôn. Chọn **Quick** → làm theo mục **Quick Mode** (bên dưới phần "Sinh Test Case chi tiết"), bỏ qua Bước 0 còn lại và Bước 1.
 
-**Không có lựa chọn của user** (không tương tác, user bỏ qua, hoặc trả lời không rõ chọn chế độ nào) → **dừng, không tự chọn chế độ, không tạo file nào**, in đúng một dòng: `Module chưa có analysis.md/plan-tcs.md. Chạy lại /gen-tcs và chọn Full hoặc Quick.`
+**Không có lựa chọn của user** (không tương tác, user bỏ qua, hoặc trả lời không rõ chọn chế độ nào) → **dừng, không tự chọn chế độ, không tạo file nào**, in đúng một dòng: `Module chưa có analysis.md. Chạy lại /gen-tcs và chọn Full hoặc Quick.`
 
-**Thiếu 1 trong 2** → thông báo ngắn rồi **tự động chạy tuần tự** các bước còn thiếu — không cần hỏi user có muốn chạy không, vì đây là bước bắt buộc để thực hiện đúng yêu cầu user vừa đưa ra:
+**Đã có `analysis.md`** → tiếp tục luôn, không chạy lại `/analyze-req`.
 
-> ℹ️ Module này chưa có `analysis.md`/`plan-tcs.md`. Tôi sẽ tự chạy `/analyze-req` → `/plan-tcs` trước, sau đó tiếp tục `/gen-tcs`.
+**Dựng cấu trúc test (Full mode):** theo **Section 3** của skill `rbt_manual_testing`, **không lưu thành file**. Gồm Screen, Component theo thứ tự, Component Type, Risk Level, Permission Matrix (chép đủ hàng của `analysis.md` + hàng "của người khác"), rule tương tác chéo, Assumption môi trường test, 3-6 luồng E2E. Cấu trúc này chỉ là khung để sinh TC trong lần chạy này; nếu khi sinh TC thấy cấu trúc sai hoặc thiếu so với `analysis.md` thì sửa luôn, ưu tiên `analysis.md`.
 
-- Thiếu `analysis.md` → thực hiện **Section 2: Requirement Analysis** (skill `rbt_manual_testing`) — vẫn dừng đúng tại checkpoint Summary + System Model confirm như khi chạy `/analyze-req` độc lập.
-- Sau khi có `analysis.md` (vừa tạo hoặc đã có sẵn) mà thiếu `plan-tcs.md` → thực hiện **Section 3: TC Implementation Plan**, lưu `plan-tcs.md` và **không dừng hỏi** (không có checkpoint "Bạn muốn điều chỉnh gì không?").
-- Ngay sau đó tiếp tục Bước 1 bên dưới. Đầu output in **tóm tắt plan không chặn** (xem bên dưới).
-
-**Có sẵn cả 2** → tiếp tục Bước 1 luôn, không chạy lại.
-
-**Tóm tắt plan (in ở đầu output, không chờ user trả lời):**
+**Tóm tắt cấu trúc (in ở đầu output, không chờ user trả lời):**
 
 ```
-📋 Plan: [N] Screen: [Screen 1] (suy luận từ spec / theo design), [Screen 2] ...
+📋 Cấu trúc: [N] Screen: [Screen 1] (suy luận từ spec / theo design), [Screen 2] ...
 - Permission Matrix: [số hàng] hàng ([số ô ?] ô chưa rõ)
 - Luồng E2E chính: [N] luồng — [tên luồng 1], [tên luồng 2] ...
-Nếu cấu trúc sai, dừng lại và chạy `/plan-tcs` để chỉnh `plan-tcs.md` trước.
+- Phạm vi không test (nếu có): [điều không test] — [lý do, AC hoặc Q&A]
+Nếu cấu trúc sai (VD chia Screen chưa đúng), báo lại cách chia mong muốn để sinh lại.
 ```
 
-Plan chỉ có Screen suy luận từ text (không có design) → ghi rõ "suy luận từ spec" cho từng Screen để người dùng thấy ngay phần dễ sai nhất.
+Chỉ có Screen suy luận từ text (không có design) → ghi rõ "suy luận từ spec" cho từng Screen để người dùng thấy ngay phần dễ sai nhất.
+
+**Assumption môi trường test:** nếu có điều kiện hạ tầng/bên ngoài mà TC ngầm dựa vào, ghi một dòng blockquote ngay dưới tiêu đề file TC: `> **Assumption môi trường test:** ...` (không tạo heading `##`). Không có thì bỏ.
 
 ---
 
 ## Bước 1 — Kiểm tra TBD ACs (severity-gated)
 
-Đọc `testing/[module]/analysis.md`, kiểm tra cột Status trong bảng Acceptance Criteria. Với mỗi AC status TBD, tra Severity của Q-MOD-XXX liên quan trong bảng Q&A — Cần quyết định (nếu không xác định được Q&A liên quan hoặc severity không rõ, coi như **High** để an toàn). AC phụ thuộc **DIF-XX** (bảng Lệch spec↔design) chưa được chọn A/B coi như mức **Low**. AC status `Assumed` (gắn ASM-XX) sinh TC bình thường, không cần tag.
+**Nguồn đọc (Full):** `analysis.md` là nguồn chính; không đọc lại toàn bộ spec gốc. Chỉ tra đúng đoạn spec khi một mục trong analysis mơ hồ hoặc thiếu chi tiết. Analysis thiếu so với spec thì dừng, đề nghị chạy lại `/analyze-req` hoặc `/update-tcs`, không tự bù TC từ spec.
+
+**Khi spec và analysis lệch nhau** (chỉ xét khi đã tra spec như trên):
+- **Không tính là lệch** nếu analysis khác spec do quyết định đã ghi lại: Q&A đã trả lời, ASM đã chấp nhận, hoặc DIF đã chọn A/B. Ở các chỗ này analysis đúng, sinh TC bình thường.
+- **Lệch nhỏ** (wording, label, định dạng hiển thị, không đổi hành vi hay Expected nghiệp vụ) → vẫn sinh TC theo analysis, gắn tag `[LỆCH SPEC]` ở đầu ô Expected Results, và ghi trong ô đó (hoặc Notes) 1 câu `Spec ghi: [...]`. Liệt kê thêm trong báo cáo cuối: `Spec lệch analysis (nhỏ): [điểm lệch]`.
+- **Lệch lớn** (đổi Expected, luồng nghiệp vụ, điều kiện, phân quyền, số liệu) → **không sinh TC cho AC đó**, các AC khác vẫn sinh. Cuối lượt gom mọi chỗ lệch lớn thành **một lần hỏi duy nhất**: mỗi chỗ nêu AC, `Analysis ghi: ...`, `Spec ghi: ...`, để user chọn theo analysis hay theo spec (nếu theo spec thì đề nghị chạy `/update-tcs`). Sau khi user chọn thì sinh TC cho các AC đó.
+- Không chắc lệch nhỏ hay lớn → coi là lớn.
+
+Đọc analysis mới nhất (`testing/[module]/[module]-analysis-vN.md`), kiểm tra cột Status trong bảng Acceptance Criteria. Với mỗi AC status TBD, tra Severity của Q-MOD-XXX liên quan trong bảng Q&A — Cần quyết định (nếu không xác định được Q&A liên quan hoặc severity không rõ, coi như **High** để an toàn). AC phụ thuộc **DIF-XX** (bảng Lệch spec↔design) chưa được chọn A/B coi như mức **Low**. AC status `Assumed` (gắn ASM-XX) sinh TC bình thường, không cần tag `[UNCONFIRMED]` (Expected dựa trên ASM vẫn tag `[ASSUMED]` ở đầu ô Expected Results theo TC Gate).
 
 **Không có AC nào status TBD** → tiếp tục bình thường.
 
@@ -63,7 +82,7 @@ Plan chỉ có Screen suy luận từ text (không có design) → ghi rõ "suy 
 | **1 — Spec chưa chọn hành vi** | Q&A có `Phương án đề xuất` A/B rõ (VD ai nhập actual weight, ở bước nào) | Sinh đủ happy + negative + edge **theo phương án đề xuất**. Expected nêu hành vi của phương án đó, ghi rõ `theo đề xuất Q-XXX-NNN` ở Expected hoặc Test Data. Áp dụng Technique (Decision Table/State Transition/Boundary Tier) như AC Confirmed. |
 | **2 — Spec thiếu giá trị / công thức** | Q&A hỏi về giá trị cụ thể không thể suy ra (đơn giá, bậc phí, ngưỡng, bảng ghép) | **Không tự đặt giá trị.** Chỉ sinh TC kiểm tra **quan hệ** không cần giá trị (VD Express Fee chỉ có khi Service Type là Express; phí tính lại khi actual weight lớn hơn registered; giữ nguyên khi nhỏ hơn hoặc bằng). Phần cần giá trị (biên bậc phí, tổng tiền cụ thể) **không sinh TC**. |
 
-Cuối output (sau Self-check), thêm mục:
+Cuối output (sau Self-check), thêm mục (ghi vào cuối `test-cases.md` dưới dạng blockquote ngay sau Bảng 2, **không tạo heading `##`**; `/export-xlsx` đưa phần này vào sheet `High Risk & E2E`; đồng thời nêu ngắn trong chat):
 
 ```
 ⚠️ AC High đang dựa trên giả định (nên PM trả lời trước khi chạy test):
@@ -80,50 +99,66 @@ Khi Q&A được trả lời và `analysis.md` cập nhật: chạy lại `/gen-
 
 ## Sinh Test Case chi tiết
 
-1. Đọc `plan-tcs.md` — dùng làm khung cấu trúc (Screen → Component → Risk Level/Ghi chú phụ thuộc, **Strategy Summary** của từng Screen là đầu vào bắt buộc: phạm vi không test, tổ hợp ưu tiên, cách xử lý TBD, lưu ý kiểm thử không hiển nhiên; và **Permission Matrix** nếu có — mỗi ô ❌ phải có TC phủ, xem Pattern 1 trong skill).
+1. Dựng cấu trúc test theo **Section 3** (Bước 0) — Screen → Component → Component Type/Risk Level, **Permission Matrix** nếu có (mỗi ô ❌ phải có TC phủ, xem Pattern 1 trong skill), rule tương tác chéo, luồng E2E. Không lưu thành file; nếu file TC đã có thì giữ nguyên Screen và Function Name đang dùng (trừ khi đang nâng bản Quick lên Full và user chọn chia Screen theo analysis, xem Bước 0).
 2. Đọc `analysis.md` — lấy nội dung AC/Q&A để viết Steps/Expected Result.
+   - **Diagram (nếu có):** dòng link ngay đầu `analysis.md` (`> Sơ đồ để dễ hình dung ...`) trỏ tới `diagrams/[module]-state-vN.html` và/hoặc `[module]-flow-vN.html`. Có thì đọc thêm file `.json` cùng tên (lifecycle: `transitions[]`; workflow: `edges[]`) **chỉ để đối chiếu độ phủ** (xem tiêu chí D1). **Text của `analysis.md` là bản chính**: diagram không phải nguồn sinh TC riêng, không có AC/Q&A/ASM tương ứng thì không sinh TC chỉ vì có trong diagram; diagram lệch với text thì theo text. Không có link hoặc không đọc được JSON → bỏ qua, không báo lỗi.
 3. Xác định platform: `analysis.md` Summary → nếu trống, `CLAUDE.md` → đọc `.claude/skills/testing_dimensions/SKILL.md` section tương ứng. **Cả hai trống (hoặc còn `[...]`) → hỏi user một lần** (Web / Mobile / Desktop...) trước khi sinh TC, không tự mặc định. Multi-language và tính năng đặc thù (push, offline...) suy ra từ spec/AC, không nhắc thì không áp, không hỏi. Xác định **Locale** cùng nguồn (`analysis.md` Summary → `CLAUDE.md`): nếu `Locale: JP` → đọc `.claude/skills/jp_validation/SKILL.md` và áp **cho mọi field nhập liệu**, không phụ thuộc spec có nhắc 全角/半角 hay không (spec có ghi lớp ký tự thì theo spec, không thì dùng bảng mặc định theo loại field, tag `[ASSUMED]`).
-4. Với mỗi Screen trong `plan-tcs.md` (theo đúng thứ tự xuất hiện trong file):
+4. Với mỗi Screen trong cấu trúc đã dựng (theo đúng thứ tự):
    - Sinh **đúng 1 TC UI** cho Screen đó (đặt đầu bảng): `Check giao diện màn hình [tên Screen] thống nhất với design`, Expected Results = đúng một dòng `UI thống nhất với design` (không thêm tên frame, không mô tả chi tiết; chưa có design vẫn ghi như vậy). Theo "UI Policy" trong skill `rbt_manual_testing`.
-   - Với mỗi Component (theo đúng thứ tự trong plan):
-     - Nhận diện pattern từ AC (và lưu ý trong Strategy Summary) → dựng đầy đủ Decision Table/State Transition/Boundary Tier tương ứng (tham chiếu sub-section "Complex Logic Patterns" trong skill `rbt_manual_testing`), show inline trước khi expand ra TC.
+   - Với mỗi Component (theo đúng thứ tự trong cấu trúc):
+     - Nhận diện pattern từ AC → dựng đầy đủ Decision Table/State Transition/Boundary Tier tương ứng (tham chiếu sub-section "Complex Logic Patterns" trong skill `rbt_manual_testing`), show inline trước khi expand ra TC. Ngưỡng nghiệp vụ (giới hạn số lượng, thời gian chờ, số lần thử) cũng áp Boundary Tier và phải có TC cả hai phía của ngưỡng (Pattern 3).
      - **Không** sinh TC visual theo state/component. Popup/dialog/toast/submenu hiện sau action → verify trong Expected Result của TC action đó. Thuộc tính UI chỉ có TC riêng khi là giá trị nghiệp vụ (màu/label theo status, format theo spec) — xem "UI Policy".
      - Nếu là input field: sinh **Field-Level Validation TCs riêng cho từng trường** (Bảng Field-Level Validation trong skill) — không gộp nhiều field vào 1 TC. Nếu `Locale: JP`: sinh theo **Bộ khung TC cho mỗi field text** trong `jp_validation` (thay cho phần ký tự/độ dài của bảng Field-Level, không sinh trùng).
-     - Áp **Component Checklist** từ `.claude/skills/component_checklist/SKILL.md` theo **Component Type** đã gắn trong `plan-tcs.md` — tra trực tiếp Section A/B/C, không đoán qua keyword AC text.
-     - Nếu cột "Ghi chú phụ thuộc" của component không phải "—": sinh thêm TC cho tương tác cross-component đó (gắn vào Logic của component này).
+     - Áp **Component Checklist** từ `.claude/skills/component_checklist/SKILL.md` theo **Component Type** đã xác định ở Section 3 — tra trực tiếp Section A/B/C, không đoán qua keyword AC text.
+     - Nếu component phụ thuộc hoặc ảnh hưởng component khác trên cùng Screen: sinh thêm TC cho tương tác cross-component đó (gắn vào Logic của component này).
 5. Áp dụng kỹ thuật thiết kế phù hợp: Equivalence Partitioning (EP) kết hợp Boundary Value Analysis (BVA) theo **Pattern 4** trong skill `rbt_manual_testing` cho mọi field có giới hạn độ dài/giá trị (dựng bảng lớp và giá trị inline trước khi sinh TC). Khi expand ra TC, tuân thủ **"Quy tắc gộp TC"** trong skill `rbt_manual_testing`: TC cùng Steps chỉ khác data và cùng loại kết quả → gộp 1 TC nhiều dòng Test Data; Boundary chỉ lấy giá trị sát biên mỗi phía.
-6. Áp dụng Platform Dimensions từ `.claude/skills/testing_dimensions/SKILL.md` **một lần cho cả module** (sau khi sinh xong tất cả Screen), gom vào nhóm Function Name `Platform – [tên platform]`, mỗi dimension tối đa 1 TC đại diện, chỉ chọn dimension module thật sự có rủi ro. Không lặp theo Screen/Component.
+6. Áp dụng Platform Dimensions từ `.claude/skills/testing_dimensions/SKILL.md` **một lần cho cả module** (sau khi sinh xong tất cả Screen), gom vào nhóm Function Name `Platform – [tên platform]`, **đặt ở cuối bảng của Screen cuối cùng, không tạo heading `##` riêng** (heading riêng sẽ thành một sheet thừa khi export), ID nối tiếp, mỗi dimension tối đa 1 TC đại diện, chỉ chọn dimension module thật sự có rủi ro. Không lặp theo Screen/Component.
 7. Tuân thủ **Rule ngôn ngữ Test Scenario** (xem sub-section bên dưới).
 8. Mỗi **Screen điều hướng chính** (List, Detail...) là 1 heading `## [tên Screen]` duy nhất, với **một bảng TC** ngay bên dưới — `/export-xlsx` dựa vào heading `##` để tách sheet. Popup/dialog/submenu thuộc Screen nào thì TC nằm trong bảng của Screen đó (phân biệt bằng cột Function Name), **không** tạo heading riêng. Không tạo heading theo nhóm tính năng hay theo lượt sinh; ID đánh số liên tục trong toàn module.
-9. Sau khi sinh xong tất cả Screen và Platform Dimensions, sinh mục **`## High Risk & E2E`** ở cuối file theo "Mục High Risk & E2E" trong skill `rbt_manual_testing`: **Bảng 1** nhóm TC high risk cần ưu tiên chạy (suy ra từ Risk Level trong `plan-tcs.md`, ô ❌ Permission Matrix, Q&A High, trạng thái không đảo ngược, toàn vẹn dữ liệu) và **Bảng 2** test E2E cần đảm bảo work trước (lấy từ mục "Luồng E2E chính" trong `plan-tcs.md`, chỉ tham chiếu TC có sẵn). Hai bảng luôn được sinh lại sau mỗi lần sinh hoặc sinh lại TC của bất kỳ Screen nào (vì ID có thể đổi).
-10. Lưu output ra `testing/[module]/test-cases.md`.
+9. Sau khi sinh xong tất cả Screen, Platform Dimensions, sinh mục **`## High Risk & E2E`** ở cuối file theo "Mục High Risk & E2E" trong skill `rbt_manual_testing`: **Bảng 1** nhóm TC high risk cần ưu tiên chạy (suy ra từ Risk Level đã xác định, ô ❌ Permission Matrix, Q&A High, trạng thái không đảo ngược, toàn vẹn dữ liệu) và **Bảng 2** test E2E cần đảm bảo work trước (lấy từ các luồng E2E chính đã dựng, chỉ tham chiếu TC có sẵn). Hai bảng luôn được sinh lại sau mỗi lần sinh hoặc sinh lại TC của bất kỳ Screen nào (vì ID có thể đổi).
+10. Lưu output ra file TC đích đã xác định ở Bước 0 (`testing/[module]/[module]-testcases-vN.md`).
+11. **Export tự động:** sau khi lưu file md, nếu `[module]-testcases-vN.xlsx` **chưa tồn tại** thì chạy luôn `python3 .claude/scripts/md_to_xlsx.py <file md> <web|app>` để có xlsx cùng tên. Chọn template theo Platform: Summary của analysis (Full) → dòng `**Platform:**` đầu file (Quick) → `CLAUDE.md`; có chữ Web thì `web`; App, Mobile, iOS hoặc Android thì `app`; không rõ hoặc nhiều nền tảng thì hỏi user một lần. Xlsx đích **đã tồn tại** (có thể chứa kết quả test) → **không chạy, không hỏi**, chỉ in một dòng `xlsx đã tồn tại, chưa ghi đè: <đường dẫn> (chạy /export-xlsx nếu muốn xuất lại)`. Nêu đường dẫn xlsx trong báo cáo cuối.
 
-> Nếu nhiều Screen, sinh từng Screen một theo đúng thứ tự trong `plan-tcs.md`, hỏi user để tiếp tục. Nếu một Screen quá lớn phải sinh nhiều lượt, các lượt sau **nối tiếp vào cùng bảng/heading** của Screen đó.
+> Nếu nhiều Screen, sinh từng Screen một theo đúng thứ tự đã dựng, hỏi user để tiếp tục. Nếu một Screen quá lớn phải sinh nhiều lượt, các lượt sau **nối tiếp vào cùng bảng/heading** của Screen đó. Sinh lại hoặc sinh tiếp một Screen đã có trong `test-cases.md`: lấy Function Name từ bảng hiện có để tên không đổi giữa các lần chạy.
 
 ---
 
 ## Quick Mode
 
-Chỉ vào đây khi module thiếu cả `analysis.md` và `plan-tcs.md` **và** user chọn Quick ở Bước 0. Không chạy `/analyze-req`, `/plan-tcs`, không có Question Gate/Q&A, bỏ Bước 1 (không có AC TBD). Đánh đổi: spec mơ hồ không được phát hiện, nên Expected dựa trên suy luận phải tag `[ASSUMED]`.
+Chỉ vào đây khi module chưa có `analysis.md` **và** user chọn Quick ở Bước 0. Không chạy `/analyze-req`, không có Question Gate/Q&A, bỏ Bước 1 (không có AC TBD). Đánh đổi: spec mơ hồ không được phát hiện, nên Expected dựa trên suy luận phải tag `[ASSUMED]`.
 
 **Đầu vào:** spec/requirement của module (Backlog, Drive, Docs, .md, Figma) cộng `CLAUDE.md`. Chưa có spec nào để đọc → dừng và hỏi user spec ở đâu.
 
-**Trước khi ghi file:** nếu `testing/[module]/test-cases.md` đã tồn tại, hỏi user xác nhận ghi đè (nêu rõ file hiện tại là bản Full hay Quick theo dòng `Mode:` ở đầu file; bản Full thì cảnh báo mạnh hơn). Không đồng ý → dừng, không ghi.
+**Trước khi ghi file:** nếu file TC đích đã tồn tại, hỏi user xác nhận ghi đè (nêu rõ file hiện tại là bản Full hay Quick theo dòng `Mode:` ở đầu file; bản Full thì cảnh báo mạnh hơn). Không đồng ý → dừng, không ghi.
 
 **Cách sinh:**
 1. Đọc spec, xác định platform và Locale (nguồn: spec → `CLAUDE.md`). `Locale: JP` → áp `jp_validation` cho mọi field nhập liệu như Full.
-2. Rút danh sách yêu cầu từ spec, đánh mã `REQ-01`, `REQ-02`... theo thứ tự xuất hiện (dùng ở cột Traceability ID thay AC-xx). Giả định tự đặt ghi `ASM-xx`, tag `[ASSUMED]`.
-3. **Chỉ 1 sheet TC cho cả module**: toàn bộ TC nằm trong **một** heading `## [tên module]` với một bảng TC duy nhất (không tách heading theo nhóm tính năng hay theo frame, vì `/export-xlsx` tách sheet theo heading `##`). Phân biệt các nhóm tính năng/popup/dialog bằng cột Function Name; ID đánh số liên tục. Mục `## High Risk & E2E` vẫn là sheet riêng (bước 6). Spec có phân quyền thì mỗi ô bị cấm vẫn phải có ≥1 TC.
+2. Rút danh sách yêu cầu từ spec, đánh mã `REQ-01`, `REQ-02`... theo thứ tự xuất hiện (dùng ở cột Traceability ID thay AC-xx). Giả định tự đặt chỉ cần tag `[ASSUMED]` ở đầu ô Expected Results; **không đánh mã `ASM-xx`** (bản Quick không có bảng Assumptions để tra mã).
+3. **Chỉ 1 sheet TC cho cả module**: toàn bộ TC nằm trong **một** heading `## [tên sheet]` với một bảng TC duy nhất (tên sheet là tên tính năng đọc được, lấy theo spec, viết tiếng Việt nếu spec tiếng Việt, tối đa 31 ký tự; **không** dùng tên thư mục module) (không tách heading theo nhóm tính năng hay theo frame, vì `/export-xlsx` tách sheet theo heading `##`). Phân biệt các nhóm tính năng/popup/dialog bằng cột Function Name; ID đánh số liên tục. Mục `## High Risk & E2E` vẫn là sheet riêng (bước 6). Spec có phân quyền thì mỗi ô bị cấm vẫn phải có ≥1 TC.
 4. Với mỗi nhóm áp **cùng bộ luật như Full**: Field-Level Validation riêng từng field, `component_checklist` (tự nhận Component Type từ spec), EP/BVA theo Pattern 4, "Quy tắc gộp TC", UI Policy (1 TC UI cho mỗi nhóm có màn hình), Platform Dimensions một lần cho cả module, "Rule ngôn ngữ Test Scenario" và TC Gate. Technique (Decision Table/State Transition/Boundary Tier) **không** sinh TC riêng cho từng hàng, mà gộp thành nhiều dòng Test Data trong TC.
 5. Spec im lặng hoặc mơ hồ → **không đoán Expected**: theo TC Gate, bỏ TC đó và ghi vào mục "Hành vi spec chưa nêu" cuối output.
 6. Cuối file vẫn có `## High Risk & E2E` (Bảng 1, Bảng 2) theo skill `rbt_manual_testing`: Bảng 1 suy từ yêu cầu về tiền/bảo mật/phân quyền/dữ liệu không đảo ngược trong spec; Bảng 2 từ các luồng chính trong spec (3-6 luồng).
-7. Chạy Self-Check như Full, **trừ** các tiêu chí cần file không tồn tại: C1 đối chiếu REQ-xx thay AC, S1 và P1(a) không áp dụng, Q2 chỉ đối chiếu các yêu cầu rủi ro cao rút từ spec.
+7. Chạy Self-Check như Full, **trừ** các tiêu chí cần file không tồn tại: C1 đối chiếu REQ-xx thay AC, S1 và P1(a) không áp dụng, I1 không áp dụng, Q2 chỉ đối chiếu các yêu cầu rủi ro cao rút từ spec.
 
-**Dòng đầu file `test-cases.md` (bắt buộc):**
+**Dòng đầu file TC (bắt buộc):**
 
 ```
-> Mode: Quick — chưa qua /analyze-req; Traceability dùng REQ-xx/ASM-xx; Expected tag [ASSUMED] là suy luận, chưa PM/BA xác nhận.
+> Mode: Quick — chưa qua /analyze-req; Traceability dùng REQ-xx; Expected tag [ASSUMED] là suy luận, chưa PM/BA xác nhận.
 ```
+
+Ngay sau dòng đó và tiêu đề `# Test Cases: ...`, ghi thêm các dòng sau (`/review-tcs` đọc để đối chiếu; không vào xlsx):
+
+```
+**Nguồn:** `[đường dẫn hoặc link spec]`
+
+**Platform:** [Web | App | ...]
+
+**Yêu cầu (REQ):** REQ-01 [tên yêu cầu] · REQ-02 [tên yêu cầu] · ...
+```
+
+Dòng `**Yêu cầu (REQ):**` liệt kê đủ mọi mã `REQ-xx` đã dùng ở cột Traceability ID, mỗi mã kèm tên yêu cầu ngắn, để người đọc biết `REQ-xx` là gì mà không cần mở spec.
+
+**Export tự động:** sau khi lưu file, làm đúng "Export tự động" ở bước 11 của phần Full (Platform lấy từ dòng `**Platform:**` đầu file).
 
 **Cuối output, in thêm:**
 
@@ -131,7 +166,7 @@ Chỉ vào đây khi module thiếu cả `analysis.md` và `plan-tcs.md` **và**
 ⚠️ Bản Quick, chưa qua analyze-req: chưa có Q&A để phát hiện điểm spec mơ hồ. Module rủi ro cao (tiền/bảo mật/phân quyền) nên chạy /analyze-req rồi /gen-tcs (Full).
 ```
 
-Muốn nâng lên Full: chạy `/analyze-req` rồi `/gen-tcs` (có đủ `analysis.md`, `plan-tcs.md` thì chạy thẳng, ghi đè bản Quick sau khi user xác nhận).
+Muốn nâng lên Full: chạy `/analyze-req` rồi `/gen-tcs` (có `analysis.md` thì chạy thẳng, ghi đè bản Quick sau khi user xác nhận).
 
 ---
 
@@ -144,11 +179,13 @@ Mỗi TC ứng viên phải qua 2 cổng trước khi vào bảng. Cổng này l
 | **G1 — Nguồn** | TC có ít nhất một nguồn hợp lệ không? Nguồn hợp lệ: AC/Q&A/design trong `analysis.md`; ASM-XX đã ghi; Business Rules trong `CLAUDE.md`; hoặc **bộ chuẩn của kit** có Expected không cần spec (Field-Level cơ bản như bắt buộc nhập, không thực thi script/SQL, double-submit không tạo 2 bản ghi; `jp_validation` khi Locale = JP) | Không sinh TC |
 | **G2 — Expected đo được** | Nêu được kết quả cụ thể, quan sát được (message, state, giá trị hiển thị) không? | Không sinh TC |
 
-- Expected dựa trên **bộ chuẩn của kit** hoặc **ASM** (không có câu chữ trong spec) → tag `[ASSUMED]`.
+- Expected dựa trên **bộ chuẩn của kit** hoặc **ASM** (không có câu chữ trong spec) → tag `[ASSUMED]` **ở đầu ô Expected Results** (một lần cho cả TC, không đặt trong Test Scenario để Scenario luôn bắt đầu bằng "Check"; `[UNCONFIRMED]` vẫn đặt ở đầu Test Scenario). Không gắn `[ASSUMED]` khi Expected có câu chữ trong spec/AC/Q&A để đối chiếu.
+- Expected đã sinh theo analysis nhưng spec ghi khác ở điểm lệch nhỏ (xem Bước 1, "Khi spec và analysis lệch nhau") → tag `[LỆCH SPEC]` ở đầu ô Expected Results, kèm `Spec ghi: [...]`. Nếu TC đồng thời cần `[ASSUMED]` thì đặt cả hai, `[LỆCH SPEC]` đứng trước.
+- **Bộ chuẩn Field-Level luôn áp dụng** cho mọi field nhập liệu, kể cả khi AC của field đó TBD: bắt buộc nhập, **chỉ khoảng trắng**, ký tự đặc biệt/script/SQL, và với field ngày thì **ngày không tồn tại** (VD 31/02) — theo Bảng Field-Level Validation trong skill. Không được đưa các mục này vào mục "Hành vi spec chưa nêu"; chỉ phần cần giá trị từ spec (độ dài tối đa, định dạng hiển thị, đơn vị) mới ghi vào đó.
 - Dòng checklist ghi "(theo spec)" mà spec im lặng và không có nguồn G1 → **không sinh TC**, không đoán Expected. Ghi vào mục cuối output (xem dưới) để QC hỏi PM/BA hoặc bổ sung `analysis.md`.
 - Không dùng Gate để loại TC của AC đã Confirmed/Assumed hoặc ô ❌ Permission Matrix.
 
-Mục cuối output (cùng chỗ với cảnh báo AC High), chỉ in khi có mục để liệt kê:
+Mục cuối output (cùng chỗ và cùng cách ghi với cảnh báo AC High), chỉ in khi có mục để liệt kê:
 
 ```
 ℹ️ Hành vi spec chưa nêu, chưa sinh TC (cần PM/BA hoặc bổ sung analysis.md):
@@ -157,7 +194,7 @@ Mục cuối output (cùng chỗ với cảnh báo AC High), chỉ in khi có m�
 
 ## Rule ngôn ngữ Test Scenario
 
-- Luôn bắt đầu bằng **"Check"**, theo sau là **câu tự nhiên hoàn chỉnh, đọc như người nói** — không phải cụm từ khóa rút gọn.
+- Luôn bắt đầu bằng **"Check"**, theo sau là **câu tự nhiên hoàn chỉnh, đọc như người nói** — không phải cụm từ khóa rút gọn. Tag `[UNCONFIRMED]` (nếu có) đứng ngay trước chữ "Check" (`[UNCONFIRMED] Check ...`) và không tính là vi phạm.
 - **Cấm:** ký hiệu mũi tên (`→`, `->`), gạch chéo nén ý thay cho "hoặc" (VD `A/B`), dấu hai chấm nén nhiều ý (VD `Login: email sai`), viết tắt không giải thích.
 - Ví dụ:
   - ❌ Sai: `Login → Dashboard (email/pass hợp lệ)`
@@ -173,19 +210,22 @@ Sau khi draft xong toàn bộ TCs, thực hiện quick pass **trước khi lưu 
 
 | # | Tiêu chí | Cách check |
 |---|----------|-----------|
-| C1 | **AC Coverage** — mỗi AC có ≥1 TC positive | Dò cột Traceability ID, đối chiếu với `analysis.md` |
+| C1 | **AC Coverage theo vế** — tách mỗi AC thành các vế (xem "Vế của AC và điều kiện Covered" trong skill `rbt_manual_testing`); mỗi vế có ≥1 TC positive mà Steps thực hiện vế đó và Expected kiểm chứng vế đó. Nhiều TC có thể cùng phủ một AC | Liệt kê vế của từng AC, dò cột Traceability ID, đọc Steps và Expected của từng vế. Vế chỉ có Steps mà Expected không kiểm → bổ sung Expected hoặc thêm TC |
 | C2 | **Test Data cụ thể khi có ghi** — không có placeholder (chỉ áp cho ô đã ghi; ô không cần thì để trống) | Grep "email hợp lệ", "số điện thoại đúng", "nhập đúng", "bất kỳ" trong cột Test Data |
 | C3 | **Expected Result đo được** — không mơ hồ | Grep "hiển thị đúng", "load nhanh", "thành công", "phản hồi nhanh" trong cột Expected Results. "Hiển thị đúng" chỉ được chấp nhận khi nêu rõ đối tượng và đối chiếu được với Test Data hoặc Steps (VD "Hiển thị đúng dữ liệu đã nhập như Test Data"); dạng trơn ("hiển thị đúng", "hiển thị đúng thông tin") thì viết lại |
-| M1 | **TC Independence** — không TC nào refer đến TC khác | Grep mã module của chính file (VD `APB-\d{3}`, lấy từ tiền tố cột ID) cùng "xem TC", "kết quả bước trước" trong cột Steps/Precondition |
+| M1 | **TC Independence** — không TC nào refer đến TC khác; các TC dùng cùng giá trị định danh trong Test Data mà cần trạng thái khác nhau thì tách dữ liệu hoặc ghi bước chuẩn bị trong Precondition, để chạy liên tiếp không làm lệch nhau | Grep mã module của chính file (VD `APB-\d{3}`, lấy từ tiền tố cột ID) cùng "xem TC", "kết quả bước trước" trong cột Steps/Precondition; nhóm TC theo giá trị Test Data trùng nhau và so trạng thái yêu cầu |
 | M2 | **Negative Coverage** — mỗi happy path AC có ≥1 TC negative (**trừ** AC `[UNCONFIRMED]` mức Medium/Low chỉ có 1 TC đại diện; AC High vẫn phải có negative) | Gom TC theo Traceability ID; TC là **negative** khi Expected báo lỗi, từ chối, chặn hoặc không thực hiện được hành động (hoặc Category `Negative`/`Security`). Không đếm theo Category vì TC mức component chỉ có UI/Validate/Behavior/Logic |
+| E1 | **Bảng EP/BVA/Decision Table phủ đủ** — mọi dòng của bảng lớp EP, giá trị BVA và Decision Table đã dựng inline (Bước 4 và 5) có ≥1 TC hoặc ≥1 dòng Test Data (theo "Quy tắc gộp TC") | Đối chiếu từng dòng của các bảng inline với bảng TC |
+| O1 | **Một TC một mục tiêu** — Expected chỉ gồm kết quả của một hành vi chính (nhiều kết quả cùng một hành vi thì được, VD báo lỗi và không lưu dữ liệu); Test Scenario không nối hai hành vi bằng "và"; nhiều dòng Test Data cùng Steps vẫn là một mục tiêu | Đọc Test Scenario và Expected của từng TC |
 | Q1 | **ID trong mục High Risk & E2E còn tồn tại** — mọi ID ở Bảng 1 và Bảng 2 có trong bảng TC; ID không bị lặp ở Bảng 1 | Đối chiếu từng ID với cột ID của bảng TC |
 | Q2 | **Bảng 1 phủ rủi ro** — gồm mọi ô ❌ của Permission Matrix, mọi TC của AC High, và không vượt khoảng 30% tổng số TC | Đối chiếu Permission Matrix, bảng AC (Status/Q&A High) với cột TC của Bảng 1 |
-| Q3 | **Bảng 2 phủ luồng chính** — có đủ các luồng ở mục "Luồng E2E chính" của plan (3-6 luồng), mỗi bước có TC hoặc ghi `thiếu TC`, có cột "Nếu fail thì" | Đối chiếu mục Luồng E2E chính của `plan-tcs.md` với Bảng 2 |
+| Q3 | **Bảng 2 phủ luồng chính** — có 3-6 luồng E2E (luồng chính trước, mỗi nhánh có ý nghĩa nghiệp vụ một luồng), mỗi bước có TC hoặc ghi `thiếu TC`, có cột "Nếu fail thì" | Đối chiếu các luồng E2E đã dựng ở Bước 0 với Bảng 2 |
+| D1 | **Diagram phủ chuyển trạng thái và luồng** — mỗi `transitions[]` của lifecycle và mỗi `edges[]` có nhãn của workflow trong diagram (bước 2) có ≥1 TC phủ (qua AC/Q&A/ASM tương ứng trong text); chuyển trạng thái đi tới trạng thái cuối hoặc đường lùi cũng phải có TC. Phần trong diagram mà text không nêu → **không sinh TC**, ghi 1 dòng ở báo cáo cuối: `Diagram lệch text: [chuyển trạng thái/cạnh] — kiểm tra lại analysis.md hoặc diagram` (chỉ check khi module có diagram) | Liệt kê `id`/`label` của transitions và edges, đối chiếu với Steps/Expected của TC |
 | L1 | **Ngôn ngữ TS** — không còn ký hiệu rút gọn | Grep `→`, `->`, dấu `:` nén ý trong cột Test Scenario |
-| S1 | **Plan nhất quán với analysis và đã dùng Strategy** — Screen trong `plan-tcs.md` khớp Screen Inventory của `analysis.md` (nếu có); mọi hàng ma trận của `analysis.md` có trong plan (xem P1a); TC không sinh cho phần Strategy ghi "không test" | Đối chiếu `plan-tcs.md` với `analysis.md` và các bullet Strategy Summary |
+| S1 | **Cấu trúc nhất quán với analysis** — Screen khớp Screen Inventory của `analysis.md` (nếu có); mọi hàng ma trận của `analysis.md` có trong Permission Matrix đã dựng (xem P1a); mọi Screen/Component có TC; phạm vi "không test" nếu có chỉ dựa trên căn cứ cụ thể trong `analysis.md` và không loại bộ chuẩn Field-Level, ô ❌ Permission Matrix, TC của AC High | Đối chiếu cấu trúc với `analysis.md` và tóm tắt in ở đầu output |
 | L3 | **Precondition và Test Data chỉ khi cần** — Precondition để trống nếu Steps tự đủ; không có "đăng nhập", email/tài khoản, tên định danh (`Hospital A`, `M1`); mỗi điều kiện một dòng, ngắn, tham chiếu `như Test Data` khi đã có dữ liệu cụ thể. Test Data không chứa email/tài khoản, không chứa mô tả trạng thái (thuộc Precondition), không ghi `—` | Rà hai cột: grep `@`, `đăng nhập`, `Đăng nhập`, `—`; Test Data có dòng `Trạng thái:` thì chuyển sang Precondition; TC UI/mở màn hình không cần Precondition |
 | L2 | **Test Data một field một dòng** — không nối nhiều field bằng `;` hoặc `,` trên một dòng | Rà cột Test Data: mỗi field/giá trị phải nằm sau `<br>` riêng (xem "Trình bày cột Test Data" trong skill) |
-| P1 | **Permission Coverage** — (a) mỗi hàng ma trận Actor × Action trong `analysis.md` có mặt trong Permission Matrix của `plan-tcs.md` (nếu thiếu thì bổ sung hàng vào plan trước); (b) mỗi ô ❌ — kể cả hàng sở hữu `[Action] — của người khác` — có ≥1 dòng Test Data trong một TC; (c) ô ? có Q&A thì có 1 TC `[UNCONFIRMED]` (chỉ check khi module có phân quyền) | Đối chiếu ma trận `analysis.md` → `plan-tcs.md` → cột Test Data/Steps của TC Security/Negative |
+| P1 | **Permission Coverage** — (a) mỗi hàng ma trận Actor × Action trong `analysis.md` có mặt trong Permission Matrix đã dựng; (b) mỗi ô ❌ — kể cả hàng sở hữu `[Action] — của người khác` — có ≥1 dòng Test Data trong một TC; (c) ô ? có Q&A thì **luôn** có 1 TC `[UNCONFIRMED]` (kể cả khi Q&A chỉ hỏi hành vi gần kề, xem Pattern 1 trong skill; chỉ khi ô ? không có Q&A nào liên quan mới không sinh) (chỉ check khi module có phân quyền) | Đối chiếu ma trận `analysis.md` → cột Test Data/Steps của TC Security/Negative |
 
 > Mã C1-C3/M1-M2 dùng chung với `/review-tcs` (Q1-Q3 tương ứng M4 của `/review-tcs`) (M3 — Boundary Completeness — chỉ có ở `/review-tcs`, không check ở đây vì cần đối chiếu sâu constraint trong AC). L1, L2, L3, P1, S1 và Q1-Q3 là tiêu chí riêng của self-check lúc sinh TC, không có ở `/review-tcs`.
 
@@ -206,7 +246,7 @@ Các tiêu chí trên chỉ thêm TC. Bước này kiểm tra chiều ngược l
 - Hai TC thuộc **hai field khác nhau** (mỗi field giữ TC validation riêng, kể cả khi rule giống nhau).
 - Kết quả hoặc side-effect của hai TC khác nhau.
 
-**Sau khi gộp/xoá:** chạy lại C1, M2, P1 để chắc chắn không làm mất độ phủ AC, negative hay ô ❌.
+**Sau khi gộp/xoá:** chạy lại C1 (theo vế), M2, P1, E1 để chắc chắn không làm mất độ phủ AC, negative hay ô ❌.
 
 ### Khi phát hiện issue: tự fix luôn, ghi nhận để báo cáo.
 
@@ -221,23 +261,23 @@ Các tiêu chí trên chỉ thêm TC. Bước này kiểm tra chiều ngược l
 - R1: Gộp TC-027 và TC-028 (Retry lần 1, lần 2) thành 1 TC 2 dòng Test Data
 - R3: Xoá TC-052 (Expected đã nằm trong TC-030)
 
-File đã lưu tại testing/[module]/test-cases.md
+File đã lưu tại testing/[module]/[module]-testcases-vN.md
 ```
 
-Nếu không phát hiện issue nào: `✅ Self-check: 0 issues. File đã lưu tại testing/[module]/test-cases.md`
+Nếu không phát hiện issue nào: `✅ Self-check: 0 issues. File đã lưu tại testing/[module]/[module]-testcases-vN.md`
 
 ---
 
 ## Output
 
-`testing/[module]/test-cases.md`
+`testing/[module]/[module]-testcases-vN.md`
 
 Bảng TC format: `ID | Function Name | Category | Traceability ID | Test Scenario | Precondition | Steps | Expected Results | Test Data` — **không có** cột Risk Level và Priority; ưu tiên chạy nằm ở mục `## High Risk & E2E` (xem bên dưới).
 
-- **Function Name:** Sub-module/Component từ `plan-tcs.md` (VD "Email field", "Submit button"). Nếu TC ở mức flow (không gắn 1 component cụ thể), dùng tên flow (VD "Login Flow").
+- **Function Name:** Component đã dựng ở Section 3, đặt tên theo **quy ước cố định** trong "Output Format" của skill `rbt_manual_testing` (field nhập liệu dùng tên field đúng như spec, không hậu tố "field"; `[Tên] button`, `[Tên] dialog`, `[Tên] table`; `Màn hình [Screen]`; `Permission – [Action]`; `Notification – [sự kiện]`; `Platform – [platform]`). Nếu TC ở mức flow (không gắn 1 component cụ thể), dùng tên flow (VD "Login Flow").
 - **Category:** cấp con dưới Function Name — "UI"/"Validate"/"Behavior"/"Logic" (component-level) hoặc "Happy Path"/"Negative"/"Security" (flow-level).
 - **Traceability ID:** AC tương ứng từ `analysis.md` (VD `AC-05`), hoặc Q&A ID (VD `Q-LOG-001`), hoặc `N/A` nếu không có nguồn rõ ràng — tên cột dùng chung cho mọi loại ID team quy ước để trace ngược, không giới hạn chỉ AC.
 
-> Khi export ra `.xlsx` qua `/export-xlsx`: Sheet name = tên Screen (heading `##` trong `test-cases.md`, lấy theo tên Screen trong `plan-tcs.md`).
+> Khi export ra `.xlsx` qua `/export-xlsx`: Sheet name = tên Screen (heading `##` trong `test-cases.md`).
 >
-> Khi requirements thay đổi sau khi đã có `test-cases.md`: cập nhật `plan-tcs.md` trước (nếu cấu trúc Screen/Component đổi), rồi chạy lại `/gen-tcs` cho Screen bị ảnh hưởng.
+> Khi requirements thay đổi sau khi đã có file TC: chạy `/update-tcs` (tạo version mới, giữ TC không đổi). Chỉ dùng `/gen-tcs` sinh lại một Screen khi **spec không đổi** mà muốn viết lại TC (Function Name lấy từ bảng hiện có).
